@@ -1,0 +1,11 @@
+{
+    "private": true,
+    "scripts": {
+	"dev": "npm --prefix frontend run dev",
+	"install:frontend": "npm --prefix frontend install",
+	"ci:frontend": "npm --prefix frontend ci"
+    }
+
+
+
+}
