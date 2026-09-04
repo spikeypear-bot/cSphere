@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: postgres-db
+    volumes:
+      # Postgres 18+ wants the mount at this parent path; it stores PGDATA in a
+      # version-named subdirectory so pg_upgrade works across image bumps.
+      - pgdata:/var/lib/postgresql
+    ports:
+      - 5432:5432
+    environment:
+      POSTGRES_PASSWORD: root
+      POSTGRES_USER: postgres
+      POSTGRES_DB: csphere
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d csphere"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build: ./backend
+    container_name: csphere-backend
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - 8080:8080
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/csphere
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+volumes:
+  pgdata:
