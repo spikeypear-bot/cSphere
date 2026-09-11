@@ -1,0 +1,333 @@
+# ConnectSphere — Schema Dictionary
+
+Reference for `V2__init_tables.sql`. Column names, types and constraints below are
+generated from the migration and are authoritative. **Descriptions are a first draft
+inferred from the SQL comments — correct anything that misreads the intent.**
+
+`TODO` marks a decision that hasn't been made yet.
+
+- **Database:** PostgreSQL 18
+- **Migration tool:** Flyway (`spring.flyway.enabled=true`), runs on app boot
+- **Hibernate:** `ddl-auto=validate` — the schema is owned by these files, never by JPA
+
+---
+
+## 1. Domain overview
+
+The system manages the lifecycle of an event from request to completion, plus the
+venue and equipment resources an event consumes.
+
+```
+  request  ────>  event  ──┬──> venue_booking       (where it happens)
+                                  └──> equipment_request   (what it needs)
+                                            │
+                                            └──> equipment_logs  (what actually went out)
+```
+
+1. A user raises an **event_request** — either a *creation* request (no `event_id`) or a
+   *change* request against an existing event (`event_id` set).
+2. On approval the request becomes an **event**.
+3. The event is matched to a **venue** and a **venue_booking** is opened.
+4. The event raises an **equipment_request**, itemised in `equipment_request_equipments`.
+5. Equipment actually issued is recorded in **equipment_logs**, which is what availability
+   for any given time window is calculated from.
+6. Approval made only after venue is booked and equipment is confirmed.
+
+### Entity relationships
+
+```mermaid
+erDiagram
+    users                        ||--o{ event_requests               : raises
+    events                       ||--o{ event_requests               : "amended by"
+    venues                       ||--o{ events                       : hosts
+    venues                       ||--o{ venue_bookings               : "booked as"
+    events                       ||--o{ venue_bookings               : reserves
+    events                       ||--o{ equipment_requests           : requests
+    events                       ||--o{ equipment_logs               : consumes
+    equipment_requests           ||--o{ equipment_request_equipments : "itemised by"
+    equipments                   ||--o{ equipment_request_equipments : "requested as"
+    equipments                   ||--o{ serialised_equipments        : "tracked as units"
+    equipments                   ||--o{ equipment_logs               : "issued as"
+    serialised_equipments        ||--o{ equipment_logs               : "issued as unit"
+```
+
+---
+
+## 2. Enum types
+
+Adding a value later is easy (`ALTER TYPE ... ADD VALUE`); renaming or removing one is
+painful. Settle these before there is production data.
+
+| Type | Values | Used by |
+|---|---|---|
+| `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician` | `users.role` |
+| `event_status` | `confirmed`, `cancelled`, `completed` | `events.status` |
+| `event_request_status` | `pending`, `approved`, `rejected`, `cancelled` | `event_requests.status` |
+| `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
+| `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
+| `venue_booking_status` | `pending`, `confirmed`, `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
+| `accessibilities` | `accessible_parking`, `drop_off_zone`, `public_transport`, `step_free_access`, `wide_doorways`, `elevators`, `wheelchair_support` | `venues.venue_accessibilities`, `events.accessibility_needs`, `event_requests.accessibility_needs` |
+| `facilities` | `audio_visual_equipment`, `air_conditioning`, `breakout_spaces`, `projection`, `stage`, `dining_area`, `barbeque_pit` | `venues.venue_facilities` |
+
+### Role meanings
+
+| Value | Stands for | Description |
+|---|---|---|
+| `ec` | Event Coordinator| Coordinate event |
+| `eo` | Event Organiser | People who organise events |
+| `vs` | Venue stuff | In charge of the venues |
+| `attendee` | Attendee | End user who attends events |
+| `technician` | Technician | Technician — presumably handles equipment issue/return |
+
+### Single-character code columns
+
+These are `CHAR(1)`; the letter-to-meaning mapping lives in application code, not the DB.
+
+| Column | Codes | Meaning |
+|---|---|---|
+| `event_requests.request_type` | TODO | Creation vs change. Note both words start with "C" — pick non-colliding letters |
+| `equipments.equipment_type` | TODO | TODO |
+
+---
+
+## 3. Tables
+
+### `users`
+People who can log in. Role drives what they may do; `organisation` is free text and may be
+null for internal staff.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `user_id` | `UUID` | no | PK | Identifier |
+| `hashed_password` | `VARCHAR(255)` | no | | Password hash. TODO — record the algorithm used |
+| `email` | `VARCHAR(255)` | no | UQ | Login identity, unique |
+| `username` | `VARCHAR(255)` | no | UQ | Display name, unique |
+| `created_at` | `TIMESTAMPTZ` | no | | Defaults to `CURRENT_TIMESTAMP` |
+| `role` | `user_role` | no | | Determines permissions |
+| `organisation` | `VARCHAR(100)` | yes | | Free text; null or `connectSphere` for internal roles |
+
+---
+
+### `venues`
+Bookable spaces, with the accessibility and facility attributes used to match them to events.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `venue_id` | `UUID` | no | PK | Identifier |
+| `venue_address` | `TEXT` | no | | Full address |
+| `venue_layout` | `TEXT` | yes | | TODO — free-text layout notes, or a reference to a plan? |
+| `venue_capacity` | `INTEGER` | yes | | Maximum occupancy |
+| `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
+| `operating_information` | `TEXT` | no | | Opening hours / operating constraints |
+| `venue_facilities` | `facilities[]` | no | | Facilities present. Defaults to `{}` |
+| `additional_information` | `TEXT` | yes | | Free-text notes |
+
+**Indexes**
+
+| Name | Definition | Purpose |
+|---|---|---|
+| `idx_venue_accessibility` | `GIN (venue_accessibilities)` | Containment filtering, e.g. `venue_accessibilities @> '{wheelchair_support}'` |
+| `idx_venue_facility` | `GIN (venue_facilities)` | Same, for facilities |
+
+> Use the `@>` containment operator to hit these indexes. `= ANY(...)` will not use them.
+
+---
+
+### `events`
+A confirmed event. Created from an approved `event_request`.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `event_id` | `UUID` | no | PK | Identifier |
+| `event_name` | `VARCHAR(255)` | no | | Title |
+| `purpose` | `TEXT` | no | | Why the event is being held |
+| `description` | `TEXT` | yes | | Longer description |
+| `start_datetime` | `TIMESTAMPTZ` | no | | Start |
+| `end_datetime` | `TIMESTAMPTZ` | no | | End |
+| `expected_attendance` | `INTEGER` | no | | Forecast headcount, used against `venue_capacity` |
+| `venue_id` | `UUID` | yes | FK → `venues` | Null until a venue is assigned |
+| `accessibility_needs` | `accessibilities[]` | no | | Required features, matched against `venues.venue_accessibilities`. Defaults to `{}` |
+| `registration_needs` | `BOOLEAN` | yes | | Whether attendees must register |
+| `organisation` | `VARCHAR(100)` | yes | | Owning organisation, free text |
+| `actual_attendance` | `INTEGER` | yes | | Recorded after the event |
+| `venue_requirements` | `TEXT` | no | | Free-text venue needs |
+| `equipment_requirements` | `TEXT` | yes | | Free-text equipment needs. TODO — clarify against `equipment_requests.technical_requirement` |
+| `status` | `event_status` | no | | Lifecycle state |
+
+---
+
+### `event_requests`
+Requests to create a new event or change an existing one. Mirrors most of `events` because a
+request holds proposed values that are not yet live.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `request_id` | `UUID` | no | PK | Identifier |
+| `request_type` | `CHAR(1)` | yes | | Creation vs change — see code table above. TODO — should this be `NOT NULL`? |
+| `event_id` | `UUID` | yes | FK → `events` | Set for change requests, null for creation requests |
+| `event_name` | `VARCHAR(255)` | no | | Proposed title |
+| `purpose` | `TEXT` | no | | Proposed purpose |
+| `description` | `TEXT` | yes | | Proposed description |
+| `start_datetime` | `TIMESTAMPTZ` | yes | | Proposed start. Nullable here, `NOT NULL` on `events` |
+| `end_datetime` | `TIMESTAMPTZ` | yes | | Proposed end. Same note |
+| `expected_attendance` | `INTEGER` | no | | Proposed headcount |
+| `venue_requirements` | `TEXT` | no | | Proposed venue needs |
+| `equipment_requirements` | `TEXT` | yes | | Proposed equipment needs |
+| `accessibility_needs` | `accessibilities[]` | no | | Proposed required features. Defaults to `{}` |
+| `registration_needs` | `BOOLEAN` | yes | | Whether registration is proposed |
+| `status` | `event_request_status` | no | | Approval state |
+| `created_at` | `TIMESTAMPTZ` | no | | Defaults to `CURRENT_TIMESTAMP` |
+| `organisation` | `VARCHAR(100)` | yes | | Requesting organisation, free text |
+| `created_by` | `UUID` | yes | FK → `users` | Requester |
+
+> A request may carry null start/end times while `events` requires them, so approval must
+> reject or fill in a request with missing times.
+
+---
+
+### `equipments`
+Inventory catalogue — one row per equipment *kind*, not per physical unit.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `equipment_id` | `UUID` | no | PK | Identifier |
+| `equipment_name` | `VARCHAR(255)` | no | | Display name |
+| `equipment_qty` | `INTEGER` | no | | Total units owned. Availability = this minus what is on loan |
+| `serialised` | `BOOLEAN` | yes | | True when individual units are tracked in `serialised_equipments` |
+| `equipment_type` | `CHAR(1)` | no | | Category code — see code table above |
+
+---
+
+### `serialised_equipments`
+Individual physical units of high-value equipment. Only used where `equipments.serialised` is true.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `equipment_id` | `UUID` | no | PK, FK → `equipments` | Which kind of equipment |
+| `serial_number` | `VARCHAR(255)` | no | PK | Serial, unique only within an `equipment_id` |
+| `status` | `equipment_status` | no | | Condition/availability of this unit |
+
+**Primary key:** `(equipment_id, serial_number)` — serials are only assumed unique per equipment kind.
+
+---
+
+### `equipment_requests`
+A request for equipment attached to an event. Header row; the items are in
+`equipment_request_equipments`.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `request_id` | `UUID` | no | PK | Identifier |
+| `event_id` | `UUID` | no | FK → `events` | Event the equipment is for |
+| `status` | `equipment_request_status` | no | | Approval state |
+| `technical_requirement` | `TEXT` | no | | Free-text technical needs |
+| `reject_reason` | `TEXT` | yes | | Populated only when `status = 'rejected'` |
+
+---
+
+### `equipment_request_equipments`
+Line items — what equipment, and how much of it, a request asks for.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `request_id` | `UUID` | no | PK, FK → `equipment_requests` | Parent request |
+| `equipment_id` | `UUID` | no | PK, FK → `equipments` | Equipment kind requested |
+| `equipment_qty` | `INTEGER` | no | | Quantity requested |
+
+**Primary key:** `(request_id, equipment_id)` — one line per equipment kind per request.
+
+---
+
+### `equipment_logs`
+What equipment is actually out, and for how long. This is the table availability is computed
+from; `equipment_requests` records intent, this records reality.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `log_id` | `UUID` | no | PK | Identifier |
+| `event_id` | `UUID` | no | FK → `events` | Event the equipment went to |
+| `equipment_id` | `UUID` | no | FK → `equipments` | Equipment kind |
+| `quantity` | `INTEGER` | no | | Units issued. `1` for a serialised unit |
+| `technical_requirements` | `TEXT` | yes | | Free-text notes |
+| `serial_number` | `VARCHAR(255)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
+| `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
+| `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
+
+**Foreign keys:** `(equipment_id, serial_number)` is a *composite* FK to `serialised_equipments`,
+so a log row cannot cite a serial belonging to a different equipment kind. Because
+`serial_number` is nullable, the constraint is skipped for bulk loans (`MATCH SIMPLE`).
+
+**Availability for a window** — the query this table exists to serve:
+
+```sql
+SELECT e.equipment_name,
+       e.equipment_qty                          AS total,
+       COALESCE(SUM(l.quantity), 0)             AS on_loan,
+       e.equipment_qty - COALESCE(SUM(l.quantity), 0) AS available
+FROM equipments e
+LEFT JOIN equipment_logs l
+       ON l.equipment_id = e.equipment_id
+      AND l.loaned_from  < :window_end
+      AND l.loaned_until > :window_start
+GROUP BY e.equipment_id, e.equipment_name, e.equipment_qty;
+```
+
+---
+
+### `venue_bookings`
+Reservation of a venue for an event. On a change request the existing booking is cancelled or
+marked changed and a new booking row is opened, so an event may have several booking rows
+over its life.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `booking_id` | `UUID` | no | PK | Identifier |
+| `venue_id` | `UUID` | no | FK → `venues` | Venue reserved |
+| `event_id` | `UUID` | no | FK → `events` | Event reserving it |
+| `status` | `venue_booking_status` | no | | Booking state |
+| `booking_notes` | `TEXT` | yes | | Free-text notes |
+| `reject_reason` | `TEXT` | yes | | Populated only when `status = 'rejected'` |
+
+---
+
+### `mock`, `mock_references` (V1)
+Scaffolding from the mock API used to demonstrate the MVC layering. Not part of the domain —
+delete once real entities exist.
+
+---
+
+## 4. Conventions
+
+- **Keys** are `UUID`, generated by the application, never sequential integers.
+- **Timestamps** are `TIMESTAMPTZ` (UTC on the wire, rendered in the client's zone).
+  Never use plain `TIMESTAMP`.
+- **Enum arrays** are compared with `@>` so the GIN indexes are used.
+- **Free-text** fields are `TEXT`; bounded identifiers are `VARCHAR(n)`.
+- **`reject_reason`** is nullable everywhere it appears — only populated on rejection.
+- **Migrations are immutable once applied.** Flyway stores a checksum per file; editing an
+  already-applied migration makes the next boot fail. Add `V3__*.sql` instead, or reset dev
+  with `docker compose down -v`.
+
+## 5. Known gaps / decisions outstanding
+
+| # | Item | Notes |
+|---|---|---|
+| 1 | No overlap protection on `venue_bookings` | Two confirmed bookings can hold the same venue at the same time. Currently to be prevented in the frontend |
+| 2 | `organisation` is free text in 3 tables | Accepted for now; risks `connectSphere` / `ConnectSphere` drift |
+| 3 | `CHAR(1)` code mappings undocumented | `request_type`, `equipment_type` — see §2 |
+| 4 | `event_requests` start/end nullable but `events` requires them | Approval path must handle this |
+| 5 | `equipment_requirements` vs `equipment_requests.technical_requirement` | Overlapping free text — confirm which is authoritative |
+| 6 | No audit of who approved a request | Only `created_by` is captured |
+| 7 | `equipment_logs` has no return/check-in flag | Availability is inferred purely from the loan window |
+
+## 6. JPA notes for whoever writes the entities
+
+The schema uses Postgres types that plain JPA annotations do not map by default:
+
+- **Enum columns** (`role`, `status`, …) are real Postgres enums, not varchar. Plain
+  `@Enumerated(EnumType.STRING)` fails with a type mismatch — use
+  `@JdbcTypeCode(SqlTypes.NAMED_ENUM)` (Hibernate 6.2+).
+- **Array columns** (`accessibilities[]`, `facilities[]`) need `@JdbcTypeCode(SqlTypes.ARRAY)`.
+- **Composite keys** (`serialised_equipments`, `equipment_request_equipments`) need
+  `@IdClass` or `@EmbeddedId` — same pattern as the existing `MockReferenceId`.
+- Tables with no entity are ignored by `ddl-auto=validate`, so entities can land one at a time.
