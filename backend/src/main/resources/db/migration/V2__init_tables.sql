@@ -101,6 +101,7 @@ CREATE TABLE IF NOT EXISTS events(
     organisation VARCHAR(100),
     actual_attendance INTEGER,
     venue_requirements TEXT NOT NULL,
+    equipment_requirements TEXT,
     status event_status NOT NULL,
 
     FOREIGN KEY (venue_id) REFERENCES venues(venue_id)
@@ -119,6 +120,7 @@ CREATE TABLE IF NOT EXISTS event_requests(
     end_datetime TIMESTAMPTZ,
     expected_attendance INTEGER NOT NULL,
     venue_requirements TEXT NOT NULL,
+    equipment_requirements TEXT,
     accessibility_needs accessibilities[] NOT NULL DEFAULT '{}',
     registration_needs BOOLEAN,
     status event_request_status NOT NULL,
