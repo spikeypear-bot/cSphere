@@ -1,8 +1,9 @@
 # ConnectSphere — Schema Dictionary
 
-Reference for `V2__init_tables.sql`. Column names, types and constraints below are
-generated from the migration and are authoritative. **Descriptions are a first draft
-inferred from the SQL comments — correct anything that misreads the intent.**
+Reference for `V2__init_tables.sql`, updated for `V3__event_request_draft_support.sql`.
+Column names, types and constraints below are generated from the migrations and are
+authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
+anything that misreads the intent.**
 
 `TODO` marks a decision that hasn't been made yet.
 
@@ -25,7 +26,9 @@ venue and equipment resources an event consumes.
 ```
 
 1. A user raises an **event_request** — either a *creation* request (no `event_id`) or a
-   *change* request against an existing event (`event_id` set).
+   *change* request against an existing event (`event_id` set). A creation request starts
+   life as `draft` (freely incomplete, editable, visible only to its own `organisation`)
+   and moves to `pending` only once submitted with all required fields present.
 2. On approval the request becomes an **event**.
 3. The event is matched to a **venue** and a **venue_booking** is opened.
 4. The event raises an **equipment_request**, itemised in `equipment_request_equipments`.
@@ -62,7 +65,7 @@ painful. Settle these before there is production data.
 |---|---|---|
 | `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician` | `users.role` |
 | `event_status` | `confirmed`, `cancelled`, `completed` | `events.status` |
-| `event_request_status` | `pending`, `approved`, `rejected`, `cancelled` | `event_requests.status` |
+| `event_request_status` | `draft`, `pending`, `approved`, `rejected`, `cancelled` | `event_requests.status` |
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
 | `venue_booking_status` | `pending`, `confirmed`, `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
@@ -85,7 +88,7 @@ These are `CHAR(1)`; the letter-to-meaning mapping lives in application code, no
 
 | Column | Codes | Meaning |
 |---|---|---|
-| `event_requests.request_type` | TODO | Creation vs change. Note both words start with "C" — pick non-colliding letters |
+| `event_requests.request_type` | `C` = creation, `A` = amendment/change | Resolved in V3 — a creation request has `event_id IS NULL`; an amendment has it set. |
 | `equipments.equipment_type` | TODO | TODO |
 
 ---
@@ -163,17 +166,17 @@ request holds proposed values that are not yet live.
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `request_id` | `UUID` | no | PK | Identifier |
-| `request_type` | `CHAR(1)` | yes | | Creation vs change — see code table above. TODO — should this be `NOT NULL`? |
+| `request_type` | `CHAR(1)` | yes | | Creation (`C`) vs amendment (`A`) — see code table above |
 | `event_id` | `UUID` | yes | FK → `events` | Set for change requests, null for creation requests |
-| `event_name` | `VARCHAR(255)` | no | | Proposed title |
-| `purpose` | `TEXT` | no | | Proposed purpose |
+| `event_name` | `VARCHAR(255)` | **yes (since V3)** | | Proposed title. Nullable while status is `draft`; required to submit (enforced in the app, not the DB) |
+| `purpose` | `TEXT` | **yes (since V3)** | | Proposed purpose. Same draft/submit note as `event_name` |
 | `description` | `TEXT` | yes | | Proposed description |
-| `start_datetime` | `TIMESTAMPTZ` | yes | | Proposed start. Nullable here, `NOT NULL` on `events` |
+| `start_datetime` | `TIMESTAMPTZ` | yes | | Proposed start. Nullable here, `NOT NULL` on `events`; required to submit |
 | `end_datetime` | `TIMESTAMPTZ` | yes | | Proposed end. Same note |
-| `expected_attendance` | `INTEGER` | no | | Proposed headcount |
-| `venue_requirements` | `TEXT` | no | | Proposed venue needs |
+| `expected_attendance` | `INTEGER` | **yes (since V3)** | | Proposed headcount. Same draft/submit note |
+| `venue_requirements` | `TEXT` | **yes (since V3)** | | Proposed venue needs. Same draft/submit note |
 | `equipment_requirements` | `TEXT` | yes | | Proposed equipment needs |
-| `accessibility_needs` | `accessibilities[]` | no | | Proposed required features. Defaults to `{}` |
+| `accessibility_needs` | **`text[]` (since V4 — see below)** | no | | Proposed required features. Defaults to `{}` |
 | `registration_needs` | `BOOLEAN` | yes | | Whether registration is proposed |
 | `status` | `event_request_status` | no | | Approval state |
 | `created_at` | `TIMESTAMPTZ` | no | | Defaults to `CURRENT_TIMESTAMP` |
@@ -182,6 +185,19 @@ request holds proposed values that are not yet live.
 
 > A request may carry null start/end times while `events` requires them, so approval must
 > reject or fill in a request with missing times.
+>
+> **`status = 'draft'` is the only state where the four columns above may legitimately be
+> null.** `EventRequestService.submit()` is the single place that checks all of them are
+> present before allowing a transition to `pending` — do not duplicate that check elsewhere,
+> and do not rely on the database to catch a missing field once a request leaves `draft`.
+>
+> **`accessibility_needs` on this table only is `text[]`, not the shared `accessibilities`
+> enum-array type** (see V4 migration) — Hibernate 7 could not reliably bind a value into a
+> *named* Postgres enum array (two approaches tried against real Postgres both failed; see
+> the V4 migration file for the detail). `venues.venue_accessibilities` and
+> `events.accessibility_needs` are unaffected and still use the real enum-array type — if you
+> implement those tables' entities, do not copy this table's mapping; work out the enum-array
+> mapping properly for them, or apply the same `text[]` fallback deliberately and note it here.
 
 ---
 
@@ -314,11 +330,12 @@ delete once real entities exist.
 |---|---|---|
 | 1 | No overlap protection on `venue_bookings` | Two confirmed bookings can hold the same venue at the same time. Currently to be prevented in the frontend |
 | 2 | `organisation` is free text in 3 tables | Accepted for now; risks `connectSphere` / `ConnectSphere` drift |
-| 3 | `CHAR(1)` code mappings undocumented | `request_type`, `equipment_type` — see §2 |
-| 4 | `event_requests` start/end nullable but `events` requires them | Approval path must handle this |
+| 3 | ~~`CHAR(1)` code mappings undocumented~~ | **Resolved in V3** for `request_type` (`C`/`A`) — see §2. `equipment_type` still TODO. |
+| 4 | `event_requests` has several nullable fields that `events` requires | Approval path must handle this. Widened in V3 (`event_name`, `purpose`, `expected_attendance`, `venue_requirements` are now also nullable, to support `draft` status) — `EventRequestService.submit()` is where completeness is enforced before a request may leave `draft`. |
 | 5 | `equipment_requirements` vs `equipment_requests.technical_requirement` | Overlapping free text — confirm which is authoritative |
 | 6 | No audit of who approved a request | Only `created_by` is captured |
 | 7 | `equipment_logs` has no return/check-in flag | Availability is inferred purely from the loan window |
+| 8 | `event_requests.accessibility_needs` is `text[]`, not the shared enum-array type | V4 migration — ORM limitation, not a data-modelling choice. Revisit if `venues`/`events` entities need the same values and a consistent type is wanted across tables. |
 
 ## 6. JPA notes for whoever writes the entities
 

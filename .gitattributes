@@ -1,0 +1,13 @@
+# Normalise line endings so files that must run inside Linux containers (the
+# Maven wrapper, shell scripts) never pick up CRLF from a Windows checkout —
+# see docs/decision-log.md for the incident this fixed (mvnw failed with
+# "/bin/sh^M: bad interpreter" inside eclipse-temurin:25-jdk).
+* text=auto eol=lf
+
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+*.jar binary
+*.png binary
+*.jpg binary
+*.svg binary

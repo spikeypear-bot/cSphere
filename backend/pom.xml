@@ -79,6 +79,15 @@
 
 		<!-- Test -->
 		<dependency>
+			<!-- Brings @WebMvcTest — matches spring-boot-starter-webmvc above the
+			     same way the other *-test starters below match their production
+			     counterpart. Added for EventRequestControllerTest; nothing used
+			     @WebMvcTest before this. -->
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-restclient-test</artifactId>
 			<scope>test</scope>

@@ -1,111 +1,128 @@
+/* ConnectSphere design tokens.
+ *
+ * Deliberately not another blue/purple SaaS gradient: a warm, paper-and-ink
+ * palette (closer to an operations ledger than a marketing site), one
+ * confident accent for actions, and low-contrast hairline borders rather than
+ * drop shadows — the panel-border-over-shadow choice comes from how Linear's
+ * dashboard reads at a glance (see docs/product-context.md's design notes).
+ * Each role gets a single identifying accent, used sparingly (a chip, a left
+ * border) — not a different theme per page.
+ */
 :root {
-  --text: #6b6375;
-  --text-h: #08060d;
-  --bg: #fff;
-  --border: #e5e4e7;
-  --code-bg: #f4f3ec;
-  --accent: #aa3bff;
-  --accent-bg: rgba(170, 59, 255, 0.1);
-  --accent-border: rgba(170, 59, 255, 0.5);
-  --social-bg: rgba(244, 243, 236, 0.5);
-  --shadow:
-    rgba(0, 0, 0, 0.1) 0 10px 15px -3px, rgba(0, 0, 0, 0.05) 0 4px 6px -2px;
+  --paper: #faf7f0;
+  --panel: #ffffff;
+  --ink: #211d16;
+  --ink-soft: #675f4e;
+  --ink-faint: #9a917c;
+  --hairline: #e6ddc9;
+  --hairline-strong: #d3c7a8;
+
+  --accent: #b3502e;
+  --accent-ink: #fff8f2;
+  --accent-soft: #f6e3d4;
+  --accent-strong: #8f3d22;
+
+  --success: #4b6a4f;
+  --success-soft: #e3ead9;
+  --danger: #9c3b3b;
+  --danger-soft: #f5dcdc;
+
+  --role-organiser: #b3502e;
+  --role-coordinator: #9c7a1f;
+  --role-venue: #4b6a4f;
+  --role-technical: #3f5b6b;
+  --role-attendee: #6b4b6f;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+  --shadow-panel: 0 1px 2px rgba(33, 29, 22, 0.06);
 
   --sans: system-ui, 'Segoe UI', Roboto, sans-serif;
-  --heading: system-ui, 'Segoe UI', Roboto, sans-serif;
   --mono: ui-monospace, Consolas, monospace;
 
-  font: 18px/145% var(--sans);
-  letter-spacing: 0.18px;
+  font: 16px/1.5 var(--sans);
   color-scheme: light dark;
-  color: var(--text);
-  background: var(--bg);
+  color: var(--ink);
+  background: var(--paper);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-
-  @media (max-width: 1024px) {
-    font-size: 16px;
-  }
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --text: #9ca3af;
-    --text-h: #f3f4f6;
-    --bg: #16171d;
-    --border: #2e303a;
-    --code-bg: #1f2028;
-    --accent: #c084fc;
-    --accent-bg: rgba(192, 132, 252, 0.15);
-    --accent-border: rgba(192, 132, 252, 0.5);
-    --social-bg: rgba(47, 48, 58, 0.5);
-    --shadow:
-      rgba(0, 0, 0, 0.4) 0 10px 15px -3px, rgba(0, 0, 0, 0.25) 0 4px 6px -2px;
-  }
+    --paper: #171410;
+    --panel: #201c16;
+    --ink: #f2ede2;
+    --ink-soft: #c5bca8;
+    --ink-faint: #8b8270;
+    --hairline: #3a3427;
+    --hairline-strong: #4c4432;
 
-  #social .button-icon {
-    filter: invert(1) brightness(2);
+    --accent: #e07a4f;
+    --accent-ink: #1c1108;
+    --accent-soft: #402a1c;
+    --accent-strong: #f3a17c;
+
+    --success: #8fae8f;
+    --success-soft: #26301f;
+    --danger: #d98686;
+    --danger-soft: #3a2222;
+
+    --role-organiser: #e07a4f;
+    --role-coordinator: #d9b24c;
+    --role-venue: #8fae8f;
+    --role-technical: #82aac2;
+    --role-attendee: #b98fc0;
+
+    --shadow-panel: 0 1px 2px rgba(0, 0, 0, 0.3);
   }
 }
 
-#root {
-  width: 1126px;
-  max-width: 100%;
-  margin: 0 auto;
-  text-align: center;
-  border-inline: 1px solid var(--border);
-  min-height: 100svh;
-  display: flex;
-  flex-direction: column;
+* {
   box-sizing: border-box;
 }
 
 body {
   margin: 0;
+  background: var(--paper);
+  color: var(--ink);
 }
 
-h1,
-h2 {
-  font-family: var(--heading);
-  font-weight: 500;
-  color: var(--text-h);
+#root {
+  min-height: 100svh;
+  display: flex;
+  flex-direction: column;
 }
 
-h1 {
-  font-size: 56px;
-  letter-spacing: -1.68px;
-  margin: 32px 0;
-  @media (max-width: 1024px) {
-    font-size: 36px;
-    margin: 20px 0;
-  }
-}
-h2 {
-  font-size: 24px;
-  line-height: 118%;
-  letter-spacing: -0.24px;
-  margin: 0 0 8px;
-  @media (max-width: 1024px) {
-    font-size: 20px;
-  }
-}
-p {
+h1, h2, h3 {
+  font-family: var(--sans);
+  color: var(--ink);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin: 0;
 }
 
-code,
-.counter {
-  font-family: var(--mono);
-  display: inline-flex;
-  border-radius: 4px;
-  color: var(--text-h);
+h1 { font-size: 2rem; }
+h2 { font-size: 1.375rem; }
+h3 { font-size: 1.05rem; }
+
+p { margin: 0; }
+
+button, input, select, textarea {
+  font: inherit;
+  color: inherit;
+}
+
+a {
+  color: var(--accent-strong);
 }
 
 code {
-  font-size: 15px;
-  line-height: 135%;
-  padding: 4px 8px;
-  background: var(--code-bg);
+  font-family: var(--mono);
+  background: var(--accent-soft);
+  border-radius: 4px;
+  padding: 0.1em 0.4em;
 }
