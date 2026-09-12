@@ -1,8 +1,23 @@
 // Shared fetch wrapper. Handles the four response shapes DEV11's acceptance
 // criteria call for: success, validation error (422, with missingFields),
-// unauthorised/expired-session (not applicable yet — no real auth, see
-// docs/decision-log.md D6a/Q2), and unexpected failure — consistently, so
-// every feature doesn't reinvent error handling.
+// unauthorised/expired-session (401/403 — there's no real auth session yet,
+// see docs/decision-log.md D6a/Q2, but the shape is handled now so real login
+// slots in without every caller changing), and unexpected failure —
+// consistently, so every feature doesn't reinvent error handling.
+
+// Base URL is read once from Vite's env (see README "Environment
+// configuration"). Defaults to the relative `/api` path, which `vite.config.ts`
+// proxies to the local backend in dev and which a production reverse proxy
+// can serve from the same origin — set VITE_API_BASE_URL only when the
+// frontend and backend are *not* on the same origin (e.g. a separately
+// deployed backend).
+const API_BASE_URL: string = (import.meta.env.VITE_API_BASE_URL ?? '/api').replace(/\/$/, '')
+
+/** Dispatched on `window` whenever a request comes back 401/403, so any part
+ * of the app (currently: SessionProvider) can react — e.g. by clearing a
+ * stale session — without the API client needing to know about session state
+ * itself. */
+export const UNAUTHORISED_EVENT = 'connectsphere:unauthorised'
 
 export class ApiClientError extends Error {
   readonly status: number
@@ -13,6 +28,12 @@ export class ApiClientError extends Error {
     this.name = 'ApiClientError'
     this.status = status
     this.missingFields = missingFields
+  }
+
+  /** True for a 401/403 — the request was rejected because the caller isn't
+   * (or is no longer) authorised, as opposed to a validation or server error. */
+  get isUnauthorised(): boolean {
+    return this.status === 401 || this.status === 403
   }
 }
 
@@ -37,7 +58,7 @@ async function request<T>(method: string, path: string, options: RequestOptions 
 
   let response: Response
   try {
-    response = await fetch(`/api${path}`, {
+    response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
@@ -58,6 +79,18 @@ async function request<T>(method: string, path: string, options: RequestOptions 
 
   if (!response.ok) {
     const body = (json ?? {}) as ApiErrorBody
+
+    if (response.status === 401 || response.status === 403) {
+      // Let anything listening (SessionProvider) clear a stale session, then
+      // surface a message consistent across every caller rather than each
+      // feature writing its own "please log in again" copy.
+      window.dispatchEvent(new CustomEvent(UNAUTHORISED_EVENT))
+      throw new ApiClientError(
+        body.message ?? 'Your session has expired. Please log in again.',
+        response.status,
+      )
+    }
+
     throw new ApiClientError(
       body.message ?? `Request failed (${response.status})`,
       response.status,

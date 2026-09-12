@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { apiClient, ApiClientError } from './apiClient'
+import { apiClient, ApiClientError, UNAUTHORISED_EVENT } from './apiClient'
 
 function mockFetchOnce(response: Partial<Response> & { jsonBody?: unknown }) {
   const { jsonBody, ...rest } = response
@@ -54,6 +54,35 @@ describe('apiClient', () => {
       status: 422,
       missingFields: ['eventName'],
     })
+  })
+
+  it('treats a 401 as an unauthorised/expired-session error and broadcasts it', async () => {
+    mockFetchOnce({
+      ok: false,
+      status: 401,
+      jsonBody: { message: 'Session expired' },
+    })
+    const listener = vi.fn()
+    window.addEventListener(UNAUTHORISED_EVENT, listener)
+
+    const error = await apiClient.get('/event-requests', 'Acme').catch((err: unknown) => err)
+
+    expect(error).toBeInstanceOf(ApiClientError)
+    expect((error as ApiClientError).isUnauthorised).toBe(true)
+    expect(listener).toHaveBeenCalledTimes(1)
+    window.removeEventListener(UNAUTHORISED_EVENT, listener)
+  })
+
+  it('treats a 403 the same way as a 401', async () => {
+    mockFetchOnce({ ok: false, status: 403 })
+    const error = await apiClient.get('/event-requests', 'Acme').catch((err: unknown) => err)
+    expect((error as ApiClientError).isUnauthorised).toBe(true)
+  })
+
+  it('does not treat a validation (422) or server (500) error as unauthorised', async () => {
+    mockFetchOnce({ ok: false, status: 500 })
+    const error = await apiClient.get('/event-requests', 'Acme').catch((err: unknown) => err)
+    expect((error as ApiClientError).isUnauthorised).toBe(false)
   })
 
   it('throws a distinguishable ApiClientError when the network request itself fails', async () => {
