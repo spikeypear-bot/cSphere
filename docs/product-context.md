@@ -138,7 +138,7 @@ The full, current set of 114 stories (with IDs, roles, epics, scope calls, prior
 **Dependencies:** none technically, but almost every user-facing story needs it.
 **Priority / Points / Sprint:** High / 8 / Sprint 1.
 **Source:** Grading rubric — "Working software", "Code quality".
-**Status:** **OPEN QUESTION** — the backlog currently marks this **In Progress**, but `frontend/src/App.tsx` in the repository is still the unmodified Vite starter template as of 2026-09-12. Confirm with the team whether this work exists elsewhere (another branch, uncommitted locally) before assuming any of it is done; see `docs/decision-log.md`.
+**Status:** VERIFIED as of 2026-09-12 (later same day) — the app shell now exists: central routing with role gating, shared `AppShell` layout, authentication-aware navigation (signed-out/signed-in and role-appropriate, UI-only per the AC's explicit note — backend remains responsible for enforcement), a shared `apiClient` with base-URL/env config and consistent success/validation/unauthorised/unexpected-failure handling, an agreed component/feature/lib folder structure, responsive layouts, and a documented `frontend/README.md`. Confirm the backlog's status is updated to match.
 
 ---
 
@@ -169,6 +169,6 @@ Per Week 4 material: derive test cases from each story's acceptance criteria usi
 - **OPEN QUESTION**: planned velocity (77.5 points/sprint, from `Estimation!E8`) is roughly 5× the Week 3 slide deck's own worked example (velocity 15) for a comparable team — confirm this is realistic before treating the 4-sprint plan as fixed.
 - **OPEN QUESTION**: several backlog rows show `Out of Scope` with a stale Priority/Points/Sprint value left over (VS06, VS09, VS13, first AT05, AT06, AU01A/B/C, AU03, AU05) — harmless to the live formulas but worth a cleanup pass.
 - **OPEN QUESTION**: `AT05` and `AT08` each appear as two different rows sharing one ID — resolve before these IDs are used in test-case or C4-diagram traceability.
-- **OPEN QUESTION**: `DEV11` (frontend app shell) is marked "In Progress" in the backlog but the repository's frontend is still the unmodified Vite template — reconcile before Sprint 1 review.
+- **RESOLVED (2026-09-12)**: `DEV11` (frontend app shell) is now implemented in the repository (see §5 DEV11 above and `frontend/README.md`) — update the backlog's status to match before Sprint 1 review.
 - **Technical debt (acknowledged in `SCHEMA.md` itself)**: no DB-level venue-booking overlap protection yet (frontend-only prevention is not sufficient per DEV06/the briefing); no audit-trail table beyond `created_by`; no equipment check-in/return flag; `event_requests` nullable start/end vs. `events` non-null start/end needs an explicit approval-path rule.
 - **Assumption to confirm**: no numeric performance/scalability targets were given by the customer — any SLA-like number used in tests or NFR docs must be labelled PROPOSED, not customer-verified.
