@@ -1,0 +1,221 @@
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.1rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid transparent;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
+}
+
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.button--primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.button--secondary {
+  background: transparent;
+  border-color: var(--hairline-strong);
+  color: var(--ink);
+}
+
+.button--secondary:hover:not(:disabled) {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--ink-soft);
+  padding-inline: 0.4rem;
+}
+
+.button--ghost:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.card {
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-panel);
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.field label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.field .field-hint {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+.field .field-error {
+  font-size: 0.8rem;
+  color: var(--danger);
+  font-weight: 600;
+}
+
+.field input,
+.field textarea,
+.field select {
+  background: var(--paper);
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  padding: 0.6rem 0.7rem;
+  color: var(--ink);
+}
+
+.field input:focus-visible,
+.field textarea:focus-visible,
+.field select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+
+.field--invalid input,
+.field--invalid textarea {
+  border-color: var(--danger);
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 5rem;
+  font-family: inherit;
+}
+
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.chip {
+  border: 1px solid var(--hairline-strong);
+  background: var(--paper);
+  color: var(--ink-soft);
+  border-radius: 999px;
+  padding: 0.4rem 0.85rem;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.status-badge--draft {
+  background: var(--hairline);
+  color: var(--ink-soft);
+}
+
+.status-badge--pending {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.status-badge--approved {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.status-badge--rejected,
+.status-badge--cancelled {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.step-indicator {
+  display: flex;
+  gap: 0.5rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.step-indicator li {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-block-start: 0.6rem;
+  border-top: 3px solid var(--hairline);
+  font-size: 0.8rem;
+  color: var(--ink-faint);
+  font-weight: 600;
+}
+
+.step-indicator li[data-state='current'] {
+  border-top-color: var(--accent);
+  color: var(--ink);
+}
+
+.step-indicator li[data-state='done'] {
+  border-top-color: var(--success);
+  color: var(--ink-soft);
+}
+
+.autosave-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.82rem;
+  color: var(--ink-faint);
+}
+
+.autosave-indicator[data-state='saving'] {
+  color: var(--ink-soft);
+}
+
+.autosave-indicator[data-state='saved'] {
+  color: var(--success);
+}
+
+.autosave-indicator[data-state='error'] {
+  color: var(--danger);
+}
+
+.autosave-indicator .dot {
+  width: 0.4rem;
+  height: 0.4rem;
+  border-radius: 999px;
+  background: currentColor;
+}
