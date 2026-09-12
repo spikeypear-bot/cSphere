@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { UNAUTHORISED_EVENT } from './apiClient'
 import {
   SessionContext,
   SESSION_STORAGE_KEY,
@@ -22,6 +23,17 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       // works for the current page load, it just won't survive a refresh.
     }
   }, [session])
+
+  useEffect(() => {
+    // Any 401/403 from apiClient means this "session" is no longer valid —
+    // clear it so route guards (App.tsx's useRoleGate) bounce the user back
+    // to the role selector, the same place an actual expired login would.
+    function handleUnauthorised() {
+      setSession({ role: null, organisation: null })
+    }
+    window.addEventListener(UNAUTHORISED_EVENT, handleUnauthorised)
+    return () => window.removeEventListener(UNAUTHORISED_EVENT, handleUnauthorised)
+  }, [])
 
   const value = useMemo<SessionContextValue>(
     () => ({
