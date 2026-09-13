@@ -1,3 +1,7 @@
+## Project context for AI tools
+
+Read **`AI_Context.md`** at the repository root before making any change with an AI coding assistant (Claude, Copilot, Cursor, etc.) — it's the single source of truth for scope, roles, architecture, conventions, and current status. `CLAUDE.md` is only a pointer to it, kept because Claude Code specifically looks for that exact filename.
+
 ## SetUp
 
 1) Ensure Docker desktop is on.
@@ -17,12 +21,31 @@ note: building of springboot app may take quite long during the first build, sub
 
 note: all db files are to be written on the backend/src/main/resources/db/migration in the form of VERSION__description.sql, for example 1__init-table.sql 
 
+### Tests
 
+Frontend (Vitest + React Testing Library):
+```
+npm run test          # from frontend/, or npm --prefix frontend run test from root
+npm run test:watch    # watch mode
+```
 
+Backend (JUnit 5 + Mockito, via the Maven wrapper — needs a JDK; if you don't
+have Java locally, run it inside a container against the `db` service, e.g.:
+`docker compose up -d db`, then from `backend/`:
+`docker run --rm -v "$PWD:/build" -w /build --network <project>_default -e SPRING_PROFILES_ACTIVE=dev -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/csphere -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=root eclipse-temurin:25-jdk ./mvnw test`
+(On Windows, if `mvnw` fails inside the container with `/bin/sh^M: bad interpreter`,
+its line endings were re-saved as CRLF by your editor/checkout — run
+`sed -i 's/\r$//' backend/mvnw` and it'll work again; `.gitattributes` at the
+repo root should prevent this going forward.)
+```
+./mvnw test            # from backend/, if you have JDK 25 locally
+```
 
 ## Development
 ### Frontend
 1) Ensure the app is created in routers when going throught the different views
+2) Shared UI primitives live in `frontend/src/components/ui/`; per-role screens live under `frontend/src/features/<role>/`
+3) There is no real login yet — see `docs/decision-log.md` D6a: the main page is a "Login as [Role]" selector (`frontend/src/lib/session.tsx`)
 ### Backend
 1)  Addition of dependencies for the project through pom.xml, configs are in applications .properties for the backend
 2) Unit tests to be created for each features/functions when the time is right
