@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
@@ -16,6 +16,16 @@ export function OrganiserHomePage() {
   const { organisation } = useSession()
   const [requests, setRequests] = useState<EventRequestDto[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const location = useLocation()
+  const navigate = useNavigate()
+  // EO02: show the "submitted successfully" confirmation exactly once, then
+  // drop it from history state so refreshing or navigating back here later
+  // doesn't re-show it.
+  const [justSubmitted] = useState(() => Boolean((location.state as { justSubmitted?: boolean } | null)?.justSubmitted))
+  useEffect(() => {
+    if (justSubmitted) navigate('.', { replace: true, state: null })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   useEffect(() => {
     if (!organisation) return
@@ -43,6 +53,12 @@ export function OrganiserHomePage() {
         </div>
         <NewRequestButton />
       </div>
+
+      {justSubmitted ? (
+        <p className="organiser-home__confirmation" role="status">
+          Your event request has been submitted successfully.
+        </p>
+      ) : null}
 
       {error ? <p role="alert">{error}</p> : null}
 

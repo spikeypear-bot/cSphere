@@ -16,6 +16,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
@@ -139,7 +140,20 @@ class EventRequestServiceTest {
                 .isInstanceOf(IncompleteEventRequestException.class)
                 .satisfies(ex -> assertThat(((IncompleteEventRequestException) ex).getMissingFields())
                         .contains("eventName", "purpose", "startDatetime", "endDatetime",
-                                "expectedAttendance", "venueRequirements"));
+                                "expectedAttendance", "venueRequirements", "accessibilityNeeds"));
+    }
+
+    @Test
+    void submissionIsBlockedWhenAccessibilityNeedsWasNeverAnswered() {
+        UUID id = UUID.randomUUID();
+        EventRequest existing = completeDraftEntity(id, ORG);
+        existing.setAccessibilityNeeds(List.of());
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+
+        assertThatThrownBy(() -> service.submit(ORG, id))
+                .isInstanceOf(IncompleteEventRequestException.class)
+                .satisfies(ex -> assertThat(((IncompleteEventRequestException) ex).getMissingFields())
+                        .containsExactly("accessibilityNeeds"));
     }
 
     @Test
@@ -195,6 +209,7 @@ class EventRequestServiceTest {
         entity.setEndDatetime(java.time.OffsetDateTime.now().plusDays(30).plusHours(2));
         entity.setExpectedAttendance(150);
         entity.setVenueRequirements("Theatre-style seating for 150");
+        entity.setAccessibilityNeeds(List.of(AccessibilityFeature.none));
         return entity;
     }
 }

@@ -56,13 +56,42 @@ export function EventRequestWizardPage() {
     setStepIndex(nextIndex)
   }
 
+  // Turns the flat missingFields list (from a blocked submit) into an inline
+  // error message on the specific field it belongs to, using the shared
+  // field component's built-in error display — previously missingFields was
+  // only ever shown as a list on the Review step, never inline on the field
+  // itself, so this closes that gap (DEV11 AC17 / DEV11-TC5).
+  function fieldError(field: string): string | undefined {
+    return missingFields.includes(field) ? `${REQUIRED_FIELD_LABELS[field]} is required` : undefined
+  }
+
+  // "No accessibility requirements needed" is a real, exclusive answer — it
+  // doesn't make sense selected alongside an actual accommodation, in either
+  // direction of the toggle.
+  function reconcileAccessibilitySelection(selected: AccessibilityFeature[]): AccessibilityFeature[] {
+    const justAddedNone = selected.includes('none') && !fields.accessibilityNeeds.includes('none')
+    if (justAddedNone) return ['none']
+    return selected.filter((option) => option !== 'none') as AccessibilityFeature[]
+  }
+
+  async function handleExit() {
+    // "Exit" still saves first — leaving the wizard must never silently
+    // discard what was typed (the previous "Save & exit" button looked like
+    // it did this but only navigated away, without calling save()).
+    await save()
+    navigate('/organiser')
+  }
+
   async function handleSubmit() {
     await save()
     setSubmitting(true)
     try {
       const result = await submit()
       if (result.ok) {
-        navigate('/organiser')
+        // EO02: "is shown that the request has been submitted successfully" —
+        // a plain redirect back to the list wasn't itself a confirmation, so
+        // the list picks this flag up and shows a banner once.
+        navigate('/organiser', { state: { justSubmitted: true } })
       } else {
         setMissingFields(result.missingFields)
       }
@@ -89,6 +118,7 @@ export function EventRequestWizardPage() {
               value={fields.eventName ?? ''}
               onChange={(value) => setFields({ eventName: value || null })}
               placeholder="Q1 Partner Town Hall"
+              error={fieldError('eventName')}
             />
             <TextField
               id="purpose"
@@ -97,6 +127,7 @@ export function EventRequestWizardPage() {
               onChange={(value) => setFields({ purpose: value || null })}
               placeholder="Why is this event happening?"
               multiline
+              error={fieldError('purpose')}
             />
             <TextField
               id="description"
@@ -116,12 +147,14 @@ export function EventRequestWizardPage() {
               label="Start date & time"
               value={fields.startDatetime}
               onChange={(value) => setFields({ startDatetime: value })}
+              error={fieldError('startDatetime')}
             />
             <DateTimeField
               id="endDatetime"
               label="End date & time"
               value={fields.endDatetime}
               onChange={(value) => setFields({ endDatetime: value })}
+              error={fieldError('endDatetime')}
             />
             <NumberField
               id="expectedAttendance"
@@ -129,6 +162,7 @@ export function EventRequestWizardPage() {
               min={1}
               value={fields.expectedAttendance}
               onChange={(value) => setFields({ expectedAttendance: value })}
+              error={fieldError('expectedAttendance')}
             />
           </>
         )}
@@ -142,13 +176,15 @@ export function EventRequestWizardPage() {
               onChange={(value) => setFields({ venueRequirements: value || null })}
               placeholder="Theatre-style seating for 150, one breakout room…"
               multiline
+              error={fieldError('venueRequirements')}
             />
             <ChipGroup
               label="Accessibility needs"
               options={ACCESSIBILITY_OPTIONS}
               labels={ACCESSIBILITY_LABELS}
               selected={fields.accessibilityNeeds}
-              onChange={(selected) => setFields({ accessibilityNeeds: selected })}
+              onChange={(selected) => setFields({ accessibilityNeeds: reconcileAccessibilitySelection(selected) })}
+              error={fieldError('accessibilityNeeds')}
             />
           </>
         )}
@@ -182,12 +218,20 @@ export function EventRequestWizardPage() {
       </Card>
 
       <div className="wizard__nav">
-        <Button
-          variant="secondary"
-          onClick={() => (stepIndex === 0 ? navigate('/organiser') : goToStep(stepIndex - 1))}
-        >
-          {stepIndex === 0 ? 'Save & exit' : 'Back'}
-        </Button>
+        {stepIndex === 0 ? (
+          <>
+            <Button variant="secondary" onClick={() => save()}>
+              Save as draft
+            </Button>
+            <Button variant="secondary" onClick={handleExit}>
+              Exit
+            </Button>
+          </>
+        ) : (
+          <Button variant="secondary" onClick={() => goToStep(stepIndex - 1)}>
+            Back
+          </Button>
+        )}
         {stepIndex < STEPS.length - 1 ? (
           <Button onClick={() => goToStep(stepIndex + 1)}>Next</Button>
         ) : (
@@ -245,6 +289,17 @@ function ReviewStep({
           onEdit={() => onEditStep(1)}
         />
         <SummaryRow label="Venue requirements" value={fields.venueRequirements} onEdit={() => onEditStep(2)} />
+        <SummaryRow
+          label="Accessibility needs"
+          value={fields.accessibilityNeeds.length > 0 ? fields.accessibilityNeeds.map((need) => ACCESSIBILITY_LABELS[need]).join(', ') : null}
+          onEdit={() => onEditStep(2)}
+        />
+        <SummaryRow label="Equipment requirements" value={fields.equipmentRequirements} onEdit={() => onEditStep(3)} />
+        <SummaryRow
+          label="Registration needs"
+          value={fields.registrationNeeds ? 'Attendees need to register' : 'No registration required'}
+          onEdit={() => onEditStep(3)}
+        />
       </dl>
     </div>
   )

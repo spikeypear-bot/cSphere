@@ -156,4 +156,85 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(within(missing).getByText('Event name')).toBeInTheDocument()
     expect(within(missing).getByText('Purpose')).toBeInTheDocument()
   })
+
+  it('shows an inline error on the accessibility field when the backend reports it missing', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/event-requests' && init?.method === 'POST') {
+        return jsonResponse(201, {
+          requestId: DRAFT_ID,
+          status: 'draft',
+          accessibilityNeeds: [],
+          organisation: 'Acme Conferences',
+          createdAt: new Date().toISOString(),
+        })
+      }
+      if (url === `/api/event-requests/${DRAFT_ID}` && init?.method === 'PUT') {
+        return jsonResponse(200, {
+          requestId: DRAFT_ID,
+          status: 'draft',
+          accessibilityNeeds: [],
+          organisation: 'Acme Conferences',
+          createdAt: new Date().toISOString(),
+        })
+      }
+      if (url === `/api/event-requests/${DRAFT_ID}/submit`) {
+        return jsonResponse(422, {
+          message: 'Event request is missing required fields: accessibilityNeeds',
+          missingFields: ['accessibilityNeeds'],
+        })
+      }
+      throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const user = userEvent.setup()
+    renderWizard()
+
+    for (let i = 0; i < 4; i += 1) {
+      await user.click(await screen.findByRole('button', { name: 'Next' }))
+    }
+    await user.click(await screen.findByRole('button', { name: /submit for review/i }))
+
+    const missing = await screen.findByRole('alert')
+    expect(within(missing).getByText('Accessibility requirements')).toBeInTheDocument()
+
+    // Jump back to the step that owns the missing field via its "Edit" button.
+    const accessibilityRow = screen.getByText('Accessibility needs').closest('.wizard__summary-row')
+    await user.click(within(accessibilityRow as HTMLElement).getByRole('button', { name: 'Edit' }))
+
+    expect(await screen.findByText('Accessibility requirements is required')).toBeInTheDocument()
+  })
+
+  it('treats "no accessibility requirements needed" as exclusive with a real accommodation', async () => {
+    const fetchMock = vi.fn(async () =>
+      jsonResponse(201, {
+        requestId: DRAFT_ID,
+        status: 'draft',
+        accessibilityNeeds: [],
+        organisation: 'Acme Conferences',
+        createdAt: new Date().toISOString(),
+      }),
+    )
+    vi.stubGlobal('fetch', fetchMock)
+
+    const user = userEvent.setup()
+    renderWizard()
+    await user.click(await screen.findByRole('button', { name: 'Next' }))
+    await user.click(await screen.findByRole('button', { name: 'Next' }))
+
+    const wheelchair = await screen.findByRole('button', { name: 'Wheelchair support' })
+    const none = screen.getByRole('button', { name: 'No accessibility requirements needed' })
+
+    await user.click(wheelchair)
+    expect(wheelchair).toHaveAttribute('aria-pressed', 'true')
+
+    await user.click(none)
+    expect(none).toHaveAttribute('aria-pressed', 'true')
+    expect(wheelchair).toHaveAttribute('aria-pressed', 'false')
+
+    await user.click(wheelchair)
+    expect(wheelchair).toHaveAttribute('aria-pressed', 'true')
+    expect(none).toHaveAttribute('aria-pressed', 'false')
+  })
 })

@@ -17,5 +17,9 @@ public enum AccessibilityFeature {
     step_free_access,
     wide_doorways,
     elevators,
-    wheelchair_support
+    wheelchair_support,
+    /** Means "asked, and no accessibility accommodation is needed" — not the
+     * absence of an answer. See V5 migration and EventRequestService's
+     * required-field check for why this exists (EO02). */
+    none
 }
