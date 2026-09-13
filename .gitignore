@@ -34,3 +34,16 @@ logs/
 ### OS ###
 .DS_Store
 Thumbs.db
+
+### Course materials (never publish to a public/shared repo) ###
+# Lecture slides, briefs, and other SMU-provided course content are the
+# university's/lecturer's copyrighted material, not ours to redistribute —
+# keep all of it out of version control regardless of where it lives in the
+# tree. Matched by folder name (not by file extension) so legitimate project
+# deliverables like exported diagrams or design docs elsewhere in the repo
+# aren't silently swallowed too.
+Materials/
+materials/
+**/course-materials/
+**/CourseMaterials/
+**/Course Materials/
