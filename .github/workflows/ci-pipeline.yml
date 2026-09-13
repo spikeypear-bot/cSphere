@@ -1,0 +1,65 @@
+name: cSphere CI pipeline
+
+on:
+  push:
+    branches:
+      - 'main'
+  pull_request:
+    branches:
+      - 'main'
+
+jobs:
+  frontend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Clean install
+        run: npm ci
+      - name: Run test
+        run: npm test
+      - name: Build
+        run: npm run build
+
+  backend-build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: csphere
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d csphere"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/csphere
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Build and test with maven
+        run: ./mvnw -B -ntp clean verify

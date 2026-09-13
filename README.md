@@ -28,16 +28,32 @@ Frontend (Vitest + React Testing Library):
 npm run test          # from frontend/, or npm --prefix frontend run test from root
 npm run test:watch    # watch mode
 ```
+docker container has been set up specifically to run jUNIT/mockito tests.
 
-Backend (JUnit 5 + Mockito, via the Maven wrapper — needs a JDK; if you don't
-have Java locally, run it inside a container against the `db` service, e.g.:
-`docker compose up -d db`, then from `backend/`:
-`docker run --rm -v "$PWD:/build" -w /build --network <project>_default -e SPRING_PROFILES_ACTIVE=dev -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/csphere -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=root eclipse-temurin:25-jdk ./mvnw test`
-(On Windows, if `mvnw` fails inside the container with `/bin/sh^M: bad interpreter`,
-its line endings were re-saved as CRLF by your editor/checkout — run
-`sed -i 's/\r$//' backend/mvnw` and it'll work again; `.gitattributes` at the
-repo root should prevent this going forward.)
-```
+Mockito allows us to test layers with mock dependent layers, like servicetest class can have a @Mock repository field, so that I can just test the service layer by itself. Junit makes use of the AssertJ and @Test(marking a method as test for junit) to check the different testcases and assert a response on the service, like could be asserting errors or asserting the values of the service function. 
+
+Controller makes use of @WebMvcTest + @Mockitobean (register the mockito fake in spring container) tests for container layer, makes use of mockmvc to act as client and mockito bean for the mock service
+
+Springboot test test for the application with the DB connection mainly to test if it can be compiled, note that lazy initialisation is set to false so that every thing is loaded and test. 
+
+commands to run :
+
+run all tests:
+1. docker compose run --rm backend-test 
+
+run a single test:
+2. docker compose run --rm test -Dtest=EventRequestServiceTest
+
+run a single method:
+3. docker compose run --rm backend-test test  -Dtest='EventRequestServiceTest#methodName'
+
+runing test without DB:
+4. docker compose run --rm --no-deps backend-test test -Dtest=EventRequestServiceTest
+
+clean+all tests:
+5. docker compose run --rm backend-test clean test
+
+
 ./mvnw test            # from backend/, if you have JDK 25 locally
 ```
 
@@ -51,4 +67,3 @@ repo root should prevent this going forward.)
 2) Unit tests to be created for each features/functions when the time is right
 ### DB
 1) All db tables to exist and created via migration files, do not auto create in the springboot, keep auto-ddl to validate.
-
