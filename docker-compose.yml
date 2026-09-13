@@ -37,5 +37,27 @@ services:
       retries: 12
       start_period: 30s
 
+  # Runs the backend test suite with a throwaway JDK container, so no local Java
+  # is needed. backend/ is bind-mounted (no image build), and Maven downloads are
+  # cached in m2cache. The profile keeps it out of a plain `docker compose up`.
+  # Usage: docker compose run --rm backend-test [maven args, default: test]
+  backend-test:
+    image: eclipse-temurin:25-jdk
+    profiles: ["test"]
+    working_dir: /build
+    volumes:
+      - ./backend:/build
+      - m2cache:/root/.m2
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/csphere
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+    entrypoint: ["./mvnw", "-B", "-ntp"]
+    command: ["test"]
+
 volumes:
   pgdata:
+  m2cache:
