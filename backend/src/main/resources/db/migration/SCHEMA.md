@@ -1,6 +1,6 @@
 # ConnectSphere — Schema Dictionary
 
-Reference for `V2__init_tables.sql`, updated for `V3__event_request_draft_support.sql`.
+Reference for `V2__init_tables.sql`, updated through `V5__venue_catalogue_logistics.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -118,12 +118,39 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 |---|---|---|---|---|
 | `venue_id` | `UUID` | no | PK | Identifier |
 | `venue_address` | `TEXT` | no | | Full address |
-| `venue_layout` | `TEXT` | yes | | TODO — free-text layout notes, or a reference to a plan? |
-| `venue_capacity` | `INTEGER` | yes | | Maximum occupancy |
+| `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V5) |
+| `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V5) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
-| `operating_information` | `TEXT` | no | | Opening hours / operating constraints |
+| `operating_information` | `TEXT` | no | | Operating days/hours and constraints; must contain non-whitespace text (V5) |
 | `venue_facilities` | `facilities[]` | no | | Facilities present. Defaults to `{}` |
 | `additional_information` | `TEXT` | yes | | Free-text notes |
+
+**VS06A scope and migration:** V5 renames `venue_layout` to `supported_layouts`
+and preserves each legacy text value verbatim as one array element. It does not
+guess separators or classify old prose. Existing venues with missing/nonpositive
+capacity, capacity above 50,000, missing/blank layout or blank operating information must be corrected
+before V5 can run; the migration raises an error instead of inventing values.
+
+Constraints: `chk_venue_capacity_range`, `chk_venue_layouts_nonempty`,
+`chk_venue_layout_values` and `chk_venue_operating_information_nonblank`.
+The immutable SQL helper `venue_layouts_have_values(text[])` rejects null/blank
+array elements. The API DTOs use the Java `VenueLayout` enum: `classroom`,
+`theatre`, `boardroom`, `banquet`, `exhibition`. The entity keeps `List<String>`
+and the database keeps `text[]`; this migration does not introduce a PostgreSQL
+layout enum. Legacy prose values need classification before enum-based DTO reads.
+
+The planned creation form starts capacity at 50, editable by Venue Staff. This is
+a frontend initial value, not a database default. Backend input validation (in
+`VenueService.createVenue`) rejects omitted/out-of-range capacity, missing/duplicate layouts,
+blank address/operating information and addresses over 500 characters; addresses
+are trimmed, not checked for real-world existence. These DTO/service rules are
+distinct from the database constraints documented above.
+
+Operating information remains human-readable text (for example, "Mon-Fri,
+09:00-18:00; closed on public holidays"). These constraints ensure it is present,
+not that the schedule can be calculated automatically. Structured hours, booking
+availability and accessibility/facility entry are separate stories. Venue address
+remains required; accessibility and facility arrays retain their empty defaults.
 
 **Indexes**
 
@@ -321,7 +348,7 @@ delete once real entities exist.
 - **Free-text** fields are `TEXT`; bounded identifiers are `VARCHAR(n)`.
 - **`reject_reason`** is nullable everywhere it appears — only populated on rejection.
 - **Migrations are immutable once applied.** Flyway stores a checksum per file; editing an
-  already-applied migration makes the next boot fail. Add `V3__*.sql` instead, or reset dev
+  already-applied migration makes the next boot fail. Add the next unused `V{n}__*.sql` instead, or reset dev
   with `docker compose down -v`.
 
 ## 5. Known gaps / decisions outstanding
