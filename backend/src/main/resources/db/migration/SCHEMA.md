@@ -1,6 +1,6 @@
 # ConnectSphere — Schema Dictionary
 
-Reference for `V2__init_tables.sql`, updated through `V5__venue_catalogue_logistics.sql`.
+Reference for `V2__init_tables.sql`, updated through `V6__venue_catalogue_logistics.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -69,7 +69,7 @@ painful. Settle these before there is production data.
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
 | `venue_booking_status` | `pending`, `confirmed`, `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
-| `accessibilities` | `accessible_parking`, `drop_off_zone`, `public_transport`, `step_free_access`, `wide_doorways`, `elevators`, `wheelchair_support` | `venues.venue_accessibilities`, `events.accessibility_needs`, `event_requests.accessibility_needs` |
+| `accessibilities` | `accessible_parking`, `drop_off_zone`, `public_transport`, `step_free_access`, `wide_doorways`, `elevators`, `wheelchair_support`, `none` (added V5 — see EO02) | `venues.venue_accessibilities`, `events.accessibility_needs`, `event_requests.accessibility_needs` |
 | `facilities` | `audio_visual_equipment`, `air_conditioning`, `breakout_spaces`, `projection`, `stage`, `dining_area`, `barbeque_pit` | `venues.venue_facilities` |
 
 ### Role meanings
@@ -118,18 +118,18 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 |---|---|---|---|---|
 | `venue_id` | `UUID` | no | PK | Identifier |
 | `venue_address` | `TEXT` | no | | Full address |
-| `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V5) |
-| `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V5) |
+| `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
+| `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
-| `operating_information` | `TEXT` | no | | Operating days/hours and constraints; must contain non-whitespace text (V5) |
+| `operating_information` | `TEXT` | no | | Operating days/hours and constraints; must contain non-whitespace text (V6) |
 | `venue_facilities` | `facilities[]` | no | | Facilities present. Defaults to `{}` |
 | `additional_information` | `TEXT` | yes | | Free-text notes |
 
-**VS06A scope and migration:** V5 renames `venue_layout` to `supported_layouts`
+**VS06A scope and migration:** V6 renames `venue_layout` to `supported_layouts`
 and preserves each legacy text value verbatim as one array element. It does not
 guess separators or classify old prose. Existing venues with missing/nonpositive
 capacity, capacity above 50,000, missing/blank layout or blank operating information must be corrected
-before V5 can run; the migration raises an error instead of inventing values.
+before V6 can run; the migration raises an error instead of inventing values.
 
 Constraints: `chk_venue_capacity_range`, `chk_venue_layouts_nonempty`,
 `chk_venue_layout_values` and `chk_venue_operating_information_nonblank`.

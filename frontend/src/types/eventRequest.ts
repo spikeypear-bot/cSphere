@@ -10,6 +10,11 @@ export type AccessibilityFeature =
   | 'wide_doorways'
   | 'elevators'
   | 'wheelchair_support'
+  // Means "asked, and none are needed" — not the absence of an answer. Lets
+  // EO02's "is required to provide accessibility requirements before
+  // submitting" be enforced honestly, without forcing an unrelated pick when
+  // an event genuinely has no accessibility needs.
+  | 'none'
 
 export const ACCESSIBILITY_LABELS: Record<AccessibilityFeature, string> = {
   accessible_parking: 'Accessible parking',
@@ -19,6 +24,7 @@ export const ACCESSIBILITY_LABELS: Record<AccessibilityFeature, string> = {
   wide_doorways: 'Wide doorways',
   elevators: 'Elevators',
   wheelchair_support: 'Wheelchair support',
+  none: 'No accessibility requirements needed',
 }
 
 export type EventRequestStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'cancelled'
@@ -66,4 +72,5 @@ export const REQUIRED_FIELD_LABELS: Record<string, string> = {
   endDatetime: 'End date & time',
   expectedAttendance: 'Expected attendance',
   venueRequirements: 'Venue requirements',
+  accessibilityNeeds: 'Accessibility requirements',
 }

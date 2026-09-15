@@ -1,0 +1,14 @@
+-- EO02's "is required to provide accessibility requirements before
+-- submitting the request" (Sprint Backlog 1) can't be satisfied honestly by
+-- forcing every Event Organiser to tick a real accommodation when a given
+-- event genuinely needs none — there was no way to say that explicitly.
+-- Adding `none` to the shared `accessibilities` enum gives the frontend chip
+-- group an option that means "no accessibility requirements needed", so
+-- "provide accessibility requirements" can be enforced as "answer the
+-- question" rather than "pick something arbitrary".
+--
+-- ALTER TYPE ... ADD VALUE cannot run in the same transaction that then uses
+-- the new value (Postgres restriction, still true as of PG18) — this
+-- migration only adds the value; EventRequestService is the first place that
+-- reads/writes it, in a later request.
+ALTER TYPE accessibilities ADD VALUE IF NOT EXISTS 'none';

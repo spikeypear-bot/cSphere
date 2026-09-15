@@ -6,6 +6,7 @@ interface ChipGroupProps<T extends string> {
   labels: Record<T, string>
   selected: T[]
   onChange: (selected: T[]) => void
+  error?: string
 }
 
 export function ChipGroup<T extends string>({
@@ -14,6 +15,7 @@ export function ChipGroup<T extends string>({
   labels,
   selected,
   onChange,
+  error,
 }: ChipGroupProps<T>) {
   function toggle(option: T) {
     onChange(
@@ -22,7 +24,7 @@ export function ChipGroup<T extends string>({
   }
 
   return (
-    <div className="field">
+    <div className={['field', error ? 'field--invalid' : null].filter(Boolean).join(' ')}>
       <label>{label}</label>
       <div className="chip-group" role="group" aria-label={label}>
         {options.map((option) => (
@@ -37,6 +39,11 @@ export function ChipGroup<T extends string>({
           </button>
         ))}
       </div>
+      {error ? (
+        <span className="field-error" role="alert">
+          {error}
+        </span>
+      ) : null}
     </div>
   )
 }

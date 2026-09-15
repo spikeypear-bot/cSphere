@@ -136,6 +136,9 @@ public class EventRequestService {
         if (isBlank(entity.getVenueRequirements())) {
             missing.add("venueRequirements");
         }
+        if (entity.getAccessibilityNeeds() == null || entity.getAccessibilityNeeds().isEmpty()) {
+            missing.add("accessibilityNeeds");
+        }
         return missing;
     }
 

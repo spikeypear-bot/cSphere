@@ -107,6 +107,12 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Source:** User instructions in this task; `VenueController`, `VenueCreatePage`, `VenueCataloguePage`, `VenuePages.test.tsx`; `docs/venue-api.md`.
 - **Known limits:** Accessibility/facilities remain outside the implemented slice and use existing empty database defaults. Venue API errors currently collect field messages in `message` rather than populate `missingFields`. Frontend role gates do not secure the API: Q2 remains open and no backend Venue Staff authorization has been implemented. The later combined checklist is not fully satisfied, and the Venue Staff home still contains outdated skeleton copy.
 
+### D15 — Merging `main` (venue catalogue + CI) into `feature/eo1-eo2-eo15-event_request`: `V5` renamed to `V6`
+- **Status:** Decided and completed, 2026-09-15.
+- **Decision:** Both branches independently claimed migration version 5 — this branch's `V5__accessibility_none_option.sql` (already applied on shared/tested databases, confirmed via `flyway_schema_history` on 2026-09-13) and `main`'s `V5__venue_catalogue_logistics.sql` (D13, applied only to that branch author's local, unshared database). D13 already establishes that an unshared, unapplied-elsewhere migration may be renumbered; `main`'s file was renamed to `V6__venue_catalogue_logistics.sql` on merge rather than renumbering the already-shared one. SCHEMA.md's internal `V5` references for venue capacity/layouts/operating information were updated to `V6` to match; D13's own text is left as the historical record of what the file was called when that work happened, per this log's convention for dated entries (see D2's note by example).
+- **Consequences:** Anyone who already pulled `main`'s `V5__venue_catalogue_logistics.sql` onto a local database must rename their local file to `V6__...` (or reset via `docker compose down -v`) before pulling this merge, or Flyway will report a checksum/version mismatch.
+- **Source:** Merge of `origin/main` into this branch, this session; `flyway_schema_history` inspection confirming which `V5` was actually shared.
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
