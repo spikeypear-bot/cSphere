@@ -86,6 +86,33 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Consequences:** Everyone should treat `AI_Context.md` as the single source of truth and edit only that file — `CLAUDE.md` is intentionally kept minimal so it can never drift out of sync with it. Every cross-reference in `docs/` and inline code comments that used to say "see `CLAUDE.md`" was updated to say "see `AI_Context.md`" as part of this change, except historical, dated entries elsewhere in this log (e.g. D8, D9) which describe the state of the repository as it was at the time and are left unedited on purpose.
 - **Source:** Direct instruction from Jillian, this session.
 
+### D12 — Venue Staff catalogue scope and data model
+- **Status:** Decided for this implementation (user-agreed and implemented, 2026-09-13/14); not a change to the team's live backlog.
+- **Decision:** Build VS06A venue entry plus catalogue list/detail backend reads. Store required address, one overall capacity, supported layouts, required operating information and optional additional information. There is no booking request, approval state or per-layout capacity in this slice. Address and the application-generated UUID identify the venue; no venue-name column is added.
+- **Capacity:** One integer from 1 to 50,000 inclusive, shared by all selected layouts. The form starts at 50 and Venue Staff can change it. This is a frontend initial value, not a database default.
+- **Layouts:** API DTOs use `VenueLayout` with `classroom`, `theatre`, `boardroom`, `banquet`, `exhibition`; the entity uses `List<String>` and the database uses `supported_layouts text[]`. These are the implemented choices accepted in this task, not evidence of independent team/customer sign-off on an exhaustive vocabulary. At least one selection is required; duplicate/null selections are rejected.
+- **Validation:** Address is trimmed, required and limited to 500 characters by the service; it is not checked for real-world existence. Operating information is nonblank free text describing days/hours and closures. Structured opening-hour calculations remain outside this slice.
+- **Source:** User instructions and approvals in this task, 2026-09-13/14; `VenueService`, `VenueLayout`, `VenueCreatePage` and `SCHEMA.md`.
+
+### D13 — Local V5 revision during venue development
+- **Status:** Decided and completed, 2026-09-13.
+- **Decision:** Use `V5__venue_catalogue_logistics.sql` for the required capacity range, multiple layouts and nonblank operating information. V5 had been applied by an earlier test run; the user authorised revising it because it was unshared and there was no local data. Every application table was checked for rows before the local schema was rebuilt, and Flyway reapplied V1-V5 successfully.
+- **Consequences:** This was an explicitly authorised local-development reset, not permission to edit migrations applied to shared databases. Further changes after sharing/application elsewhere must use a new migration. V2 was not edited.
+- **Source:** User authorisation and PostgreSQL/Flyway verification in this task; V5 migration.
+
+### D14 — Venue catalogue API and form interaction
+- **Status:** Decided and implemented, 2026-09-13/14.
+- **Decision:** `POST /api/venues` creates a catalogue record immediately and returns 201 with its UUID and Location header. `GET /api/venues` lists records ordered by address then UUID; `GET /api/venues/{id}` returns details or 404. DTOs are named `CreateVenueDto` and `VenueDto`, using `supportedLayouts` consistently across frontend/backend.
+- **Frontend:** `/venue-staff/catalogue/new` reuses shared fields, layout chips, buttons, cards and `apiClient`. While editing, invalid entered values receive field-specific errors; Save validates all required fields and displays all errors together beside those fields. Failed saves preserve input. Successful saves navigate to `/venue-staff/catalogue`, issue a fresh GET and show a dismissible success banner with a light green border and translucent green background. Catalogue cards display address, generated ID and the recorded basic characteristics.
+- **Source:** User instructions in this task; `VenueController`, `VenueCreatePage`, `VenueCataloguePage`, `VenuePages.test.tsx`; `docs/venue-api.md`.
+- **Known limits:** Accessibility/facilities remain outside the implemented slice and use existing empty database defaults. Venue API errors currently collect field messages in `message` rather than populate `missingFields`. Frontend role gates do not secure the API: Q2 remains open and no backend Venue Staff authorization has been implemented. The later combined checklist is not fully satisfied, and the Venue Staff home still contains outdated skeleton copy.
+
+### D15 — Merging `main` (venue catalogue + CI) into `feature/eo1-eo2-eo15-event_request`: `V5` renamed to `V6`
+- **Status:** Decided and completed, 2026-09-15.
+- **Decision:** Both branches independently claimed migration version 5 — this branch's `V5__accessibility_none_option.sql` (already applied on shared/tested databases, confirmed via `flyway_schema_history` on 2026-09-13) and `main`'s `V5__venue_catalogue_logistics.sql` (D13, applied only to that branch author's local, unshared database). D13 already establishes that an unshared, unapplied-elsewhere migration may be renumbered; `main`'s file was renamed to `V6__venue_catalogue_logistics.sql` on merge rather than renumbering the already-shared one. SCHEMA.md's internal `V5` references for venue capacity/layouts/operating information were updated to `V6` to match; D13's own text is left as the historical record of what the file was called when that work happened, per this log's convention for dated entries (see D2's note by example).
+- **Consequences:** Anyone who already pulled `main`'s `V5__venue_catalogue_logistics.sql` onto a local database must rename their local file to `V6__...` (or reset via `docker compose down -v`) before pulling this merge, or Flyway will report a checksum/version mismatch.
+- **Source:** Merge of `origin/main` into this branch, this session; `flyway_schema_history` inspection confirming which `V5` was actually shared.
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?

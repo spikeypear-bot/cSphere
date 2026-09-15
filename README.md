@@ -29,17 +29,33 @@ npm run test          # from frontend/, or npm --prefix frontend run test from r
 npm run test:watch    # watch mode
 ```
 
-Backend (JUnit 5 + Mockito, via the Maven wrapper — needs a JDK; if you don't
-have Java locally, run it inside a container against the `db` service, e.g.:
-`docker compose up -d db`, then from `backend/`:
+Backend (JUnit 5 + Mockito). A `backend-test` service in `docker-compose.yml` is
+the easiest way to run these — it needs no local JDK:
+
+```
+docker compose run --rm backend-test              # run all tests
+docker compose run --rm backend-test test -Dtest=EventRequestServiceTest         # a single test class
+docker compose run --rm backend-test test -Dtest='EventRequestServiceTest#methodName'  # a single method
+docker compose run --rm --no-deps backend-test test -Dtest=EventRequestServiceTest      # without starting the db dependency
+docker compose run --rm backend-test clean test    # clean + all tests
+```
+
+Mockito lets a test mock out dependent layers (e.g. a `@Mock` repository field on
+a service test, so the service layer is tested in isolation). JUnit's `@Test` +
+AssertJ assertions check the resulting values/errors. Controller tests use
+`@WebMvcTest` + `@MockitoBean` (a fake service registered in the Spring test
+container) with `MockMvc` acting as the HTTP client. `ConnectSphereApplicationTests`
+boots the full application against a real DB connection to confirm it compiles and
+wires together — lazy initialisation is off for tests so everything actually loads.
+
+If you have JDK 25 locally instead, `./mvnw test` from `backend/` works directly.
+Without Docker's `backend-test` service, run it inside a plain container against
+the `db` service: `docker compose up -d db`, then from `backend/`:
 `docker run --rm -v "$PWD:/build" -w /build --network <project>_default -e SPRING_PROFILES_ACTIVE=dev -e SPRING_DATASOURCE_URL=jdbc:postgresql://postgres-db:5432/csphere -e SPRING_DATASOURCE_USERNAME=postgres -e SPRING_DATASOURCE_PASSWORD=root eclipse-temurin:25-jdk ./mvnw test`
 (On Windows, if `mvnw` fails inside the container with `/bin/sh^M: bad interpreter`,
 its line endings were re-saved as CRLF by your editor/checkout — run
 `sed -i 's/\r$//' backend/mvnw` and it'll work again; `.gitattributes` at the
 repo root should prevent this going forward.)
-```
-./mvnw test            # from backend/, if you have JDK 25 locally
-```
 
 ## Development
 ### Frontend
@@ -51,4 +67,3 @@ repo root should prevent this going forward.)
 2) Unit tests to be created for each features/functions when the time is right
 ### DB
 1) All db tables to exist and created via migration files, do not auto create in the springboot, keep auto-ddl to validate.
-
