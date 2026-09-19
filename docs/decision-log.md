@@ -119,6 +119,18 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Consequences:** This is scoped to the classes that exist in code right now; it is not a replacement for `SCHEMA.md`'s full ER diagram (which already covers every DB table, including ones with no Java entity yet). Flagged for a future revisit if EO03 (amendment) or the `User`/role model end up needing real per-type behaviour — see the file's own inline notes for what to check before reaching for inheritance there.
 - **Source:** IS212 Week 5 lecture (`Materials/Week5/Week5-CommunicatingDesign_Collaborating.pdf`) and lab materials; direct instruction from Jillian, this session.
 
+### D17 — EO01/EO02/EO15 UX enhancements: widened ACs, not yet team-approved
+- **Status:** Implemented (Jillian-directed and approved for building, 2026-09-19); the AC wording widening is a backlog change and has **not** been applied to the live Google Sheet — Claude Code cannot edit it directly (see "Product Backlog Spreadsheet" in AI_Context.md). Flag to the team before treating these as official ACs.
+- **Context:** Jillian asked for UX/event-planning best-practice research and was open to widening ACs for "wow factor." Four enhancements were picked from a shortlist backed by external sources (multi-step form autosave/UX research, approval-dashboard status-visualisation research).
+- **Decision:**
+  1. **Live completion tracker (EO02):** the wizard's Review step shows a running checklist of required fields (reusing `EventRequestService`'s exact required-field list, mirrored client-side) that updates as the organiser types, instead of only surfacing what's missing after a blocked submit attempt.
+  2. **Visual status timeline (EO15):** the organiser's request list shows status as a horizontal stepper (Draft → Submitted → Approved, with Rejected/Cancelled as a distinct terminal state) reusing the wizard's own `StepIndicator` styling, instead of a flat colour badge alone (badge kept alongside it, not replaced).
+  3. **True autosave + local backup (EO01):** the wizard now saves a field change automatically ~1.5s after the person stops typing (previously only saved on step-change/exit/submit), and mirrors unsaved field state into `localStorage` keyed by the draft's id so a dropped connection or accidental tab close doesn't lose typed input; the local copy is cleared on a confirmed successful save.
+  4. **Last-edited time + completion % (EO01/EO15):** each draft card on the organiser's list shows "edited X ago" (relative time from the new `updated_at` column, D17/V7) and a completion-percentage ring computed from the same required-field list as (1).
+- **New backend column:** `event_requests.updated_at` (`V7__event_request_updated_at.sql`), set by `EventRequestService` on every save/submit — see SCHEMA.md.
+- **Consequences:** None of these change what's required to submit — they only change how visibly that requirement is communicated before and during editing, and add a genuinely missing last-modified timestamp. Should be proposed to the team as AC additions to EO01/EO02/EO15 in the Google Sheet, not assumed as already agreed scope.
+- **Source:** Direct instruction from Jillian, this session; UX research cited in the same session's response (multi-step form autosave/UX and approval-dashboard status-visualisation sources).
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?

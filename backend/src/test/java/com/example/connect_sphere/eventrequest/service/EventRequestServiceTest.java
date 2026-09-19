@@ -55,7 +55,7 @@ class EventRequestServiceTest {
                         entity.getStartDatetime(), entity.getEndDatetime(), entity.getExpectedAttendance(),
                         entity.getVenueRequirements(), entity.getEquipmentRequirements(),
                         entity.getAccessibilityNeeds(), entity.getRegistrationNeeds(),
-                        entity.getStatus(), entity.getCreatedAt(), entity.getOrganisation());
+                        entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt(), entity.getOrganisation());
             }
         };
         service = new EventRequestService(repository, mapper);
@@ -108,6 +108,30 @@ class EventRequestServiceTest {
         ArgumentCaptor<EventRequest> saved = ArgumentCaptor.forClass(EventRequest.class);
         verify(repository).save(saved.capture());
         assertThat(saved.getValue().getRequestId()).isEqualTo(id);
+    }
+
+    @Test
+    void savingANewDraftSetsBothCreatedAndUpdatedAt() {
+        EventRequestDto dto = service.saveNewDraft(ORG, blankRequest());
+
+        assertThat(dto.createdAt()).isNotNull();
+        assertThat(dto.updatedAt()).isNotNull();
+    }
+
+    @Test
+    void editingADraftAdvancesUpdatedAtButNotCreatedAt() {
+        UUID id = UUID.randomUUID();
+        java.time.OffsetDateTime originalCreatedAt = java.time.OffsetDateTime.now().minusDays(1);
+        java.time.OffsetDateTime originalUpdatedAt = java.time.OffsetDateTime.now().minusHours(1);
+        EventRequest existing = draftEntity(id, ORG);
+        existing.setCreatedAt(originalCreatedAt);
+        existing.setUpdatedAt(originalUpdatedAt);
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+
+        EventRequestDto updated = service.updateDraft(ORG, id, blankRequest());
+
+        assertThat(updated.createdAt()).isEqualTo(originalCreatedAt);
+        assertThat(updated.updatedAt()).isAfter(originalUpdatedAt);
     }
 
     @Test

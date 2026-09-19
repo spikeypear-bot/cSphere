@@ -1,6 +1,6 @@
 # ConnectSphere — Schema Dictionary
 
-Reference for `V2__init_tables.sql`, updated through `V6__venue_catalogue_logistics.sql`.
+Reference for `V2__init_tables.sql`, updated through `V7__event_request_updated_at.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -207,6 +207,7 @@ request holds proposed values that are not yet live.
 | `registration_needs` | `BOOLEAN` | yes | | Whether registration is proposed |
 | `status` | `event_request_status` | no | | Approval state |
 | `created_at` | `TIMESTAMPTZ` | no | | Defaults to `CURRENT_TIMESTAMP` |
+| `updated_at` | `TIMESTAMPTZ` | **no (since V7)** | | Last save/submit time; set by `EventRequestService`, not a DB trigger — powers EO01/EO15's "last edited X minutes ago" |
 | `organisation` | `VARCHAR(100)` | yes | | Requesting organisation, free text |
 | `created_by` | `UUID` | yes | FK → `users` | Requester |
 

@@ -26,5 +26,6 @@ public record EventRequestDto(
         Boolean registrationNeeds,
         EventRequestStatus status,
         OffsetDateTime createdAt,
+        OffsetDateTime updatedAt,
         String organisation) {
 }

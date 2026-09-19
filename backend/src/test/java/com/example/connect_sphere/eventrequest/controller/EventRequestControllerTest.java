@@ -43,7 +43,8 @@ class EventRequestControllerTest {
         UUID id = UUID.randomUUID();
         when(service.saveNewDraft(eq("Acme Conferences"), any())).thenReturn(
                 new EventRequestDto(id, 'C', null, null, null, null, null, null, null, null, null,
-                        List.of(), null, EventRequestStatus.draft, OffsetDateTime.now(), "Acme Conferences"));
+                        List.of(), null, EventRequestStatus.draft, OffsetDateTime.now(), OffsetDateTime.now(),
+                        "Acme Conferences"));
 
         mockMvc.perform(post("/api/event-requests")
                         .header("X-Organisation", "Acme Conferences")

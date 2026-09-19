@@ -41,7 +41,9 @@ public class EventRequestService {
         entity.setRequestType(REQUEST_TYPE_CREATION);
         entity.setOrganisation(organisation);
         entity.setStatus(EventRequestStatus.draft);
-        entity.setCreatedAt(OffsetDateTime.now());
+        OffsetDateTime now = OffsetDateTime.now();
+        entity.setCreatedAt(now);
+        entity.setUpdatedAt(now);
         applyFields(entity, request);
         return mapper.toDto(repository.save(entity));
     }
@@ -51,6 +53,7 @@ public class EventRequestService {
         requireOrganisation(organisation);
         EventRequest entity = findOwnedDraft(organisation, requestId);
         applyFields(entity, request);
+        entity.setUpdatedAt(OffsetDateTime.now());
         // If this save fails (e.g. the transaction rolls back for any reason),
         // Spring/JPA leaves the previously committed row untouched — EO01's
         // "does not overwrite the last successfully saved version if a later
@@ -82,6 +85,7 @@ public class EventRequestService {
             throw new IncompleteEventRequestException(missing);
         }
         entity.setStatus(EventRequestStatus.pending);
+        entity.setUpdatedAt(OffsetDateTime.now());
         return mapper.toDto(repository.save(entity));
     }
 
