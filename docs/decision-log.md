@@ -113,6 +113,12 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Consequences:** Anyone who already pulled `main`'s `V5__venue_catalogue_logistics.sql` onto a local database must rename their local file to `V6__...` (or reset via `docker compose down -v`) before pulling this merge, or Flyway will report a checksum/version mismatch.
 - **Source:** Merge of `origin/main` into this branch, this session; `flyway_schema_history` inspection confirming which `V5` was actually shared.
 
+### D16 — Added a Code-level class diagram (`docs/class-diagram.puml`), kept flat/no inheritance
+- **Status:** Decided for this implementation (Jillian-agreed and added, 2026-09-19); not yet reviewed/agreed by the rest of the team — revert freely if the group disagrees (see the commit this entry ships with).
+- **Decision:** Added `docs/class-diagram.puml`, a PlantUML class diagram covering the Java classes actually implemented so far (`EventRequest`, `Venue`, and their enums), per IS212 Week 5's guidance to keep class/sequence diagrams as versioned, diffable text next to the code rather than an exported image, and to update both in the same PR going forward. Deliberately has zero inheritance: neither `EventRequest` (creation vs. amendment, via the `requestType` discriminator) nor `Venue` currently has behaviour that diverges by "kind" at a shared call site, so per the same material's rule — inheritance only for a real is-a relationship that also needs polymorphism — a flat class per entity is correct, not under-designed.
+- **Consequences:** This is scoped to the classes that exist in code right now; it is not a replacement for `SCHEMA.md`'s full ER diagram (which already covers every DB table, including ones with no Java entity yet). Flagged for a future revisit if EO03 (amendment) or the `User`/role model end up needing real per-type behaviour — see the file's own inline notes for what to check before reaching for inheritance there.
+- **Source:** IS212 Week 5 lecture (`Materials/Week5/Week5-CommunicatingDesign_Collaborating.pdf`) and lab materials; direct instruction from Jillian, this session.
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
