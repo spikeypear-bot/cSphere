@@ -2,10 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { StatusTimeline } from '../../components/ui/StatusTimeline'
 import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
+import { formatRelativeTime } from '../../lib/relativeTime'
 import type { EventRequestDto } from '../../types/eventRequest'
+import { getCompletionPercent } from './eventRequestCompletion'
 import { organiserExtraFeatures } from './organiserExtraFeatures'
 import './OrganiserHomePage.css'
 
@@ -74,13 +77,24 @@ export function OrganiserHomePage() {
         {requests?.map((request) => (
           <li key={request.requestId}>
             <Card className="organiser-home__row">
-              <div>
-                <h3>{request.eventName || 'Untitled draft'}</h3>
+              <div className="organiser-home__row-main">
+                <div className="organiser-home__row-heading">
+                  {request.status === 'draft' ? (
+                    <span
+                      className="organiser-home__completion-ring"
+                      style={{ ['--percent' as string]: getCompletionPercent(request) }}
+                      title={`${getCompletionPercent(request)}% of required fields complete`}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <h3>{request.eventName || 'Untitled draft'}</h3>
+                </div>
                 <p className="field-hint">
                   {request.status === 'draft'
-                    ? 'Not submitted yet'
-                    : new Date(request.createdAt).toLocaleDateString()}
+                    ? `Edited ${formatRelativeTime(request.updatedAt)} — not submitted yet`
+                    : `Last updated ${formatRelativeTime(request.updatedAt)}`}
                 </p>
+                <StatusTimeline status={request.status} />
               </div>
               <StatusBadge status={request.status} />
               {request.status === 'draft' ? (

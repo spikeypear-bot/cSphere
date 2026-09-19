@@ -6,8 +6,9 @@ import { TextField, NumberField, DateTimeField, CheckboxField } from '../../comp
 import { ChipGroup } from '../../components/ui/ChipGroup'
 import { StepIndicator, type Step } from '../../components/ui/StepIndicator'
 import { AutosaveIndicator } from '../../components/ui/AutosaveIndicator'
-import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, type AccessibilityFeature } from '../../types/eventRequest'
-import { useEventRequestDraft } from './useEventRequestDraft'
+import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type AccessibilityFeature } from '../../types/eventRequest'
+import { useEventRequestDraft, type DraftFields } from './useEventRequestDraft'
+import { getMissingRequiredFields, getCompletionPercent } from './eventRequestCompletion'
 import './EventRequestWizardPage.css'
 
 const STEPS: Step[] = [
@@ -23,8 +24,17 @@ const ACCESSIBILITY_OPTIONS = Object.keys(ACCESSIBILITY_LABELS) as Accessibility
 export function EventRequestWizardPage() {
   const { requestId } = useParams()
   const navigate = useNavigate()
-  const { fields, setFields, status, loading, loadError, autosaveState, save, submit } =
-    useEventRequestDraft(requestId)
+  const {
+    fields,
+    setFields,
+    status,
+    loading,
+    loadError,
+    restoredFromLocalBackup,
+    autosaveState,
+    save,
+    submit,
+  } = useEventRequestDraft(requestId)
   const [stepIndex, setStepIndex] = useState(0)
   const [missingFields, setMissingFields] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
@@ -104,8 +114,18 @@ export function EventRequestWizardPage() {
     <div className="wizard">
       <div className="wizard__header">
         <h1>New event request</h1>
-        <AutosaveIndicator state={autosaveState} />
+        <div className="wizard__header-status">
+          <CompletionTracker fields={fields} />
+          <AutosaveIndicator state={autosaveState} />
+        </div>
       </div>
+
+      {restoredFromLocalBackup ? (
+        <p className="wizard__restored-notice" role="status">
+          Couldn't reach ConnectSphere when this loaded — showing what you last typed on this
+          device. It will sync automatically once you're back online.
+        </p>
+      ) : null}
 
       <StepIndicator steps={STEPS} currentIndex={stepIndex} />
 
@@ -253,8 +273,16 @@ function ReviewStep({
   missingFields: string[]
   onEditStep: (index: number) => void
 }) {
+  // Live checklist (EO02 UX enhancement, docs/decision-log.md D17): computed
+  // from what's actually in the form right now, so it's visible before ever
+  // attempting to submit — `missingFields` (from a blocked submit response)
+  // is still shown separately below once it exists, since it's confirmation
+  // from the actual source of truth (EventRequestService), not a guess.
+  const liveMissing = getMissingRequiredFields(fields)
   return (
     <div className="wizard__review">
+      <ChecklistTracker missing={liveMissing} />
+
       {missingFields.length > 0 ? (
         <div className="wizard__missing" role="alert">
           <p>This request still needs:</p>
@@ -302,6 +330,37 @@ function ReviewStep({
         />
       </dl>
     </div>
+  )
+}
+
+/** Persistent header badge, visible on every step — EO02 UX enhancement
+ * (docs/decision-log.md D17): "how close am I" while filling the form in,
+ * not only "what did I miss" after clicking Submit. */
+function CompletionTracker({ fields }: { fields: DraftFields }) {
+  const percent = getCompletionPercent(fields)
+  return (
+    <span className="completion-tracker" role="status">
+      <span className="completion-tracker__ring" style={{ ['--percent' as string]: percent }} aria-hidden="true" />
+      {percent}% ready to submit
+    </span>
+  )
+}
+
+/** The Review step's always-visible checklist of every required field, not
+ * only the ones a blocked submit reported missing. */
+function ChecklistTracker({ missing }: { missing: string[] }) {
+  return (
+    <ul className="wizard__checklist" aria-label="Required fields checklist">
+      {REQUIRED_FIELD_KEYS.map((key) => {
+        const done = !missing.includes(key)
+        return (
+          <li key={key} data-done={done}>
+            <span aria-hidden="true">{done ? '✓' : '○'}</span>
+            {REQUIRED_FIELD_LABELS[key]}
+          </li>
+        )
+      })}
+    </ul>
   )
 }
 

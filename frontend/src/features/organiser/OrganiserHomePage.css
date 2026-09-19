@@ -51,6 +51,40 @@
   font-size: 1rem;
 }
 
+.organiser-home__row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  flex: 1 1 16rem;
+  min-width: 14rem;
+}
+
+.organiser-home__row-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.organiser-home__row-heading h3 {
+  margin: 0;
+}
+
+/* Same conic-gradient completion ring as the wizard's tracker (--percent set
+ * inline per-request), reused here so a draft's progress reads identically
+ * in both places. */
+.organiser-home__completion-ring {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: conic-gradient(var(--accent) calc(var(--percent) * 1%), var(--hairline) 0);
+  flex-shrink: 0;
+}
+
+.organiser-home__row-main .status-timeline {
+  max-width: 16rem;
+}
+
 .organiser-home__more {
   margin-block-start: 1rem;
   padding-block-start: 1.5rem;

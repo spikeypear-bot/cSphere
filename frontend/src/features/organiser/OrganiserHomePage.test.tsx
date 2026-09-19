@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { OrganiserHomePage } from './OrganiserHomePage'
@@ -59,5 +59,71 @@ describe('OrganiserHomePage — EO15 (view requests) and EO02 (submission confir
     expect(
       screen.queryByText('Your event request has been submitted successfully.'),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe('OrganiserHomePage — EO01/EO15 UX enhancements (docs/decision-log.md D17)', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    seedSession()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('shows a relative last-edited time and completion ring for a draft', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(200, [
+          {
+            requestId: 'draft-1',
+            status: 'draft',
+            eventName: 'Q1 Town Hall',
+            purpose: null,
+            startDatetime: null,
+            endDatetime: null,
+            expectedAttendance: null,
+            venueRequirements: null,
+            accessibilityNeeds: [],
+            organisation: 'Acme Conferences',
+            createdAt: new Date(Date.now() - 10 * 60 * 1000).toISOString(),
+            updatedAt: new Date(Date.now() - 5 * 60 * 1000).toISOString(),
+          },
+        ]),
+      ),
+    )
+
+    renderHome()
+
+    expect(await screen.findByText(/Edited 5 minutes ago/)).toBeInTheDocument()
+  })
+
+  it('shows the status timeline for a submitted request, not only the badge', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(200, [
+          {
+            requestId: 'req-1',
+            status: 'pending',
+            eventName: 'Partner Summit',
+            organisation: 'Acme Conferences',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            accessibilityNeeds: [],
+          },
+        ]),
+      ),
+    )
+
+    renderHome()
+
+    await screen.findByText('Partner Summit')
+    const timeline = document.querySelector('.status-timeline') as HTMLElement
+    expect(within(timeline).getByText('Submitted').closest('li')).toHaveAttribute('data-state', 'current')
   })
 })

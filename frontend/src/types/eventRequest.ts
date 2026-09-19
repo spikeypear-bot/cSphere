@@ -45,6 +45,7 @@ export interface EventRequestDto {
   registrationNeeds: boolean | null
   status: EventRequestStatus
   createdAt: string
+  updatedAt: string
   organisation: string
 }
 
@@ -74,3 +75,8 @@ export const REQUIRED_FIELD_LABELS: Record<string, string> = {
   venueRequirements: 'Venue requirements',
   accessibilityNeeds: 'Accessibility requirements',
 }
+
+/** Same fields, in wizard-step order — the single list every "how complete is
+ * this draft" UI (the live tracker, the completion-% ring) reads from, so it
+ * can never drift from what REQUIRED_FIELD_LABELS names. */
+export const REQUIRED_FIELD_KEYS = Object.keys(REQUIRED_FIELD_LABELS)

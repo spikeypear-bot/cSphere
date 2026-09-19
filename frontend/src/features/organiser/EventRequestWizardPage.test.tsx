@@ -35,6 +35,19 @@ function renderWizard() {
   )
 }
 
+function renderExistingDraft() {
+  return render(
+    <MemoryRouter initialEntries={[`/organiser/requests/${DRAFT_ID}`]}>
+      <SessionProvider>
+        <Routes>
+          <Route path="/organiser/requests/:requestId" element={<EventRequestWizardPage />} />
+          <Route path="/organiser" element={<div>Organiser home</div>} />
+        </Routes>
+      </SessionProvider>
+    </MemoryRouter>,
+  )
+}
+
 describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () => {
   beforeEach(() => {
     window.localStorage.clear()
@@ -236,5 +249,126 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     await user.click(wheelchair)
     expect(wheelchair).toHaveAttribute('aria-pressed', 'true')
     expect(none).toHaveAttribute('aria-pressed', 'false')
+  })
+})
+
+describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-log.md D17)', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    seedSession()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('shows a live completion percentage that rises as required fields are filled in', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () =>
+        jsonResponse(201, {
+          requestId: DRAFT_ID,
+          status: 'draft',
+          accessibilityNeeds: [],
+          organisation: 'Acme Conferences',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }),
+      ),
+    )
+
+    const user = userEvent.setup()
+    renderWizard()
+
+    expect(await screen.findByText('0% ready to submit')).toBeInTheDocument()
+
+    await user.type(screen.getByLabelText('Event name'), 'Q1 Town Hall')
+
+    expect(await screen.findByText(/% ready to submit/)).not.toHaveTextContent('0% ready to submit')
+  })
+
+  it('autosaves automatically after the person stops typing, without clicking Next', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/event-requests' && init?.method === 'POST') {
+        return jsonResponse(201, {
+          requestId: DRAFT_ID,
+          status: 'draft',
+          accessibilityNeeds: [],
+          organisation: 'Acme Conferences',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        })
+      }
+      throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const user = userEvent.setup()
+    renderWizard()
+
+    await user.type(screen.getByLabelText('Event name'), 'Q1 Town Hall')
+    expect(fetchMock).not.toHaveBeenCalled()
+
+    await new Promise((resolve) => setTimeout(resolve, 1700))
+
+    expect(fetchMock).toHaveBeenCalledWith('/api/event-requests', expect.objectContaining({ method: 'POST' }))
+  }, 10000)
+
+  it('restores unsynced input from a local backup when the server is unreachable', async () => {
+    window.localStorage.setItem(
+      `connectsphere.draft-backup.Acme Conferences.${DRAFT_ID}`,
+      JSON.stringify({
+        eventName: 'Recovered Town Hall',
+        purpose: null,
+        description: null,
+        startDatetime: null,
+        endDatetime: null,
+        expectedAttendance: null,
+        venueRequirements: null,
+        equipmentRequirements: null,
+        accessibilityNeeds: [],
+        registrationNeeds: null,
+      }),
+    )
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+
+    renderExistingDraft()
+
+    expect(await screen.findByText(/Couldn't reach ConnectSphere/)).toBeInTheDocument()
+    expect(screen.getByLabelText('Event name')).toHaveValue('Recovered Town Hall')
+  })
+
+  it('never answers a load failure with a backup left behind by a different organisation on this device', async () => {
+    // Regression test for a real cross-org leak found via live testing: this
+    // browser previously acted as a different organisation and left a local
+    // backup for this exact request id. A same-device, different-organisation
+    // 404 must never be masked by it — see the backupKey comment in
+    // useEventRequestDraft.ts for the full story.
+    window.localStorage.setItem(
+      `connectsphere.draft-backup.Beta Corp Events.${DRAFT_ID}`,
+      JSON.stringify({
+        eventName: 'Beta Corp Confidential Retreat',
+        purpose: null,
+        description: null,
+        startDatetime: null,
+        endDatetime: null,
+        expectedAttendance: null,
+        venueRequirements: null,
+        equipmentRequirements: null,
+        accessibilityNeeds: [],
+        registrationNeeds: null,
+      }),
+    )
+    // seedSession() (beforeEach) signs this render in as "Acme Conferences" —
+    // a different organisation from the backup above.
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+
+    renderExistingDraft()
+
+    expect(await screen.findByText(/Could not reach ConnectSphere/)).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Beta Corp Confidential Retreat')).not.toBeInTheDocument()
   })
 })

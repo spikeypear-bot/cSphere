@@ -193,6 +193,39 @@
   color: var(--ink-soft);
 }
 
+.status-timeline {
+  display: flex;
+  gap: 0.4rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.status-timeline li {
+  flex: 1;
+  padding-block-start: 0.4rem;
+  border-top: 3px solid var(--hairline);
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--ink-faint);
+  white-space: nowrap;
+}
+
+.status-timeline li[data-state='current'] {
+  border-top-color: var(--accent);
+  color: var(--ink);
+}
+
+.status-timeline li[data-state='done'] {
+  border-top-color: var(--success);
+  color: var(--success);
+}
+
+.status-timeline li[data-state='rejected'] {
+  border-top-color: var(--danger);
+  color: var(--danger);
+}
+
 .autosave-indicator {
   display: inline-flex;
   align-items: center;

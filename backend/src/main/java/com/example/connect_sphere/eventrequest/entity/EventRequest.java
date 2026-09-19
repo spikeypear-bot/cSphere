@@ -88,6 +88,12 @@ public class EventRequest {
     @Column(name = "created_at")
     private OffsetDateTime createdAt;
 
+    // Set by EventRequestService on every save/submit, not a DB trigger — see
+    // V7 migration and the service's applyFields()/submit() for the one place
+    // this is written. Powers EO01/EO15's "last edited X minutes ago".
+    @Column(name = "updated_at")
+    private OffsetDateTime updatedAt;
+
     private String organisation;
 
     @Column(name = "created_by")
