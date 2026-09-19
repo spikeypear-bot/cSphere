@@ -1,0 +1,103 @@
+@startuml ConnectSphere-Code-Level-Class-Diagram
+' C4 "Code" level view (IS212 Week 5): the Java classes actually implemented
+' in backend/src/main/java/com/example/connect_sphere, not the full database
+' schema — see SCHEMA.md for the complete ER diagram of every table,
+' including the ones with no Java entity yet (users, events, equipments,
+' venue_bookings, ...).
+'
+' Kept as text (not an exported image) so it stays diffable and is meant to
+' be updated in the same PR as the code whenever a class here changes shape,
+' per this week's "keep diagrams as diffable text" guidance.
+'
+' Deliberately flat, no inheritance: every EventRequest behaves the same
+' regardless of requestType, and every Venue behaves the same regardless of
+' its layouts — there is no subclass anywhere in this codebase that
+' overrides a method for a different runtime type, so none is modelled here.
+' The two request "kinds" (creation vs amendment) are one class with a
+' discriminator field (requestType), not a subclass each, because they do
+' not yet diverge in behaviour — only in which fields are required. If EO03
+' (amendment) later gives them real behavioural differences, revisit this
+' before reaching for inheritance (see decision-log.md).
+
+hide circle
+skinparam classAttributeIconSize 0
+
+enum EventRequestStatus {
+  draft
+  pending
+  approved
+  rejected
+  cancelled
+}
+
+enum AccessibilityFeature {
+  accessible_parking
+  drop_off_zone
+  public_transport
+  step_free_access
+  wide_doorways
+  elevators
+  wheelchair_support
+  none
+}
+
+enum VenueLayout {
+  classroom
+  theatre
+  boardroom
+  banquet
+  exhibition
+}
+
+class EventRequest {
+  requestId : UUID
+  requestType : Character
+  eventId : UUID
+  eventName : String
+  purpose : String
+  description : String
+  startDatetime : OffsetDateTime
+  endDatetime : OffsetDateTime
+  expectedAttendance : Integer
+  venueRequirements : String
+  equipmentRequirements : String
+  accessibilityNeeds : List<AccessibilityFeature>
+  registrationNeeds : Boolean
+  status : EventRequestStatus
+  createdAt : OffsetDateTime
+  organisation : String
+  createdBy : UUID
+}
+
+class Venue {
+  venueId : UUID
+  venueAddress : String
+  venueCapacity : Integer
+  supportedLayouts : List<VenueLayout>
+  operatingInformation : String
+  additionalInformation : String
+}
+
+' Dependency arrows (not associations): these enums are attribute types,
+' not related objects with their own multiplicity/cardinality.
+EventRequest ..> AccessibilityFeature : accessibilityNeeds
+EventRequest ..> EventRequestStatus : status
+Venue ..> VenueLayout : supportedLayouts
+EventRequest -[hidden]- Venue
+
+note right of EventRequest
+  requestType 'C' = creation (eventId is null);
+  'A' = amendment against an existing event
+  (eventId set). See decision-log.md D7a.
+end note
+
+note bottom of Venue
+  Not yet associated with EventRequest in code:
+  venueRequirements is still free text (VS06's
+  matching/suitability logic is a later story).
+  SCHEMA.md's full ER diagram shows where this
+  and other tables (users, events, equipments,
+  venue_bookings, ...) are headed.
+end note
+
+@enduml
