@@ -46,31 +46,41 @@ const BLANK_DRAFT: DraftFields = {
 const AUTOSAVE_DEBOUNCE_MS = 1500
 const BACKUP_KEY_PREFIX = 'connectsphere.draft-backup.'
 
-function backupKey(id: string | null): string {
-  return `${BACKUP_KEY_PREFIX}${id ?? 'new'}`
+// Scoped by organisation as well as id: this browser's storage is shared
+// across every organisation "logged in" on it in turn (there is no real
+// account/session isolation yet — see decision-log.md D6a), so a key by id
+// alone let a stale backup from one organisation answer a load-failure
+// fallback for a *different* organisation viewing the same request id after
+// a blocked cross-org 404 — a real cross-organisation data leak found via
+// testing (EO01-TC4/EO15-TC3), even though the server itself always
+// correctly rejected the request. Organisation is part of the key so a
+// browser can never surface one organisation's typed content while acting
+// as another.
+function backupKey(organisation: string | null, id: string | null): string {
+  return `${BACKUP_KEY_PREFIX}${organisation ?? 'unknown'}.${id ?? 'new'}`
 }
 
-function readBackup(id: string | null): DraftFields | null {
+function readBackup(organisation: string | null, id: string | null): DraftFields | null {
   try {
-    const raw = window.localStorage.getItem(backupKey(id))
+    const raw = window.localStorage.getItem(backupKey(organisation, id))
     return raw ? (JSON.parse(raw) as DraftFields) : null
   } catch {
     return null // Corrupt/unavailable storage is not worth failing the page over.
   }
 }
 
-function writeBackup(id: string | null, fields: DraftFields): void {
+function writeBackup(organisation: string | null, id: string | null, fields: DraftFields): void {
   try {
-    window.localStorage.setItem(backupKey(id), JSON.stringify(fields))
+    window.localStorage.setItem(backupKey(organisation, id), JSON.stringify(fields))
   } catch {
     // Best-effort only — private browsing / full storage just means no
     // safety net this session, not a broken wizard.
   }
 }
 
-function clearBackup(id: string | null): void {
+function clearBackup(organisation: string | null, id: string | null): void {
   try {
-    window.localStorage.removeItem(backupKey(id))
+    window.localStorage.removeItem(backupKey(organisation, id))
   } catch {
     // Nothing to do if storage is unavailable.
   }
@@ -111,7 +121,9 @@ interface UseEventRequestDraftResult {
 export function useEventRequestDraft(requestId: string | undefined): UseEventRequestDraftResult {
   const { organisation } = useSession()
   const [id, setId] = useState<string | null>(requestId ?? null)
-  const [fields, setFieldsState] = useState<DraftFields>(() => readBackup(requestId ?? null) ?? BLANK_DRAFT)
+  const [fields, setFieldsState] = useState<DraftFields>(
+    () => readBackup(organisation, requestId ?? null) ?? BLANK_DRAFT,
+  )
   const [status, setStatus] = useState<EventRequestDto['status'] | null>(null)
   const [loading, setLoading] = useState(Boolean(requestId))
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -138,14 +150,17 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
         setFieldsState(toDraftFields(dto))
         setStatus(dto.status)
         setId(dto.requestId)
-        clearBackup(requestId) // Server is reachable and authoritative again.
+        clearBackup(organisation, requestId) // Server is reachable and authoritative again.
       })
       .catch((error: unknown) => {
         if (cancelled) return
         // Session persistence pattern: a dropped connection shouldn't strand
         // the organiser on a bare error page if there's a local backup of
-        // this exact draft to fall back to — let them keep editing.
-        const backup = readBackup(requestId)
+        // this exact draft to fall back to — let them keep editing. Scoped to
+        // *this* organisation, so a cross-org 404 (this request belongs to a
+        // different organisation) can never be answered by a backup left
+        // behind by that other organisation's own session on this device.
+        const backup = readBackup(organisation, requestId)
         if (backup) {
           setFieldsState(backup)
           setId(requestId)
@@ -174,8 +189,8 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
   // since it never leaves the browser.
   useEffect(() => {
     if (!hasLoadedRef.current) return
-    writeBackup(id, fields)
-  }, [id, fields])
+    writeBackup(organisation, id, fields)
+  }, [organisation, id, fields])
 
   const save = useCallback(async () => {
     if (!organisation || savingRef.current) return
@@ -194,8 +209,8 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
       // Confirmed saved server-side — the local safety net for this draft
       // (and its pre-first-save "new" backup, if this was the first save)
       // is no longer needed.
-      clearBackup(dto.requestId)
-      if (!previousId) clearBackup(null)
+      clearBackup(organisation, dto.requestId)
+      if (!previousId) clearBackup(organisation, null)
     } catch {
       // The previously saved version is untouched server-side (see
       // EventRequestService.updateDraft) — just tell the person the retry is
@@ -231,7 +246,7 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
     try {
       const dto = await apiClient.post<EventRequestDto>(`/event-requests/${id}/submit`, {}, organisation)
       setStatus(dto.status)
-      clearBackup(id)
+      clearBackup(organisation, id)
       return { ok: true }
     } catch (error) {
       if (error instanceof ApiClientError && error.status === 422 && error.missingFields) {

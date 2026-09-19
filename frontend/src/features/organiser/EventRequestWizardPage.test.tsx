@@ -319,7 +319,7 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
 
   it('restores unsynced input from a local backup when the server is unreachable', async () => {
     window.localStorage.setItem(
-      `connectsphere.draft-backup.${DRAFT_ID}`,
+      `connectsphere.draft-backup.Acme Conferences.${DRAFT_ID}`,
       JSON.stringify({
         eventName: 'Recovered Town Hall',
         purpose: null,
@@ -339,5 +339,36 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
 
     expect(await screen.findByText(/Couldn't reach ConnectSphere/)).toBeInTheDocument()
     expect(screen.getByLabelText('Event name')).toHaveValue('Recovered Town Hall')
+  })
+
+  it('never answers a load failure with a backup left behind by a different organisation on this device', async () => {
+    // Regression test for a real cross-org leak found via live testing: this
+    // browser previously acted as a different organisation and left a local
+    // backup for this exact request id. A same-device, different-organisation
+    // 404 must never be masked by it — see the backupKey comment in
+    // useEventRequestDraft.ts for the full story.
+    window.localStorage.setItem(
+      `connectsphere.draft-backup.Beta Corp Events.${DRAFT_ID}`,
+      JSON.stringify({
+        eventName: 'Beta Corp Confidential Retreat',
+        purpose: null,
+        description: null,
+        startDatetime: null,
+        endDatetime: null,
+        expectedAttendance: null,
+        venueRequirements: null,
+        equipmentRequirements: null,
+        accessibilityNeeds: [],
+        registrationNeeds: null,
+      }),
+    )
+    // seedSession() (beforeEach) signs this render in as "Acme Conferences" —
+    // a different organisation from the backup above.
+    vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('network down') }))
+
+    renderExistingDraft()
+
+    expect(await screen.findByText(/Could not reach ConnectSphere/)).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Beta Corp Confidential Retreat')).not.toBeInTheDocument()
   })
 })
