@@ -131,6 +131,14 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Consequences:** None of these change what's required to submit — they only change how visibly that requirement is communicated before and during editing, and add a genuinely missing last-modified timestamp. Should be proposed to the team as AC additions to EO01/EO02/EO15 in the Google Sheet, not assumed as already agreed scope.
 - **Source:** Direct instruction from Jillian, this session; UX research cited in the same session's response (multi-step form autosave/UX and approval-dashboard status-visualisation sources).
 
+### D18 — Cross-organisation data leak found and fixed in EO01's local draft backup (D17 item 3)
+- **Status:** Found, fixed, and verified against the real running app, 2026-09-19.
+- **Context:** While live-testing EO01-TC4/EO15-TC3 (cross-org access denial) with a real second organisation and a real request id (not a placeholder), the wizard displayed the *other* organisation's event name instead of blocking access, even though the server correctly returned 404.
+- **Root cause:** D17's local-backup key (`connectsphere.draft-backup.<id>`) was scoped only by request id. This browser's `localStorage` is shared across every organisation "logged in" on it in turn (no real account/session isolation yet — D6a), so a stale backup left by one organisation's own session answered the load-failure fallback for a *different* organisation hitting a correctly-blocked cross-org 404 on the same request id.
+- **Decision:** Every backup read/write/clear is now keyed by organisation *and* id (`useEventRequestDraft.ts`). Added a regression test (`EventRequestWizardPage.test.tsx`) asserting a same-device, different-organisation 404 is never masked by another organisation's backup.
+- **Consequences:** This was a client-side-only leak — the backend never exposed the data (confirmed via a direct API call returning 404 both before and after the fix) — but it did undermine EO01/EO15's "cannot view another organisation's draft" guarantee at the UI level on a shared device. Re-verified live: the exact browser sequence that surfaced the leak (Organisation B creates a draft, Organisation A navigates directly to its id) now correctly shows "Event request not found," and 8 other previously-unexecuted EO01/EO02/EO15 test cases were run live in the same session (EO01-TC2/TC3/TC5, EO02-TC2/TC4/TC5, EO15-TC2/TC4) — all passing.
+- **Source:** Found via Playwright-driven live browser testing, this session, while filling in EO01/EO02/EO15's test case execution results.
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
