@@ -4,8 +4,8 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 
-function renderApp(initialPath = '/') {
-  window.localStorage.clear()
+function renderApp(initialPath = '/', clearSession = true) {
+  if (clearSession) window.localStorage.clear()
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <App />
@@ -48,7 +48,7 @@ describe('App routing — role consoles', () => {
     expect(screen.getByText('com.example.connect_sphere.equipment')).toBeInTheDocument()
   })
 
-  it("keeps a role gated from another role's console", async () => {
+  it("keeps a role gated from another role's console and explains why", async () => {
     const user = userEvent.setup()
     renderApp('/')
 
@@ -61,7 +61,9 @@ describe('App routing — role consoles', () => {
       'connectsphere.session',
       JSON.stringify({ role: 'attendee', organisation: null }),
     )
-    renderApp('/venue-staff')
+    renderApp('/venue-staff', false)
     expect(screen.getByRole('heading', { name: "Who's working today?" })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
+    expect(screen.getByRole('alert')).toHaveTextContent('/venue-staff')
   })
 })

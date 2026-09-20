@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { SessionProvider } from './lib/session'
 import { useSession, type Role } from './lib/sessionContext'
 import { AppShell } from './components/AppShell'
@@ -35,7 +35,10 @@ function skeletonRoutes(features: SkeletonFeature[]) {
 }
 
 function OrganiserRoutes() {
-  if (!useRoleGate('organiser')) return <Navigate to="/" replace />
+  const permitted = useRoleGate('organiser')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
   return (
     <Routes>
       <Route index element={<OrganiserHomePage />} />
@@ -47,7 +50,10 @@ function OrganiserRoutes() {
 }
 
 function CoordinatorRoutes() {
-  if (!useRoleGate('coordinator')) return <Navigate to="/" replace />
+  const permitted = useRoleGate('coordinator')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
   return (
     <Routes>
       <Route index element={<CoordinatorHomePage />} />
@@ -57,7 +63,10 @@ function CoordinatorRoutes() {
 }
 
 function VenueStaffRoutes() {
-  if (!useRoleGate('venue-staff')) return <Navigate to="/" replace />
+  const permitted = useRoleGate('venue-staff')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
   return (
     <Routes>
       <Route index element={<VenueStaffHomePage />} />
@@ -69,7 +78,10 @@ function VenueStaffRoutes() {
 }
 
 function TechnicalSupportRoutes() {
-  if (!useRoleGate('technical-support')) return <Navigate to="/" replace />
+  const permitted = useRoleGate('technical-support')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
   return (
     <Routes>
       <Route index element={<TechnicalSupportHomePage />} />
@@ -79,7 +91,10 @@ function TechnicalSupportRoutes() {
 }
 
 function AttendeeRoutes() {
-  if (!useRoleGate('attendee')) return <Navigate to="/" replace />
+  const permitted = useRoleGate('attendee')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
   return (
     <Routes>
       <Route index element={<AttendeeHomePage />} />
