@@ -43,7 +43,7 @@ public class VenueController {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleInvalidBody(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest().body(ApiError.of(
-                "Invalid venue JSON: check field types and supported layout values."));
+                "Invalid venue JSON: check field types, supported layouts, accessibility and facility values."));
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)

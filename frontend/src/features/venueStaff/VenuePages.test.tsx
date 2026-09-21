@@ -6,7 +6,8 @@ import { VenueCreatePage } from './VenueCreatePage'
 import { VenueCataloguePage } from './VenueCataloguePage'
 
 const venue = { venueId: '123', venueAddress: 'Example Road', venueCapacity: 50,
-  supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null }
+  supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null,
+  venueAccessibilities: [], venueFacilities: [] }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function page(path = '/venue-staff/catalogue/new') {
   render(<MemoryRouter initialEntries={[path]}><Routes>
@@ -65,12 +66,13 @@ it('POSTs trimmed input then GETs the catalogue and displays success', async () 
   await user.click(screen.getByRole('button', { name: 'Save venue' }))
   expect(await screen.findByText('Venue saved successfully.')).toBeInTheDocument()
   expect(await screen.findByRole('heading', { name: 'Example Road' })).toBeInTheDocument()
-  expect(screen.getByText('Venue ID')).toBeInTheDocument()
+  expect(screen.getByLabelText('Venue ID')).toHaveTextContent(venue.venueId)
   expect(screen.getByText(venue.venueId)).toBeInTheDocument()
   expect(fetch.mock.calls[0][0]).toBe('/api/venues')
   expect(fetch.mock.calls[0][1].method).toBe('POST')
   expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ venueAddress: 'Example Road', venueCapacity: 50,
-    supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null })
+    supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null,
+    venueAccessibilities: [], venueFacilities: [] })
   expect(fetch.mock.calls[1][1].method).toBe('GET')
   await user.click(screen.getByRole('button', { name: 'Dismiss' }))
   expect(screen.queryByText('Venue saved successfully.')).not.toBeInTheDocument()
@@ -78,10 +80,67 @@ it('POSTs trimmed input then GETs the catalogue and displays success', async () 
 it('retains input after backend rejection', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ message: 'Invalid venue details' }, 422)))
   page(); const user = await fillForm()
+  await user.click(screen.getByRole('button', { name: 'Elevators' }))
+  await user.click(screen.getByRole('button', { name: 'Stage' }))
   await user.click(screen.getByRole('button', { name: 'Save venue' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Invalid venue details')
   expect(screen.getByLabelText('Venue address')).toHaveValue(' Example Road ')
+  expect(screen.getByRole('button', { name: 'Elevators' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'Stage' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: 'Save venue' })).toBeEnabled()
+})
+
+it('saves selections and displays the freshly fetched catalogue labels', async () => {
+  const saved = { ...venue, venueAccessibilities: ['step_free_access', 'elevators'], venueFacilities: ['projection', 'stage'] }
+  const fetch = vi.fn().mockResolvedValueOnce(response(saved, 201))
+    .mockResolvedValueOnce(response([{ ...saved, additionalInformation: 'Fresh server details' }]))
+  vi.stubGlobal('fetch', fetch); page(); const user = await fillForm()
+  for (const name of ['Step-free access', 'Elevators', 'Projection', 'Stage']) {
+    await user.click(screen.getByRole('button', { name }))
+  }
+  await user.click(screen.getByRole('button', { name: 'Save venue' }))
+  expect(await screen.findByText('Step-free access, Elevators')).toBeInTheDocument()
+  expect(screen.getByText('Projection, Stage')).toBeInTheDocument()
+  expect(screen.getByText('Fresh server details')).toBeInTheDocument()
+  expect(screen.getByText('50 people')).toBeInTheDocument()
+  expect(screen.getByText('Theatre')).toBeInTheDocument()
+  expect(screen.getByText('Monday 9-5')).toBeInTheDocument()
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
+    venueAccessibilities: saved.venueAccessibilities, venueFacilities: saved.venueFacilities,
+  })
+  expect(fetch.mock.calls[1][0]).toBe('/api/venues')
+  expect(fetch.mock.calls[1][1].method).toBe('GET')
+})
+
+it('keeps no provisions exclusive and lets selections be cleared', async () => {
+  page(); const user = userEvent.setup()
+  const none = screen.getByRole('button', { name: 'No accessibility provisions' })
+  const elevators = screen.getByRole('button', { name: 'Elevators' })
+  await user.click(elevators)
+  await user.click(none)
+  expect(none).toHaveAttribute('aria-pressed', 'true')
+  expect(elevators).toHaveAttribute('aria-pressed', 'false')
+  await user.click(elevators)
+  expect(none).toHaveAttribute('aria-pressed', 'false')
+  expect(elevators).toHaveAttribute('aria-pressed', 'true')
+  await user.click(elevators)
+  await user.click(none)
+  await user.click(none)
+  expect(none).toHaveAttribute('aria-pressed', 'false')
+  const stage = screen.getByRole('button', { name: 'Stage' })
+  await user.click(stage)
+  await user.click(stage)
+  expect(stage).toHaveAttribute('aria-pressed', 'false')
+})
+
+it('distinguishes empty selections from explicitly no accessibility provisions', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([
+    venue, { ...venue, venueId: '456', venueAddress: 'Second venue', venueAccessibilities: ['none'] },
+  ])))
+  page('/venue-staff/catalogue')
+  expect(await screen.findByText('No accessibility provisions')).toBeInTheDocument()
+  expect(screen.getAllByText('Not recorded')).toHaveLength(3)
+  expect(screen.getAllByText('No Additional Information')).toHaveLength(2)
 })
 it('handles network failure and retries catalogue loading', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(response([])))
@@ -89,4 +148,50 @@ it('handles network failure and retries catalogue loading', async () => {
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ConnectSphere')
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
   expect(await screen.findByText('No venues yet')).toBeInTheDocument()
+})
+
+it('saves explicit no provisions as none and displays the saved meaning', async () => {
+  const saved = { ...venue, venueAccessibilities: ['none'] }
+  const fetch = vi.fn().mockResolvedValueOnce(response(saved, 201)).mockResolvedValueOnce(response([saved]))
+  vi.stubGlobal('fetch', fetch); page(); const user = await fillForm()
+  await user.click(screen.getByRole('button', { name: 'Elevators' }))
+  await user.click(screen.getByRole('button', { name: 'No accessibility provisions' }))
+  await user.click(screen.getByRole('button', { name: 'Save venue' }))
+  expect(await screen.findByText('Venue saved successfully.')).toBeInTheDocument()
+  expect(await screen.findByText('No accessibility provisions')).toBeInTheDocument()
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ venueAccessibilities: ['none'], venueFacilities: [] })
+})
+
+it.each(['capacity', 'layouts', 'operating information'])('still validates %s when provisions are selected', async field => {
+  const fetch = vi.fn(); vi.stubGlobal('fetch', fetch)
+  page(); const user = await fillForm()
+  await user.click(screen.getByRole('button', { name: 'Elevators' }))
+  await user.click(screen.getByRole('button', { name: 'Stage' }))
+  if (field === 'capacity') {
+    await user.clear(screen.getByLabelText('Overall capacity'))
+    await user.type(screen.getByLabelText('Overall capacity'), '0')
+  } else if (field === 'layouts') {
+    await user.click(screen.getByRole('button', { name: 'Theatre' }))
+  } else {
+    await user.clear(screen.getByLabelText('Operating information'))
+    await user.type(screen.getByLabelText('Operating information'), '   ')
+  }
+  await user.click(screen.getByRole('button', { name: 'Save venue' }))
+  expect(screen.getByRole('alert')).toHaveTextContent(field === 'capacity' ? 'Enter a whole number'
+    : field === 'layouts' ? 'Select at least one layout' : 'Enter operating days and hours')
+  expect(fetch).not.toHaveBeenCalled()
+  expect(screen.getByRole('button', { name: 'Elevators' })).toHaveAttribute('aria-pressed', 'true')
+  expect(screen.getByRole('button', { name: 'Stage' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+it('displays all supported provision and facility labels', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([{ ...venue,
+    venueAccessibilities: ['accessible_parking', 'drop_off_zone', 'public_transport', 'step_free_access',
+      'wide_doorways', 'elevators', 'wheelchair_support'],
+    venueFacilities: ['audio_visual_equipment', 'air_conditioning', 'breakout_spaces', 'projection',
+      'stage', 'dining_area', 'barbeque_pit'],
+  }])))
+  page('/venue-staff/catalogue')
+  expect(await screen.findByText('Accessible parking, Drop-off zone, Near public transport, Step-free access, Wide doorways, Elevators, Wheelchair support')).toBeInTheDocument()
+  expect(screen.getByText('Audio-visual equipment, Air conditioning, Breakout spaces, Projection, Stage, Dining area, Barbeque pit')).toBeInTheDocument()
 })

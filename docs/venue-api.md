@@ -14,6 +14,20 @@ integer from 1 through 50,000. The frontend default of 50 is not supplied by thi
 API. Layout labels: `classroom`, `theatre`, `boardroom`, `banquet`, `exhibition`.
 The response adds `venueId` to these fields.
 
+Optional `venueAccessibilities` and `venueFacilities` arrays record venue provisions.
+Omitted or null arrays become empty arrays; responses always include both arrays.
+Empty means no selections recorded. Accessibility `none` explicitly records no
+provisions and cannot be combined with other accessibility selections. Null entries
+and duplicate selections return 422; unknown enum labels or malformed types return 400.
+Accessibility labels match `AccessibilityFeature`; facility labels are
+`audio_visual_equipment`, `air_conditioning`, `breakout_spaces`, `projection`,
+`stage`, `dining_area`, and `barbeque_pit`.
+
+The entity stores enum labels as string collections and casts write parameters to
+PostgreSQL `accessibilities[]` / `facilities[]`. Existing column types and GIN
+indexes are unchanged. This avoids the named-enum-array binding issue documented
+in V4 without changing the Venue schema. No filtering or update endpoint is added.
+
 Errors use the shared `ApiError` shape: `message` and optional `missingFields`.
 Malformed JSON/types/layout labels or malformed UUIDs return 400; service
 validation returns 422; an unknown venue UUID returns 404.
@@ -31,4 +45,4 @@ The list currently returns the whole catalogue without pagination.
 `VenueControllerTest` exercises POST then GET through MockMvc and real PostgreSQL,
 plus invalid-input and not-found responses. Test transactions roll back inserted
 venues. `VenueServiceTest` covers creation validation; `VenuePersistenceTest`
-checks array persistence and defaults for unmapped venue fields.
+checks enum-array round trips, empty selections, and PostgreSQL column types.

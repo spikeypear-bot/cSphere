@@ -49,6 +49,16 @@ enum VenueLayout {
   exhibition
 }
 
+enum Facility {
+  audio_visual_equipment
+  air_conditioning
+  breakout_spaces
+  projection
+  stage
+  dining_area
+  barbeque_pit
+}
+
 class EventRequest {
   requestId : UUID
   requestType : Character
@@ -73,7 +83,9 @@ class Venue {
   venueId : UUID
   venueAddress : String
   venueCapacity : Integer
-  supportedLayouts : List<VenueLayout>
+  supportedLayouts : List<String>
+  venueAccessibilities : List<String>
+  venueFacilities : List<String>
   operatingInformation : String
   additionalInformation : String
 }
@@ -83,6 +95,8 @@ class Venue {
 EventRequest ..> AccessibilityFeature : accessibilityNeeds
 EventRequest ..> EventRequestStatus : status
 Venue ..> VenueLayout : supportedLayouts
+Venue ..> AccessibilityFeature : API labels
+Venue ..> Facility : API labels
 EventRequest -[hidden]- Venue
 
 note right of EventRequest

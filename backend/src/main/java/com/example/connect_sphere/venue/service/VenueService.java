@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.UUID;
+import com.example.connect_sphere.common.enums.AccessibilityFeature;
 
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Sort;
@@ -36,6 +37,8 @@ public class VenueService {
         venue.setSupportedLayouts(new ArrayList<>(input.supportedLayouts().stream()
                 .map(Enum::name).toList()));
         venue.setOperatingInformation(input.operatingInformation().strip());
+        venue.setVenueAccessibilities(labels(input.venueAccessibilities()));
+        venue.setVenueFacilities(labels(input.venueFacilities()));
         venue.setAdditionalInformation(input.additionalInformation() == null
                 ? null : input.additionalInformation().strip());
         return mapper.toDto(repository.save(venue));
@@ -67,8 +70,30 @@ public class VenueService {
         if (input.operatingInformation() == null || input.operatingInformation().isBlank()) {
             errors.add("operatingInformation is required");
         }
+        validateSelections("venueAccessibilities", input.venueAccessibilities(), errors);
+        validateSelections("venueFacilities", input.venueFacilities(), errors);
+        if (input.venueAccessibilities() != null
+                && input.venueAccessibilities().contains(AccessibilityFeature.none)
+                && input.venueAccessibilities().size() > 1) {
+            errors.add("venueAccessibilities: none cannot be combined with other selections");
+        }
         if (!errors.isEmpty()) {
             throw new InvalidVenueException(errors);
+        }
+    }
+
+    private static List<String> labels(List<? extends Enum<?>> values) {
+        return values == null ? new ArrayList<>()
+                : new ArrayList<>(values.stream().map(Enum::name).toList());
+    }
+
+    private static void validateSelections(String field, List<?> values, List<String> errors) {
+        if (values == null) return;
+        if (values.stream().anyMatch(value -> value == null)) {
+            errors.add(field + " must not contain null entries");
+        }
+        if (new HashSet<>(values).size() != values.size()) {
+            errors.add(field + " must not contain duplicates");
         }
     }
 

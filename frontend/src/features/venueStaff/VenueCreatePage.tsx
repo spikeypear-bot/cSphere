@@ -5,7 +5,8 @@ import { Button } from '../../components/ui/Button'
 import { TextField, NumberField } from '../../components/ui/fields'
 import { ChipGroup } from '../../components/ui/ChipGroup'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { venueLayouts, venueLayoutLabels, type CreateVenueDto, type VenueDto } from '../../types/venue'
+import { venueLayouts, venueLayoutLabels, venueAccessibilities, venueAccessibilityLabels,
+  venueFacilities, venueFacilityLabels, type CreateVenueDto, type VenueDto } from '../../types/venue'
 import '../../components/skeleton.css'
 
 export function VenueCreatePage() {
@@ -15,7 +16,7 @@ export function VenueCreatePage() {
   const [error, setError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [form, setForm] = useState<CreateVenueDto>({ venueAddress: '', venueCapacity: 50,
-    supportedLayouts: [], operatingInformation: '', additionalInformation: '' })
+    supportedLayouts: [], venueAccessibilities: [], venueFacilities: [], operatingInformation: '', additionalInformation: '' })
   function change<K extends keyof CreateVenueDto>(key: K, value: CreateVenueDto[K]) {
     setForm(previous => ({ ...previous, [key]: value }))
     let message = ''
@@ -53,12 +54,21 @@ export function VenueCreatePage() {
   return <div className="feature-skeleton">
     <Link to="/venue-staff/catalogue">← Venue catalogue</Link>
     <div className="feature-skeleton__header"><h1>Add Venue</h1></div>
-    <p className="feature-skeleton__summary">Record capacity, supported layouts and operating information. All fields are required unless marked optional.</p>
+    <p className="feature-skeleton__summary">Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional.</p>
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
       <TextField id="venueAddress" label="Venue address" placeholder="e.g. 123 Example Road, #02-01, Singapore 123456" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Include building, street and unit details. Maximum 500 characters." />
       <NumberField id="venueCapacity" label="Overall capacity" value={form.venueCapacity} min={1} onChange={v => change('venueCapacity', v)} error={errors.venueCapacity} hint="1–50,000 people. One capacity applies to every selected layout." />
       <div className="field"><ChipGroup label="Supported layouts" options={venueLayouts} labels={venueLayoutLabels} selected={form.supportedLayouts} onChange={v => change('supportedLayouts', v)} />
         {errors.supportedLayouts && <span className="field-error" role="alert">{errors.supportedLayouts}</span>}</div>
+      <div className="field">
+        <ChipGroup label="Accessibility provisions (optional)" options={venueAccessibilities} labels={venueAccessibilityLabels}
+          selected={form.venueAccessibilities} onChange={values => change('venueAccessibilities',
+            values.includes('none') && !form.venueAccessibilities.includes('none')
+              ? ['none'] : values.filter(value => value !== 'none'))} />
+        <span className="field-hint">Select the provisions present, or choose No accessibility provisions. Leave blank if not recorded.</span>
+      </div>
+      <ChipGroup label="Facilities (optional)" options={venueFacilities} labels={venueFacilityLabels}
+        selected={form.venueFacilities} onChange={values => change('venueFacilities', values)} />
       <TextField id="operatingInformation" label="Operating information" placeholder="e.g. Monday–Friday, 09:00–18:00. Closed on public holidays." multiline value={form.operatingInformation} onChange={v => change('operatingInformation', v)} error={errors.operatingInformation} hint="Include operating days, hours and any closures." />
       <TextField id="additionalInformation" label="Additional information (optional)" placeholder="e.g. Use the entrance on Level 2." multiline value={form.additionalInformation ?? ''} onChange={v => change('additionalInformation', v)} />
       {error && <div className="field"><p className="field-error" role="alert">{error}</p></div>}
