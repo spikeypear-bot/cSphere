@@ -1,30 +1,33 @@
-import type { EquipmentItem, EquipmentStatus, TimePeriod } from './equipmentStatus.types'
+import type { EquipmentStatus, EquipmentUnit, TimePeriod } from './equipmentStatus.types'
 
-// Our pretend database. It resets whenever you refresh the page.
-const items: EquipmentItem[] = [
-  { id: 'p1', name: 'Projector 1', typeName: 'Projector', status: 'Available' },
-  { id: 'p2', name: 'Projector 2', typeName: 'Projector', status: 'Available' },
-  { id: 'p3', name: 'Projector 3', typeName: 'Projector', status: 'Faulty' },
-  { id: 'm1', name: 'Microphone 1', typeName: 'Microphone', status: 'Available' },
-  { id: 'm2', name: 'Microphone 2', typeName: 'Microphone', status: 'Unavailable' },
-]
+// The address of the backend. We may change this one line later (see the CORS section).
+const API_BASE = ''
 
-const delay = (ms = 300) => new Promise((resolve) => setTimeout(resolve, ms))
-
-// The underscore tells TypeScript "I know this is unused for now".
-// The real backend will use the period; the mock ignores it.
-export async function fetchEquipment(_period: TimePeriod): Promise<EquipmentItem[]> {
-  await delay()
-  return items.map((item) => ({ ...item })) // return copies, not the originals
+// One helper so both calls handle errors the same way.
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json' },
+    ...init,
+  })
+  if (!response.ok) {
+    throw new Error(`Request failed with status ${response.status}`)
+  }
+  return response.json() as Promise<T>
 }
 
-export async function saveEquipmentStatus(
-  id: string,
+// The backend doesn't filter by period yet, so it's accepted but ignored.
+export function fetchEquipmentUnits(_period: TimePeriod): Promise<EquipmentUnit[]> {
+  return request<EquipmentUnit[]>('/api/equipment/units')
+}
+
+export function saveUnitStatus(
+  unit: EquipmentUnit,
   status: EquipmentStatus,
-): Promise<EquipmentItem> {
-  await delay()
-  const item = items.find((i) => i.id === id)
-  if (!item) throw new Error('Equipment not found')
-  item.status = status
-  return { ...item }
+): Promise<EquipmentUnit> {
+  // encodeURIComponent stops odd characters in a serial number from breaking the URL.
+  const path = `/api/equipment/${unit.equipmentId}/units/${encodeURIComponent(unit.serialNumber)}/status`
+  return request<EquipmentUnit>(path, {
+    method: 'PATCH',
+    body: JSON.stringify({ status }),
+  })
 }

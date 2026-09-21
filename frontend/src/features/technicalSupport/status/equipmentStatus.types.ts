@@ -2,10 +2,11 @@ export type EquipmentStatus = 'Available' | 'Faulty' | 'Unavailable'
 
 export const EQUIPMENT_STATUSES: EquipmentStatus[] = ['Available', 'Faulty', 'Unavailable']
 
-export interface EquipmentItem {
-  id: string
-  name: string
-  typeName: string
+// One physical unit, exactly as the backend sends it.
+export interface EquipmentUnit {
+  equipmentId: string
+  equipmentName: string   // "Projector"
+  serialNumber: string    // "PJ-001"
   status: EquipmentStatus
 }
 

@@ -1,17 +1,23 @@
-import type { AvailabilityCount, EquipmentItem } from './equipmentStatus.types'
+import type { AvailabilityCount, EquipmentUnit } from './equipmentStatus.types'
 
-export function countAvailableByType(items: EquipmentItem[]): AvailabilityCount[] {
+// A unit has no single id, so we join its two identifying parts into one string.
+export function unitKey(unit: EquipmentUnit): string {
+  return `${unit.equipmentId}:${unit.serialNumber}`
+}
+
+// Counts are recalculated from the list every time, never stored separately.
+export function countAvailableByType(units: EquipmentUnit[]): AvailabilityCount[] {
   const byType = new Map<string, AvailabilityCount>()
 
-  for (const item of items) {
-    const entry = byType.get(item.typeName) ?? {
-      typeName: item.typeName,
+  for (const unit of units) {
+    const entry = byType.get(unit.equipmentName) ?? {
+      typeName: unit.equipmentName,
       availableCount: 0,
       totalCount: 0,
     }
     entry.totalCount += 1
-    if (item.status === 'Available') entry.availableCount += 1
-    byType.set(item.typeName, entry)
+    if (unit.status === 'Available') entry.availableCount += 1
+    byType.set(unit.equipmentName, entry)
   }
 
   return [...byType.values()]
