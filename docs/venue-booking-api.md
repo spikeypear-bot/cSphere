@@ -116,3 +116,11 @@ rendering, optional placeholders, explicit accessibility none, empty booking lis
 and error/retry behavior. HTTP responses are mocked; these are not live-browser tests.
 
 Frontend verification (2026-09-22): 30 tests passed across VenuePages.test.tsx and BookingDetailsPage.test.tsx; production build and ESLint passed.
+
+## Local seed for component developers
+
+Venue Staff and Event Coordinator developers can use the self-contained demo venue,
+event and pending booking without implementing Coordinator workflows first.
+See [VS16 manual testing and cleanup](vs16-manual-testing.md). Scripts live under
+`backend/dev/seed/`, require explicit invocation and are not Flyway migrations.
+Seeded bookings use the same detail route as future workflow-created bookings.

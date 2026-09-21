@@ -69,3 +69,11 @@ If time runs short, the smallest coherent demoable path is: **Slice 0's EO01/EO0
 ## Definition of Done for each slice
 
 Per `AI_Context.md` § Definition of Done — every story above is only "done" once its acceptance criteria are met, role/data-scoping is enforced server-side, tests exist and pass, the code is reviewed/explainable, conventions are followed, docs are updated, and it's demoable end-to-end (or the limitation is documented).
+
+## VS16 development fixture
+
+For Venue Staff / Event Coordinator work on the shared booking-detail component,
+[the VS16 seed guide](vs16-manual-testing.md) provides an opt-in local venue, event
+and pending booking under `backend/dev/seed/`. This enables manual component testing
+before Coordinator workflows exist; it does not implement them or resolve backend
+authorization. Future VS02 should reuse the existing booking-detail route.
