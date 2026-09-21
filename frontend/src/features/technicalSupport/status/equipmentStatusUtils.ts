@@ -1,6 +1,5 @@
-import type { AvailabilityCount, EquipmentUnit } from './equipmentStatus.types'
+import type { AvailabilityCount, EquipmentUnit, StatusPeriod } from './equipmentStatus.types'
 
-// A unit has no single id, so we join its two identifying parts into one string.
 export function unitKey(unit: EquipmentUnit): string {
   return `${unit.equipmentId}:${unit.serialNumber}`
 }
@@ -21,4 +20,14 @@ export function countAvailableByType(units: EquipmentUnit[]): AvailabilityCount[
   }
 
   return [...byType.values()]
+}
+
+function formatMoment(iso: string): string {
+  return new Date(iso).toLocaleString('en-SG', { dateStyle: 'medium', timeStyle: 'short' })
+}
+
+export function describePeriod(block: StatusPeriod): string {
+  return block.end === null
+    ? `from ${formatMoment(block.start)}, until changed back`
+    : `${formatMoment(block.start)} to ${formatMoment(block.end)}`
 }

@@ -1,15 +1,25 @@
 export type EquipmentStatus = 'Available' | 'Faulty' | 'Unavailable'
 
-export const EQUIPMENT_STATUSES: EquipmentStatus[] = ['Available', 'Faulty', 'Unavailable']
+// Only these two can be saved as a block. "Available" is the default state.
+export type BlockStatus = 'Faulty' | 'Unavailable'
+export const BLOCK_STATUSES: BlockStatus[] = ['Faulty', 'Unavailable']
 
-// One physical unit, exactly as the backend sends it.
 export interface EquipmentUnit {
   equipmentId: string
-  equipmentName: string   // "Projector"
-  serialNumber: string    // "PJ-001"
-  status: EquipmentStatus
+  equipmentName: string
+  serialNumber: string
+  status: EquipmentStatus // status for the viewed period
 }
 
+// A saved Faulty/Unavailable block. end === null means "no end date".
+export interface StatusPeriod {
+  id: string
+  status: BlockStatus
+  start: string
+  end: string | null
+}
+
+// Values from <input type="datetime-local">, e.g. "2026-09-25T09:00"
 export interface TimePeriod {
   start: string
   end: string

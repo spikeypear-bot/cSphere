@@ -1,23 +1,41 @@
 import { useEffect, useState } from 'react'
 import {
-  EQUIPMENT_STATUSES,
-  type EquipmentStatus,
+  BLOCK_STATUSES,
+  type BlockStatus,
   type EquipmentUnit,
+  type StatusPeriod,
   type TimePeriod,
 } from './equipmentStatus.types'
-import { fetchEquipmentUnits, saveUnitStatus } from './equipmentStatusApi'
-import { countAvailableByType, unitKey } from './equipmentStatusUtils'
+import {
+  ApiError,
+  addStatusPeriod,
+  fetchEquipmentUnits,
+  fetchStatusPeriods,
+  removeStatusPeriod,
+} from './equipmentStatusApi'
+import { countAvailableByType, describePeriod, unitKey } from './equipmentStatusUtils'
 
 export function EquipmentStatusPage() {
-  // ---- State ----
+  // ---- The period we are VIEWING ----
   const [period, setPeriod] = useState<TimePeriod>({
     start: '2026-09-25T09:00',
     end: '2026-09-25T17:00',
   })
   const [units, setUnits] = useState<EquipmentUnit[]>([])
   const [loading, setLoading] = useState(false)
+  // Bumping this number makes both lists reload from the backend.
+  const [reloadCount, setReloadCount] = useState(0)
+
+  // ---- The selected unit and its blocks ----
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
-  const [draftStatus, setDraftStatus] = useState<EquipmentStatus>('Available') // unsaved choice
+  const [blocks, setBlocks] = useState<StatusPeriod[]>([])
+
+  // ---- The "mark as faulty/unavailable" form (a draft until saved) ----
+  const [draftStatus, setDraftStatus] = useState<BlockStatus>('Unavailable')
+  const [draftStart, setDraftStart] = useState('')
+  const [draftEnd, setDraftEnd] = useState('')
+  const [indefinite, setIndefinite] = useState(false)
+
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -26,10 +44,13 @@ export function EquipmentStatusPage() {
   const periodIsValid =
     period.start !== '' && period.end !== '' && period.end > period.start
   const selectedUnit = units.find((u) => unitKey(u) === selectedKey) ?? null
-  const hasUnsavedChange = selectedUnit !== null && draftStatus !== selectedUnit.status
+  const selectedEquipmentId = selectedUnit?.equipmentId
+  const selectedSerial = selectedUnit?.serialNumber
   const counts = countAvailableByType(units)
+  const formIsValid =
+    draftStart !== '' && (indefinite || (draftEnd !== '' && draftEnd > draftStart))
 
-  // ---- AC 1: load statuses when the period changes ----
+  // ---- Load every unit's status for the viewed period ----
   useEffect(() => {
     if (!periodIsValid) {
       setUnits([])
@@ -37,44 +58,92 @@ export function EquipmentStatusPage() {
     }
     let cancelled = false
     setLoading(true)
-    setError(null)
     fetchEquipmentUnits(period)
       .then((data) => { if (!cancelled) setUnits(data) })
       .catch(() => { if (!cancelled) setError('Could not load equipment.') })
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
-  }, [period, periodIsValid])
+  }, [period, periodIsValid, reloadCount])
 
-  // ---- Choosing a unit: the draft starts as its SAVED status ----
+  // ---- Load the selected unit's blocks ----
+  useEffect(() => {
+    if (!selectedEquipmentId || !selectedSerial) {
+      setBlocks([])
+      return
+    }
+    let cancelled = false
+    fetchStatusPeriods(selectedEquipmentId, selectedSerial)
+      .then((data) => { if (!cancelled) setBlocks(data) })
+      .catch(() => { if (!cancelled) setError('Could not load this unit\'s periods.') })
+    return () => { cancelled = true }
+  }, [selectedEquipmentId, selectedSerial, reloadCount])
+
+  function resetForm() {
+    setDraftStatus('Unavailable')
+    setDraftStart(period.start)
+    setDraftEnd(period.end)
+    setIndefinite(false)
+  }
+
   function handleSelect(unit: EquipmentUnit) {
     setSelectedKey(unitKey(unit))
-    setDraftStatus(unit.status)
+    resetForm()
     setMessage(null)
     setError(null)
   }
 
-  // ---- AC 2 + 3: save, then show the updated status ----
+  // Cancel = throw the draft away. Nothing was saved, so nothing changes.
+  function handleCancel() {
+    resetForm()
+    setError(null)
+  }
+
   async function handleSave() {
-    if (!selectedUnit) return
+    if (!selectedUnit || !formIsValid) return
     setSaving(true)
     setMessage(null)
     setError(null)
     try {
-      const updated = await saveUnitStatus(selectedUnit, draftStatus)
-      setUnits((prev) => prev.map((u) => (unitKey(u) === unitKey(updated) ? updated : u)))
-      setMessage(`${updated.equipmentName} ${updated.serialNumber} is now ${updated.status}.`)
-    } catch {
-      // AC 4 (failure): put the draft back to the saved status
-      setDraftStatus(selectedUnit.status)
-      setError('Could not save the change. The previous status has been kept.')
+      await addStatusPeriod(
+        selectedUnit.equipmentId,
+        selectedUnit.serialNumber,
+        draftStatus,
+        draftStart,
+        indefinite ? null : draftEnd,
+      )
+      setMessage(
+        `${selectedUnit.equipmentName} ${selectedUnit.serialNumber} marked ${draftStatus} ` +
+          (indefinite ? 'until you change it back.' : 'for the chosen dates.'),
+      )
+      resetForm()
+      setReloadCount((n) => n + 1)
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 409) {
+        setError('This unit already has a status for part of those dates. Remove that period first.')
+      } else {
+        setError('Could not save the change. The previous status has been kept.')
+      }
     } finally {
       setSaving(false)
     }
   }
 
-  // ---- AC 4 (cancel): throw away the draft ----
-  function handleCancel() {
-    if (selectedUnit) setDraftStatus(selectedUnit.status)
+  async function handleRemove(block: StatusPeriod) {
+    if (!selectedUnit) return
+    setSaving(true)
+    setMessage(null)
+    setError(null)
+    try {
+      await removeStatusPeriod(block.id)
+      setMessage(
+        `${selectedUnit.equipmentName} ${selectedUnit.serialNumber} is available again for that period.`,
+      )
+      setReloadCount((n) => n + 1)
+    } catch {
+      setError('Could not remove that period. Nothing was changed.')
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -82,7 +151,7 @@ export function EquipmentStatusPage() {
       <h1>Equipment Status</h1>
 
       <fieldset>
-        <legend>Date and time period</legend>
+        <legend>Date and time period to view</legend>
         <label htmlFor="period-start">Start</label>
         <input
           id="period-start"
@@ -131,25 +200,80 @@ export function EquipmentStatusPage() {
             {selectedUnit.equipmentName} {selectedUnit.serialNumber}
           </h2>
           <p>
-            Current status: <strong>{selectedUnit.status}</strong>
+            Status for the period above: <strong>{selectedUnit.status}</strong>
           </p>
 
-          <label htmlFor="status-select">Change status to</label>
+          <h3>Faulty / unavailable periods</h3>
+          {blocks.length === 0 ? (
+            <p>None. This unit is available at all times.</p>
+          ) : (
+            <ul>
+              {blocks.map((block) => (
+                <li key={block.id}>
+                  <strong>{block.status}</strong>: {describePeriod(block)}{' '}
+                  <button type="button" onClick={() => handleRemove(block)} disabled={saving}>
+                    Remove (mark available)
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <h3>Mark as faulty or unavailable</h3>
+          <label htmlFor="block-status">Status</label>
           <select
-            id="status-select"
+            id="block-status"
             value={draftStatus}
-            onChange={(e) => setDraftStatus(e.target.value as EquipmentStatus)}
+            onChange={(e) => setDraftStatus(e.target.value as BlockStatus)}
             disabled={saving}
           >
-            {EQUIPMENT_STATUSES.map((s) => (
+            {BLOCK_STATUSES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>
 
-          <button type="button" onClick={handleSave} disabled={!hasUnsavedChange || saving}>
+          <label htmlFor="block-start">From</label>
+          <input
+            id="block-start"
+            type="datetime-local"
+            value={draftStart}
+            onChange={(e) => setDraftStart(e.target.value)}
+            disabled={saving}
+          />
+
+          <label>
+            <input
+              type="checkbox"
+              checked={indefinite}
+              onChange={(e) => setIndefinite(e.target.checked)}
+              disabled={saving}
+            />
+            No end date (until I change it back)
+          </label>
+
+          {!indefinite && (
+            <>
+              <label htmlFor="block-end">Until</label>
+              <input
+                id="block-end"
+                type="datetime-local"
+                value={draftEnd}
+                onChange={(e) => setDraftEnd(e.target.value)}
+                disabled={saving}
+              />
+            </>
+          )}
+
+          {!formIsValid && (
+            <p role="alert">
+              Choose a start time, and an end time after it (or tick "No end date").
+            </p>
+          )}
+
+          <button type="button" onClick={handleSave} disabled={!formIsValid || saving}>
             {saving ? 'Saving…' : 'Save'}
           </button>
-          <button type="button" onClick={handleCancel} disabled={!hasUnsavedChange || saving}>
+          <button type="button" onClick={handleCancel} disabled={saving}>
             Cancel
           </button>
         </div>
