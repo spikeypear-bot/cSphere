@@ -18,4 +18,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Optional safe rather than a List.
      */
     Optional<User> findByUsername(String username);
+
+    /**
+     * Lets the dev seeder stay idempotent — it runs on every boot, and both
+     * `username` and `email` are UNIQUE, so a blind insert would fail on the
+     * second startup rather than quietly doing nothing.
+     */
+    boolean existsByUsername(String username);
 }
