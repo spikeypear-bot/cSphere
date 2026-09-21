@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
@@ -15,10 +16,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * Basic venue catalogue information for VS06A, mapped to the V5 schema.
- * IDs are assigned by the application before persistence. Accessibility and
- * facilities are not mapped in this slice, so inserts use their database defaults
- * and updates leave any existing values intact.
+ * Venue catalogue information. IDs are assigned by the application.
+ * Enum labels use string arrays with explicit write casts to retain PostgreSQL
+ * enum-array validation without relying on Hibernate named-enum-array binding.
  */
 @Entity
 @Table(name = "venues")
@@ -39,6 +39,16 @@ public class Venue {
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "supported_layouts", nullable = false, columnDefinition = "text[]")
     private List<String> supportedLayouts = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @ColumnTransformer(write = "cast(? as accessibilities[])")
+    @Column(name = "venue_accessibilities", nullable = false, columnDefinition = "accessibilities[]")
+    private List<String> venueAccessibilities = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @ColumnTransformer(write = "cast(? as facilities[])")
+    @Column(name = "venue_facilities", nullable = false, columnDefinition = "facilities[]")
+    private List<String> venueFacilities = new ArrayList<>();
 
     @Column(name = "operating_information", nullable = false, columnDefinition = "text")
     private String operatingInformation;

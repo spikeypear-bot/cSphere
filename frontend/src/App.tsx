@@ -11,6 +11,7 @@ import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatu
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
 import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
 import { VenueStaffHomePage } from './features/venueStaff/VenueStaffHomePage'
+import { VenueEditPage } from './features/venueStaff/VenueEditPage'
 import { VenueCreatePage } from './features/venueStaff/VenueCreatePage'
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
@@ -72,6 +73,7 @@ function VenueStaffRoutes() {
       <Route index element={<VenueStaffHomePage />} />
       <Route path="catalogue" element={<VenueCataloguePage />} />
       <Route path="catalogue/new" element={<VenueCreatePage />} />
+      <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
       {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue')))}
     </Routes>
   )

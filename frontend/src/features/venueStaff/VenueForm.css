@@ -1,0 +1,22 @@
+.venue-form,
+.venue-form .feature-skeleton__body,
+.venue-form .feature-skeleton__detail-preview,
+.venue-form .field {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.venue-form .field p {
+  white-space: pre-wrap;
+}
+
+.venue-form textarea {
+  box-sizing: border-box;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  resize: vertical;
+}

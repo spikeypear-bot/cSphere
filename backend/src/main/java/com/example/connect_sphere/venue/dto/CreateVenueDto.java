@@ -1,6 +1,8 @@
 package com.example.connect_sphere.venue.dto;
 
 import java.util.List;
+import com.example.connect_sphere.common.enums.AccessibilityFeature;
+import com.example.connect_sphere.common.enums.Facility;
 
 import com.example.connect_sphere.venue.entity.VenueLayout;
 
@@ -14,5 +16,7 @@ public record CreateVenueDto(
         Integer venueCapacity,
         List<VenueLayout> supportedLayouts,
         String operatingInformation,
-        String additionalInformation) {
+        String additionalInformation,
+        List<AccessibilityFeature> venueAccessibilities,
+        List<Facility> venueFacilities) {
 }

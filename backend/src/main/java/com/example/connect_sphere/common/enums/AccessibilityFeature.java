@@ -2,8 +2,8 @@ package com.example.connect_sphere.common.enums;
 
 /**
  * Mirrors the Postgres `accessibilities` enum (see SCHEMA.md §2). Shared across
- * event requests, events, and (later) venues, since all three columns reference
- * the same DB type.
+ * event requests, events, and venues. Venue/event columns retain this DB enum;
+ * event requests store its labels in text[] (V4).
  *
  * Constant names are intentionally lower_snake_case, matching the Postgres enum
  * labels exactly — Hibernate's NamedEnumJdbcType (SCHEMA.md §6) sends the Java
@@ -18,8 +18,8 @@ public enum AccessibilityFeature {
     wide_doorways,
     elevators,
     wheelchair_support,
-    /** Means "asked, and no accessibility accommodation is needed" — not the
-     * absence of an answer. See V5 migration and EventRequestService's
-     * required-field check for why this exists (EO02). */
+    /** Explicitly no requirements for an event request, or no provisions for
+     * a venue. Venue validation disallows combining this with other features;
+     * an empty venue list means no provisions have been recorded. */
     none
 }
