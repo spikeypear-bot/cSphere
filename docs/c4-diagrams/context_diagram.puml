@@ -1,0 +1,21 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+
+LAYOUT_WITH_LEGEND()
+
+title System Context diagram for ConnectSphere
+
+Person(organiser, "Event Organiser", "Creates and tracks event requests")
+Person(coordinator, "Event Coordinator", "Reviews requests and confirms events")
+Person(venueStaff, "Venue Staff", "Manages venues and approves bookings")
+Person(techSupport, "Technical Support Staff", "Keeps equipment status up to date")
+Person(attendee, "Attendee", "Views and signs up for events")
+
+System(connectSphere, "ConnectSphere", "Helps plan events and book venues")
+
+Rel(organiser, connectSphere, "Submits and tracks event requests")
+Rel(coordinator, connectSphere, "Reviews and confirms events")
+Rel(venueStaff, connectSphere, "Manages venues and bookings")
+Rel(techSupport, connectSphere, "Updates equipment status")
+Rel(attendee, connectSphere, "Views and signs up for events")
+@enduml
