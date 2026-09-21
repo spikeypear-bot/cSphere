@@ -45,6 +45,15 @@
 		    <groupId>org.springframework.boot</groupId>
 		    <artifactId>spring-boot-starter-security</artifactId>
 		</dependency>
+		<!-- Validates incoming JWTs and brings in Nimbus, which also does the
+		     signing. Note the "security-" prefix: the older
+		     spring-boot-starter-oauth2-resource-server still resolves but its
+		     own POM marks it deprecated in favour of this one. Most tutorials
+		     use the old name. -->
+		<dependency>
+		    <groupId>org.springframework.boot</groupId>
+		    <artifactId>spring-boot-starter-security-oauth2-resource-server</artifactId>
+		</dependency>
 		<!-- Persistence -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -2,6 +2,7 @@ package com.example.connect_sphere.common.web;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -10,6 +11,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundExcep
 import com.example.connect_sphere.eventrequest.service.IncompleteEventRequestException;
 import com.example.connect_sphere.eventrequest.service.MissingOrganisationException;
 import com.example.connect_sphere.venue.service.InvalidVenueException;
+import com.example.connect_sphere.user.service.InvalidRefreshTokenException;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 
 /** One place that turns domain exceptions into HTTP responses, so every
@@ -48,5 +50,32 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MissingOrganisationException.class)
     public ResponseEntity<ApiError> handleMissingOrganisation(MissingOrganisationException ex) {
         return ResponseEntity.badRequest().body(ApiError.of(ex.getMessage()));
+    }
+
+    /**
+     * Every authentication failure answers identically — wrong password, unknown
+     * username, blank credentials alike. Distinguishing them would let an
+     * unauthenticated caller enumerate valid usernames one request at a time, so
+     * the exception's own message is deliberately discarded rather than returned.
+     *
+     * This covers failures thrown from AuthController, which happen inside the
+     * dispatcher and so reach @RestControllerAdvice. Requests rejected by the
+     * filter chain before any controller runs never get here — shaping those is
+     * an AuthenticationEntryPoint's job, and is still outstanding.
+     */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiError> handleAuthenticationFailure(AuthenticationException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                .body(ApiError.of("Invalid username or password"));
+    }
+
+    /**
+     * Unknown, expired, already-rotated and revoked refresh tokens all land here
+     * and all answer identically — the client's only recourse is to log in again,
+     * and saying more would tell a holder of a stolen token what they have.
+     */
+    @ExceptionHandler(InvalidRefreshTokenException.class)
+    public ResponseEntity<ApiError> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.of(ex.getMessage()));
     }
 }
