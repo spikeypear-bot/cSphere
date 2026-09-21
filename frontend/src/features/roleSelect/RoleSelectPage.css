@@ -7,6 +7,26 @@
   color: var(--ink-soft);
 }
 
+.role-select__access-denied {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-color: var(--danger);
+}
+
+.role-select__access-denied h2 {
+  color: var(--danger);
+  font-size: 1rem;
+}
+
+.role-select__access-denied p {
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+}
+
+.role-select__access-denied code {
+  overflow-wrap: anywhere;
+}
+
 .role-select__grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));

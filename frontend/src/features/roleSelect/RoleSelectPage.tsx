@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/fields'
@@ -72,8 +72,10 @@ const ROLE_OPTIONS: RoleOption[] = [
 export function RoleSelectPage() {
   const { loginAs } = useSession()
   const navigate = useNavigate()
+  const location = useLocation()
   const [pendingRole, setPendingRole] = useState<RoleOption | null>(null)
   const [organisationInput, setOrganisationInput] = useState('')
+  const deniedPath = new URLSearchParams(location.search).get('access-denied')
 
   function handleSelect(option: RoleOption) {
     if (!option.needsOrganisation) {
@@ -96,6 +98,13 @@ export function RoleSelectPage() {
         <h1>Who's working today?</h1>
         <p>Pick your role to open ConnectSphere's console for it.</p>
       </div>
+
+      {deniedPath ? (
+        <Card className="role-select__access-denied" role="alert">
+          <h2>Access denied</h2>
+          <p>You do not have permission to access <code>{deniedPath}</code> with your current role. Choose the appropriate role to continue.</p>
+        </Card>
+      ) : null}
 
       <div className="role-select__grid">
         {ROLE_OPTIONS.map((option) => (

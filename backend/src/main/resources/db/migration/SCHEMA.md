@@ -149,8 +149,12 @@ distinct from the database constraints documented above.
 Operating information remains human-readable text (for example, "Mon-Fri,
 09:00-18:00; closed on public holidays"). These constraints ensure it is present,
 not that the schedule can be calculated automatically. Structured hours, booking
-availability and accessibility/facility entry are separate stories. Venue address
-remains required; accessibility and facility arrays retain their empty defaults.
+availability remain separate stories. Venue address remains required.
+The Venue API now records accessibility/facility selections in the existing enum
+arrays. Omitted/null lists become empty; duplicate/null entries are rejected.
+Accessibility `none` explicitly records no provisions and is exclusive. The entity
+uses string collections with write casts to `accessibilities[]` / `facilities[]`,
+preserving database enum validation and existing GIN indexes (see `docs/venue-api.md`).
 
 **Indexes**
 
