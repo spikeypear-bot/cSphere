@@ -9,11 +9,11 @@ public record EquipmentUnitResponse(
         String serialNumber,
         EquipmentStatus status) {
 
-    static EquipmentUnitResponse from(SerialisedEquipment unit) {
+    static EquipmentUnitResponse from(SerialisedEquipment unit, EquipmentStatus status) {
         return new EquipmentUnitResponse(
                 unit.getId().getEquipmentId(),
                 unit.getEquipment().getName(),
                 unit.getId().getSerialNumber(),
-                unit.getStatus());
+                status);
     }
 }
