@@ -1,0 +1,21 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Container.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Container diagram for ConnectSphere
+
+Person(user, "ConnectSphere User", "Event Organiser, Coordinator, Venue Staff, Technical Support, or Attendee")
+
+System_Boundary(connectSphere, "ConnectSphere") {
+    Container(spa, "Frontend App", "React, TypeScript, Vite", "Provides role-based user interfaces and consumes backend REST APIs")
+
+    Container(api, "Backend API", "Java, Spring Boot", "Provides event request and venue management services")
+
+    ContainerDb(db, "Database", "PostgreSQL", "Stores all event and venue data")
+}
+
+Rel(user, spa, "Uses", "HTTP")
+Rel(spa, api, "Sends requests to", "HTTP")
+Rel(api, db, "Reads and writes data", "SQL")
+@enduml
