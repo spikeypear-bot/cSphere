@@ -1,0 +1,40 @@
+@startuml
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+
+LAYOUT_WITH_LEGEND()
+
+title Component diagram for ConnectSphere — Backend API
+
+Container(spa, "Frontend App", "React, TypeScript", "The website users interact with")
+ContainerDb(db, "Database", "PostgreSQL", "Stores all event and venue data")
+
+Container_Boundary(api, "Backend API") {
+    Component(eventController, "EventRequestController", "Spring Controller", "Receives event request calls from the frontend")
+    Component(eventService, "EventRequestService", "Spring Service", "Handles the main logic for creating, updating, and submitting event requests")
+    Component(eventMapper, "EventRequestMapper", "Mapper", "Converts event request data between the database format and the format sent to the frontend")
+    Component(eventRepo, "EventRequestRepository", "Data Repository", "Saves and loads event requests from the database")
+
+    Component(venueController, "VenueController", "Spring Controller", "Receives venue and room calls from the frontend")
+    Component(venueService, "VenueService", "Spring Service", "Handles the main logic for managing venues")
+    Component(venueMapper, "VenueMapper", "Mapper", "Converts venue data between the database format and the format sent to the frontend")
+    Component(venueRepo, "VenueRepository", "Data Repository", "Saves and loads venues from the database")
+
+    Component(errorHandler, "ApiExceptionHandler", "Spring Component", "Catches errors and sends back a clear error message")
+}
+
+Rel(spa, eventController, "Calls")
+Rel(spa, venueController, "Calls")
+
+Rel(eventController, eventService, "Uses")
+Rel(eventService, eventMapper, "Uses")
+Rel(eventService, eventRepo, "Uses")
+Rel(eventRepo, db, "Reads and writes data")
+
+Rel(venueController, venueService, "Uses")
+Rel(venueService, venueMapper, "Uses")
+Rel(venueService, venueRepo, "Uses")
+Rel(venueRepo, db, "Reads and writes data")
+
+Rel(eventController, errorHandler, "Errors handled by")
+Rel(venueController, errorHandler, "Errors handled by")
+@enduml
