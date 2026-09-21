@@ -1,0 +1,14 @@
+.booking-details-page { max-width: none; }
+.booking-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+.booking-detail-layout > section { min-width: 0; overflow-wrap: anywhere; }
+.event-requirements-panel h3 { margin-top: 1rem; }
+.event-requirements-scroll { max-height: 75svh; overflow-y: auto; overscroll-behavior: contain; }
+.event-requirements-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.associated-bookings { list-style: none; padding: 0; display: grid; gap: 1rem; margin-top: 1rem; }
+.associated-bookings p { margin: 0.5rem 0; }
+.venue-details-page { overflow-wrap: anywhere; }
+.venue-card-preview__details { margin-top: 1.25rem; }
+@media (max-width: 700px), (max-height: 600px) {
+  .booking-detail-layout { grid-template-columns: minmax(0, 1fr); }
+  .event-requirements-scroll { max-height: none; overflow: visible; }
+}
