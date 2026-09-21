@@ -9,7 +9,10 @@ import './VenueCataloguePage.css'
 
 function VenueCatalogueCard({ venue }: { venue: VenueDto }) {
   return <Card className="feature-skeleton__body venue-card-preview">
-    <p className="venue-card-preview__id" aria-label="Venue ID">{venue.venueId}</p>
+    <div className="venue-card-preview__header">
+      <p className="venue-card-preview__id" aria-label="Venue ID">{venue.venueId}</p>
+      <Link className="button button--secondary venue-card-preview__edit" to={`/venue-staff/catalogue/${venue.venueId}/edit`}>Edit venue</Link>
+    </div>
     <ul className="venue-card-preview__tags" aria-label="Supported layouts">
       {venue.supportedLayouts.map(layout => <li key={layout} className="venue-card-preview__tag">
         {venueLayoutLabels[layout] ?? layout}
@@ -43,7 +46,7 @@ export function VenueCataloguePage() {
   return <div className="feature-skeleton">
     <div className="feature-skeleton__header"><h1>Venue Catalogue</h1><Link className="button button--primary" to="/venue-staff/catalogue/new">Add a venue</Link></div>
     <p className="feature-skeleton__summary">View saved venue details for event planning.</p>
-    {location.state?.venueSaved && <Card className="feature-skeleton__body venue-success-banner"><p role="status">Venue saved successfully.</p>
+    {location.state?.venueSaved && <Card className="feature-skeleton__body venue-success-banner"><p role="status">{location.state?.venueUpdated ? 'Venue updated successfully.' : 'Venue saved successfully.'}</p>
       <Button variant="ghost" onClick={() => navigate(location.pathname, { replace: true, state: null })}>Dismiss</Button></Card>}
     {error ? <Card className="feature-skeleton__body"><p role="alert">{error}</p><Button variant="secondary" onClick={() => { setError(''); setAttempt(n => n + 1) }}>Try again</Button></Card>
       : venues === null ? <p role="status">Loading venues…</p>

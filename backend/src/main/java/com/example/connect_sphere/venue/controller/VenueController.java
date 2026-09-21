@@ -3,6 +3,7 @@ package com.example.connect_sphere.venue.controller;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import tools.jackson.core.JacksonException;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -11,6 +12,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 
 import com.example.connect_sphere.common.web.ApiError;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
+import com.example.connect_sphere.venue.dto.UpdateVenueDto;
 import com.example.connect_sphere.venue.dto.VenueDto;
 import com.example.connect_sphere.venue.service.VenueService;
 
@@ -30,6 +32,11 @@ public class VenueController {
         return ResponseEntity.created(URI.create("/api/venues/" + saved.venueId())).body(saved);
     }
 
+    @PutMapping("/{venueId}")
+    public VenueDto update(@PathVariable("venueId") UUID venueId, @RequestBody UpdateVenueDto input) {
+        return service.updateVenue(venueId, input);
+    }
+
     @GetMapping
     public List<VenueDto> list() {
         return service.list();
@@ -42,6 +49,25 @@ public class VenueController {
 
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiError> handleInvalidBody(HttpMessageNotReadableException ex) {
+        // Use only known field names, never expose parser internals or submitted values.
+        for (Throwable cause = ex.getCause(); cause != null; cause = cause.getCause()) {
+            if (cause instanceof JacksonException jsonError) {
+                for (var reference : jsonError.getPath()) {
+                    String field = reference.getPropertyName();
+                    if (field == null) continue;
+                    String message = switch (field) {
+                        case "venueCapacity" -> "venueCapacity must be a whole number between 1 and 50000; null is not allowed";
+                        case "supportedLayouts" -> "supportedLayouts must be an array of valid layout selections; null is not allowed";
+                        case "venueAccessibilities" -> "venueAccessibilities must be an array of valid accessibility selections; use [] to clear selections, not null";
+                        case "venueFacilities" -> "venueFacilities must be an array of valid facility selections; use [] to clear selections, not null";
+                        case "additionalInformation" -> "additionalInformation must be text; use an empty string to clear it, not null";
+                        case "operatingInformation" -> "operatingInformation must be nonblank text; null is not allowed";
+                        default -> null;
+                    };
+                    if (message != null) return ResponseEntity.badRequest().body(ApiError.of(message));
+                }
+            }
+        }
         return ResponseEntity.badRequest().body(ApiError.of(
                 "Invalid venue JSON: check field types, supported layouts, accessibility and facility values."));
     }

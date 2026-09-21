@@ -8,14 +8,15 @@ import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { venueLayouts, venueLayoutLabels, venueAccessibilities, venueAccessibilityLabels,
   venueFacilities, venueFacilityLabels, type CreateVenueDto, type VenueDto } from '../../types/venue'
 import '../../components/skeleton.css'
+import './VenueForm.css'
 
-export function VenueCreatePage() {
+export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   const navigate = useNavigate()
   const busy = useRef(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [form, setForm] = useState<CreateVenueDto>({ venueAddress: '', venueCapacity: 50,
+  const [form, setForm] = useState<CreateVenueDto>(initialVenue ?? { venueAddress: '', venueCapacity: 50,
     supportedLayouts: [], venueAccessibilities: [], venueFacilities: [], operatingInformation: '', additionalInformation: '' })
   function change<K extends keyof CreateVenueDto>(key: K, value: CreateVenueDto[K]) {
     setForm(previous => ({ ...previous, [key]: value }))
@@ -44,19 +45,30 @@ export function VenueCreatePage() {
     busy.current = true
     setSaving(true)
     try {
-      await apiClient.post<VenueDto>('/venues', { ...form, venueAddress: form.venueAddress.trim(),
-        operatingInformation: form.operatingInformation.trim(), additionalInformation: form.additionalInformation?.trim() || null })
-      navigate('/venue-staff/catalogue', { replace: true, state: { venueSaved: true } })
+      if (initialVenue) {
+        const changes: Partial<CreateVenueDto> = {}
+        const fields = ['venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation'] as const
+        for (const field of fields) {
+          if (JSON.stringify(form[field]) !== JSON.stringify(initialVenue[field])) {
+            Object.assign(changes, { [field]: form[field] })
+          }
+        }
+        await apiClient.put<VenueDto>(`/venues/${initialVenue.venueId}`, changes)
+      } else {
+        await apiClient.post<VenueDto>('/venues', { ...form, venueAddress: form.venueAddress.trim(),
+          operatingInformation: form.operatingInformation.trim(), additionalInformation: form.additionalInformation?.trim() || null })
+      }
+      navigate('/venue-staff/catalogue', { replace: true, state: { venueSaved: true, venueUpdated: !!initialVenue } })
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Could not save the venue. Please try again.')
     } finally { busy.current = false; setSaving(false) }
   }
-  return <div className="feature-skeleton">
+  return <div className="feature-skeleton venue-form">
     <Link to="/venue-staff/catalogue">← Venue catalogue</Link>
-    <div className="feature-skeleton__header"><h1>Add Venue</h1></div>
+    <div className="feature-skeleton__header"><h1>{initialVenue ? 'Edit Venue' : 'Add Venue'}</h1></div>
     <p className="feature-skeleton__summary">Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional.</p>
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
-      <TextField id="venueAddress" label="Venue address" placeholder="e.g. 123 Example Road, #02-01, Singapore 123456" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Include building, street and unit details. Maximum 500 characters." />
+      {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. 123 Example Road, #02-01, Singapore 123456" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Include building, street and unit details. Maximum 500 characters." />}
       <NumberField id="venueCapacity" label="Overall capacity" value={form.venueCapacity} min={1} onChange={v => change('venueCapacity', v)} error={errors.venueCapacity} hint="1–50,000 people. One capacity applies to every selected layout." />
       <div className="field"><ChipGroup label="Supported layouts" options={venueLayouts} labels={venueLayoutLabels} selected={form.supportedLayouts} onChange={v => change('supportedLayouts', v)} />
         {errors.supportedLayouts && <span className="field-error" role="alert">{errors.supportedLayouts}</span>}</div>

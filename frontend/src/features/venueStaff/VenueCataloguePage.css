@@ -42,7 +42,7 @@
 
 .venue-card-preview__capacity {
   margin-top: 0.5rem;
-  color: var(--ink-soft);
+  color: var(--accent-strong);
   font-size: 1rem;
 }
 
@@ -63,4 +63,24 @@
   color: var(--ink-soft);
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+.venue-card-preview__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.venue-card-preview__header .venue-card-preview__id {
+  min-width: 0;
+  margin: 0;
+}
+
+.venue-card-preview__edit {
+  font-size: 0.75rem;
+  padding: 0.4rem 0.75rem;
+  flex-shrink: 0;
+  margin-left: auto;
 }
