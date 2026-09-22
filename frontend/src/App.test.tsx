@@ -63,13 +63,27 @@ describe('App routing — role consoles', () => {
     expect(screen.getByText('com.example.connect_sphere.equipment')).toBeInTheDocument()
   })
 
-  it("redirects a signed-in account away from another role's console to its own", async () => {
+  it("redirects a signed-in account away from another role's console and says why", async () => {
     signInAs('attendee', 'att1')
     renderApp('/venue-staff')
 
     // Their own console, not the login page: the session is valid, this just
     // isn't their area. The server rejects the API calls regardless (D20).
     expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+
+    // AU06 — a silent redirect reads as the app misbehaving. Originally
+    // delivered on the role-select screen (PR #11); it moved to AppShell when
+    // that screen was replaced by a real login page.
+    expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
+    expect(screen.getByRole('alert')).toHaveTextContent('/venue-staff')
+  })
+
+  it('does not show the access-denied alert during ordinary navigation', async () => {
+    signInAs('attendee', 'att1')
+    renderApp('/attendee')
+
+    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('identifies the signed-in account in the shell', async () => {

@@ -131,6 +131,79 @@ Entities: `users`, `venues`, `events`, `event_requests`, `equipments`, `serialis
 - **Check every branch before claiming a migration version.** `git ls-tree -r --name-only <branch> | grep V[0-9]` across all branches, not just your own — `origin/main` and five feature branches already carry a `V7`. The team has hit a version collision once (D15) and `feat/auth` deliberately claimed a colliding `V7` a second time, to be renumbered on merge.
 - **Object-oriented modelling rules (IS212 Week 5, "Communicating Design & Collaborating on Code"):** use inheritance only for a real "is-a" relationship that *also* needs polymorphism (a subclass overriding a method so the same call site behaves differently per type at runtime) — not for data-only variation (e.g. a role label), which belongs on one flat class as a field/enum instead. When an association between two classes carries its own meaningful data (dates, quantities, a status), give it its own class rather than bolting fields onto either side. Prefer a plain association over aggregation, and aggregation over composition, unless the stronger relationship is genuinely true — composition only when the child has no independent existence. Model only classes an actual story/AC needs. Keep class/sequence diagrams as versioned PlantUML/Mermaid text committed to the repo (see `docs/class-diagram.puml`), updated in the same PR as the code they describe, not a one-off exported image — see `docs/decision-log.md` D16 for how this was applied to the current domain model.
 
+## Adding a new API endpoint — checklist (D19/D20)
+
+Authentication and authorisation are in place; these are the steps that are easy
+to forget, ordered by how quietly they fail.
+
+**1. Add a role rule, or your endpoint is open to all five roles.**
+`anyRequest().authenticated()` catches anything unlisted, so a new endpoint is
+never *public* — but it is reachable by every signed-in account until a matcher
+exists. Add a row to `docs/decision-log.md` D20, then the matcher in
+`SecurityConfig.authorizeHttpRequests`. **This failure is silent:** no error, no
+red test, the feature demos perfectly. The only thing that catches it is a
+negative test (below).
+
+**2. Matcher order decides the outcome.** First match wins and evaluation stops,
+so a method-scoped rule must come *above* the path-wide rule it carves an
+exception out of — e.g. `GET /api/venues/**` → `authenticated()` before
+`/api/venues/**` → `hasAnyRole("EC","VS")`. Reverse them and reads become
+write-role-only. `anyRequest()` must be last; Spring fails at startup otherwise.
+
+**3. `hasRole` takes exactly one role** — `hasAnyRole("EC","VS")` for several.
+Never write the `ROLE_` prefix yourself, and match the case: authorities are
+`ROLE_VS`, so `hasRole("vs")` 403s everything.
+
+**4. Never read identity or scope from the request.** No `X-Organisation`-style
+header, no `userId` in a body or query parameter. Take it from
+`@AuthenticationPrincipal Jwt jwt` and read the claim (see
+`EventRequestController.organisationOf`). Anything the client can type, the
+client can forge — this was a live cross-organisation leak on 2026-09-22.
+
+**5. Role gating is not data scoping.** A matcher or `@PreAuthorize` answers
+*whether* a caller may reach the endpoint. *Which rows* they get is a `WHERE`
+clause in the repository. For a list there is no yes/no to make at all — the
+answer is a smaller result set, and no annotation can express that.
+
+**6. `@PreAuthorize` only where the rule needs a method argument or the
+principal.** A plain role check belongs in the filter chain, which rejects
+earlier and keeps every rule in one readable list. Never write the same rule in
+both places: the URL layer wins, so a drifted pair leaves the annotation looking
+load-bearing when it is not.
+
+**7. Tests differ by test type, and the difference is not obvious:**
+
+| Style | What security it loads | What you must do |
+| --- | --- | --- |
+| `@SpringBootTest @AutoConfigureMockMvc` | the real filter chain | `@WithMockUser(roles = "…")`, or `SecurityMockMvcRequestPostProcessors.jwt()` when the test needs claims |
+| `@WebMvcTest` slice | Boot's **default** chain, not `SecurityConfig` | `@AutoConfigureMockMvc(addFilters = false)`; set `SecurityContextHolder` directly if the controller reads a principal |
+| direct service call | none — the context is empty | `@WithMockUser` only if the method carries `@PreAuthorize` |
+
+`jwt()` inside a slice with `addFilters = false` silently yields a **null**
+principal: it saves through a `SecurityContextRepository` that only the filter
+chain loads back. See `EventRequestControllerTest` for the working pattern.
+
+**8. Write a negative test per boundary** — one call with a role that should not
+have access, asserting 403 and that nothing was written. This is the only thing
+that catches step 1 being skipped; `VenueControllerTest` has the pattern, and
+`EventRequestScopingTest` has the cross-organisation equivalent.
+
+**9. Frontend: call it through `apiClient`** (`get`/`post`/`put`/`del`). That is
+what attaches the Bearer token, renews an expired one, replays the original
+call, and ends a dead session. A raw `fetch` gets none of it and 401s forever —
+which is exactly what happened to `equipmentStatusApi.ts`.
+
+**10. Errors**: throw a domain exception and map it in `ApiExceptionHandler`.
+Do not hand-roll 401/403 bodies — `RestAuthenticationEntryPoint` and
+`RestAccessDeniedHandler` already produce the shared `ApiError` shape.
+
+**A new migration needs a rebuilt image.** `docker-compose.yml` builds the
+backend from its Dockerfile, which packages `src/` into a jar; Flyway reads
+migrations from that jar, not from disk. Use `docker compose up -d --build
+backend` — plain `up` reuses the old image and the migration silently never
+runs. `down -v` is only needed when a migration that was already applied has
+been edited or renumbered, not for a new one.
+
 ## Commands (VERIFIED only — do not invent others)
 
 - Frontend install: `npm run install:frontend` (root) or `npm --prefix frontend install`; CI-style install: `npm run ci:frontend`.

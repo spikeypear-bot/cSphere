@@ -31,11 +31,17 @@ function useRoleGate(expected: Role) {
   return role === expected
 }
 
-/** Where to send someone who asked for a console that isn't theirs. Signed in:
- * their own console, since that is the only one they can use. Signed out: the
- * login page, carrying the path so it can say what they were trying to open. */
+/** Where to send someone who asked for a console that isn't theirs, and what to
+ * tell them when they get there (AU06).
+ *
+ * Signed in: their own console, which is the only one they can use — but the
+ * attempted path travels with them so AppShell can say why they moved. Dropping
+ * that message is a regression: AU06 is specifically "clear message on an
+ * unauthorised action", and a silent redirect reads as the app misbehaving.
+ * Signed out: the login page, which shows its own version of the notice. */
 function redirectFor(role: Role | null, pathname: string): string {
-  return role ? HOME_BY_ROLE[role] : `/?access-denied=${encodeURIComponent(pathname)}`
+  const denied = `access-denied=${encodeURIComponent(pathname)}`
+  return role ? `${HOME_BY_ROLE[role]}?${denied}` : `/?${denied}`
 }
 
 function skeletonRoutes(features: SkeletonFeature[]) {
