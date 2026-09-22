@@ -42,13 +42,19 @@ public class SecurityConfig{
 	    .exceptionHandling(exceptions -> exceptions
 		    .authenticationEntryPoint(authenticationEntryPoint)
 		    .accessDeniedHandler(accessDeniedHandler))
-	    // Setting them once above is not enough. BasicAuthenticationFilter
-	    // and BearerTokenAuthenticationFilter each catch their own
-	    // AuthenticationException and call their OWN entry point, never
-	    // reaching ExceptionTranslationFilter — so an expired or forged token
-	    // would still come back in Spring's default shape unless the same
-	    // handler is handed to each of them explicitly.
-	    .httpBasic(basic -> basic.authenticationEntryPoint(authenticationEntryPoint))
+	    // Repeated here because setting them above is not enough:
+	    // BearerTokenAuthenticationFilter catches its own
+	    // AuthenticationException and calls its OWN entry point, never reaching
+	    // ExceptionTranslationFilter — so an expired or forged token would still
+	    // come back in Spring's default shape unless the same handler is handed
+	    // to the filter explicitly.
+	    //
+	    // No httpBasic(): it existed only so authenticated requests were
+	    // testable with `curl -u` before tokens worked (D17 stage 3). Keeping it
+	    // would send the password on every request with no expiry or revocation,
+	    // re-run BCrypt per request under STATELESS, and leave two principal
+	    // shapes — UserPrincipal on Basic, Jwt on Bearer — for expressions to
+	    // disagree over. Log in and send the Bearer token instead.
 	    .oauth2ResourceServer(oauth2 -> oauth2
 		    .authenticationEntryPoint(authenticationEntryPoint)
 		    .accessDeniedHandler(accessDeniedHandler)
