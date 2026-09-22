@@ -170,6 +170,7 @@ function endSession(): void {
 
 interface RequestOptions {
   body?: unknown
+  cache?: RequestCache
 }
 
 async function request<T>(
@@ -188,6 +189,7 @@ async function request<T>(
     response = await fetch(`${API_BASE_URL}${path}`, {
       method,
       headers,
+      ...(options.cache ? { cache: options.cache } : {}),
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     })
   } catch {
@@ -216,7 +218,7 @@ async function request<T>(
 }
 
 export const apiClient = {
-  get: <T>(path: string) => request<T>('GET', path),
+  get: <T>(path: string, options?: Pick<RequestOptions, 'cache'>) => request<T>('GET', path, options),
   post: <T>(path: string, body?: unknown) => request<T>('POST', path, { body: body ?? {} }),
   put: <T>(path: string, body: unknown) => request<T>('PUT', path, { body }),
   del: <T>(path: string) => request<T>('DELETE', path),

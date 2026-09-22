@@ -16,7 +16,7 @@ import com.example.connect_sphere.venue.dto.UpdateVenueDto;
 import com.example.connect_sphere.venue.dto.VenueDto;
 import com.example.connect_sphere.venue.service.VenueService;
 
-/** Catalogue API. Verified server-side identity/role enforcement is pending D6a/Q2. */
+/** Catalogue API. Authentication and endpoint roles are enforced by SecurityConfig; no per-venue scoping. */
 @RestController
 @RequestMapping("/api/venues")
 public class VenueController {

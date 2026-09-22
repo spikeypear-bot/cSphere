@@ -319,12 +319,76 @@ class VenueControllerTest {
         assertThat(bookingSnapshot()).isEqualTo(before);
     }
 
-    @Test
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/venues", "/api/venues/00000000-0000-0000-0000-000000000001"})
     @WithAnonymousUser
-    void unauthenticatedRequestReturns401InApiErrorShape() throws Exception {
-        mvc.perform(get("/api/venues"))
+    void unauthenticatedRequestReturns401InApiErrorShape(String path) throws Exception {
+        mvc.perform(get(path))
                 .andExpect(status().isUnauthorized())
                 .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    void catalogueAndDetailReadsPreserveVenueEventAndBookingRows() throws Exception {
+        String location = updateFixture();
+        UUID venueId = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
+        UUID eventId = UUID.randomUUID();
+        entityManager.createNativeQuery("""
+                INSERT INTO events (event_id,event_name,purpose,start_datetime,end_datetime,
+                    expected_attendance,venue_requirements,status,venue_id)
+                VALUES (:id,'VS18 read isolation','Test',CURRENT_TIMESTAMP,
+                    CURRENT_TIMESTAMP + interval '1 hour',40,'Test','confirmed',:venue)
+                """).setParameter("id", eventId).setParameter("venue", venueId).executeUpdate();
+        for (String state : java.util.List.of("pending", "confirmed", "changed", "rejected", "cancelled")) {
+            entityManager.createNativeQuery("""
+                    INSERT INTO venue_bookings (booking_id,venue_id,event_id,status,booking_notes)
+                    VALUES (:id,:venue,:event,cast(:status as venue_booking_status),'Preserve me')
+                    """).setParameter("id", UUID.randomUUID()).setParameter("venue", venueId)
+                    .setParameter("event", eventId).setParameter("status", state).executeUpdate();
+        }
+        entityManager.flush();
+        entityManager.clear();
+        Object venuesBefore = entityManager.createNativeQuery(
+                "SELECT jsonb_agg(to_jsonb(v) ORDER BY venue_id)::text FROM venues v").getSingleResult();
+        Object eventsBefore = entityManager.createNativeQuery(
+                "SELECT jsonb_agg(to_jsonb(e) ORDER BY event_id)::text FROM events e").getSingleResult();
+        Object bookingsBefore = bookingSnapshot();
+        for (String path : java.util.List.of("/api/venues", location, location + "/bookings")) {
+            mvc.perform(get(path)).andExpect(status().isOk());
+        }
+        entityManager.flush();
+        entityManager.clear();
+        assertThat(entityManager.createNativeQuery(
+                "SELECT jsonb_agg(to_jsonb(v) ORDER BY venue_id)::text FROM venues v").getSingleResult())
+                .isEqualTo(venuesBefore);
+        assertThat(entityManager.createNativeQuery(
+                "SELECT jsonb_agg(to_jsonb(e) ORDER BY event_id)::text FROM events e").getSingleResult())
+                .isEqualTo(eventsBefore);
+        assertThat(bookingSnapshot()).isEqualTo(bookingsBefore);
+    }
+
+    @Test
+    void allVenueStaffCanReadTheSameCatalogueAndIndividualRecords() throws Exception {
+        String location = updateFixture();
+        for (String staff : java.util.List.of("venue-staff-one", "venue-staff-two")) {
+            mvc.perform(get("/api/venues").with(
+                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(staff).roles("VS")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.venueAddress == 'VS07 Venue')]").isNotEmpty());
+            mvc.perform(get(location).with(
+                    org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user(staff).roles("VS")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.venueAddress").value("VS07 Venue"));
+        }
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"/api/venues", "/api/venues/00000000-0000-0000-0000-000000000001"})
+    @WithAnonymousUser
+    void invalidBearerTokenCannotReadVenues(String path) throws Exception {
+        mvc.perform(get(path).header("Authorization", "Bearer invalid-token"))
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").exists());
     }
 
