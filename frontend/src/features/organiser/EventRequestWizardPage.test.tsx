@@ -9,8 +9,14 @@ const DRAFT_ID = '11111111-1111-1111-1111-111111111111'
 
 function seedSession() {
   window.localStorage.setItem(
-    'connectsphere.session',
-    JSON.stringify({ role: 'organiser', organisation: 'Acme Conferences' }),
+    'connectsphere.auth',
+    JSON.stringify({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      username: 'eo1',
+      role: 'organiser',
+      organisation: 'Acme Conferences',
+    }),
   )
 }
 

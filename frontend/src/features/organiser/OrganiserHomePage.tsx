@@ -12,9 +12,9 @@ import { getCompletionPercent } from './eventRequestCompletion'
 import { organiserExtraFeatures } from './organiserExtraFeatures'
 import './OrganiserHomePage.css'
 
-/** EO15: "view my event requests and their statuses" — scoped to the
- * organisation entered on the role-select screen (see docs/decision-log.md
- * D6a). */
+/** EO15: "view my event requests and their statuses". The scoping happens on
+ * the server, from the access token's `organisation` claim (D20) — the value
+ * read here is for display only, and nothing is sent with the request. */
 export function OrganiserHomePage() {
   const { organisation } = useSession()
   const [requests, setRequests] = useState<EventRequestDto[] | null>(null)
@@ -31,10 +31,9 @@ export function OrganiserHomePage() {
   }, [])
 
   useEffect(() => {
-    if (!organisation) return
     let cancelled = false
     apiClient
-      .get<EventRequestDto[]>('/event-requests', organisation)
+      .get<EventRequestDto[]>('/event-requests')
       .then((results) => {
         if (!cancelled) setRequests(results)
       })
@@ -45,7 +44,9 @@ export function OrganiserHomePage() {
     return () => {
       cancelled = true
     }
-  }, [organisation])
+    // The route guard guarantees a signed-in Organiser here, and the scope is
+    // the token's, so there is nothing for this to depend on.
+  }, [])
 
   return (
     <div className="organiser-home">

@@ -12,7 +12,7 @@ const ROLE_LABELS: Record<string, string> = {
 }
 
 export function AppShell({ children }: { children: ReactNode }) {
-  const { role, organisation, logout } = useSession()
+  const { role, username, organisation, logout } = useSession()
 
   return (
     <div className="app-shell">
@@ -23,11 +23,11 @@ export function AppShell({ children }: { children: ReactNode }) {
         {role ? (
           <div className="app-shell__session">
             <span>
-              {ROLE_LABELS[role]}
+              {username} · {ROLE_LABELS[role]}
               {organisation ? ` · ${organisation}` : ''}
             </span>
-            <button type="button" className="app-shell__switch" onClick={logout}>
-              Switch role
+            <button type="button" className="app-shell__switch" onClick={() => void logout()}>
+              Log out
             </button>
           </div>
         ) : null}
