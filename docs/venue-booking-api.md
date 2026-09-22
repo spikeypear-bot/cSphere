@@ -55,10 +55,11 @@ and no mutation endpoint is introduced. Existing venue mapping/DTO conversion is
 ## Authorization limitation
 
 As explicitly requested, this slice does not implement or alter authorization.
-The endpoints currently have no backend identity or staff-to-venue permission
-checks. The existing Venue Staff frontend gate does not protect direct API access.
-VS16's authorized-access acceptance criteria remain unmet/deferred and must not be
-claimed complete. No access-denial test is claimed for a control that does not exist.
+The application's shared security configuration now requires authentication for these
+reads. VS16 does not add staff-to-venue ownership checks or change those rules.
+The Venue Staff frontend gate alone does not establish venue-management scope.
+Full VS16 authorized-scope acceptance remains deferred. Read-only integration tests
+use an authenticated VS test principal; they do not claim ownership enforcement.
 
 ## Future reuse
 
@@ -124,3 +125,45 @@ event and pending booking without implementing Coordinator workflows first.
 See [VS16 manual testing and cleanup](vs16-manual-testing.md). Scripts live under
 `backend/dev/seed/`, require explicit invocation and are not Flyway migrations.
 Seeded bookings use the same detail route as future workflow-created bookings.
+
+## Booking pagination
+
+The heading stays above the two-column layout. Previous/Next controls on the right
+show `Booking N of M` using the selected venue's associated bookings in API order.
+Each control uses client-side navigation to update `/venue-staff/bookings/:bookingId` and fetches fresh detail data;
+list data is used for navigation, not as a cached event-detail response. Ends are
+disabled, and navigation failures can be retried without hiding current details.
+
+Pagination replaces the independently scrolling requirements container and its
+height-measurement hook. There is no nested scrollbar or clipped content. Long
+requirements use ordinary document flow. Existing desktop columns and stacked
+small-screen layout remain. VS02 can reuse this page unchanged.
+
+Navigation, values, reopen/refetch, 404 handling, optional placeholders and GET-only
+viewing are covered in `BookingDetailsPage.test.tsx`. Added missing-venue and booking
+list failure/retry cases. Eight real-PostgreSQL `VenueBookingReadTest` cases passed
+again after adapting the test principal to the repository's existing authentication.
+These tests compare complete records across events, venues, bookings and requests
+before/after reading. No production authorization or other-role workflow was changed.
+
+VS02 must reuse `/venue-staff/bookings/:bookingId`, `VenueDetailsPanel` and
+`EventRequirementsPanel`; add any future approval actions as a separate component,
+not a duplicate detail screen. VS16 exposes no approval/rejection action.
+
+Latest pagination checks (2026-09-22): 35 Venue Staff UI tests, scoped ESLint, and production build passed. The earlier 8 PostgreSQL VS16 read tests passed; backend tests were not rerun for these frontend-only fixes. Full frontend lint reports two existing react-hooks/set-state-in-effect errors in technicalSupport/status/equipmentStatusPage.tsx (lines 56 and 71); that other-role file was not modified.
+
+Pagination keeps the previous detail panels and navigation mounted while the next
+GET is pending, with a loading indicator and temporarily disabled controls. This
+avoids collapsing the document and losing scroll position during loading. The venue
+booking list is retained across same-venue pagination rather than refetched each time.
+Failed detail requests and retries also retain the previous panels and pagination.
+An error explicitly identifies the content as the previously loaded booking; a
+successful retry replaces it with the requested booking. Initial failures still
+show an error without inventing details.
+
+Previous/Next remain the same button elements throughout loading and at boundaries.
+They use `aria-disabled` with guarded activation so keyboard focus is retained and
+unavailable controls cannot navigate. They never submit a form or reload the page.
+Regression tests verify panel identity through loading, failure and retry, keyboard
+focus retention, blocked repeated activation, and one list fetch while paging.
+These DOM tests do not measure browser scroll position or layout geometry.

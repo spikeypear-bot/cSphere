@@ -1,14 +1,27 @@
 .booking-details-page { max-width: none; }
 .booking-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
-.booking-detail-layout > section { min-width: 0; overflow-wrap: anywhere; }
-.event-requirements-panel h3 { margin-top: 1rem; }
-.event-requirements-scroll { max-height: 75svh; overflow-y: auto; overscroll-behavior: contain; }
-.event-requirements-scroll:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.booking-detail-layout > * { min-width: 0; min-height: 0; overflow-wrap: anywhere; }
+.booking-details-page .event-requirements-panel h3 { margin-top: 1rem; }
 .associated-bookings { list-style: none; padding: 0; display: grid; gap: 1rem; margin-top: 1rem; }
 .associated-bookings p { margin: 0.5rem 0; }
 .venue-details-page { overflow-wrap: anywhere; }
 .venue-card-preview__details { margin-top: 1.25rem; }
 @media (max-width: 700px), (max-height: 600px) {
   .booking-detail-layout { grid-template-columns: minmax(0, 1fr); }
-  .event-requirements-scroll { max-height: none; overflow: visible; }
 }
+
+.booking-details-page .venue-card-preview,
+.booking-details-page .event-requirements-panel {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.booking-requirements-column { display: grid; gap: 1rem; min-width: 0; }
+.booking-pagination { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem; }
+.booking-pagination .button { font-size: 0.75rem; padding: 0.4rem 0.75rem; }
+.booking-pagination span { font-size: 0.85rem; color: var(--ink-soft); }
+
+.booking-requirements-column { position: relative; }
+.booking-loading-notice { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); background: var(--panel); color: var(--ink-soft); font-size: 0.8rem; }
+
+.booking-pagination .button[aria-disabled="true"] { opacity: .5; cursor: default; }
