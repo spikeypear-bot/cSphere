@@ -144,7 +144,7 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
     // is never re-mounted with a *different* requestId without a full
     // navigation, which remounts it fresh anyway.
     apiClient
-      .get<EventRequestDto>(`/event-requests/${requestId}`, organisation)
+      .get<EventRequestDto>(`/event-requests/${requestId}`)
       .then((dto) => {
         if (cancelled) return
         setFieldsState(toDraftFields(dto))
@@ -200,8 +200,8 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
       const body: SaveEventRequestRequest = fields
       const previousId = id
       const dto = id
-        ? await apiClient.put<EventRequestDto>(`/event-requests/${id}`, body, organisation)
-        : await apiClient.post<EventRequestDto>('/event-requests', body, organisation)
+        ? await apiClient.put<EventRequestDto>(`/event-requests/${id}`, body)
+        : await apiClient.post<EventRequestDto>('/event-requests', body)
       setId(dto.requestId)
       setStatus(dto.status)
       setAutosaveState('saved')
@@ -244,7 +244,7 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
   > => {
     if (!organisation || !id) return { ok: false, missingFields: [] }
     try {
-      const dto = await apiClient.post<EventRequestDto>(`/event-requests/${id}/submit`, {}, organisation)
+      const dto = await apiClient.post<EventRequestDto>(`/event-requests/${id}/submit`)
       setStatus(dto.status)
       clearBackup(organisation, id)
       return { ok: true }

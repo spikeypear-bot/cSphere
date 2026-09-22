@@ -1,10 +1,12 @@
 package com.example.connect_sphere.eventrequest.service;
 
-/** Thrown when the interim `X-Organisation` header (see docs/decision-log.md
- * D6a) is absent or blank — there is no other way yet to know whose event
- * requests are being asked for. */
+/** Thrown when the caller's organisation is absent or blank. This used to mean a
+ * missing `X-Organisation` header (D6a); since D20 the value comes from the
+ * access token's `organisation` claim, which TokenService always sets — so it
+ * now signals a server-side invariant failure rather than a malformed request,
+ * and is kept as a guard against a service being called with a null scope. */
 public class MissingOrganisationException extends RuntimeException {
     public MissingOrganisationException() {
-        super("X-Organisation header is required");
+        super("Authenticated caller has no organisation");
     }
 }
