@@ -84,6 +84,9 @@ public class EventRequestService {
         if (!missing.isEmpty()) {
             throw new IncompleteEventRequestException(missing);
         }
+        if (entity.getEndDatetime().isBefore(entity.getStartDatetime())) {
+            throw new InvalidEventRequestScheduleException();
+        }
         entity.setStatus(EventRequestStatus.pending);
         entity.setUpdatedAt(OffsetDateTime.now());
         return mapper.toDto(repository.save(entity));

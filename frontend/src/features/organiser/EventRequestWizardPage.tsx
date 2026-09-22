@@ -9,6 +9,7 @@ import { AutosaveIndicator } from '../../components/ui/AutosaveIndicator'
 import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type AccessibilityFeature } from '../../types/eventRequest'
 import { useEventRequestDraft, type DraftFields } from './useEventRequestDraft'
 import { getMissingRequiredFields, getCompletionPercent } from './eventRequestCompletion'
+import { dateRangeError } from './eventRequestValidation'
 import './EventRequestWizardPage.css'
 
 const STEPS: Step[] = [
@@ -38,6 +39,8 @@ export function EventRequestWizardPage() {
   const [stepIndex, setStepIndex] = useState(0)
   const [missingFields, setMissingFields] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState<string>()
+  const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
 
   if (loading) {
     return <p>Loading your draft…</p>
@@ -62,6 +65,7 @@ export function EventRequestWizardPage() {
   }
 
   async function goToStep(nextIndex: number) {
+    if (nextIndex > stepIndex && rangeError) return
     await save()
     setStepIndex(nextIndex)
   }
@@ -72,6 +76,7 @@ export function EventRequestWizardPage() {
   // only ever shown as a list on the Review step, never inline on the field
   // itself, so this closes that gap (DEV11 AC17 / DEV11-TC5).
   function fieldError(field: string): string | undefined {
+    if ((field === 'startDatetime' || field === 'endDatetime') && rangeError) return rangeError
     return missingFields.includes(field) ? `${REQUIRED_FIELD_LABELS[field]} is required` : undefined
   }
 
@@ -93,7 +98,8 @@ export function EventRequestWizardPage() {
   }
 
   async function handleSubmit() {
-    await save()
+    if (rangeError || submitting) return
+    setSubmitError(undefined)
     setSubmitting(true)
     try {
       const result = await submit()
@@ -105,6 +111,8 @@ export function EventRequestWizardPage() {
       } else {
         setMissingFields(result.missingFields)
       }
+    } catch (error) {
+      setSubmitError(error instanceof Error ? error.message : 'Could not submit. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -172,6 +180,7 @@ export function EventRequestWizardPage() {
             <DateTimeField
               id="endDatetime"
               label="End date & time"
+              min={fields.startDatetime ?? undefined}
               value={fields.endDatetime}
               onChange={(value) => setFields({ endDatetime: value })}
               error={fieldError('endDatetime')}
@@ -237,6 +246,8 @@ export function EventRequestWizardPage() {
         )}
       </Card>
 
+      {submitError && <p role="alert">{submitError}</p>}
+      {rangeError && stepIndex !== 1 && <p role="alert">{rangeError}</p>}
       <div className="wizard__nav">
         {stepIndex === 0 ? (
           <>
@@ -253,9 +264,9 @@ export function EventRequestWizardPage() {
           </Button>
         )}
         {stepIndex < STEPS.length - 1 ? (
-          <Button onClick={() => goToStep(stepIndex + 1)}>Next</Button>
+          <Button disabled={!!rangeError} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
         ) : (
-          <Button onClick={handleSubmit} disabled={submitting}>
+          <Button onClick={handleSubmit} disabled={submitting || !!rangeError}>
             {submitting ? 'Submitting…' : 'Submit for review'}
           </Button>
         )}

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
+import { dateRangeError } from './eventRequestValidation'
 import { useSession } from '../../lib/sessionContext'
 import type {
   AccessibilityFeature,
@@ -109,7 +110,7 @@ interface UseEventRequestDraftResult {
   loadError: string | null
   restoredFromLocalBackup: boolean
   autosaveState: AutosaveState
-  save: () => Promise<void>
+  save: () => Promise<string | null>
   submit: () => Promise<{ ok: true } | { ok: false; missingFields: string[] }>
 }
 
@@ -193,7 +194,7 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
   }, [organisation, id, fields])
 
   const save = useCallback(async () => {
-    if (!organisation || savingRef.current) return
+    if (!organisation || savingRef.current) return null
     savingRef.current = true
     setAutosaveState('saving')
     try {
@@ -211,12 +212,14 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
       // is no longer needed.
       clearBackup(organisation, dto.requestId)
       if (!previousId) clearBackup(organisation, null)
+      return dto.requestId
     } catch {
       // The previously saved version is untouched server-side (see
       // EventRequestService.updateDraft) — just tell the person the retry is
       // safe, don't discard what they typed. The local backup (written on
       // every field change above) still has it regardless.
       setAutosaveState('error')
+      return null
     } finally {
       savingRef.current = false
     }
@@ -242,9 +245,12 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
   const submit = useCallback(async (): Promise<
     { ok: true } | { ok: false; missingFields: string[] }
   > => {
-    if (!organisation || !id) return { ok: false, missingFields: [] }
+    const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
+    if (rangeError) throw new Error(rangeError)
+    const savedId = await save()
+    if (!savedId) throw new Error('Your latest changes have not been saved yet. Please try submitting again.')
     try {
-      const dto = await apiClient.post<EventRequestDto>(`/event-requests/${id}/submit`)
+      const dto = await apiClient.post<EventRequestDto>(`/event-requests/${savedId}/submit`)
       setStatus(dto.status)
       clearBackup(organisation, id)
       return { ok: true }
@@ -254,7 +260,7 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
       }
       throw error
     }
-  }, [id, organisation])
+  }, [id, organisation, fields, save])
 
   return {
     fields,
