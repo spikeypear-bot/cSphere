@@ -495,6 +495,10 @@ class EventRequestServiceTest {
         List<EventRequestDto> queue = service.listPendingReview();
 
         assertThat(queue).hasSize(1);
+    }
+
+    // ---- EO12/EC03 schedule validation (merged from main) -------------
+
     @Test
     void reversedRangeCannotBeSubmittedAndDoesNotChangeTheDraft() {
         UUID id = UUID.randomUUID();
