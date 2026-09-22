@@ -5,6 +5,8 @@
 .associated-bookings { list-style: none; padding: 0; display: grid; gap: 1rem; margin-top: 1rem; }
 .associated-bookings p { margin: 0.5rem 0; }
 .venue-details-page { overflow-wrap: anywhere; }
+.venue-details-page__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
+.venue-details-page__header h1 { margin: 0; }
 .venue-card-preview__details { margin-top: 1.25rem; }
 @media (max-width: 700px), (max-height: 600px) {
   .booking-detail-layout { grid-template-columns: minmax(0, 1fr); }

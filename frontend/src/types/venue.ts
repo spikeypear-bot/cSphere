@@ -14,6 +14,7 @@ export interface CreateVenueDto {
   operatingInformation: string
   additionalInformation: string | null
 }
+/** One independently bookable room or space; venueAddress is its displayed identity and location. */
 export interface VenueDto extends CreateVenueDto { venueId: string }
 
 
