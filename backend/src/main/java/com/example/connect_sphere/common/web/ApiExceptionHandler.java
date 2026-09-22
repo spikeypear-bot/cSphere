@@ -2,6 +2,7 @@ package com.example.connect_sphere.common.web;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -60,8 +61,8 @@ public class ApiExceptionHandler {
      *
      * This covers failures thrown from AuthController, which happen inside the
      * dispatcher and so reach @RestControllerAdvice. Requests rejected by the
-     * filter chain before any controller runs never get here — shaping those is
-     * an AuthenticationEntryPoint's job, and is still outstanding.
+     * filter chain before any controller runs never get here — those are shaped
+     * by {@link RestAuthenticationEntryPoint}, which returns the same body.
      */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiError> handleAuthenticationFailure(AuthenticationException ex) {
@@ -77,5 +78,24 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidRefreshTokenException.class)
     public ResponseEntity<ApiError> handleInvalidRefreshToken(InvalidRefreshTokenException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(ApiError.of(ex.getMessage()));
+    }
+
+    /**
+     * Denials raised by {@code @PreAuthorize} on a service method. These are
+     * thrown inside the dispatcher, so they arrive here rather than at
+     * {@link RestAccessDeniedHandler} — which catches only the filter chain's
+     * own URL-level denials. Two entry points, deliberately one body: the
+     * frontend should not be able to tell which layer said no.
+     *
+     * Registering this handler means such a denial never propagates out to
+     * ExceptionTranslationFilter. That is safe only because
+     * {@code anyRequest().authenticated()} keeps anonymous callers out of
+     * controllers entirely — otherwise an anonymous denial would answer 403
+     * here instead of being upgraded to a 401 by that filter.
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .body(ApiError.of("You do not have permission to perform this action."));
     }
 }

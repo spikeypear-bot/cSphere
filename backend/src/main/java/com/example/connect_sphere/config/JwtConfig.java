@@ -38,23 +38,6 @@ public class JwtConfig {
         return NimbusJwtDecoder.withSecretKey(key).build();
     }
 
-    /**
-     * Turns the token's `role` claim into the same authority
-     * UserPrincipal.getAuthorities() produces, so a caller ends up with identical
-     * rights whether they authenticated by Basic or by Bearer.
-     *
-     * Spring's default converter reads a `scope`/`scp` claim and prefixes SCOPE_.
-     * Our tokens carry neither, so without this a fully authenticated user would
-     * hold zero authorities — harmless until the first hasRole(...) rule exists,
-     * then a blanket 403.
-     *
-     * Keep this expression in step with UserPrincipal: hasRole("VS") compiles to
-     * an exact String.equals against "ROLE_VS", so ROLE_vs is an unrelated string
-     * and the mismatch shows up only as a 403 that looks like a bad rule. The
-     * claim itself stays lowercase — that is the domain value the frontend reads;
-     * the ROLE_ prefix and upper case are Spring Security's convention, and
-     * translating into it belongs here rather than in the token.
-     */
     @Bean
     public JwtAuthenticationConverter jwtAuthenticationConverter() {
         JwtAuthenticationConverter converter = new JwtAuthenticationConverter();

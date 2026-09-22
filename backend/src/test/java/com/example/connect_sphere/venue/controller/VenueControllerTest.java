@@ -13,6 +13,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,6 +26,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@WithMockUser(roles = "VS")
 class VenueControllerTest {
     @Autowired MockMvc mvc;
     @Autowired EntityManager entityManager;
@@ -314,5 +317,27 @@ class VenueControllerTest {
                 .content("{\"venueCapacity\":0}"))
                 .andExpect(status().isUnprocessableEntity());
         assertThat(bookingSnapshot()).isEqualTo(before);
+    }
+
+    @Test
+    @WithAnonymousUser
+    void unauthenticatedRequestReturns401InApiErrorShape() throws Exception {
+        mvc.perform(get("/api/venues"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("WWW-Authenticate", "Bearer"))
+                .andExpect(jsonPath("$.message").exists());
+    }
+
+    @Test
+    @WithMockUser(roles = "ATTENDEE")
+    void createByDisallowedRoleReturns403WithoutSaving() throws Exception {
+        long before = repository.count();
+        mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
+                {"venueAddress":"Forbidden Venue","venueCapacity":50,
+                 "supportedLayouts":["theatre"]}
+                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").exists());
+        assertThat(repository.count()).isEqualTo(before);
     }
 }

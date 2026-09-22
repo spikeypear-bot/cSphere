@@ -8,6 +8,7 @@ import com.example.connect_sphere.common.enums.AccessibilityFeature;
 
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
@@ -29,6 +30,7 @@ public class VenueService {
 
     /** Creates a catalogue record immediately; no booking/approval workflow. */
     @Transactional
+    @PreAuthorize("hasAnyRole('EC','VS')")
     public VenueDto createVenue(CreateVenueDto input) {
         validate(input);
         Venue venue = new Venue();
