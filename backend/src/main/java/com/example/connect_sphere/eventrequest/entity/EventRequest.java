@@ -99,6 +99,16 @@ public class EventRequest {
     @Column(name = "created_by")
     private UUID createdBy;
 
+    // EO19: set by EventRequestService.assignCoordinator(); null until an
+    // Event Coordinator picks this request up. See V12 migration.
+    @Column(name = "coordinator_id")
+    private UUID coordinatorId;
+
+    // EO09: set by EventRequestService.reject(); shown to the Event
+    // Organiser on the rejection notification.
+    @Column(name = "rejection_reason")
+    private String rejectionReason;
+
     public EventRequest() {
     }
 }

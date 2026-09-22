@@ -7,12 +7,17 @@ import { SessionContext, type Session, type SessionContextValue } from './sessio
 // react-refresh/only-export-components requires that. Everything else
 // (useSession, Role, Session) lives in ./sessionContext; import from there.
 
-const LOGGED_OUT: Session = { role: null, username: null, organisation: null }
+const LOGGED_OUT: Session = { role: null, userId: null, username: null, organisation: null }
 
 function currentSession(): Session {
   const tokens = readTokens()
   if (!tokens) return LOGGED_OUT
-  return { role: tokens.role, username: tokens.username, organisation: tokens.organisation }
+  return {
+    role: tokens.role,
+    userId: tokens.userId,
+    username: tokens.username,
+    organisation: tokens.organisation,
+  }
 }
 
 export function SessionProvider({ children }: { children: ReactNode }) {
@@ -40,6 +45,7 @@ export function SessionProvider({ children }: { children: ReactNode }) {
         const tokens = await apiLogin(username, password)
         setSession({
           role: tokens.role,
+          userId: tokens.userId,
           username: tokens.username,
           organisation: tokens.organisation,
         })

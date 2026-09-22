@@ -41,6 +41,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 class EventRequestControllerTest {
 
     private static final String ACME = "Acme Conferences";
+    private static final UUID USER_ID = UUID.randomUUID();
 
     @Autowired
     private MockMvc mockMvc;
@@ -60,6 +61,7 @@ class EventRequestControllerTest {
     @BeforeEach
     void authenticateAsAnOrganiserOfAcme() {
         Jwt token = Jwt.withTokenValue("test-token").header("alg", "none")
+                .subject(USER_ID.toString())
                 .claim("organisation", ACME).build();
         SecurityContextHolder.getContext().setAuthentication(
                 new JwtAuthenticationToken(token, List.of(new SimpleGrantedAuthority("ROLE_EO"))));
@@ -73,13 +75,13 @@ class EventRequestControllerTest {
     private static EventRequestDto draft(UUID id, String organisation) {
         return new EventRequestDto(id, 'C', null, null, null, null, null, null, null, null, null,
                 List.of(), null, EventRequestStatus.draft, OffsetDateTime.now(), OffsetDateTime.now(),
-                organisation);
+                organisation, null, null);
     }
 
     @Test
     void savingADraftWithAnEmptyBodyReturns201() throws Exception {
         UUID id = UUID.randomUUID();
-        when(service.saveNewDraft(eq(ACME), any())).thenReturn(draft(id, ACME));
+        when(service.saveNewDraft(eq(ACME), eq(USER_ID), any())).thenReturn(draft(id, ACME));
 
         mockMvc.perform(post("/api/event-requests")
                         .contentType(MediaType.APPLICATION_JSON)

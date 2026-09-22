@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Card } from './ui/Card'
 import { useSession } from '../lib/sessionContext'
+import { NotificationBell } from '../features/notifications/NotificationBell'
 import './AppShell.css'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -31,6 +32,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         </Link>
         {role ? (
           <div className="app-shell__session">
+            <NotificationBell />
             <span>
               {username} · {ROLE_LABELS[role]}
               {organisation ? ` · ${organisation}` : ''}

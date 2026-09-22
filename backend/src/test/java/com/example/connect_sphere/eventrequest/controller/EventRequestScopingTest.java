@@ -16,6 +16,8 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.user.repository.UserRepository;
+
 /**
  * AU04 data scoping, through the real filter chain and a real database.
  *
@@ -29,14 +31,24 @@ import org.springframework.transaction.annotation.Transactional;
 @Transactional
 class EventRequestScopingTest {
 
+    // Match DevUserSeeder's own organisation strings exactly, so the seeded
+    // eo1/eo3 accounts genuinely belong to these organisations.
     private static final String ACME = "Acme Pte Ltd";
     private static final String GLOBEX = "Globex Holdings";
 
     @Autowired MockMvc mvc;
+    @Autowired UserRepository userRepository;
 
-    /** An Organiser of the given organisation, shaped like a real Bearer request. */
-    private static JwtRequestPostProcessor organiser(String organisation) {
-        return jwt().jwt(token -> token.claim("organisation", organisation))
+    /** An Organiser of the given organisation, shaped like a real Bearer
+     * request — including a real seeded account's own id as `sub`, since
+     * EventRequestController reads that as the caller's user id (createdBy)
+     * as of the EO09/EO19 slice, and that column is a real foreign key to
+     * `users`: a fabricated UUID (or the post-processor's own default `sub`,
+     * "user") would fail the insert outright, not merely be unrealistic. */
+    private JwtRequestPostProcessor organiser(String organisation) {
+        String username = ACME.equals(organisation) ? "eo1" : "eo3";
+        String userId = userRepository.findByUsername(username).orElseThrow().getUserId().toString();
+        return jwt().jwt(token -> token.subject(userId).claim("organisation", organisation))
                 .authorities(new SimpleGrantedAuthority("ROLE_EO"));
     }
 

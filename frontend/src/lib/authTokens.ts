@@ -10,6 +10,7 @@ export interface LoginResponse {
   refreshToken: string
   tokenType: string
   expiresIn: number
+  userId: string
   username: string
   role: string
   organisation: string | null
@@ -18,6 +19,7 @@ export interface LoginResponse {
 export interface AuthTokens {
   accessToken: string
   refreshToken: string
+  userId: string
   username: string
   role: Role
   organisation: string | null
@@ -49,6 +51,7 @@ export function tokensFromResponse(response: LoginResponse): AuthTokens | null {
   return {
     accessToken: response.accessToken,
     refreshToken: response.refreshToken,
+    userId: response.userId,
     username: response.username,
     role,
     organisation: response.organisation ?? null,
@@ -64,6 +67,7 @@ export function readTokens(): AuthTokens | null {
     return {
       accessToken: parsed.accessToken,
       refreshToken: parsed.refreshToken ?? '',
+      userId: parsed.userId ?? '',
       username: parsed.username ?? '',
       role: parsed.role,
       organisation: parsed.organisation ?? null,
