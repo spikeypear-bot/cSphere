@@ -3,9 +3,18 @@ import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
+import { AUTH_STORAGE_KEY, type Role } from './lib/authTokens'
 
-function renderApp(initialPath = '/', clearSession = true) {
-  if (clearSession) window.localStorage.clear()
+/** Seeds a signed-in session the way a successful login would. The app reads
+ * role from stored token data, so tests no longer click a role selector. */
+function signInAs(role: Role, username = 'user1', organisation: string | null = null) {
+  window.localStorage.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({ accessToken: 'access-1', refreshToken: 'refresh-1', username, role, organisation }),
+  )
+}
+
+function renderApp(initialPath = '/') {
   return render(
     <MemoryRouter initialEntries={[initialPath]}>
       <App />
@@ -19,27 +28,33 @@ describe('App routing — role consoles', () => {
     window.localStorage.clear()
   })
 
-  it('sends an unauthenticated visit to a role route back to the role selector', () => {
+  it('sends an unauthenticated visit to a role route to the login page', () => {
+    window.localStorage.clear()
     renderApp('/coordinator')
-    expect(screen.getByRole('heading', { name: "Who's working today?" })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /Sign in to ConnectSphere/i })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('/coordinator')
   })
 
-  it('opens the Event Coordinator skeleton console after logging in as that role', async () => {
-    const user = userEvent.setup()
-    renderApp('/')
-
-    await user.click(screen.getByRole('button', { name: /Login as Event Coordinator/i }))
+  it('opens the console belonging to the signed-in account', async () => {
+    signInAs('coordinator', 'ec1', 'ConnectSphere')
+    renderApp('/coordinator')
 
     expect(await screen.findByRole('heading', { name: /Event Coordinator console/i })).toBeInTheDocument()
     // Every skeleton card names its backlog story ID so a teammate can trace it.
     expect(screen.getByText('EC01')).toBeInTheDocument()
   })
 
+  it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
+    signInAs('attendee', 'att1', 'Acme Pte Ltd')
+    renderApp('/')
+    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+  })
+
   it('shows the vertical-slice checklist and story ID on a skeleton feature page', async () => {
     const user = userEvent.setup()
-    renderApp('/')
+    signInAs('technical-support', 'tech1', 'ConnectSphere')
+    renderApp('/technical-support')
 
-    await user.click(screen.getByRole('button', { name: /Login as Technical Support Staff/i }))
     await user.click(screen.getByRole('link', { name: /Check availability/i }))
 
     expect(await screen.findByRole('heading', { name: 'Equipment Availability' })).toBeInTheDocument()
@@ -48,22 +63,34 @@ describe('App routing — role consoles', () => {
     expect(screen.getByText('com.example.connect_sphere.equipment')).toBeInTheDocument()
   })
 
-  it("keeps a role gated from another role's console and explains why", async () => {
-    const user = userEvent.setup()
-    renderApp('/')
+  it("redirects a signed-in account away from another role's console and says why", async () => {
+    signInAs('attendee', 'att1')
+    renderApp('/venue-staff')
 
-    await user.click(screen.getByRole('button', { name: /Login as Attendee/i }))
+    // Their own console, not the login page: the session is valid, this just
+    // isn't their area. The server rejects the API calls regardless (D20).
     expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
 
-    // Attempting a different role's route while logged in as Attendee bounces home.
-    cleanup()
-    window.localStorage.setItem(
-      'connectsphere.session',
-      JSON.stringify({ role: 'attendee', organisation: null }),
-    )
-    renderApp('/venue-staff', false)
-    expect(screen.getByRole('heading', { name: "Who's working today?" })).toBeInTheDocument()
+    // AU06 — a silent redirect reads as the app misbehaving. Originally
+    // delivered on the role-select screen (PR #11); it moved to AppShell when
+    // that screen was replaced by a real login page.
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/venue-staff')
+  })
+
+  it('does not show the access-denied alert during ordinary navigation', async () => {
+    signInAs('attendee', 'att1')
+    renderApp('/attendee')
+
+    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('identifies the signed-in account in the shell', async () => {
+    signInAs('organiser', 'eo1', 'Acme Pte Ltd')
+    renderApp('/organiser')
+
+    expect(await screen.findByText(/eo1 · Event Organiser · Acme Pte Ltd/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
   })
 })

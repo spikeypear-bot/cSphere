@@ -95,13 +95,13 @@ NFRs (VERIFIED, customer briefing §8, INFERRED into concrete stories on the bac
 - **RBAC / data scoping**: an Event Organiser may access only their own organisation's requests; an Event Coordinator only events assigned/authorised to them; Venue Staff only venue records/bookings they manage; Technical Support Staff only equipment/reservations relevant to them; an Attendee only their own registration and confirmed event info they're entitled to see. Enforce this server-side (API), not only via hidden UI — direct URL access or role/ownership tampering must not grant wider access (AU04 refined AC, threaded comment E22 on Sprint Backlog 1).
 - **Registration** is bounded by a defined capacity and an open/close period; registrations beyond capacity or outside the period must be prevented or handled per an agreed rule (waiting list is out of scope for Release 1 unless the backlog changes).
 - **Equipment status update** (Available/Faulty/Unavailable) never itself creates, cancels, or alters a reservation — these are separate concerns (threaded comment E21 on Sprint Backlog 1).
-- **Interim access model (current phase, team decision 10/9/2026)**: real account creation and credential-based login (`AU01A/B/C`, `AU02`, `AU03`, `AU05`) are deliberately deferred. For now, the main page offers a "Login as [Role]" button per role, which routes straight into that role's views with no credentials involved. `AU04` (only see/do what your role permits) and `AU06` (clear message on an unauthorised action) still apply, but their mechanism is the selected role, not a verified account — whether that role must also be enforced server-side during this phase is an open question (`docs/decision-log.md` Q2). Do not build real registration/login screens unless the team brings them back into the current slice.
+- **Interim access model (team decision 10/9/2026 — now being superseded on `feat/auth`, see D19)**: real account creation and credential-based login (`AU01A/B/C`, `AU02`, `AU03`, `AU05`) are deliberately deferred. For now, the main page offers a "Login as [Role]" button per role, which routes straight into that role's views with no credentials involved. `AU04` (only see/do what your role permits) and `AU06` (clear message on an unauthorised action) still apply, but their mechanism is the selected role, not a verified account — whether that role must also be enforced server-side during this phase is an open question (`docs/decision-log.md` Q2). Do not build real registration/login screens unless the team brings them back into the current slice.
 
 ## Data / Domain Model — VERIFIED from `backend/src/main/resources/db/migration/`
 
 Authoritative reference: `backend/src/main/resources/db/migration/SCHEMA.md` (hand-written schema dictionary) and `V2__init_tables.sql`. Do not re-derive this from memory — read those files.
 
-Entities: `users`, `venues`, `events`, `event_requests`, `equipments`, `serialised_equipments`, `equipment_requests`, `equipment_request_equipments`, `equipment_logs`, `venue_bookings`. Relationships and enum types (user_role, event_status, event_request_status, equipment_request_status, equipment_status, venue_booking_status, accessibilities, facilities) are documented in `SCHEMA.md` — read it for the full ER diagram and column-level detail before writing any entity, repository, or migration.
+Entities: `users`, `venues`, `events`, `event_requests`, `equipments`, `serialised_equipments`, `equipment_requests`, `equipment_request_equipments`, `equipment_logs`, `venue_bookings`, `refresh_tokens` (added by `V7__refresh_tokens.sql` on `feat/auth`). Relationships and enum types (user_role, event_status, event_request_status, equipment_request_status, equipment_status, venue_booking_status, accessibilities, facilities) are documented in `SCHEMA.md` — read it for the full ER diagram and column-level detail before writing any entity, repository, or migration.
 
 **Known, team-acknowledged gaps in the current schema** (from `SCHEMA.md` §5 — PROPOSED to resolve, not yet decided): no DB-level venue-booking overlap protection; `request_type`/`equipment_type` single-char codes undocumented; `event_requests` allows null start/end while `events` requires them (the approval path must handle this); overlap between `equipment_requirements` (free text) and `equipment_requests.technical_requirement`; no audit trail beyond `created_by`; no equipment return/check-in flag. Confirm resolutions with the team before assuming any of these are settled — see `docs/decision-log.md`.
 
@@ -110,6 +110,8 @@ Entities: `users`, `venues`, `events`, `event_requests`, `equipments`, `serialis
 ## Existing Architecture & Technology (VERIFIED by repository inspection — 2026-09-12)
 
 - **Backend**: Spring Boot **4.1.1**, Java **25**, Maven (`backend/pom.xml`, wrapper at `backend/mvnw`). Web MVC + RestClient + Actuator + springdoc-openapi (Swagger UI likely at the default path). Persistence: Spring Data JDBC **and** JPA both present; Flyway (`flyway-database-postgresql`) owns the schema — `spring.jpa.hibernate.ddl-auto=validate`, `spring.jpa.generate-ddl=false` (`application.properties`). Lombok for boilerplate, MapStruct for entity↔DTO mapping. One demo vertical slice exists (`mock` package: controller → service → repository → entity → DTO → mapper) purely to show the intended MVC convention — no real domain controllers/services exist yet.
+- **Security** (built on `feat/auth`, 2026-09-21/22 — see D19 in `docs/decision-log.md`, **not yet team-ratified**): `spring-boot-starter-security` (**Spring Security 7.1.1**, Framework 7.0.9 via the Boot 4.1.1 BOM) plus `spring-boot-starter-security-oauth2-resource-server` — note the `security-` prefix; the shorter `spring-boot-starter-oauth2-resource-server` still resolves but its own POM marks it deprecated, and every tutorial uses the old name. **This matters more than anything else when searching for help: virtually every JWT/Spring Security tutorial online targets Boot 3.x / Security 6.x, and Security 7 removed the deprecated non-lambda DSL — `.and()` chaining, `http.csrf().disable()`, and `WebSecurityConfigurerAdapter` will not compile.** Verified 7.1.1 API differences that break tutorials: `DaoAuthenticationProvider` has **only** a `DaoAuthenticationProvider(UserDetailsService)` constructor (no no-arg ctor, no `setUserDetailsService`) while the encoder still goes in via `setPasswordEncoder`; `NimbusJwtEncoder.withSecretKey(key).build()` and `NimbusJwtDecoder.withSecretKey(key).build()` both exist and default to HS256, so the `ImmutableSecret` JWKSource route — which defaults to RS256 and needs an explicit `JwsHeader` — is unnecessary. Boot 4 also moved classes: `EndpointRequest` is now at `org.springframework.boot.security.autoconfigure.actuate.web.servlet`, `@WebMvcTest` at `org.springframework.boot.webmvc.test.autoconfigure`.
+  **What exists now (stages 0–7 of D19 + D20, all live-verified):** stateless filter chain (`config/SecurityConfig` — no `HttpSession`, CSRF disabled for the token API, `/actuator/**` and `/api/auth/**` permitAll, role rules per D20); `config/AuthenticationConfig` (a `ProviderManager` over a `DaoAuthenticationProvider`); `config/JwtConfig` (HS256 encoder/decoder + a `JwtAuthenticationConverter`); `user/` slice (`User`, `UserRole`, `UserRepository`, `UserPrincipal`, `AppUserDetailsService`, `DevUserSeeder`, `TokenService`, `RefreshTokenService`); `POST /api/auth/login|refresh|logout`. Access tokens are 15-minute HS256 JWTs claiming `sub` (user UUID), `iss`, `iat`, `exp`, `username`, `role`, `organisation`; refresh tokens are opaque 256-bit values, SHA-256-hashed in `refresh_tokens`, single-use, rotating, family-revoked on reuse. **HTTP Basic has been removed** — log in and send a Bearer token; `curl -u` no longer works. `@EnableMethodSecurity` is on. `common/web/RestAuthenticationEntryPoint` (401) and `RestAccessDeniedHandler` (403) put filter-chain rejections into the `ApiError` shape, and an `AccessDeniedException` handler on `ApiExceptionHandler` does the same for `@PreAuthorize` denials. Role rules for every endpoint live in `authorizeHttpRequests` (D20); `/api/event-requests/**` is additionally scoped by the token's `organisation` claim, **not** by the old `X-Organisation` header, which is no longer read. **Still missing:** the frontend — `apiClient` sends no `Authorization` header, so the React app is 401 against its own backend until a login page replaces D6a's role selector.
 - **Database**: PostgreSQL **18**, run via `docker-compose.yml` (`db` service, `csphere` database). Migrations live at `backend/src/main/resources/db/migration/V{n}__description.sql`; **never** hand-edit an already-applied migration — Flyway checksums it and the next boot fails. Add `V3__*.sql` instead, or reset dev DB with `docker compose down -v`.
 - **Frontend**: React **19.2**, Vite **8**, TypeScript **~6.0**, ESLint **10** + typescript-eslint. `frontend/src/App.tsx` is still the untouched Vite starter template — no real screens, no router, no state-management library, no styling library beyond plain CSS, and **no test framework** installed (no Jest/Vitest/React Testing Library) as of this writing.
 - **No CI pipeline exists yet** (no `.github/workflows/` or equivalent) — confirmed absent from the repository.
@@ -123,7 +125,84 @@ Entities: `users`, `venues`, `events`, `event_requests`, `equipments`, `serialis
 - Composite keys (e.g. `serialised_equipments`, `equipment_request_equipments`) use `@IdClass`/`@EmbeddedId`, matching the existing `MockReferenceId` pattern.
 - Schema is owned by Flyway migrations, never by JPA auto-DDL — entities can be added one at a time; tables without an entity are simply ignored by `ddl-auto=validate`.
 - Enum-array columns are queried with the `@>` containment operator to hit the existing GIN indexes (`idx_venue_accessibility`, `idx_venue_facility`) — `= ANY(...)` will not use them.
+- **Database-owned column values** use Hibernate's `@Generated(event = EventType.INSERT)` (see `User.createdAt`), not a value assigned in Java. A Postgres `DEFAULT` only applies when the INSERT **omits** the column, and Hibernate names every mapped column by default — so an unset field is sent as an explicit `NULL`, which overrides the default and trips `NOT NULL`. `@Generated` makes Hibernate leave the column out and read the value back afterwards. Verified against a real insert, 2026-09-21. Application-assigned IDs (`UUID.randomUUID()` in the service/seeder) remain the convention — there is no `@GeneratedValue` anywhere.
+- **Seed/fixture data belongs in a profile-guarded `CommandLineRunner`, never in a Flyway migration** (see `DevUserSeeder`). Migrations own *schema* and reference data the app cannot run without; environment-specific fixtures are neither, and migrations are immutable once applied — seeding accounts in a `V{n}` file means a new migration every time a password or user changes. A runner can also inject the real `PasswordEncoder` bean, so seeded hashes and login verification are guaranteed to use the same encoder (the classic "correct password always rejected" bug is encoding and verifying with different ones). `V1__mock_data.sql` is *not* precedent for the opposite — it is scaffolding slated for deletion.
+- **Granted authorities are a bare string match.** Since HTTP Basic was removed, `JwtConfig`'s `JwtAuthenticationConverter` is the only thing that grants authorities to a request; it produces `"ROLE_" + role.toUpperCase()`. (`UserPrincipal.getAuthorities()` still produces the same shape, but it is now only reached during login, where the authorities are not used for any authorisation decision — keep the two in step anyway, since a future non-token path would depend on it.) `hasRole("VS")` compiles to an exact `String.equals` against `"ROLE_VS"`, and a `GrantedAuthority` is just a wrapped string with no registry or validation — so `ROLE_vs` and `ROLE_VS` are unrelated, and a mismatch surfaces only as a 403 that reads like a broken rule. Worse, `@WithMockUser(roles = "VS")` tests would still pass while real Bearer requests 403, because that annotation builds the authority itself rather than going through the converter. Change the two together or not at all. The `role` claim itself stays lowercase — that is the domain value the frontend reads; the `ROLE_`/uppercase shape is Spring Security convention and translating into it belongs in the converter.
+- **Check every branch before claiming a migration version.** `git ls-tree -r --name-only <branch> | grep V[0-9]` across all branches, not just your own — `origin/main` and five feature branches already carry a `V7`. The team has hit a version collision once (D15) and `feat/auth` deliberately claimed a colliding `V7` a second time, to be renumbered on merge.
 - **Object-oriented modelling rules (IS212 Week 5, "Communicating Design & Collaborating on Code"):** use inheritance only for a real "is-a" relationship that *also* needs polymorphism (a subclass overriding a method so the same call site behaves differently per type at runtime) — not for data-only variation (e.g. a role label), which belongs on one flat class as a field/enum instead. When an association between two classes carries its own meaningful data (dates, quantities, a status), give it its own class rather than bolting fields onto either side. Prefer a plain association over aggregation, and aggregation over composition, unless the stronger relationship is genuinely true — composition only when the child has no independent existence. Model only classes an actual story/AC needs. Keep class/sequence diagrams as versioned PlantUML/Mermaid text committed to the repo (see `docs/class-diagram.puml`), updated in the same PR as the code they describe, not a one-off exported image — see `docs/decision-log.md` D16 for how this was applied to the current domain model.
+
+## Adding a new API endpoint — checklist (D19/D20)
+
+Authentication and authorisation are in place; these are the steps that are easy
+to forget, ordered by how quietly they fail.
+
+**1. Add a role rule, or your endpoint is open to all five roles.**
+`anyRequest().authenticated()` catches anything unlisted, so a new endpoint is
+never *public* — but it is reachable by every signed-in account until a matcher
+exists. Add a row to `docs/decision-log.md` D20, then the matcher in
+`SecurityConfig.authorizeHttpRequests`. **This failure is silent:** no error, no
+red test, the feature demos perfectly. The only thing that catches it is a
+negative test (below).
+
+**2. Matcher order decides the outcome.** First match wins and evaluation stops,
+so a method-scoped rule must come *above* the path-wide rule it carves an
+exception out of — e.g. `GET /api/venues/**` → `authenticated()` before
+`/api/venues/**` → `hasAnyRole("EC","VS")`. Reverse them and reads become
+write-role-only. `anyRequest()` must be last; Spring fails at startup otherwise.
+
+**3. `hasRole` takes exactly one role** — `hasAnyRole("EC","VS")` for several.
+Never write the `ROLE_` prefix yourself, and match the case: authorities are
+`ROLE_VS`, so `hasRole("vs")` 403s everything.
+
+**4. Never read identity or scope from the request.** No `X-Organisation`-style
+header, no `userId` in a body or query parameter. Take it from
+`@AuthenticationPrincipal Jwt jwt` and read the claim (see
+`EventRequestController.organisationOf`). Anything the client can type, the
+client can forge — this was a live cross-organisation leak on 2026-09-22.
+
+**5. Role gating is not data scoping.** A matcher or `@PreAuthorize` answers
+*whether* a caller may reach the endpoint. *Which rows* they get is a `WHERE`
+clause in the repository. For a list there is no yes/no to make at all — the
+answer is a smaller result set, and no annotation can express that.
+
+**6. `@PreAuthorize` only where the rule needs a method argument or the
+principal.** A plain role check belongs in the filter chain, which rejects
+earlier and keeps every rule in one readable list. Never write the same rule in
+both places: the URL layer wins, so a drifted pair leaves the annotation looking
+load-bearing when it is not.
+
+**7. Tests differ by test type, and the difference is not obvious:**
+
+| Style | What security it loads | What you must do |
+| --- | --- | --- |
+| `@SpringBootTest @AutoConfigureMockMvc` | the real filter chain | `@WithMockUser(roles = "…")`, or `SecurityMockMvcRequestPostProcessors.jwt()` when the test needs claims |
+| `@WebMvcTest` slice | Boot's **default** chain, not `SecurityConfig` | `@AutoConfigureMockMvc(addFilters = false)`; set `SecurityContextHolder` directly if the controller reads a principal |
+| direct service call | none — the context is empty | `@WithMockUser` only if the method carries `@PreAuthorize` |
+
+`jwt()` inside a slice with `addFilters = false` silently yields a **null**
+principal: it saves through a `SecurityContextRepository` that only the filter
+chain loads back. See `EventRequestControllerTest` for the working pattern.
+
+**8. Write a negative test per boundary** — one call with a role that should not
+have access, asserting 403 and that nothing was written. This is the only thing
+that catches step 1 being skipped; `VenueControllerTest` has the pattern, and
+`EventRequestScopingTest` has the cross-organisation equivalent.
+
+**9. Frontend: call it through `apiClient`** (`get`/`post`/`put`/`del`). That is
+what attaches the Bearer token, renews an expired one, replays the original
+call, and ends a dead session. A raw `fetch` gets none of it and 401s forever —
+which is exactly what happened to `equipmentStatusApi.ts`.
+
+**10. Errors**: throw a domain exception and map it in `ApiExceptionHandler`.
+Do not hand-roll 401/403 bodies — `RestAuthenticationEntryPoint` and
+`RestAccessDeniedHandler` already produce the shared `ApiError` shape.
+
+**A new migration needs a rebuilt image.** `docker-compose.yml` builds the
+backend from its Dockerfile, which packages `src/` into a jar; Flyway reads
+migrations from that jar, not from disk. Use `docker compose up -d --build
+backend` — plain `up` reuses the old image and the migration silently never
+runs. `down -v` is only needed when a migration that was already applied has
+been edited or renumbered, not for a new one.
 
 ## Commands (VERIFIED only — do not invent others)
 
@@ -131,12 +210,22 @@ Entities: `users`, `venues`, `events`, `event_requests`, `equipments`, `serialis
 - Frontend dev server: `npm run dev` (root, proxies to `vite` in `frontend/`).
 - Frontend build: `cd frontend && npm run build` (`tsc -b && vite build`).
 - Frontend lint: `cd frontend && npm run lint` (`eslint .`).
+- **Getting a token** (`feat/auth` only): `curl -s -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' -d '{"username":"ec1","password":"123456"}'` returns `accessToken`, `refreshToken`, `expiresIn`, plus `username`/`role`/`organisation`. Then `curl -H "Authorization: Bearer <accessToken>" localhost:8080/api/venues`. `POST /api/auth/refresh` with `{"refreshToken":"..."}` rotates it (the old one dies, and re-presenting it revokes the whole family); `POST /api/auth/logout` with the same body returns 204. The signing key is `JWT_SECRET`, with a committed dev fallback in `application-dev.properties` — a fixed key on purpose, so tokens survive a container restart.
+- **Dev accounts** (`dev` profile only, seeded by `DevUserSeeder` on every boot, idempotent): 25 accounts, 5 per role — `ec1`–`ec5`, `eo1`–`eo5`, `vs1`–`vs5`, `att1`–`att5`, `tech1`–`tech5`, **password `123456`** for all. Internal roles (ec/vs/technician) are organisation `ConnectSphere`; `eo1`/`eo2` + `att1`/`att2` are `Acme Pte Ltd`, `eo3`/`eo4` + `att3`/`att4` are `Globex Holdings`, `eo5` + `att5` are `Initech Asia` — deliberately arranged so same-org and cross-org pairs exist for AU04 data-scoping tests. Test by logging in first — HTTP Basic is gone, so `curl -u` no longer works:
+  ```sh
+  TOKEN=$(curl -s -X POST localhost:8080/api/auth/login -H 'Content-Type: application/json' \
+    -d '{"username":"ec1","password":"123456"}' | jq -r .accessToken)
+  curl -H "Authorization: Bearer $TOKEN" localhost:8080/api/venues
+  ```
+  These are dev fixtures committed to git on purpose; they must never exist in a real environment, which is what `@Profile("dev")` enforces.
+- **Always use `docker compose up --build`**, not plain `up`. Plain `up` reuses whatever `csphere-backend` image already exists and does not rebuild on source changes — on 2026-09-21 a ten-day-old image seeded a fresh volume with an outdated schema and produced a Flyway checksum-mismatch boot failure that looked like a migration bug but was a stale image.
 - Backend + DB (Docker Desktop must be running): `docker compose up --build -d`; tear down with `docker compose down` (add `-v` only to also wipe the Postgres volume, e.g. to reset migrations — confirm with the team first, as this is destructive).
 - Backend tests: `./mvnw test` from `backend/` (needs a JDK — see README for running it inside a container against the `db` service if you don't have Java locally). **Verified 2026-09-12**: 13/13 tests pass (`EventRequestServiceTest`, `EventRequestControllerTest`, `ConnectSphereApplicationTests`) against a real Postgres 18 instance, including the V3 migration. `@WebMvcTest` lives at `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` in this Spring Boot 4.1.1 project (not the pre-4.x package) — needs `spring-boot-starter-webmvc-test` on the test classpath, added alongside the other per-feature test starters already in `pom.xml`.
 - Frontend tests: `npm run test` (Vitest + React Testing Library, both added — none existed before). **Verified 2026-09-12**: 10/10 pass. `npm run build` (`tsc -b && vite build`) and `npm run lint` (ESLint) also verified clean.
 - No lint/static-analysis tool is configured for the backend (no Checkstyle/Spotless in `pom.xml`).
 - No seed-data command exists — `V1__mock_data.sql` is scaffolding only, not domain seed data.
 - No CI command exists — there is no CI pipeline in this repository yet, though the backend and frontend are both now verified independently testable, which is what a CI job would need to run.
+- **A mystery empty 401 is often a masked 404/500.** Spring Boot forwards unhandled errors to `/error`, which is a path like any other — under `.anyRequest().authenticated()` the forward is rejected and the real status is overwritten with a bodiless 401 carrying `WWW-Authenticate`. Re-send the request with `-u ec1:123456`: if the status changes, the 401 was never about authentication. Consider adding `/error` to `permitAll`.
 - **Known environment gotcha, fixed 2026-09-12**: `backend/mvnw` had CRLF line endings from a Windows checkout, which breaks it inside any Linux container (`docker compose up --build` included) with `/bin/sh^M: bad interpreter`. Fixed in the working tree and a root `.gitattributes` added to prevent recurrence — **this fix is not committed yet**; commit `backend/mvnw` and `.gitattributes` together so teammates on Windows don't hit the same failure.
 
 ## Product Backlog Spreadsheet — safe reading/editing rules
@@ -206,7 +295,7 @@ After implementing:
 
 Do not assume:
 - The technology stack, package manager, commands, database, deployment target, or CI workflow beyond what's verified above — this repository has no frontend router/state library, no frontend test framework, and no CI pipeline implemented yet.
-- That real authentication is being built right now — the team has deliberately deferred it in favour of a "Login as [Role]" selector (see "Interim access model" above); don't add registration/login screens unless asked.
+- That the "Login as [Role]" selector is still the whole story — real credential-based authentication **is now being built** on the `feat/auth` branch (D19), ahead of the team's recorded D6a deferral. On `main` the interim selector still stands; on `feat/auth` it is being replaced. Check which branch you are on before assuming either.
 - That every capability mentioned in the Week 1 customer briefing belongs in Release 1 — only the 20 named core features (and whatever the live backlog currently marks "Within Scope, Included" or "Added") do.
 - That the backlog spreadsheet's current numbers (velocity, sprint dates, story-to-sprint assignment, `Assigned To` names) are stable — it is edited live; re-read it rather than relying on a cached figure, especially before sprint planning or reporting progress.
 - That a venue is available solely because its capacity is large enough, or that a booking is confirmed without a verified status/workflow rule.

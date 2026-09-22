@@ -1,35 +1,30 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { UNAUTHORISED_EVENT } from './apiClient'
-import {
-  SessionContext,
-  SESSION_STORAGE_KEY,
-  readStoredSession,
-  type Session,
-  type SessionContextValue,
-} from './sessionContext'
+import { login as apiLogin, logout as apiLogout, UNAUTHORISED_EVENT } from './apiClient'
+import { readTokens } from './authTokens'
+import { SessionContext, type Session, type SessionContextValue } from './sessionContext'
 
 // Only SessionProvider (a component) is exported from this file —
 // react-refresh/only-export-components requires that. Everything else
 // (useSession, Role, Session) lives in ./sessionContext; import from there.
 
+const LOGGED_OUT: Session = { role: null, username: null, organisation: null }
+
+function currentSession(): Session {
+  const tokens = readTokens()
+  if (!tokens) return LOGGED_OUT
+  return { role: tokens.role, username: tokens.username, organisation: tokens.organisation }
+}
+
 export function SessionProvider({ children }: { children: ReactNode }) {
-  const [session, setSession] = useState<Session>(readStoredSession)
+  const [session, setSession] = useState<Session>(currentSession)
 
   useEffect(() => {
-    try {
-      window.localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session))
-    } catch {
-      // Nothing useful to do if storage is unavailable — the session still
-      // works for the current page load, it just won't survive a refresh.
-    }
-  }, [session])
-
-  useEffect(() => {
-    // Any 401/403 from apiClient means this "session" is no longer valid —
-    // clear it so route guards (App.tsx's useRoleGate) bounce the user back
-    // to the role selector, the same place an actual expired login would.
+    // apiClient reports this only when the session is over and could not be
+    // renewed — never for a 403, which means the session is fine and this
+    // account simply isn't allowed to do that. Route guards then bounce the
+    // user to the login page.
     function handleUnauthorised() {
-      setSession({ role: null, organisation: null })
+      setSession(LOGGED_OUT)
     }
     window.addEventListener(UNAUTHORISED_EVENT, handleUnauthorised)
     return () => window.removeEventListener(UNAUTHORISED_EVENT, handleUnauthorised)
@@ -38,8 +33,21 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SessionContextValue>(
     () => ({
       ...session,
-      loginAs: (role, organisation) => setSession({ role, organisation: organisation ?? null }),
-      logout: () => setSession({ role: null, organisation: null }),
+      login: async (username, password) => {
+        // apiClient writes the tokens; this mirrors them into React state so
+        // the tree re-renders. Storage stays the source of truth, so a reload
+        // resumes the same session.
+        const tokens = await apiLogin(username, password)
+        setSession({
+          role: tokens.role,
+          username: tokens.username,
+          organisation: tokens.organisation,
+        })
+      },
+      logout: async () => {
+        setSession(LOGGED_OUT)
+        await apiLogout()
+      },
     }),
     [session],
   )
