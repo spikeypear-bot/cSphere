@@ -3,17 +3,11 @@ import type { SkeletonFeature } from '../../types/skeletonFeature'
 // Story IDs per docs/product-context.md § End-to-End Workflows (steps 3, 4,
 // 5, 6, 7, 9) and § Detailed User Stories — re-check against the live
 // backlog sheet before building any of these for real.
+// 'review-queue' (EC01/EC02) is not in this list any more — it's a real page
+// now (ReviewQueuePage, routed directly in App.tsx), reached from
+// CoordinatorHomePage's own primary button rather than a "Skeleton" card, the
+// same way EventRequestWizardPage isn't in organiserExtraFeatures either.
 export const coordinatorFeatures: SkeletonFeature[] = [
-  {
-    path: 'review-queue',
-    navLabel: 'Review requests',
-    pageTitle: 'Event Request Review',
-    storyIds: ['EC01', 'EC02'],
-    featureArea: 'Event Review and Approval',
-    summary: 'Review a submitted event request; approve, reject, or send it back for clarification.',
-    layout: 'list',
-    suggestedBackendPackage: 'com.example.connect_sphere.eventrequest (extend with a review/approve action)',
-  },
   {
     path: 'venue-search',
     navLabel: 'Search venues',

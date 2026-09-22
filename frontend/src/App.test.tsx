@@ -40,8 +40,14 @@ describe('App routing — role consoles', () => {
     renderApp('/coordinator')
 
     expect(await screen.findByRole('heading', { name: /Event Coordinator console/i })).toBeInTheDocument()
-    // Every skeleton card names its backlog story ID so a teammate can trace it.
-    expect(screen.getByText('EC01')).toBeInTheDocument()
+    // EC01/EC02's review queue is a real page now, reached via its own
+    // button rather than a "Skeleton" card (see coordinatorFeatures.ts).
+    expect(screen.getByRole('link', { name: 'Review requests' })).toHaveAttribute(
+      'href', '/coordinator/review-queue',
+    )
+    // Every *remaining* skeleton card still names its backlog story ID so a
+    // teammate can trace it.
+    expect(screen.getByText('EC04')).toBeInTheDocument()
   })
 
   it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {

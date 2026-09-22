@@ -1,0 +1,27 @@
+.coordinator-home {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.coordinator-home__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.coordinator-home__more {
+  margin-block-start: 1rem;
+  padding-block-start: 1.5rem;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.coordinator-home__more h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}

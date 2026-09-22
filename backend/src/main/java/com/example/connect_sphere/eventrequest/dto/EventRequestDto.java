@@ -27,5 +27,7 @@ public record EventRequestDto(
         EventRequestStatus status,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
-        String organisation) {
+        String organisation,
+        UUID coordinatorId,
+        String rejectionReason) {
 }

@@ -7,11 +7,18 @@ import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.example.connect_sphere.event.service.EventNotFoundException;
+import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotEditableException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundException;
+import com.example.connect_sphere.eventrequest.service.EventRequestNotPendingException;
 import com.example.connect_sphere.eventrequest.service.IncompleteEventRequestException;
+import com.example.connect_sphere.eventrequest.service.InvalidCoordinatorException;
 import com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException;
 import com.example.connect_sphere.eventrequest.service.MissingOrganisationException;
+import com.example.connect_sphere.eventrequest.service.MissingRejectionReasonException;
+import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
+import com.example.connect_sphere.notification.service.NotificationNotFoundException;
 import com.example.connect_sphere.venue.service.InvalidVenueException;
 import com.example.connect_sphere.user.service.InvalidRefreshTokenException;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
@@ -57,6 +64,47 @@ public class ApiExceptionHandler {
     @ExceptionHandler(MissingOrganisationException.class)
     public ResponseEntity<ApiError> handleMissingOrganisation(MissingOrganisationException ex) {
         return ResponseEntity.badRequest().body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventRequestNotPendingException.class)
+    public ResponseEntity<ApiError> handleNotPending(EventRequestNotPendingException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    /**
+     * Not "forbidden" in the AU06/role sense — the caller is a real Event
+     * Coordinator, just not *this* request's coordinator — so 409, the same
+     * status as every other "this action doesn't make sense given the
+     * current state" conflict in this handler, rather than 403.
+     */
+    @ExceptionHandler(NotAssignedCoordinatorException.class)
+    public ResponseEntity<ApiError> handleNotAssignedCoordinator(NotAssignedCoordinatorException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidCoordinatorException.class)
+    public ResponseEntity<ApiError> handleInvalidCoordinator(InvalidCoordinatorException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(MissingRejectionReasonException.class)
+    public ResponseEntity<ApiError> handleMissingRejectionReason(MissingRejectionReasonException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventNotFoundException.class)
+    public ResponseEntity<ApiError> handleEventNotFound(EventNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventNotPendingException.class)
+    public ResponseEntity<ApiError> handleEventNotPending(EventNotPendingException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(NotificationNotFoundException.class)
+    public ResponseEntity<ApiError> handleNotificationNotFound(NotificationNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
     }
 
     /**

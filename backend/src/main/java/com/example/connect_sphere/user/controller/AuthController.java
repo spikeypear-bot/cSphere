@@ -96,6 +96,7 @@ public class AuthController {
                 refreshToken,
                 "Bearer",
                 tokenService.accessTokenTtlSeconds(),
+                principal.getUserId(),
                 principal.getUsername(),
                 principal.getUser().getRole().name(),
                 principal.getOrganisation());

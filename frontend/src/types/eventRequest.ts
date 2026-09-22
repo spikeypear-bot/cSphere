@@ -47,6 +47,8 @@ export interface EventRequestDto {
   createdAt: string
   updatedAt: string
   organisation: string
+  coordinatorId: string | null
+  rejectionReason: string | null
 }
 
 /** Every field optional — a draft may be saved incomplete (EO01). */

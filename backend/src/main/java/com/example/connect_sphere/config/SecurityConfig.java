@@ -86,6 +86,18 @@ public class SecurityConfig{
 		    // since this layer rejects first and a drifting pair would leave
 		    // the annotation looking load-bearing when it is not.
 		    .requestMatchers("/api/venues/**").hasAnyRole("EC", "VS")
+		    // EO09/EO19's minimal Event Coordinator side: the review queue and
+		    // the three decision actions. Deliberately narrow HttpMethod+path
+		    // matchers so they carve out only themselves from the blanket
+		    // hasRole("EO") rule immediately below, which otherwise still
+		    // governs every other /api/event-requests/** path exactly as
+		    // before — an Organiser's token must not satisfy these, and a
+		    // Coordinator's must not satisfy that.
+		    .requestMatchers(HttpMethod.GET, "/api/event-requests/queue").hasRole("EC")
+		    .requestMatchers(HttpMethod.POST,
+			    "/api/event-requests/*/assign-coordinator",
+			    "/api/event-requests/*/approve",
+			    "/api/event-requests/*/reject").hasRole("EC")
 		    // Organisers only, deliberately narrower than D20's first draft.
 		    // Coordinators are internal (organisation "ConnectSphere") and no
 		    // Organiser belongs to it, so scoping them by their own claim would
@@ -103,6 +115,17 @@ public class SecurityConfig{
 		    // is TS02, so writes narrow to the technician below.
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
+		    // EO09 "Confirmed": only the assigned Coordinator confirms
+		    // (enforced in EventService.confirm() itself, same pattern as
+		    // approve/reject). Reads are open to both roles that can
+		    // legitimately reach one — EventService itself decides whether an
+		    // Organiser's own organisation actually owns the event.
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/confirm").hasRole("EC")
+		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC")
+		    // EO09/EO19: any signed-in role may read/mark-read their own
+		    // notifications — scoping is always by the caller's own `sub`
+		    // claim (NotificationController), never anything role-specific.
+		    .requestMatchers("/api/notifications/**").authenticated()
 		    .anyRequest().authenticated());
 	return http.build();
 

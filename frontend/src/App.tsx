@@ -10,6 +10,8 @@ import { EventRequestWizardPage } from './features/organiser/EventRequestWizardP
 import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatures'
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
 import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
+import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
+import { EventDetailsPage } from './features/events/EventDetailsPage'
 import { VenueStaffHomePage } from './features/venueStaff/VenueStaffHomePage'
 import { VenueEditPage } from './features/venueStaff/VenueEditPage'
 import { VenueCreatePage } from './features/venueStaff/VenueCreatePage'
@@ -62,6 +64,7 @@ function OrganiserRoutes() {
       <Route index element={<OrganiserHomePage />} />
       <Route path="requests/new" element={<EventRequestWizardPage />} />
       <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
+      <Route path="events/:eventId" element={<EventDetailsPage />} />
       {skeletonRoutes(organiserExtraFeatures)}
     </Routes>
   )
@@ -75,6 +78,8 @@ function CoordinatorRoutes() {
   return (
     <Routes>
       <Route index element={<CoordinatorHomePage />} />
+      <Route path="review-queue" element={<ReviewQueuePage />} />
+      <Route path="events/:eventId" element={<EventDetailsPage />} />
       {skeletonRoutes(coordinatorFeatures)}
     </Routes>
   )

@@ -15,6 +15,7 @@ export type { Role }
 
 export interface Session {
   role: Role | null
+  userId: string | null
   username: string | null
   organisation: string | null
 }

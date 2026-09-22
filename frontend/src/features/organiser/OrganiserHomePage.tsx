@@ -103,6 +103,11 @@ export function OrganiserHomePage() {
                   Continue editing
                 </Link>
               ) : null}
+              {request.status === 'approved' && request.eventId ? (
+                <Link className="button button--secondary" to={`/organiser/events/${request.eventId}`}>
+                  View event
+                </Link>
+              ) : null}
             </Card>
           </li>
         ))}
