@@ -11,7 +11,6 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
@@ -23,7 +22,6 @@ import jakarta.persistence.EntityManager;
 /** Real PostgreSQL round trip; the test transaction rolls back the venue. */
 @SpringBootTest
 @Transactional
-@WithMockUser(roles = "VS")
 class VenuePersistenceTest {
     @Autowired VenueService service;
     @Autowired VenueRepository repository;
