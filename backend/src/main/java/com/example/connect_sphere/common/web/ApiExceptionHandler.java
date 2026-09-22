@@ -14,6 +14,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundExcep
 import com.example.connect_sphere.eventrequest.service.EventRequestNotPendingException;
 import com.example.connect_sphere.eventrequest.service.IncompleteEventRequestException;
 import com.example.connect_sphere.eventrequest.service.InvalidCoordinatorException;
+import com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException;
 import com.example.connect_sphere.eventrequest.service.MissingOrganisationException;
 import com.example.connect_sphere.eventrequest.service.MissingRejectionReasonException;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
@@ -53,6 +54,11 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleIncomplete(IncompleteEventRequestException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ApiError.missingFields(ex.getMessage(), ex.getMissingFields()));
+    }
+
+    @ExceptionHandler(InvalidEventRequestScheduleException.class)
+    public ResponseEntity<ApiError> handleInvalidSchedule(InvalidEventRequestScheduleException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(MissingOrganisationException.class)
