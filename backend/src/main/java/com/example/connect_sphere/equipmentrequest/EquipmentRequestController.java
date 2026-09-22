@@ -1,6 +1,7 @@
 package com.example.connect_sphere.equipmentrequest;
 
-import com.example.connect_sphere.event.EventRepository;
+import com.example.connect_sphere.event.entity.Event;
+import com.example.connect_sphere.event.repository.EventRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -30,7 +31,7 @@ public class EquipmentRequestController {
         return requestRepository.findByStatus(EquipmentRequestStatus.processing).stream()
             .map(r -> {
                 var event = eventRepository.findById(r.getEventId()).orElse(null);
-                String eventName = event != null ? event.getName() : "Unknown event";
+                String eventName = event != null ? event.getEventName() : "Unknown event";
                 var start = event != null ? event.getStartDatetime().toInstant() : null;
                 var end = event != null ? event.getEndDatetime().toInstant() : null;
                 return EquipmentRequestResponse.from(r, eventName, start, end);
