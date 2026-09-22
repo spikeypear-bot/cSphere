@@ -2,8 +2,8 @@
 ' C4 "Code" level view (IS212 Week 5): the Java classes actually implemented
 ' in backend/src/main/java/com/example/connect_sphere, not the full database
 ' schema — see SCHEMA.md for the complete ER diagram of every table,
-' including the ones with no Java entity yet (users, events, equipments,
-' venue_bookings, ...).
+' including the ones with no Java entity yet (users, equipments,
+' ...).
 '
 ' Kept as text (not an exported image) so it stays diffable and is meant to
 ' be updated in the same PR as the code whenever a class here changes shape,
@@ -110,8 +110,40 @@ note bottom of Venue
   venueRequirements is still free text (VS06's
   matching/suitability logic is a later story).
   SCHEMA.md's full ER diagram shows where this
-  and other tables (users, events, equipments,
-  venue_bookings, ...) are headed.
+  other tables (users, equipments, ...) are headed.
+  VS16 booking/event read mappings appear below.
+end note
+
+class VenueEvent <<immutable read mapping>> {
+  eventId : UUID
+  eventName : String
+  startDatetime : OffsetDateTime
+  endDatetime : OffsetDateTime
+  expectedAttendance : Integer
+  venueRequirements : String
+  accessibilityNeeds : List<String>
+  equipmentRequirements : String
+}
+
+class VenueBooking <<immutable read mapping>> {
+  bookingId : UUID
+  status : VenueBookingStatus
+}
+
+enum VenueBookingStatus {
+  pending
+  confirmed
+  changed
+  rejected
+  cancelled
+}
+
+VenueBooking "0..*" --> "1" Venue : venue
+VenueBooking "0..*" --> "1" VenueEvent : event
+VenueBooking ..> VenueBookingStatus : status
+note bottom of VenueEvent
+  VS16 reads current events, not pending event_requests.
+  No writes or approval behavior are implemented here.
 end note
 
 @enduml

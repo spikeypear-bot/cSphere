@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { render, screen, cleanup, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -9,8 +9,14 @@ const DRAFT_ID = '11111111-1111-1111-1111-111111111111'
 
 function seedSession() {
   window.localStorage.setItem(
-    'connectsphere.session',
-    JSON.stringify({ role: 'organiser', organisation: 'Acme Conferences' }),
+    'connectsphere.auth',
+    JSON.stringify({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      username: 'eo1',
+      role: 'organiser',
+      organisation: 'Acme Conferences',
+    }),
   )
 }
 
@@ -58,6 +64,45 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     cleanup()
     vi.unstubAllGlobals()
     window.localStorage.clear()
+  })
+
+  it('preserves invalid selections, blocks Next, and clears errors after correcting the range', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (_url, init) => jsonResponse(200, {
+      ...JSON.parse(init.body), requestId: DRAFT_ID, status: 'draft',
+    })))
+    const user = userEvent.setup()
+    renderWizard()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    const start = screen.getByLabelText('Start date & time')
+    const end = screen.getByLabelText('End date & time')
+    fireEvent.change(start, { target: { value: '2020-09-22T09:00' } })
+    fireEvent.change(end, { target: { value: '2020-09-23T09:00' } })
+    expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
+    fireEvent.change(start, { target: { value: '2020-09-24T09:00' } })
+    expect(start).toHaveValue('2020-09-24T09:00')
+    expect(end).toHaveValue('2020-09-23T09:00')
+    expect(end).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('End date & time must be on or after')
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    fireEvent.change(end, { target: { value: '2020-09-24T09:00' } })
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByLabelText('Venue requirements')).toBeInTheDocument()
+  })
+
+  it('does not submit previously saved data when saving the current fields fails', async () => {
+    let fail = false
+    const fetch = vi.fn(async (_url, init) => fail ? jsonResponse(500, { message: 'Save failed' }) : jsonResponse(200, {
+      ...JSON.parse(init.body), requestId: DRAFT_ID, status: 'draft',
+    }))
+    vi.stubGlobal('fetch', fetch)
+    const user = userEvent.setup()
+    renderWizard()
+    for (let step = 0; step < 4; step++) await user.click(screen.getByRole('button', { name: 'Next' }))
+    fail = true
+    await user.click(screen.getByRole('button', { name: 'Submit for review' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('latest changes have not been saved')
+    expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/submit'))).toBe(false)
   })
 
   it('lets the organiser move through every step without filling any field in', async () => {

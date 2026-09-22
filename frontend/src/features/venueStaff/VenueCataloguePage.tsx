@@ -3,33 +3,10 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { venueLayoutLabels, venueAccessibilityLabels, venueFacilityLabels, type VenueDto } from '../../types/venue'
+import type { VenueDto } from '../../types/venue'
+import { VenueDetailsPanel } from './VenueDetailsPanel'
 import '../../components/skeleton.css'
 import './VenueCataloguePage.css'
-
-function VenueCatalogueCard({ venue }: { venue: VenueDto }) {
-  return <Card className="feature-skeleton__body venue-card-preview">
-    <div className="venue-card-preview__header">
-      <p className="venue-card-preview__id" aria-label="Venue ID">{venue.venueId}</p>
-      <Link className="button button--secondary venue-card-preview__edit" to={`/venue-staff/catalogue/${venue.venueId}/edit`}>Edit venue</Link>
-    </div>
-    <ul className="venue-card-preview__tags" aria-label="Supported layouts">
-      {venue.supportedLayouts.map(layout => <li key={layout} className="venue-card-preview__tag">
-        {venueLayoutLabels[layout] ?? layout}
-      </li>)}
-    </ul>
-    <h2 className="venue-card-preview__title">{venue.venueAddress}</h2>
-    <p className="venue-card-preview__capacity">{venue.venueCapacity?.toLocaleString()} people</p>
-    <dl className="venue-card-preview__information">
-      <div><dt>Operating information</dt><dd>{venue.operatingInformation}</dd></div>
-      <div><dt>Accessibility provisions</dt>
-        <dd>{venue.venueAccessibilities.map(value => venueAccessibilityLabels[value]).join(', ') || 'Not recorded'}</dd></div>
-      <div><dt>Facilities</dt>
-        <dd>{venue.venueFacilities.map(value => venueFacilityLabels[value]).join(', ') || 'Not recorded'}</dd></div>
-      <div><dt>Additional information</dt><dd>{venue.additionalInformation?.trim() || 'No Additional Information'}</dd></div>
-    </dl>
-  </Card>
-}
 
 export function VenueCataloguePage() {
   const location = useLocation()
@@ -51,6 +28,6 @@ export function VenueCataloguePage() {
     {error ? <Card className="feature-skeleton__body"><p role="alert">{error}</p><Button variant="secondary" onClick={() => { setError(''); setAttempt(n => n + 1) }}>Try again</Button></Card>
       : venues === null ? <p role="status">Loading venues…</p>
       : venues.length === 0 ? <Card className="feature-skeleton__body"><h2>No venues yet</h2><p>Add your first venue to start the catalogue.</p></Card>
-      : venues.map(venue => <VenueCatalogueCard key={venue.venueId} venue={venue} />)}
+      : venues.map(venue => <VenueDetailsPanel key={venue.venueId} venue={venue} linkToDetails />)}
   </div>
 }

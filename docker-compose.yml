@@ -27,9 +27,14 @@ services:
     ports:
       - 8080:8080
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/csphere
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      # List form, not map form, so the bare JWT_SECRET entry below works: it
+      # forwards the host's value only if the host actually has one set, leaving
+      # application-dev.properties' committed dev key in place otherwise. A map
+      # entry would forward an empty string and override that default with "".
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/csphere
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+      - JWT_SECRET
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
@@ -52,9 +57,10 @@ services:
       db:
         condition: service_healthy
     environment:
-      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/csphere
-      SPRING_DATASOURCE_USERNAME: postgres
-      SPRING_DATASOURCE_PASSWORD: root
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/csphere
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=root
+      - JWT_SECRET
     entrypoint: ["./mvnw", "-B", "-ntp"]
     command: ["test"]
 

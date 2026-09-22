@@ -111,6 +111,29 @@ null for internal staff.
 
 ---
 
+### `refresh_tokens`
+Opaque, rotating session credentials (V11, D19 stage 6). Not JWTs, deliberately: the point of this
+table is that a session can be *revoked*, and a signed token cannot be. Access tokens live minutes
+and are verified by signature alone; these live weeks and are verified against this table.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `token_id` | `UUID` | no | PK | Identifier |
+| `user_id` | `UUID` | no | FK → `users` | Owner; `ON DELETE CASCADE` |
+| `token_hash` | `VARCHAR(64)` | no | UQ | SHA-256 hex of the token. The token itself is never stored |
+| `family_id` | `UUID` | no | IX | Groups every token descended from one login |
+| `issued_at` | `TIMESTAMPTZ` | no | | Defaults to `CURRENT_TIMESTAMP` |
+| `expires_at` | `TIMESTAMPTZ` | no | | Checked `> issued_at` |
+| `revoked_at` | `TIMESTAMPTZ` | yes | | Null means live; set on rotation, logout, or family revocation |
+
+Rotation is single-use: each refresh revokes the presented token and issues a successor in the same
+family. A revoked row is kept rather than deleted, because recognising an already-used token is what
+makes **reuse detection** possible — presenting one means replay or theft, so the whole family is
+revoked and the user must log in again. Hashed with SHA-256 rather than BCrypt on purpose: the value
+is 256 bits of CSPRNG output, so there is no low-entropy guess for slow hashing to frustrate.
+
+---
+
 ### `venues`
 Bookable spaces, with the accessibility and facility attributes used to match them to events.
 

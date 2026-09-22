@@ -21,6 +21,14 @@ note: building of springboot app may take quite long during the first build, sub
 
 note: all db files are to be written on the backend/src/main/resources/db/migration in the form of VERSION__description.sql, for example 1__init-table.sql 
 
+### Optional VS16 demo data (Venue Staff / Event Coordinator)
+
+Use the [VS16 local seed and testing guide](docs/vs16-manual-testing.md) to try
+Catalogue → venue → associated booking → shared booking details before the Coordinator
+workflow exists. Manual scripts under `backend/dev/seed/` create their own demo venue,
+event and pending booking and include guarded cleanup. They never run automatically.
+Share scripts, not database dumps. Development seeds are separate from Flyway migrations.
+
 ### Tests
 
 Frontend (Vitest + React Testing Library):

@@ -1,18 +1,22 @@
 import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { SessionProvider } from './lib/session'
-import { useSession, type Role } from './lib/sessionContext'
+import { HOME_BY_ROLE, useSession, type Role } from './lib/sessionContext'
 import { AppShell } from './components/AppShell'
 import { FeatureSkeletonPage } from './components/FeatureSkeletonPage'
 import type { SkeletonFeature } from './types/skeletonFeature'
-import { RoleSelectPage } from './features/roleSelect/RoleSelectPage'
+import { LoginPage } from './features/auth/LoginPage'
 import { OrganiserHomePage } from './features/organiser/OrganiserHomePage'
 import { EventRequestWizardPage } from './features/organiser/EventRequestWizardPage'
 import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatures'
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
 import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
+import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
+import { EventDetailsPage } from './features/events/EventDetailsPage'
 import { VenueStaffHomePage } from './features/venueStaff/VenueStaffHomePage'
 import { VenueEditPage } from './features/venueStaff/VenueEditPage'
 import { VenueCreatePage } from './features/venueStaff/VenueCreatePage'
+import { VenueDetailsPage } from './features/venueStaff/VenueDetailsPage'
+import { BookingDetailsPage } from './features/venueStaff/BookingDetailsPage'
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
@@ -22,13 +26,27 @@ import { EquipmentStatusPage } from './features/technicalSupport/status/equipmen
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 
-/** Route-level role gating (front-end only, for this interim phase — see
- * docs/decision-log.md Q2 for whether server-side enforcement is also
- * needed): any role other than `expected` is sent back to the selector
- * rather than shown that role's pages. */
+/** Route-level role gating. The role comes from the access token's `role`
+ * claim (D19), so editing localStorage no longer promotes anyone: a tampered
+ * token fails signature verification and every API call 401s. This gate is
+ * therefore about not showing someone a console full of requests that would
+ * all fail — the enforcement itself is D20's rules on the server. */
 function useRoleGate(expected: Role) {
   const { role } = useSession()
   return role === expected
+}
+
+/** Where to send someone who asked for a console that isn't theirs, and what to
+ * tell them when they get there (AU06).
+ *
+ * Signed in: their own console, which is the only one they can use — but the
+ * attempted path travels with them so AppShell can say why they moved. Dropping
+ * that message is a regression: AU06 is specifically "clear message on an
+ * unauthorised action", and a silent redirect reads as the app misbehaving.
+ * Signed out: the login page, which shows its own version of the notice. */
+function redirectFor(role: Role | null, pathname: string): string {
+  const denied = `access-denied=${encodeURIComponent(pathname)}`
+  return role ? `${HOME_BY_ROLE[role]}?${denied}` : `/?${denied}`
 }
 
 function skeletonRoutes(features: SkeletonFeature[]) {
@@ -41,12 +59,13 @@ function OrganiserRoutes() {
   const permitted = useRoleGate('organiser')
   const { pathname } = useLocation()
   const { role } = useSession()
-  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
     <Routes>
       <Route index element={<OrganiserHomePage />} />
       <Route path="requests/new" element={<EventRequestWizardPage />} />
       <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
+      <Route path="events/:eventId" element={<EventDetailsPage />} />
       {skeletonRoutes(organiserExtraFeatures)}
     </Routes>
   )
@@ -56,10 +75,12 @@ function CoordinatorRoutes() {
   const permitted = useRoleGate('coordinator')
   const { pathname } = useLocation()
   const { role } = useSession()
-  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
     <Routes>
       <Route index element={<CoordinatorHomePage />} />
+      <Route path="review-queue" element={<ReviewQueuePage />} />
+      <Route path="events/:eventId" element={<EventDetailsPage />} />
       {skeletonRoutes(coordinatorFeatures)}
     </Routes>
   )
@@ -69,12 +90,14 @@ function VenueStaffRoutes() {
   const permitted = useRoleGate('venue-staff')
   const { pathname } = useLocation()
   const { role } = useSession()
-  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
     <Routes>
       <Route index element={<VenueStaffHomePage />} />
       <Route path="catalogue" element={<VenueCataloguePage />} />
       <Route path="catalogue/new" element={<VenueCreatePage />} />
+      <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
+      <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
       <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
       {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue')))}
     </Routes>
@@ -85,7 +108,7 @@ function TechnicalSupportRoutes() {
   const permitted = useRoleGate('technical-support')
   const { pathname } = useLocation()
   const { role } = useSession()
-  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
     <Routes>
       <Route index element={<TechnicalSupportHomePage />} />
@@ -102,7 +125,7 @@ function AttendeeRoutes() {
   const permitted = useRoleGate('attendee')
   const { pathname } = useLocation()
   const { role } = useSession()
-  if (!permitted) return <Navigate to={role ? `/?access-denied=${encodeURIComponent(pathname)}` : '/'} replace />
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
     <Routes>
       <Route index element={<AttendeeHomePage />} />
@@ -111,10 +134,17 @@ function AttendeeRoutes() {
   )
 }
 
+/** "/" is the login page when signed out, and a redirect to your own console
+ * when signed in — there is no role to pick any more. */
+function LandingRoute() {
+  const { role } = useSession()
+  return role ? <Navigate to={HOME_BY_ROLE[role]} replace /> : <LoginPage />
+}
+
 function AppRoutes() {
   return (
     <Routes>
-      <Route path="/" element={<RoleSelectPage />} />
+      <Route path="/" element={<LandingRoute />} />
       <Route path="/organiser/*" element={<OrganiserRoutes />} />
       <Route path="/coordinator/*" element={<CoordinatorRoutes />} />
       <Route path="/venue-staff/*" element={<VenueStaffRoutes />} />

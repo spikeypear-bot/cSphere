@@ -16,7 +16,7 @@ function FieldShell({ label, hint, error, htmlFor, children }: FieldShellProps) 
       <label htmlFor={htmlFor}>{label}</label>
       {children}
       {error ? (
-        <span className="field-error" role="alert">
+        <span id={`${htmlFor}-error`} className="field-error" role="alert">
           {error}
         </span>
       ) : hint ? (
@@ -97,6 +97,7 @@ export function NumberField({ id, label, value, onChange, hint, error, min }: Nu
 }
 
 interface DateTimeFieldProps {
+  min?: string
   id: string
   label: string
   value: string | null
@@ -110,13 +111,16 @@ interface DateTimeFieldProps {
  * picker — the browser's local zone is used, which is an acceptable
  * simplification for a first slice; see docs/decision-log.md if this needs
  * revisiting). */
-export function DateTimeField({ id, label, value, onChange, hint, error }: DateTimeFieldProps) {
+export function DateTimeField({ id, label, value, onChange, hint, error, min }: DateTimeFieldProps) {
   const localValue = value ? toDatetimeLocalValue(value) : ''
   return (
     <FieldShell label={label} hint={hint} error={error} htmlFor={id}>
       <input
         id={id}
         type="datetime-local"
+        min={min ? toDatetimeLocalValue(min) : undefined}
+        aria-invalid={!!error}
+        aria-describedby={error ? `${id}-error` : undefined}
         value={localValue}
         onChange={(event) => {
           const raw = event.target.value

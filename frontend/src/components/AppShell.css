@@ -60,3 +60,26 @@
     padding: 1.25rem 1rem 3rem;
   }
 }
+
+/* AU06 — moved here from RoleSelectPage.css when the role selector was replaced
+   by a real login page. Same treatment, shown on whichever console the user is
+   redirected to. */
+.app-shell__access-denied {
+  margin-bottom: 1.25rem;
+  padding: 1rem 1.25rem;
+  border-color: var(--danger);
+}
+
+.app-shell__access-denied h2 {
+  color: var(--danger);
+  font-size: 1rem;
+}
+
+.app-shell__access-denied p {
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+}
+
+.app-shell__access-denied code {
+  overflow-wrap: anywhere;
+}
