@@ -215,6 +215,30 @@ class EventRequestServiceTest {
         assertThat(results.get(0).organisation()).isEqualTo(ORG);
     }
 
+    @Test
+    void reversedRangeCannotBeSubmittedAndDoesNotChangeTheDraft() {
+        UUID id = UUID.randomUUID();
+        EventRequest existing = completeDraftEntity(id, ORG);
+        existing.setEndDatetime(existing.getStartDatetime().minusMinutes(1));
+        var updatedAt = existing.getUpdatedAt();
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        assertThatThrownBy(() -> service.submit(ORG, id))
+                .isInstanceOf(InvalidEventRequestScheduleException.class);
+        assertThat(existing.getStatus()).isEqualTo(EventRequestStatus.draft);
+        assertThat(existing.getUpdatedAt()).isEqualTo(updatedAt);
+        org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    void equalInstantsWithDifferentOffsetsAndPastDatesCanBeSubmitted() {
+        UUID id = UUID.randomUUID();
+        EventRequest existing = completeDraftEntity(id, ORG);
+        existing.setStartDatetime(java.time.OffsetDateTime.parse("2020-09-22T09:00:00Z"));
+        existing.setEndDatetime(java.time.OffsetDateTime.parse("2020-09-22T17:00:00+08:00"));
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        assertThat(service.submit(ORG, id).status()).isEqualTo(EventRequestStatus.pending);
+    }
+
     private static EventRequest draftEntity(UUID id, String organisation) {
         EventRequest entity = new EventRequest();
         entity.setRequestId(id);

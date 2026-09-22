@@ -226,3 +226,26 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Context:** Performance, scalability, and reliability requirements are stated qualitatively ("reasonable time," "anticipated growth over three years") with no numbers.
 - **Options:** propose team-internal targets for test design (e.g. "common read operations under 2s in the dev/test environment") and label them explicitly as team assumptions, not customer requirements, in any test plan or NFR document.
 - **Owner:** team, before writing performance-related tests.
+
+
+## Organiser request date-range validation (2026-09-22)
+
+End must be on or after start, comparing full instants. Equal timestamps, same-day
+events, matching times on successive days, and past dates are allowed. No
+unavailable-date or booking-conflict rule is introduced.
+
+Reversed ranges retain both inputs and show accessible inline correction messages.
+Next and submission are blocked until corrected; Back remains available. The end
+input minimum follows start, with explicit validation for typed/restored values.
+Display uses browser-local time; the API receives ISO instants.
+
+Incomplete or reversed drafts remain saveable to preserve work in progress. Both
+dates are required on submission. The backend returns HTTP 422 for reversed ranges
+before changing status or updatedAt. Submission first saves current fields; failed
+or in-progress saves prompt a retry instead of submitting older saved values.
+
+Verification: 56 Organiser/Venue Staff frontend tests, 18 event-request service and
+controller tests, scoped ESLint, and production build passed. Regression coverage
+includes correction, retained selections, equal instants with differing offsets,
+past dates, HTTP 422, unchanged rejected drafts, and failed-save submission
+protection. Native date-picker appearance was not browser-tested.
