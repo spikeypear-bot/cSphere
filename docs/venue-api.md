@@ -35,18 +35,78 @@ Errors use the shared `ApiError` shape: `message` and optional `missingFields`.
 Malformed JSON/types/layout labels or malformed UUIDs return 400; service
 validation returns 422; an unknown venue UUID returns 404.
 
-## Current access limitation
+## VS18 venue identity and implementation review
 
-These endpoints currently have no server-side role or identity enforcement.
-The existing frontend role selector does not authenticate API callers. The
-interim access mechanism remains undecided in decision-log D6a/Q2; this API must
-not be described as restricted to Venue Staff or as completing authentication.
-The Venue Staff routes (including edit) use `useRoleGate('venue-staff')`.
-This is a UI restriction only: backend identity, role enforcement, and venue-management
-permissions do not exist. **Full VS07 AC1 is not satisfied** and depends on separate
-authorization/ownership work under D6a/Q2 and AU04/DEV05. Do not mark VS07 fully
-accepted on the strength of the UI gate. The list returns the whole catalogue
-without pagination.
+Each existing `venues` row represents one independently bookable room or space,
+with its own `venueId`. `venueAddress` contains the room identity and location and
+is the user-facing identifier, for example `School A - Classroom 1, Level 2`.
+Classroom 2 and Theatre 1 at the same school are separate records with separate
+IDs. No parent building record, dedicated name field, or schema change is needed.
+`supportedLayouts` describes arrangements supported by that room, not child rooms.
+
+The existing catalogue fetches `GET /api/venues` and renders one panel per
+`venueId`, headed by `venueAddress`. Detail and edit links retain the UUID.
+The detail page fetches `GET /api/venues/{id}` and separately reads associated
+bookings. Both venue service reads use read-only transactions; they map saved
+rows directly without grouping by building or expanding layouts into rooms.
+The existing detail panel displays all recorded characteristics.
+
+## Current access rules (reviewed 2026-09-23)
+
+`SecurityConfig` requires authentication for venue GET endpoints, including
+individual records. Reads are available to any authenticated role. Venue writes
+require EC or VS. The Venue Staff frontend routes use the session role gate
+`useRoleGate('venue-staff')`; server authentication uses validated bearer tokens.
+
+**Confirmed VS18 scope (2026-09-23): all Venue Staff can view all venues for now.**
+The authorised scope is the entire catalogue for every Venue Staff account.
+Both list and individual-record endpoints require server-validated authentication.
+Existing read access for other authenticated roles is preserved, as specified in
+D20. The list returns the whole catalogue without pagination.
+
+**Deferred:** staff-specific venue restrictions will be introduced later. There
+is currently no staff-to-venue assignment or ownership filter. That future work
+must define the assignment rule and enforce the same scope on list queries and
+direct record lookups (including related booking reads). It must not rely solely
+on hiding links in the frontend. No assignment field or schema change is added
+for the current VS18 scope.
+
+## VS18 current characteristics and verification
+
+The catalogue and individual detail view use fresh GETs on opening/reopening,
+with browser cache bypassed (`cache: 'no-store'`). Refresh controls fetch current
+saved values while the page is open. This is refresh-on-demand, not live polling.
+Old venue data is hidden during refresh and after a failed or denied request.
+Associated bookings are requested only after the venue read succeeds.
+
+The detail panel shows address, ID, capacity, supported layouts, accessibility,
+facilities, operating information and optional additional information. Empty
+accessibility/facility arrays show `Not recorded`; explicit accessibility `none`
+shows `No accessibility provisions`. Blank additional information has a clear
+fallback. The catalogue provides loading, retry/error and empty states.
+
+Verification coverage:
+
+- `VenueRead.test.tsx`: separate rooms at the same location, summaries and UUID
+  links, full details and empty selections, latest values on refresh/reopening,
+  denied/missing records, removal of stale records after denial, empty catalogue,
+  and GET-only requests with cache bypass.
+- `VenueControllerTest`: authentication required for list and direct reads;
+  invalid bearer tokens rejected; two Venue Staff accounts can read the same
+  records; saved updates returned on subsequent reads; complete venue, event and
+  booking row snapshots unchanged by list/detail/associated-booking reads.
+- No separate availability model exists. The snapshot check protects all venue
+  columns and booking statuses that currently represent the relevant state.
+
+Tests use mocked HTTP in React and real PostgreSQL with transactional rollback
+in backend integration tests; they are not a live-browser end-to-end test.
+
+Executed 2026-09-23: 41 frontend venue tests and 74 `VenueControllerTest`
+integration tests passed; frontend production build passed. Full-project lint
+reports two existing `react-hooks/set-state-in-effect` errors in
+`features/technicalSupport/status/equipmentStatusPage.tsx` (lines 56 and 71).
+Use Java 25 for backend verification; the local `JAVA_HOME` default points to
+Java 17 and must be overridden for the Maven command below.
 
 ## VS07 characteristic updates
 

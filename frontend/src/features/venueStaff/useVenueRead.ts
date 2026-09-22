@@ -7,7 +7,7 @@ export function useVenueRead<T>(path: string, retainPreviousData = false) {
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
     let active = true
-    apiClient.get<T>(path).then(data => { if (active) setResult({ path, attempt, data }) })
+    apiClient.get<T>(path, { cache: 'no-store' }).then(data => { if (active) setResult({ path, attempt, data }) })
       .catch((error: unknown) => {
         if (active) setResult(previous => ({ path, attempt, data: retainPreviousData ? previous?.data : undefined, error: error instanceof ApiClientError ? error.message : 'Could not load details. Please try again.' }))
       })

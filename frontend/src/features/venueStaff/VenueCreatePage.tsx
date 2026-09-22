@@ -68,9 +68,10 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     <div className="feature-skeleton__header"><h1>{initialVenue ? 'Edit Venue' : 'Add Venue'}</h1></div>
     <p className="feature-skeleton__summary">Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional.</p>
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
-      {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. 123 Example Road, #02-01, Singapore 123456" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Include building, street and unit details. Maximum 500 characters." />}
+      {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. School A - Classroom 1, Level 2, 123 Example Road" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Create one venue per independently bookable room or space. Include its room identity and location; this is its displayed identifier. Maximum 500 characters." />}
       <NumberField id="venueCapacity" label="Overall capacity" value={form.venueCapacity} min={1} onChange={v => change('venueCapacity', v)} error={errors.venueCapacity} hint="1–50,000 people. One capacity applies to every selected layout." />
       <div className="field"><ChipGroup label="Supported layouts" options={venueLayouts} labels={venueLayoutLabels} selected={form.supportedLayouts} onChange={v => change('supportedLayouts', v)} />
+        <span className="field-hint">Select the arrangements this room or space supports.</span>
         {errors.supportedLayouts && <span className="field-error" role="alert">{errors.supportedLayouts}</span>}</div>
       <div className="field">
         <ChipGroup label="Accessibility provisions (optional)" options={venueAccessibilities} labels={venueAccessibilityLabels}
