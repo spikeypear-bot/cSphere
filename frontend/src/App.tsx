@@ -21,6 +21,7 @@ import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
 import { technicalSupportFeatures } from './features/technicalSupport/technicalSupportFeatures'
+import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
@@ -112,9 +113,10 @@ function TechnicalSupportRoutes() {
     <Routes>
       <Route index element={<TechnicalSupportHomePage />} />
       {skeletonRoutes(
-        technicalSupportFeatures.filter((feature) => feature.path !== 'status'),
+        technicalSupportFeatures.filter((feature) => feature.path !== 'status' && feature.path !== 'reservations'),
       )}
       <Route path="status" element={<EquipmentStatusPage />} />
+      <Route path="reservations" element={<EquipmentReservationPage />} />
     </Routes>
   )
 }

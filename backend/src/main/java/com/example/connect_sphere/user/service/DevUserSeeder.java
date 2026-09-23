@@ -84,11 +84,11 @@ public class DevUserSeeder implements CommandLineRunner {
             new SeedUser("att5", "att5@initech.test", UserRole.attendee, ORG_INITECH),
 
             // Technical Support Staff — internal
-            new SeedUser("tech1", "tech1@connectsphere.test", UserRole.technician, INTERNAL_ORG),
-            new SeedUser("tech2", "tech2@connectsphere.test", UserRole.technician, INTERNAL_ORG),
-            new SeedUser("tech3", "tech3@connectsphere.test", UserRole.technician, INTERNAL_ORG),
-            new SeedUser("tech4", "tech4@connectsphere.test", UserRole.technician, INTERNAL_ORG),
-            new SeedUser("tech5", "tech5@connectsphere.test", UserRole.technician, INTERNAL_ORG));
+            new SeedUser("ts1", "ts1@connectsphere.test", UserRole.technician, INTERNAL_ORG),
+            new SeedUser("ts2", "ts2@connectsphere.test", UserRole.technician, INTERNAL_ORG),
+            new SeedUser("ts3", "ts3@connectsphere.test", UserRole.technician, INTERNAL_ORG),
+            new SeedUser("ts4", "ts4@connectsphere.test", UserRole.technician, INTERNAL_ORG),
+            new SeedUser("ts5", "ts5@connectsphere.test", UserRole.technician, INTERNAL_ORG));
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
