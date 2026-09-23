@@ -7,7 +7,6 @@ import type {
   TimePeriod,
 } from './reservation.types'
 import {
-  ApiError,
   fetchAvailability,
   fetchProcessingRequests,
   fetchRequestLines,
