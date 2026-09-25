@@ -78,4 +78,22 @@ For Venue Staff / Event Coordinator work on the shared booking-detail component,
 [the VS16 seed guide](vs16-manual-testing.md) provides an opt-in local venue, event
 and pending booking under `backend/dev/seed/`. This enables manual component testing
 before Coordinator workflows exist; it does not implement them or resolve backend
-authorization. Future VS02 should reuse the existing booking-detail route.
+authorization. VS02 now reuses the existing booking-detail route.
+
+## VS02 review flow — implemented with ownership limitation (2026-09-25)
+
+Venue Staff Booking Approvals now lists pending bookings from the VS-only queue
+endpoint and opens the existing read-only booking details. Queue context preserves
+the return link across refreshes and suppresses catalogue pagination; returning
+fetches current pending records. Details show the current status if it has changed.
+Coordinator booking submission and VS03/VS04 decisions are separate work.
+
+Last verification: 62 Venue Staff/routing frontend tests and 15 booking API
+integration tests passed, with build/lint and seeded browser flow checks. The
+pending-list test file contributes 14 of those frontend cases. See the
+[test inventory](venue-booking-api.md#automated-test-inventory) and
+[run instructions](vs16-manual-testing.md#vs02-automated-tests).
+
+Full “venues I manage” acceptance remains deferred: no staff-to-venue ownership
+relationship exists. Queue role access is enforced; shared detail endpoint access
+is unchanged. This implementation is not a claim that ownership acceptance is met.

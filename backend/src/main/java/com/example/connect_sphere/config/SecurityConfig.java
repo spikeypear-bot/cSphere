@@ -75,6 +75,8 @@ public class SecurityConfig{
 		    // product endpoint (D20 open question 4). denyAll rather than
 		    // deleting the package, which is a separate call.
 		    .requestMatchers("/api/mock", "/api/mock/**").denyAll()
+                // VS02 queue only; existing shared booking reads keep their access rules.
+                .requestMatchers(HttpMethod.GET, "/api/venue-staff/booking-requests").hasRole("VS")
 		    // Reads are open to any authenticated role: Organisers browse
 		    // venues while planning, Coordinators search them (EC04). This
 		    // must precede the VS rule below, which would otherwise swallow

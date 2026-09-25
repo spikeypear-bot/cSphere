@@ -1,4 +1,4 @@
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { VenueDetailsPanel } from './VenueDetailsPanel'
@@ -6,15 +6,20 @@ import { EventRequirementsPanel } from './EventRequirementsPanel'
 import { useVenueRead } from './useVenueRead'
 import './BookingDetailsPage.css'
 
-/** Shared by Catalogue now and VS02 later; approval actions do not belong to VS16. */
+/** Shared read-only details for Catalogue and the VS02 pending queue. */
 export function BookingDetailsPage() {
   const { bookingId } = useParams()
-  const { data, error, retry, loading } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, true)
+  const [searchParams] = useSearchParams()
+  const fromApprovals = searchParams.get('from') === 'booking-approvals'
+  const { data, error, retry, loading } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, !fromApprovals)
   return <div className="feature-skeleton booking-details-page">
-    <Link to={data ? `/venue-staff/catalogue/${data.venue.venueId}` : '/venue-staff/catalogue'}>
-      {data ? 'Back to venue details' : 'Back to venue catalogue'}
+    <Link to={fromApprovals ? '/venue-staff/booking-approvals' : data ? `/venue-staff/catalogue/${data.venue.venueId}` : '/venue-staff/catalogue'}>
+      {fromApprovals ? 'Back to Pending Booking Requests' : data ? 'Back to venue details' : 'Back to venue catalogue'}
     </Link>
     <div><h1>Booking details</h1>{data && <p>Status: {data.status}</p>}</div>
+    {fromApprovals && data && !loading && !error && data.status !== 'pending' && <p role="status">
+      This booking request is no longer pending. Its current status is {data.status}.
+    </p>}
     {error && <div><p role="alert">{error}{data && " Showing the previously loaded booking; the requested booking could not be loaded."}</p><Button onClick={retry}>Try again</Button></div>}
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>
@@ -28,7 +33,7 @@ export function BookingDetailsPage() {
             <section aria-labelledby="event-requirements-heading">
               <EventRequirementsPanel event={data.event} />
             </section>
-            <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />
+            {!fromApprovals && <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />}
           </div>
         </div>
       </>}

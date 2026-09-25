@@ -9,6 +9,7 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
 import com.example.connect_sphere.venuebooking.entity.VenueBooking;
+import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRepository;
 
 @Service
@@ -22,6 +23,11 @@ public class VenueBookingService {
         this.bookings = bookings;
         this.venues = venues;
         this.venueMapper = venueMapper;
+    }
+
+    public List<VenueBookingDto> listPending() {
+        return bookings.findByStatusOrderByEventStartDatetimeAscBookingIdAsc(VenueBookingStatus.pending)
+                .stream().map(this::toDto).toList();
     }
 
     public VenueBookingDto get(UUID bookingId) {
