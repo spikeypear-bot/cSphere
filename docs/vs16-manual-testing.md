@@ -129,7 +129,61 @@ colliding pairs abort the entire transaction. Cleanup supports both the original
 single-pair dataset and the expanded dataset and removes all reserved demo pairs.
 
 
-## Pagination failure and keyboard checks
+## VS02 queue review checks
+
+1. Sign in as Venue Staff and open `/venue-staff/booking-approvals`.
+2. Confirm the three demo bookings show Pending, venue address, event name,
+   Singapore start/end times, attendance and a short requirements summary.
+3. Open Workshop details. Confirm the correct event/venue panels, the
+   `Back to Pending Booking Requests` link and absence of Previous/Next.
+4. Refresh details: the approvals context must remain. Return with the explicit
+   link, then open Seminar and use browser Back. The queue fetches again on return.
+5. Open a booking through Catalogue: the existing venue return link and
+   Previous/Next controls must still work.
+
+Mixed-status changes, missing/malformed IDs and failures are covered by isolated
+automated fixtures. The normal demo review path requires no booking/event edits.
+VS02 does not implement staff-to-venue ownership or Coordinator booking submission.
+
+## VS02 automated tests
+
+Run from the repository root:
+
+```powershell
+# Pending-list and existing booking-details tests (23 cases).
+npm --prefix frontend run test -- src/features/venueStaff/BookingApprovalsPage.test.tsx src/features/venueStaff/BookingDetailsPage.test.tsx
+
+# Broader Venue Staff and routing regression suite (last verified: 62 cases).
+npm --prefix frontend run test -- src/features/venueStaff src/App.test.tsx
+
+# Booking API integration tests (15 cases), using Docker's test service and DB.
+docker compose run --rm backend-test test -Dtest=VenueBookingReadTest
+```
+
+Alternatively, with Java 25 and PostgreSQL already running locally:
+
+```powershell
+$env:SPRING_DATASOURCE_URL = 'jdbc:postgresql://localhost:5432/csphere'
+.\backend\mvnw.cmd -f backend/pom.xml -B -ntp test -Dtest=VenueBookingReadTest
+```
+
+Ensure `JAVA_HOME` points to Java 25 as well as `java` on PATH. Frontend tests
+simulate API responses and do not need the backend or demo seed. Backend fixtures
+roll back, but the existing dev-profile startup seeder can create missing accounts.
+See the [coverage inventory](venue-booking-api.md#automated-test-inventory) for
+automated versus manual coverage and the deferred ownership limitation.
+
+If the queue returns 404 after pulling backend changes, rebuild the running
+backend rather than reseeding bookings:
+
+```powershell
+docker compose up --build -d --no-deps backend
+```
+
+This assumes the database is already running. Wait for backend readiness, then
+refresh the queue. An empty queue should return 200 with `[]`, not 404.
+
+## Catalogue pagination failure and keyboard checks
 
 - Open a demo booking and use Previous/Next below the requirements panel. The URL
   changes within the app; there should be no document reload or panel collapse.

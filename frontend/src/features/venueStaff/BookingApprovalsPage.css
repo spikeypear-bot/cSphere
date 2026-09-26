@@ -1,0 +1,43 @@
+.booking-approvals-page {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.booking-approvals-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.booking-approvals-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.booking-approvals-card h2 {
+  margin: 0;
+  min-width: 0;
+  font-size: 1.2rem;
+}
+
+.booking-approvals-card dl {
+  display: grid;
+  gap: 0.9rem;
+  margin: 1.25rem 0;
+}
+
+.booking-approvals-card dt {
+  font-weight: 600;
+}
+
+.booking-approvals-card dd {
+  margin: 0.25rem 0 0;
+  color: var(--ink-soft);
+  white-space: pre-line;
+}

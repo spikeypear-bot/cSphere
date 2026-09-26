@@ -139,6 +139,73 @@ class VenueBookingReadTest {
     }
 
     @Test
+    void pendingQueueFiltersStatusesReadsCurrentRelationshipsAndDoesNotWrite() throws Exception {
+        jdbc.update("DELETE FROM venue_bookings"); // Rolled back; isolate the global queue from local demo data.
+        UUID firstVenue = venue(); UUID secondVenue = venue();
+        UUID firstEvent = event(); UUID secondEvent = event();
+        jdbc.update("UPDATE events SET start_datetime='2026-09-25T09:00:00+08:00', end_datetime='2026-09-25T12:00:00+08:00', expected_attendance=75 WHERE event_id=?", secondEvent);
+        UUID first = booking(firstVenue, firstEvent, "pending");
+        UUID second = booking(secondVenue, secondEvent, "pending");
+        for (String value : List.of("confirmed", "changed", "rejected", "cancelled")) {
+            booking(firstVenue, firstEvent, value);
+        }
+        var tables = List.of("events", "venues", "venue_bookings", "event_requests");
+        var before = tables.stream().map(this::snapshot).toList();
+        entityManager.clear();
+        mvc.perform(get("/api/venue-staff/booking-requests"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].bookingId").value(first.toString()))
+                .andExpect(jsonPath("$[0].status").value("pending"))
+                .andExpect(jsonPath("$[0].venue.venueId").value(firstVenue.toString()))
+                .andExpect(jsonPath("$[0].event.eventId").value(firstEvent.toString()))
+                .andExpect(jsonPath("$[0].event.venueRequirements").value("Classroom seating"))
+                .andExpect(jsonPath("$[0].event.startDatetime").exists())
+                .andExpect(jsonPath("$[0].event.endDatetime").exists())
+                .andExpect(jsonPath("$[1].bookingId").value(second.toString()))
+                .andExpect(jsonPath("$[1].venue.venueId").value(secondVenue.toString()))
+                .andExpect(jsonPath("$[1].event.eventId").value(secondEvent.toString()))
+                .andExpect(jsonPath("$[1].event.expectedAttendance").value(75));
+        mvc.perform(get("/api/venues/" + firstVenue + "/bookings"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(5));
+        entityManager.flush();
+        assertThat(tables.stream().map(this::snapshot).toList()).isEqualTo(before);
+
+        jdbc.update("UPDATE events SET expected_attendance=150 WHERE event_id=?", secondEvent);
+        jdbc.update("UPDATE venue_bookings SET status='confirmed' WHERE booking_id=?", first);
+        entityManager.clear();
+        mvc.perform(get("/api/venue-staff/booking-requests"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].bookingId").value(second.toString()))
+                .andExpect(jsonPath("$[0].event.expectedAttendance").value(150));
+    }
+
+    @Test
+    void pendingQueueReturnsEmptyWhenOnlyNonPendingBookingsExist() throws Exception {
+        jdbc.update("DELETE FROM venue_bookings");
+        booking(venue(), event(), "confirmed");
+        mvc.perform(get("/api/venue-staff/booking-requests"))
+                .andExpect(status().isOk()).andExpect(content().json("[]"));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"EO", "EC", "TECHNICIAN", "ATTENDEE"})
+    void pendingQueueRejectsOtherRolesWithoutChangingSharedReadAccess(String role) throws Exception {
+        UUID bookingId = booking(venue(), event(), "pending");
+        var principal = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("other-role").roles(role);
+        mvc.perform(get("/api/venue-staff/booking-requests").with(principal))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/venue-bookings/" + bookingId).with(principal))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void pendingQueueRequiresAuthentication() throws Exception {
+        mvc.perform(get("/api/venue-staff/booking-requests")
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void missingRecordsAndMalformedIdsUseNormalErrors() throws Exception {
         for (String path : List.of("/api/venue-bookings/" + UUID.randomUUID(),
                 "/api/venues/" + UUID.randomUUID() + "/bookings")) {

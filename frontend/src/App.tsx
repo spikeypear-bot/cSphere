@@ -17,6 +17,7 @@ import { VenueEditPage } from './features/venueStaff/VenueEditPage'
 import { VenueCreatePage } from './features/venueStaff/VenueCreatePage'
 import { VenueDetailsPage } from './features/venueStaff/VenueDetailsPage'
 import { BookingDetailsPage } from './features/venueStaff/BookingDetailsPage'
+import { BookingApprovalsPage } from './features/venueStaff/BookingApprovalsPage'
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
@@ -98,8 +99,9 @@ function VenueStaffRoutes() {
       <Route path="catalogue/new" element={<VenueCreatePage />} />
       <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
       <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
+      <Route path="booking-approvals" element={<BookingApprovalsPage />} />
       <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
-      {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue')))}
+      {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue') && feature.path !== 'booking-approvals'))}
     </Routes>
   )
 }

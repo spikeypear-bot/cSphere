@@ -10,13 +10,16 @@ import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
 import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 import com.example.connect_sphere.venuebooking.service.VenueBookingNotFoundException;
 
-/** VS16 reads only. Backend authorization is explicitly deferred, not enforced here. */
+/** Read-only booking endpoints. Queue role access is enforced by SecurityConfig; ownership is deferred. */
 @RestController
 @RequestMapping("/api")
 public class VenueBookingController {
     private final VenueBookingService service;
 
     public VenueBookingController(VenueBookingService service) { this.service = service; }
+
+    @GetMapping("/venue-staff/booking-requests")
+    public List<VenueBookingDto> pending() { return service.listPending(); }
 
     @GetMapping("/venue-bookings/{bookingId}")
     public VenueBookingDto get(@PathVariable UUID bookingId) { return service.get(bookingId); }
