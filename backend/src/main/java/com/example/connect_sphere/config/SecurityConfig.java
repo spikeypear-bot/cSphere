@@ -96,10 +96,15 @@ public class SecurityConfig{
 		    // before — an Organiser's token must not satisfy these, and a
 		    // Coordinator's must not satisfy that.
 		    .requestMatchers(HttpMethod.GET, "/api/event-requests/queue").hasRole("EC")
+		    // EC02 review screen and EC01 clarification. Which requests a
+		    // coordinator may open is the assignment check in
+		    // EventRequestService; this only decides the role.
+		    .requestMatchers(HttpMethod.GET, "/api/event-requests/*/review").hasRole("EC")
 		    .requestMatchers(HttpMethod.POST,
 			    "/api/event-requests/*/assign-coordinator",
 			    "/api/event-requests/*/approve",
-			    "/api/event-requests/*/reject").hasRole("EC")
+			    "/api/event-requests/*/reject",
+			    "/api/event-requests/*/clarifications").hasRole("EC")
 		    // Organisers only, deliberately narrower than D20's first draft.
 		    // Coordinators are internal (organisation "ConnectSphere") and no
 		    // Organiser belongs to it, so scoping them by their own claim would
@@ -123,6 +128,10 @@ public class SecurityConfig{
 		    // legitimately reach one — EventService itself decides whether an
 		    // Organiser's own organisation actually owns the event.
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/confirm").hasRole("EC")
+		    // EC03: venue shortlist and booking requests. Must precede the
+		    // GET /api/events/** rule below, which would otherwise let an
+		    // Organiser read the venue shortlist.
+		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC")
 		    // EO09/EO19: any signed-in role may read/mark-read their own
 		    // notifications — scoping is always by the caller's own `sub`

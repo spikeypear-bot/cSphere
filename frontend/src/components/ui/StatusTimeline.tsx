@@ -3,7 +3,7 @@ import type { EventRequestStatus } from '../../types/eventRequest'
 
 interface TimelineStep {
   label: string
-  state: 'done' | 'current' | 'upcoming' | 'rejected'
+  state: 'done' | 'current' | 'upcoming' | 'rejected' | 'attention'
 }
 
 /** EO15 UX enhancement (docs/decision-log.md D17): status as a horizontal
@@ -18,6 +18,12 @@ function stepsFor(status: EventRequestStatus): TimelineStep[] {
     state: status === 'draft' ? 'upcoming' : status === 'pending' ? 'current' : 'done',
   }
 
+  if (status === 'clarification_required') {
+    // EC01: the request is back with the organiser. Shown as its own step, in
+    // the "needs you" colour, so it reads as an action rather than progress.
+    return [draft, submitted, { label: 'Clarification required', state: 'attention' },
+      { label: 'Decision', state: 'upcoming' }]
+  }
   if (status === 'approved') {
     return [draft, submitted, { label: 'Approved', state: 'done' }]
   }

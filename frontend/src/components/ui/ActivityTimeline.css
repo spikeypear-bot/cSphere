@@ -1,0 +1,86 @@
+.activity-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+.activity-timeline::before {
+  content: '';
+  position: absolute;
+  inset-block: 0.5rem;
+  inset-inline-start: 0.45rem;
+  width: 2px;
+  background: var(--hairline);
+}
+
+.activity-timeline__entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1rem minmax(0, 1fr);
+  gap: 0.75rem;
+  padding-block: 0.6rem;
+}
+
+.activity-timeline__dot {
+  margin-top: 0.3rem;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 3px solid var(--ink-faint);
+  z-index: 1;
+}
+
+.activity-timeline__entry[data-type='submitted'] .activity-timeline__dot,
+.activity-timeline__entry[data-type='clarification_responded'] .activity-timeline__dot { border-color: var(--accent); }
+.activity-timeline__entry[data-type='clarification_requested'] .activity-timeline__dot { border-color: var(--role-coordinator); }
+.activity-timeline__entry[data-type='approved'] .activity-timeline__dot,
+.activity-timeline__entry[data-type='venue_booking_requested'] .activity-timeline__dot { border-color: var(--success); }
+.activity-timeline__entry[data-type='rejected'] .activity-timeline__dot { border-color: var(--danger); }
+
+.activity-timeline__body { min-width: 0; overflow-wrap: anywhere; }
+.activity-timeline__title { margin: 0; }
+.activity-timeline__role { color: var(--ink-soft); font-size: 0.85em; }
+.activity-timeline__time { margin: 0.1rem 0 0; color: var(--ink-faint); font-size: 0.8rem; }
+
+.activity-timeline__message {
+  margin: 0.5rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: var(--radius-md);
+  border-inline-start: 3px solid var(--role-coordinator);
+  background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel));
+  white-space: pre-wrap;
+}
+
+.activity-timeline__entry[data-side='organiser'] .activity-timeline__message {
+  border-inline-start-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.activity-timeline__entry[data-type='rejected'] .activity-timeline__message {
+  border-inline-start-color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.activity-timeline__note { margin: 0.35rem 0 0; color: var(--ink-soft); }
+
+.activity-timeline__flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+}
+
+.activity-timeline__flags li {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--role-coordinator);
+  border: 1px solid var(--role-coordinator);
+}
+
+.activity-timeline__status { margin: 0.35rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }

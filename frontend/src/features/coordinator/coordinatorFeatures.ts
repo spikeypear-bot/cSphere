@@ -7,6 +7,8 @@ import type { SkeletonFeature } from '../../types/skeletonFeature'
 // now (ReviewQueuePage, routed directly in App.tsx), reached from
 // CoordinatorHomePage's own primary button rather than a "Skeleton" card, the
 // same way EventRequestWizardPage isn't in organiserExtraFeatures either.
+// 'venue-booking' (EC03) is gone for the same reason: it is a real page per
+// event (VenueBookingRequestPage), reached from the event's own page.
 export const coordinatorFeatures: SkeletonFeature[] = [
   {
     path: 'venue-search',
@@ -18,16 +20,6 @@ export const coordinatorFeatures: SkeletonFeature[] = [
       "Search the venue catalogue against an event's requirements and check suitability against capacity, accessibility, and facilities.",
     layout: 'list',
     suggestedBackendPackage: 'com.example.connect_sphere.venue',
-  },
-  {
-    path: 'venue-booking',
-    navLabel: 'Request a venue booking',
-    pageTitle: 'Venue Booking Request',
-    storyIds: ['EC03'],
-    featureArea: 'Venue Booking Request',
-    summary: 'Submit a venue booking request for an event to Venue Staff for approval.',
-    layout: 'form',
-    suggestedBackendPackage: 'com.example.connect_sphere.venuebooking',
   },
   {
     path: 'equipment-request',

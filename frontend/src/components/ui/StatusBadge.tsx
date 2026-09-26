@@ -4,6 +4,7 @@ import './ui.css'
 const LABELS: Record<EventRequestStatus, string> = {
   draft: 'Draft',
   pending: 'Submitted',
+  clarification_required: 'Clarification required',
   approved: 'Approved',
   rejected: 'Rejected',
   cancelled: 'Cancelled',

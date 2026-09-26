@@ -25,6 +25,7 @@ skinparam classAttributeIconSize 0
 enum EventRequestStatus {
   draft
   pending
+  clarification_required
   approved
   rejected
   cancelled
@@ -75,8 +76,11 @@ class EventRequest {
   registrationNeeds : Boolean
   status : EventRequestStatus
   createdAt : OffsetDateTime
+  updatedAt : OffsetDateTime
   organisation : String
   createdBy : UUID
+  coordinatorId : UUID
+  rejectionReason : String
 }
 
 class Venue {
@@ -128,6 +132,9 @@ class VenueEvent <<immutable read mapping>> {
 class VenueBooking <<immutable read mapping>> {
   bookingId : UUID
   status : VenueBookingStatus
+  bookingNotes : String
+  suitabilityNote : String
+  submittedAt : OffsetDateTime
 }
 
 enum VenueBookingStatus {
@@ -137,6 +144,70 @@ enum VenueBookingStatus {
   rejected
   cancelled
 }
+
+' ---- D21 (V13): request timeline and EC03 booking requests ----------
+
+' Its own class rather than fields on EventRequest: each entry carries
+' its own data (who, when, message, status change), which is the Week 5
+' rule for giving an association its own class. Plain association, not
+' composition: entries are append-only history, never cascaded or edited.
+class RequestActivity <<append-only>> {
+  activityId : UUID
+  requestId : UUID
+  eventId : UUID
+  activityType : ActivityType
+  actorUserId : UUID
+  actorRole : String
+  actorName : String
+  message : String
+  flaggedFields : List<String>
+  fromStatus : String
+  toStatus : String
+  audienceRoles : List<String>
+  occurredAt : OffsetDateTime
+}
+
+enum ActivityType {
+  submitted
+  coordinator_assigned
+  clarification_requested
+  clarification_responded
+  approved
+  rejected
+  venue_booking_requested
+  --
+  audience() : Set<UserRole>
+}
+
+EventRequest "1" -- "0..*" RequestActivity : timeline >
+RequestActivity ..> ActivityType : activityType
+
+' EC03 write side of venue_bookings, separate from VS16's read model.
+class VenueBookingRecord {
+  bookingId : UUID
+  venueId : UUID
+  eventId : UUID
+  status : VenueBookingStatus
+  bookingNotes : String
+  suitabilityNote : String
+  rejectReason : String
+  submittedBy : UUID
+  submittedAt : OffsetDateTime
+}
+
+' Value object: how one venue fits one event (capacity, accessibility).
+class VenueSuitability <<record>> {
+  expectedAttendance : int
+  capacity : int
+  missingAccessibility : List<String>
+  --
+  capacityOk() : boolean
+  needsJustification() : boolean
+}
+
+VenueBookingRecord ..> VenueBookingStatus : status
+VenueSuitability ..> Venue : judges
+VenueSuitability ..> VenueEvent : against
 
 VenueBooking "0..*" --> "1" Venue : venue
 VenueBooking "0..*" --> "1" VenueEvent : event

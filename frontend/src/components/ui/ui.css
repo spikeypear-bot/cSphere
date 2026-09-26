@@ -157,6 +157,11 @@
   color: var(--success);
 }
 
+.status-badge--clarification_required {
+  background: color-mix(in srgb, var(--role-coordinator) 18%, var(--panel));
+  color: var(--role-coordinator);
+}
+
 .status-badge--rejected,
 .status-badge--cancelled {
   background: var(--danger-soft);
@@ -219,6 +224,12 @@
 .status-timeline li[data-state='done'] {
   border-top-color: var(--success);
   color: var(--success);
+}
+
+.status-timeline li[data-state='attention'] {
+  border-top-color: var(--role-coordinator);
+  color: var(--role-coordinator);
+  font-weight: 700;
 }
 
 .status-timeline li[data-state='rejected'] {

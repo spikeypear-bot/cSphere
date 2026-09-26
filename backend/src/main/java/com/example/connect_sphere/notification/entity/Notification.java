@@ -80,6 +80,13 @@ public class Notification {
     @Column(name = "read_at")
     private OffsetDateTime readAt;
 
+    /** V13: the clarification message / organiser response being sent. */
+    private String message;
+
+    /** V13: the booking a venue_booking_requested notification is about. */
+    @Column(name = "venue_booking_id")
+    private UUID venueBookingId;
+
     public Notification() {
     }
 }

@@ -13,6 +13,9 @@ package com.example.connect_sphere.eventrequest.entity;
 public enum EventRequestStatus {
     draft,
     pending,
+    /** EC01: the coordinator asked for more information; the organiser may
+     * edit and resubmit (EO26), which returns it to {@link #pending}. V13. */
+    clarification_required,
     approved,
     rejected,
     cancelled

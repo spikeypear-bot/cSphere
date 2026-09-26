@@ -1,14 +1,20 @@
 import { useEffect, useState } from 'react'
-import { useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
+import type { ActivityDto } from '../../types/activity'
 import type { EventDto } from '../../types/event'
+import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import './EventDetailsPage.css'
 
+// 'pending' is shown as Planning: Week 4 'Event Status Management' names
+// "planning" as the stage between approval and confirmation, and that is
+// what an approved event is doing (EC02 "Proceed to Planning").
 const STATUS_LABEL: Record<string, string> = {
-  pending: 'Awaiting confirmation',
+  pending: 'Planning',
   confirmed: 'Confirmed',
   cancelled: 'Cancelled',
   completed: 'Completed',
@@ -23,6 +29,8 @@ const STATUS_LABEL: Record<string, string> = {
 export function EventDetailsPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const { role } = useSession()
+  const location = useLocation()
+  const flash = location.state as { justApproved?: boolean; bookingRequested?: string } | null
   const [event, setEvent] = useState<EventDto | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirming, setConfirming] = useState(false)
@@ -118,6 +126,19 @@ export function EventDetailsPage() {
         </dl>
       </Card>
 
+      {flash?.justApproved ? (
+        <p className="event-details__flash" role="status">
+          Request approved. The event is now in Planning and the organiser has been notified.
+        </p>
+      ) : null}
+      {flash?.bookingRequested ? (
+        <p className="event-details__flash" role="status">
+          Booking request for {flash.bookingRequested} sent to Venue Staff for review.
+        </p>
+      ) : null}
+
+      {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={event.status === 'pending'} /> : null}
+
       {canConfirm ? (
         <Card className="event-details__confirm">
           <p>Once venue and equipment arrangements are complete, confirm this event.</p>
@@ -127,6 +148,80 @@ export function EventDetailsPage() {
           </Button>
         </Card>
       ) : null}
+
+      <EventHistoryCard eventId={event.eventId} />
     </div>
+  )
+}
+
+/** Loads one side panel's data independently of the event itself, so a
+ * failure here never hides the event details. */
+function useSideData<T>(path: string, isValid: (value: unknown) => boolean) {
+  const [data, setData] = useState<T | null>(null)
+  const [failed, setFailed] = useState(false)
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get<unknown>(path)
+      .then((value) => {
+        if (cancelled) return
+        if (isValid(value)) setData(value as T)
+        else setFailed(true)
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true)
+      })
+    return () => {
+      cancelled = true
+    }
+    // isValid is a stable module-level check at every call site.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [path])
+  return { data, failed }
+}
+
+/** EC03 from the event page: the current booking request, or the way to make one. */
+function VenueBookingCard({ eventId, planning }: { eventId: string; planning: boolean }) {
+  const { data: bookings, failed } = useSideData<EventVenueBookingDto[]>(`/events/${eventId}/venue-bookings`, Array.isArray)
+  if (failed) return null
+  if (!bookings) return null
+  const active = bookings.find((b) => b.status === 'pending' || b.status === 'confirmed')
+  const latestRejected = bookings.find((b) => b.status === 'rejected')
+  return (
+    <Card className="event-details__venue">
+      <h2>Venue</h2>
+      {active ? (
+        <p>
+          <strong>{active.venueAddress}</strong>: {BOOKING_STATUS_LABELS[active.status]}
+          {active.submittedAt ? <span className="field-hint"> · requested {new Date(active.submittedAt).toLocaleString()}</span> : null}
+        </p>
+      ) : (
+        <>
+          <p>No venue has been requested yet.</p>
+          {latestRejected ? (
+            <p className="field-hint">
+              {latestRejected.venueAddress} was rejected{latestRejected.rejectReason ? `: ${latestRejected.rejectReason}` : '.'}
+            </p>
+          ) : null}
+          {planning ? (
+            <Link className="button button--primary" to={`/coordinator/events/${eventId}/venue-booking`}>
+              Request a venue
+            </Link>
+          ) : null}
+        </>
+      )}
+    </Card>
+  )
+}
+
+/** The event's whole journey from request to now (EC01/EC02/EO26/EC03),
+ * filtered by the server to what this role may see. */
+function EventHistoryCard({ eventId }: { eventId: string }) {
+  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray)
+  if (failed || !entries) return null
+  return (
+    <Card className="event-details__history">
+      <h2>History</h2>
+      <ActivityTimeline entries={entries} emptyText="No history has been recorded for this event." />
+    </Card>
   )
 }

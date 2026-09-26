@@ -65,7 +65,7 @@ painful. Settle these before there is production data.
 |---|---|---|
 | `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician` | `users.role` |
 | `event_status` | `confirmed`, `cancelled`, `completed` | `events.status` |
-| `event_request_status` | `draft`, `pending`, `approved`, `rejected`, `cancelled` | `event_requests.status` |
+| `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
 | `venue_booking_status` | `pending`, `confirmed`, `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
@@ -358,6 +358,41 @@ over its life.
 | `status` | `venue_booking_status` | no | | Booking state |
 | `booking_notes` | `TEXT` | yes | | Free-text notes |
 | `reject_reason` | `TEXT` | yes | | Populated only when `status = 'rejected'` |
+| `submitted_by` | `UUID` | yes | FK → `users` | V13, EC03: coordinator who requested it (null on older rows) |
+| `submitted_at` | `TIMESTAMPTZ` | yes | | V13, EC03: when it was requested |
+| `suitability_note` | `TEXT` | yes | | V13, EC03: coordinator's justification when the venue lacks a requested accessibility feature |
+
+The booking's time window is the event's `start_datetime`/`end_datetime`, never a copy. EC03
+allows at most one `pending`/`confirmed` booking per event; that rule is enforced in
+`VenueBookingRequestService` under a row lock on the event, not by a unique index (VS02's test
+fixtures deliberately hold several bookings per event).
+
+---
+
+### `event_request_activity` (V13)
+Append-only timeline of one event request, from submission through review, clarification,
+approval and venue planning (EC01/EC02/EO26/EC03; first slice of DEV07). Every row is written by
+a workflow action in the same transaction as the change it describes. **A trigger rejects every
+`UPDATE` and `DELETE`**, so history cannot be rewritten even by hand.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `activity_id` | `UUID` | no | PK | Identifier |
+| `request_id` | `UUID` | no | FK → `event_requests` | The request whose story this is |
+| `event_id` | `UUID` | yes | FK → `events` | Set from approval onwards |
+| `activity_type` | `VARCHAR(50)` | no | | `ActivityType` in Java is the whitelist (text, so a new kind of entry needs no migration) |
+| `actor_user_id` | `UUID` | no | FK → `users` | Who acted |
+| `actor_role` | `VARCHAR(20)` | no | | Their role at the time |
+| `actor_name` | `VARCHAR(255)` | no | | Snapshot of their username |
+| `message` | `TEXT` | yes | | Clarification, response or reason (max 2000 chars, CHECK) |
+| `flagged_fields` | `TEXT[]` | no | | Field keys the coordinator flagged (EC01) |
+| `from_status`, `to_status` | `VARCHAR(50)` | yes | | Status change, where there was one |
+| `audience_roles` | `TEXT[]` | no | | Roles allowed to see the entry; filtered in the repository query |
+| `occurred_at` | `TIMESTAMPTZ` | no | | When |
+
+V13 also added `notifications.message` and `notifications.venue_booking_id` (no FK, on purpose:
+a notification is a historical record) and three `notification_type` values:
+`clarification_requested`, `clarification_responded`, `venue_booking_requested`.
 
 ---
 
@@ -383,12 +418,12 @@ delete once real entities exist.
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | No overlap protection on `venue_bookings` | Two confirmed bookings can hold the same venue at the same time. Currently to be prevented in the frontend |
+| 1 | No overlap protection on `venue_bookings` | Two confirmed bookings can hold the same venue at the same time. EC03 (V13) refuses a *request* that overlaps a confirmed booking, but pending requests may compete, so **VS03/VS08 must re-check overlap, under a lock, when Venue Staff confirm**. |
 | 2 | `organisation` is free text in 3 tables | Accepted for now; risks `connectSphere` / `ConnectSphere` drift |
 | 3 | ~~`CHAR(1)` code mappings undocumented~~ | **Resolved in V3** for `request_type` (`C`/`A`) — see §2. `equipment_type` still TODO. |
 | 4 | `event_requests` has several nullable fields that `events` requires | Approval path must handle this. Widened in V3 (`event_name`, `purpose`, `expected_attendance`, `venue_requirements` are now also nullable, to support `draft` status) — `EventRequestService.submit()` is where completeness is enforced before a request may leave `draft`. |
 | 5 | `equipment_requirements` vs `equipment_requests.technical_requirement` | Overlapping free text — confirm which is authoritative |
-| 6 | No audit of who approved a request | Only `created_by` is captured |
+| 6 | ~~No audit of who approved a request~~ | **Resolved in V13** for event requests: `event_request_activity` records who submitted, assigned, clarified, responded, approved, rejected and requested a venue, and when. Bookings and registrations are not yet covered (rest of DEV07). |
 | 7 | `equipment_logs` has no return/check-in flag | Availability is inferred purely from the loan window |
 | 8 | `event_requests.accessibility_needs` is `text[]`, not the shared enum-array type | V4 migration — ORM limitation, not a data-modelling choice. Revisit if `venues`/`events` entities need the same values and a consistent type is wanted across tables. |
 

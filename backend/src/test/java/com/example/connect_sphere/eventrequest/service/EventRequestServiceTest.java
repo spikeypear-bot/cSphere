@@ -21,6 +21,7 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
+import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
@@ -53,6 +54,8 @@ class EventRequestServiceTest {
     private UserRepository userRepository;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private ActivityService activityService;
 
     private EventRequestService service;
 
@@ -77,11 +80,16 @@ class EventRequestServiceTest {
                         entity.getVenueRequirements(), entity.getEquipmentRequirements(),
                         entity.getAccessibilityNeeds(), entity.getRegistrationNeeds(),
                         entity.getStatus(), entity.getCreatedAt(), entity.getUpdatedAt(),
-                        entity.getOrganisation(), entity.getCoordinatorId(), entity.getRejectionReason());
+                        entity.getOrganisation(), entity.getCoordinatorId(), entity.getRejectionReason(), null);
             }
         };
-        service = new EventRequestService(repository, mapper, eventRepository, userRepository, notificationService);
+        service = new EventRequestService(
+                repository, mapper, eventRepository, userRepository, notificationService, activityService);
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        // State changes load the row with findForUpdate (row lock); these
+        // tests stub findById, so route one to the other.
+        when(repository.findForUpdate(any()))
+                .thenAnswer(invocation -> repository.findById(invocation.getArgument(0)));
         when(eventRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -196,7 +204,7 @@ class EventRequestServiceTest {
         EventRequest existing = draftEntity(id, ORG);
         when(repository.findById(id)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.submit(ORG, id))
+        assertThatThrownBy(() -> service.submit(ORG, CREATED_BY, id))
                 .isInstanceOf(IncompleteEventRequestException.class)
                 .satisfies(ex -> assertThat(((IncompleteEventRequestException) ex).getMissingFields())
                         .contains("eventName", "purpose", "startDatetime", "endDatetime",
@@ -210,7 +218,7 @@ class EventRequestServiceTest {
         existing.setAccessibilityNeeds(List.of());
         when(repository.findById(id)).thenReturn(Optional.of(existing));
 
-        assertThatThrownBy(() -> service.submit(ORG, id))
+        assertThatThrownBy(() -> service.submit(ORG, CREATED_BY, id))
                 .isInstanceOf(IncompleteEventRequestException.class)
                 .satisfies(ex -> assertThat(((IncompleteEventRequestException) ex).getMissingFields())
                         .containsExactly("accessibilityNeeds"));
@@ -222,7 +230,7 @@ class EventRequestServiceTest {
         EventRequest existing = completeDraftEntity(id, ORG);
         when(repository.findById(id)).thenReturn(Optional.of(existing));
 
-        EventRequestDto submitted = service.submit(ORG, id);
+        EventRequestDto submitted = service.submit(ORG, CREATED_BY, id);
 
         assertThat(submitted.status()).isEqualTo(EventRequestStatus.pending);
     }
@@ -236,7 +244,7 @@ class EventRequestServiceTest {
 
         assertThatThrownBy(() -> service.updateDraft(ORG, id, blankRequest()))
                 .isInstanceOf(EventRequestNotEditableException.class);
-        assertThatThrownBy(() -> service.submit(ORG, id))
+        assertThatThrownBy(() -> service.submit(ORG, CREATED_BY, id))
                 .isInstanceOf(EventRequestNotEditableException.class);
     }
 
@@ -488,13 +496,17 @@ class EventRequestServiceTest {
     // ---- EC review queue ----------------------------------------------
 
     @Test
-    void reviewQueueListsOnlyPendingRequestsAcrossEveryOrganisation() {
-        when(repository.findByStatusOrderByCreatedAtAsc(EventRequestStatus.pending))
+    void reviewQueueSplitsMyRequestsFromUnassignedOnes() {
+        when(repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(COORDINATOR_ID, EventRequestStatus.pending))
                 .thenReturn(List.of(completeDraftEntity(UUID.randomUUID(), ORG)));
+        when(repository.findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus.pending))
+                .thenReturn(List.of(completeDraftEntity(UUID.randomUUID(), ORG), completeDraftEntity(UUID.randomUUID(), ORG)));
 
-        List<EventRequestDto> queue = service.listPendingReview();
+        var queue = service.reviewQueue(COORDINATOR_ID);
 
-        assertThat(queue).hasSize(1);
+        assertThat(queue.needsReview()).hasSize(1);
+        assertThat(queue.awaitingOrganiser()).isEmpty();
+        assertThat(queue.unassigned()).hasSize(2);
     }
 
     // ---- EO12/EC03 schedule validation (merged from main) -------------
@@ -506,7 +518,7 @@ class EventRequestServiceTest {
         existing.setEndDatetime(existing.getStartDatetime().minusMinutes(1));
         var updatedAt = existing.getUpdatedAt();
         when(repository.findById(id)).thenReturn(Optional.of(existing));
-        assertThatThrownBy(() -> service.submit(ORG, id))
+        assertThatThrownBy(() -> service.submit(ORG, CREATED_BY, id))
                 .isInstanceOf(InvalidEventRequestScheduleException.class);
         assertThat(existing.getStatus()).isEqualTo(EventRequestStatus.draft);
         assertThat(existing.getUpdatedAt()).isEqualTo(updatedAt);
@@ -520,7 +532,7 @@ class EventRequestServiceTest {
         existing.setStartDatetime(java.time.OffsetDateTime.parse("2020-09-22T09:00:00Z"));
         existing.setEndDatetime(java.time.OffsetDateTime.parse("2020-09-22T17:00:00+08:00"));
         when(repository.findById(id)).thenReturn(Optional.of(existing));
-        assertThat(service.submit(ORG, id).status()).isEqualTo(EventRequestStatus.pending);
+        assertThat(service.submit(ORG, CREATED_BY, id).status()).isEqualTo(EventRequestStatus.pending);
     }
 
     private static EventRequest draftEntity(UUID id, String organisation) {

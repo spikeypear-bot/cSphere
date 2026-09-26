@@ -8,7 +8,7 @@ import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 
 /** Only venue-related event data; no organiser ownership or private request fields. */
 public record VenueBookingDto(UUID bookingId, VenueBookingStatus status, VenueDto venue,
-        EventRequirements event) {
+        EventRequirements event, String bookingNotes, String suitabilityNote, OffsetDateTime submittedAt) {
     public record EventRequirements(UUID eventId, String eventName, OffsetDateTime startDatetime,
             OffsetDateTime endDatetime, Integer expectedAttendance, String venueRequirements,
             List<String> accessibilityNeeds, String equipmentRequirements) {}

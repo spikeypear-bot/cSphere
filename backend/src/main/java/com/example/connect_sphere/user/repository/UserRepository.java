@@ -1,5 +1,6 @@
 package com.example.connect_sphere.user.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -7,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 import com.example.connect_sphere.user.entity.User;
+import com.example.connect_sphere.user.entity.UserRole;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, UUID> {
@@ -18,6 +20,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
      * Optional safe rather than a List.
      */
     Optional<User> findByUsername(String username);
+
+    /** EC01: every Event Organiser of the organisation that owns a request. */
+    List<User> findByRoleAndOrganisation(UserRole role, String organisation);
+
+    /** EC03: every Venue Staff member (no staff-to-venue ownership exists). */
+    List<User> findByRole(UserRole role);
 
     /**
      * Lets the dev seeder stay idempotent — it runs on every boot, and both

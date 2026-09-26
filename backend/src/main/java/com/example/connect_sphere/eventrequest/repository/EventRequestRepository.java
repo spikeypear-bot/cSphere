@@ -5,6 +5,11 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
+
+import jakarta.persistence.LockModeType;
 import org.springframework.stereotype.Repository;
 
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
@@ -18,12 +23,6 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
      * organisation is the interim ownership key (see EventRequest's class doc). */
     List<EventRequest> findByOrganisationOrderByCreatedAtDesc(String organisation);
 
-    /** The Event Coordinator review queue (EC01/EC02, minimal slice built
-     * alongside EO09/EO19 so their notifications have something real to fire
-     * from) — every organisation's requests, unlike the Organiser's own
-     * organisation-scoped list, since Coordinators are internal staff. Oldest
-     * first: the request that has been waiting longest surfaces first. */
-    List<EventRequest> findByStatusOrderByCreatedAtAsc(EventRequestStatus status);
 
     /** EventService.confirm() needs to know which Event Organiser to notify —
      * events carry no direct reference back to their originating request's
@@ -31,4 +30,19 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
      * approval. At most one request ever approves into a given event, so a
      * single result is safe. */
     Optional<EventRequest> findByEventId(UUID eventId);
+
+    /** Every state change (submit, assign, clarify, resubmit, approve,
+     * reject) loads the row with this. SELECT ... FOR UPDATE makes a second
+     * concurrent action on the same request wait for the first to commit and
+     * then see its result — so a double-clicked Approve creates one Event,
+     * not two, and the second click gets "already decided". */
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT r FROM EventRequest r WHERE r.requestId = :id")
+    Optional<EventRequest> findForUpdate(@Param("id") UUID id);
+
+    /** EC02 queue: submitted requests nobody has picked up yet. */
+    List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus status);
+
+    /** EC02 queue: this coordinator's requests in one status. */
+    List<EventRequest> findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(UUID coordinatorId, EventRequestStatus status);
 }

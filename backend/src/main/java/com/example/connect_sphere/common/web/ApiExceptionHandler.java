@@ -12,6 +12,10 @@ import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotEditableException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotPendingException;
+import com.example.connect_sphere.eventrequest.service.EventRequestStateException;
+import com.example.connect_sphere.venuebooking.service.InvalidVenueBookingException;
+import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
+import com.example.connect_sphere.eventrequest.service.InvalidMessageException;
 import com.example.connect_sphere.eventrequest.service.IncompleteEventRequestException;
 import com.example.connect_sphere.eventrequest.service.InvalidCoordinatorException;
 import com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException;
@@ -72,14 +76,36 @@ public class ApiExceptionHandler {
     }
 
     /**
-     * Not "forbidden" in the AU06/role sense — the caller is a real Event
-     * Coordinator, just not *this* request's coordinator — so 409, the same
-     * status as every other "this action doesn't make sense given the
-     * current state" conflict in this handler, rather than 403.
+     * 403, not 409. This used to be treated as a state conflict, but EC02's
+     * refined ACs say a coordinator who "cannot open or act on a request not
+     * assigned to them" gets an access-denied response. Being the assigned
+     * coordinator is a relationship-based permission (Week 4 'User
+     * Authorisation and Authentication': "appropriate to their role and
+     * relationship to an event"), which is what 403 means.
      */
     @ExceptionHandler(NotAssignedCoordinatorException.class)
     public ResponseEntity<ApiError> handleNotAssignedCoordinator(NotAssignedCoordinatorException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventRequestStateException.class)
+    public ResponseEntity<ApiError> handleRequestState(EventRequestStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidVenueBookingException.class)
+    public ResponseEntity<ApiError> handleInvalidVenueBooking(InvalidVenueBookingException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(VenueBookingStateException.class)
+    public ResponseEntity<ApiError> handleVenueBookingState(VenueBookingStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidMessageException.class)
+    public ResponseEntity<ApiError> handleInvalidMessage(InvalidMessageException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(InvalidCoordinatorException.class)

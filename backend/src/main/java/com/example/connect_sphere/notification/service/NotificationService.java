@@ -87,6 +87,51 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** EC01: tell every Event Organiser of the owning organisation that
+     * clarification is needed, with the coordinator's message. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createClarificationRequestedNotifications(
+            List<UUID> recipientUserIds, UUID eventRequestId, String eventName, String message) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, NotificationType.clarification_requested, eventName);
+            notification.setEventRequestId(eventRequestId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
+    /** EO26: tell the assigned Event Coordinator the organiser has answered. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createClarificationRespondedNotification(
+            UUID coordinatorUserId, UUID eventRequestId, String eventName, String response) {
+        Notification notification = base(coordinatorUserId, NotificationType.clarification_responded, eventName);
+        notification.setEventRequestId(eventRequestId);
+        notification.setMessage(response);
+        saveBestEffort(notification);
+    }
+
+    /** EC03: tell Venue Staff a booking request is waiting for their review. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createVenueBookingRequestedNotifications(
+            List<UUID> recipientUserIds, UUID bookingId, UUID eventId, String eventName) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, NotificationType.venue_booking_requested, eventName);
+            notification.setEventId(eventId);
+            notification.setVenueBookingId(bookingId);
+            saveBestEffort(notification);
+        }
+    }
+
+    private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
+        Notification notification = new Notification();
+        notification.setNotificationId(UUID.randomUUID());
+        notification.setRecipientUserId(recipientUserId);
+        notification.setType(type);
+        notification.setEventName(eventName);
+        notification.setOccurredAt(OffsetDateTime.now());
+        return notification;
+    }
+
     private void saveBestEffort(Notification notification) {
         try {
             repository.save(notification);
@@ -134,11 +179,7 @@ public class NotificationService {
     }
 
     private static NotificationDto toDto(Notification n) {
-        String linkPath = n.getEventId() != null
-                ? "/organiser/events/" + n.getEventId()
-                : n.getEventRequestId() != null
-                        ? "/organiser/requests/" + n.getEventRequestId()
-                        : null;
+        String linkPath = linkPathFor(n);
         return new NotificationDto(
                 n.getNotificationId(),
                 n.getType().name(),
@@ -152,6 +193,23 @@ public class NotificationService {
                 n.getIsReassignment(),
                 n.getOccurredAt(),
                 n.getReadAt() != null,
-                linkPath);
+                linkPath,
+                n.getMessage());
+    }
+
+    /** Each type is only ever sent to one role, so the type alone decides
+     * which console the link opens in. EO09/EO19's original types keep their
+     * organiser links exactly as before. */
+    private static String linkPathFor(Notification n) {
+        return switch (n.getType()) {
+            case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
+            case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
+            case venue_booking_requested -> "/venue-staff/bookings/" + n.getVenueBookingId();
+            case status_change, coordinator_assignment -> n.getEventId() != null
+                    ? "/organiser/events/" + n.getEventId()
+                    : n.getEventRequestId() != null
+                            ? "/organiser/requests/" + n.getEventRequestId()
+                            : null;
+        };
     }
 }
