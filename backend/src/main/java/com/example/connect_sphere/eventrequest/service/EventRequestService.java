@@ -3,6 +3,7 @@ package com.example.connect_sphere.eventrequest.service;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -10,10 +11,15 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
+import com.example.connect_sphere.activity.dto.ActivityDto;
+import com.example.connect_sphere.activity.entity.ActivityType;
+import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
+import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
+import com.example.connect_sphere.eventrequest.dto.ReviewQueueDto;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
 import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
@@ -36,23 +42,37 @@ public class EventRequestService {
 
     private static final char REQUEST_TYPE_CREATION = 'C';
 
+    /** EC01/EO26: longest clarification message or organiser response. */
+    static final int MAX_MESSAGE_LENGTH = 2000;
+
+    /** Field keys a coordinator may flag (EC01), matching
+     * SaveEventRequestRequest's own keys so the organiser's form can
+     * highlight each one directly. */
+    static final Set<String> FLAGGABLE_FIELDS = Set.of(
+            "eventName", "purpose", "description", "startDatetime", "endDatetime",
+            "expectedAttendance", "venueRequirements", "equipmentRequirements",
+            "accessibilityNeeds", "registrationNeeds");
+
     private final EventRequestRepository repository;
     private final EventRequestMapper mapper;
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
     private final NotificationService notificationService;
+    private final ActivityService activityService;
 
     public EventRequestService(
             EventRequestRepository repository,
             EventRequestMapper mapper,
             EventRepository eventRepository,
             UserRepository userRepository,
-            NotificationService notificationService) {
+            NotificationService notificationService,
+            ActivityService activityService) {
         this.repository = repository;
         this.mapper = mapper;
         this.eventRepository = eventRepository;
         this.userRepository = userRepository;
         this.notificationService = notificationService;
+        this.activityService = activityService;
     }
 
     @Transactional
@@ -71,10 +91,13 @@ public class EventRequestService {
         return mapper.toDto(repository.save(entity));
     }
 
+    /** EO01 draft edits, and (EO26) edits to a request that is waiting for
+     * clarification. Saving never changes the status in either case: for a
+     * returned request only resubmit() sends it back for review. */
     @Transactional
     public EventRequestDto updateDraft(String organisation, UUID requestId, SaveEventRequestRequest request) {
         requireOrganisation(organisation);
-        EventRequest entity = findOwnedDraft(organisation, requestId);
+        EventRequest entity = findOwnedEditable(organisation, requestId);
         applyFields(entity, request);
         entity.setUpdatedAt(OffsetDateTime.now());
         // If this save fails (e.g. the transaction rolls back for any reason),
@@ -100,33 +123,158 @@ public class EventRequestService {
     }
 
     @Transactional
-    public EventRequestDto submit(String organisation, UUID requestId) {
+    public EventRequestDto submit(String organisation, UUID actingUserId, UUID requestId) {
         requireOrganisation(organisation);
         EventRequest entity = findOwnedDraft(organisation, requestId);
-        List<String> missing = missingRequiredFields(entity);
-        if (!missing.isEmpty()) {
-            throw new IncompleteEventRequestException(missing);
-        }
-        if (entity.getEndDatetime().isBefore(entity.getStartDatetime())) {
-            throw new InvalidEventRequestScheduleException();
-        }
+        requireSubmittable(entity);
         entity.setStatus(EventRequestStatus.pending);
         entity.setUpdatedAt(OffsetDateTime.now());
-        return mapper.toDto(repository.save(entity));
+        EventRequest saved = repository.save(entity);
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), null, ActivityType.submitted,
+                actingUserId, null, null, EventRequestStatus.draft.name(), EventRequestStatus.pending.name()));
+        return mapper.toDto(saved);
+    }
+
+    /**
+     * EO26: the organiser answers a clarification request and sends the
+     * request back for review. The same completeness and date rules as the
+     * first submission apply (a returned request must not come back less
+     * complete), the same coordinator stays assigned, and the response is
+     * recorded on the timeline in the same transaction as the status change.
+     */
+    @Transactional
+    public EventRequestDto resubmit(String organisation, UUID actingUserId, UUID requestId, String response) {
+        requireOrganisation(organisation);
+        String reply = requireMessage(response, "Please add a short response for the Event Coordinator.");
+        EventRequest entity = findOwned(organisation, requestId, true);
+        if (entity.getStatus() != EventRequestStatus.clarification_required) {
+            throw new EventRequestStateException(
+                    "Only a request that is waiting for your clarification can be resubmitted (current status: "
+                            + label(entity.getStatus()) + ").");
+        }
+        requireSubmittable(entity);
+        entity.setStatus(EventRequestStatus.pending);
+        entity.setUpdatedAt(OffsetDateTime.now());
+        EventRequest saved = repository.save(entity);
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
+                ActivityType.clarification_responded, actingUserId, reply, null,
+                EventRequestStatus.clarification_required.name(), EventRequestStatus.pending.name()));
+        if (saved.getCoordinatorId() != null) {
+            UUID coordinatorId = saved.getCoordinatorId();
+            afterThisTransactionCommits(() -> notificationService.createClarificationRespondedNotification(
+                    coordinatorId, saved.getRequestId(), saved.getEventName(), reply));
+        }
+        return mapper.toDto(saved);
+    }
+
+    /**
+     * The whole journey of an event, from its request's submission through
+     * review, clarification, approval and venue planning, for the event
+     * details page. Organisers see their own organisation's events and only
+     * Organiser-visible entries; coordinators see only events assigned to
+     * them, with every coordinator-visible entry.
+     */
+    @Transactional(readOnly = true)
+    public List<ActivityDto> timelineForEvent(UserRole viewerRole, String organisation, UUID viewerId, UUID eventId) {
+        EventRequest origin = repository.findByEventId(eventId)
+                .orElseThrow(() -> new EventRequestNotFoundException(eventId));
+        if (viewerRole == UserRole.eo) {
+            if (organisation == null || !organisation.equals(origin.getOrganisation())) {
+                throw new EventRequestNotFoundException(eventId);
+            }
+        } else {
+            requireAssigned(viewerId, origin);
+        }
+        return activityService.timeline(origin.getRequestId(), viewerRole);
+    }
+
+    /** EO26: the organiser's view of their request's timeline. Scoped by
+     * organisation exactly like get(), and filtered to Organiser-visible
+     * entries by the repository query. */
+    @Transactional(readOnly = true)
+    public List<ActivityDto> timelineForOrganiser(String organisation, UUID requestId) {
+        requireOrganisation(organisation);
+        EventRequest entity = findOwned(organisation, requestId);
+        return activityService.timeline(entity.getRequestId(), UserRole.eo);
     }
 
     // ---- Event Coordinator side (EC01/EC02 minimal slice; EO09/EO19's own
     // stories don't ask for a full review UI, only for a real transition to
     // notify off — see docs/decision-log.md) --------------------------------
 
-    /** EC review queue: every organisation's pending requests, oldest first —
-     * Coordinators are internal staff, not scoped by organisation the way an
-     * Organiser is (SecurityConfig's own comment on this). */
+    /**
+     * EC02 review queue for one coordinator: their submitted requests (oldest
+     * first), their requests waiting on the organiser, and unassigned ones
+     * they could pick up (Coordinator Assignment). Coordinators are internal
+     * staff, so none of this is scoped by organisation. Requests assigned to
+     * other coordinators are left out: EC02 says a coordinator "cannot view
+     * or review an event request that is not assigned to them".
+     */
     @Transactional(readOnly = true)
-    public List<EventRequestDto> listPendingReview() {
-        return repository.findByStatusOrderByCreatedAtAsc(EventRequestStatus.pending).stream()
-                .map(mapper::toDto)
-                .toList();
+    public ReviewQueueDto reviewQueue(UUID coordinatorId) {
+        return new ReviewQueueDto(
+                repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(coordinatorId, EventRequestStatus.pending)
+                        .stream().map(mapper::toDto).toList(),
+                repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
+                        coordinatorId, EventRequestStatus.clarification_required)
+                        .stream().map(mapper::toDto).toList(),
+                repository.findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus.pending)
+                        .stream().map(mapper::toDto).toList());
+    }
+
+    /**
+     * EC02 review screen. Only the assigned coordinator may open it. It
+     * reports what would block approval *now* (missing fields, schedule), so
+     * the page can explain a disabled Approve button before anyone presses
+     * it, and includes the full coordinator-visible timeline.
+     */
+    @Transactional(readOnly = true)
+    public EventRequestReviewDto getForReview(UUID coordinatorId, UUID requestId) {
+        EventRequest entity = repository.findById(requestId)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        requireAssigned(coordinatorId, entity);
+        return new EventRequestReviewDto(
+                mapper.toDto(entity),
+                missingRequiredFields(entity),
+                scheduleValid(entity),
+                activityService.timeline(requestId, UserRole.ec));
+    }
+
+    /**
+     * EC01. Only on a Submitted request assigned to the caller. The message
+     * and flags are validated before anything is written; the status change
+     * and its timeline entry are one transaction, so a failure leaves
+     * neither behind. Organisers are notified only after that commits. The
+     * organiser's submitted details are not touched.
+     */
+    @Transactional
+    public EventRequestDto requestClarification(
+            UUID coordinatorId, UUID requestId, String message, List<String> flaggedFields) {
+        String text = requireMessage(message, "Please describe what needs clarifying.");
+        List<String> flags = normaliseFlags(flaggedFields);
+        EventRequest entity = repository.findForUpdate(requestId)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        requireAssigned(coordinatorId, entity);
+        if (entity.getStatus() != EventRequestStatus.pending) {
+            throw new EventRequestStateException(entity.getStatus() == EventRequestStatus.clarification_required
+                    ? "Clarification has already been requested. Wait for the organiser to respond before asking again."
+                    : "Clarification can only be requested on a submitted request (current status: "
+                            + label(entity.getStatus()) + ").");
+        }
+        entity.setStatus(EventRequestStatus.clarification_required);
+        entity.setUpdatedAt(OffsetDateTime.now());
+        EventRequest saved = repository.save(entity);
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
+                ActivityType.clarification_requested, coordinatorId, text, flags,
+                EventRequestStatus.pending.name(), EventRequestStatus.clarification_required.name()));
+
+        List<UUID> organisers = userRepository.findByRoleAndOrganisation(UserRole.eo, saved.getOrganisation())
+                .stream().map(User::getUserId).toList();
+        if (!organisers.isEmpty()) {
+            afterThisTransactionCommits(() -> notificationService.createClarificationRequestedNotifications(
+                    organisers, saved.getRequestId(), saved.getEventName(), text));
+        }
+        return mapper.toDto(saved);
     }
 
     /**
@@ -137,7 +285,7 @@ public class EventRequestService {
      */
     @Transactional
     public EventRequestDto assignCoordinator(UUID requestId, UUID coordinatorUserId) {
-        EventRequest entity = repository.findById(requestId)
+        EventRequest entity = repository.findForUpdate(requestId)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
         if (coordinatorUserId == null) {
             throw new InvalidCoordinatorException();
@@ -161,12 +309,22 @@ public class EventRequestService {
         entity.setCoordinatorId(coordinatorUserId);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
+        // Self-assignment is the only assignment flow the UI offers, so the
+        // coordinator being assigned is also who performed it.
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), saved.getEventId(),
+                ActivityType.coordinator_assigned, coordinatorUserId,
+                previousCoordinatorId != null ? "Reassigned to " + coordinator.getUsername() : null,
+                null, null, null));
 
         if (saved.getCreatedBy() != null) {
-            notificationService.createCoordinatorAssignmentNotification(
+            // After commit, like approve(): the notification is written in its
+            // own transaction, and must neither reference an uncommitted row
+            // nor announce an assignment that is then rolled back.
+            boolean reassignment = previousCoordinatorId != null;
+            afterThisTransactionCommits(() -> notificationService.createCoordinatorAssignmentNotification(
                     saved.getCreatedBy(), saved.getRequestId(), saved.getEventId(),
                     saved.getEventName(), coordinator.getUsername(), coordinator.getEmail(),
-                    previousCoordinatorId != null);
+                    reassignment));
         }
         return mapper.toDto(saved);
     }
@@ -180,7 +338,14 @@ public class EventRequestService {
      */
     @Transactional
     public EventRequestDto approve(UUID actingCoordinatorId, UUID requestId) {
-        EventRequest entity = findPendingAssignedTo(actingCoordinatorId, requestId);
+        EventRequest entity = findDecidableAssignedTo(actingCoordinatorId, requestId);
+        if (entity.getStatus() == EventRequestStatus.clarification_required) {
+            throw new EventRequestStateException(
+                    "This request is waiting for the organiser's clarification. It can be approved once they resubmit.");
+        }
+        // EC02: re-check the submission rules before planning starts, rather
+        // than trusting that nothing has changed since submission.
+        requireSubmittable(entity);
 
         Event event = new Event();
         event.setEventId(UUID.randomUUID());
@@ -203,6 +368,9 @@ public class EventRequestService {
         entity.setEventId(savedEvent.getEventId());
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), savedEvent.getEventId(),
+                ActivityType.approved, actingCoordinatorId, null, null,
+                EventRequestStatus.pending.name(), EventRequestStatus.approved.name()));
 
         if (saved.getCreatedBy() != null) {
             // The Event row saved above is not yet committed/durable in this
@@ -242,30 +410,101 @@ public class EventRequestService {
         if (reason == null || reason.isBlank()) {
             throw new MissingRejectionReasonException();
         }
-        EventRequest entity = findPendingAssignedTo(actingCoordinatorId, requestId);
+        EventRequest entity = findDecidableAssignedTo(actingCoordinatorId, requestId);
+        EventRequestStatus previous = entity.getStatus();
         entity.setStatus(EventRequestStatus.rejected);
         entity.setRejectionReason(reason);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
+                ActivityType.rejected, actingCoordinatorId, reason, null,
+                previous.name(), EventRequestStatus.rejected.name()));
 
         if (saved.getCreatedBy() != null) {
-            notificationService.createStatusChangeNotification(
+            afterThisTransactionCommits(() -> notificationService.createStatusChangeNotification(
                     saved.getCreatedBy(), saved.getRequestId(), null,
-                    saved.getEventName(), "rejected", reason);
+                    saved.getEventName(), "rejected", reason));
         }
         return mapper.toDto(saved);
     }
 
-    private EventRequest findPendingAssignedTo(UUID actingCoordinatorId, UUID requestId) {
-        EventRequest entity = repository.findById(requestId)
+    /**
+     * A request the caller may approve or reject: assigned to them, and
+     * Submitted or Clarification Required. Rejecting while waiting on the
+     * organiser is allowed (EC01: e.g. no response); approve() then refuses
+     * the second case itself with its own message. Assignment is checked
+     * first so a coordinator who isn't assigned learns nothing about the
+     * request's state.
+     */
+    private EventRequest findDecidableAssignedTo(UUID actingCoordinatorId, UUID requestId) {
+        EventRequest entity = repository.findForUpdate(requestId)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
-        if (entity.getStatus() != EventRequestStatus.pending) {
+        requireAssigned(actingCoordinatorId, entity);
+        if (entity.getStatus() != EventRequestStatus.pending
+                && entity.getStatus() != EventRequestStatus.clarification_required) {
             throw new EventRequestNotPendingException(requestId, entity.getStatus());
         }
-        if (!actingCoordinatorId.equals(entity.getCoordinatorId())) {
-            throw new NotAssignedCoordinatorException(requestId);
-        }
         return entity;
+    }
+
+    private static void requireAssigned(UUID coordinatorId, EventRequest entity) {
+        if (coordinatorId == null || !coordinatorId.equals(entity.getCoordinatorId())) {
+            throw new NotAssignedCoordinatorException(entity.getRequestId());
+        }
+    }
+
+    /** EO02's submission rules, shared by submit, resubmit and approve. */
+    private static void requireSubmittable(EventRequest entity) {
+        List<String> missing = missingRequiredFields(entity);
+        if (!missing.isEmpty()) {
+            throw new IncompleteEventRequestException(missing);
+        }
+        if (!scheduleValid(entity)) {
+            throw new InvalidEventRequestScheduleException();
+        }
+    }
+
+    private static boolean scheduleValid(EventRequest entity) {
+        return entity.getStartDatetime() == null || entity.getEndDatetime() == null
+                || !entity.getEndDatetime().isBefore(entity.getStartDatetime());
+    }
+
+    /** Trimmed, 1-2000 characters, or an InvalidMessageException carrying a
+     * message fit to show the user. */
+    private static String requireMessage(String raw, String blankMessage) {
+        String text = raw == null ? "" : raw.strip();
+        if (text.isEmpty()) {
+            throw new InvalidMessageException(blankMessage);
+        }
+        if (text.length() > MAX_MESSAGE_LENGTH) {
+            throw new InvalidMessageException(
+                    "Messages can be at most " + MAX_MESSAGE_LENGTH + " characters (this one is " + text.length() + ").");
+        }
+        return text;
+    }
+
+    /** De-duplicated, order-preserving, and only real field keys. */
+    private static List<String> normaliseFlags(List<String> flaggedFields) {
+        if (flaggedFields == null) {
+            return List.of();
+        }
+        List<String> unknown = flaggedFields.stream().filter(f -> !FLAGGABLE_FIELDS.contains(f)).toList();
+        if (!unknown.isEmpty()) {
+            throw new InvalidMessageException("Unknown field(s) flagged: " + String.join(", ", unknown));
+        }
+        return flaggedFields.stream().distinct().toList();
+    }
+
+    /** The label a user sees for a status, for messages that name it. */
+    private static String label(EventRequestStatus status) {
+        return switch (status) {
+            case draft -> "Draft";
+            case pending -> "Submitted";
+            case clarification_required -> "Clarification Required";
+            case approved -> "Approved";
+            case rejected -> "Rejected";
+            case cancelled -> "Cancelled";
+        };
     }
 
     private void applyFields(EventRequest entity, SaveEventRequestRequest request) {
@@ -283,7 +522,12 @@ public class EventRequestService {
     }
 
     private EventRequest findOwned(String organisation, UUID requestId) {
-        EventRequest entity = repository.findById(requestId)
+        return findOwned(organisation, requestId, false);
+    }
+
+    /** {@code forUpdate} takes the row lock, for callers about to change it. */
+    private EventRequest findOwned(String organisation, UUID requestId, boolean forUpdate) {
+        EventRequest entity = (forUpdate ? repository.findForUpdate(requestId) : repository.findById(requestId))
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
         if (!organisation.equals(entity.getOrganisation())) {
             throw new EventRequestNotFoundException(requestId);
@@ -292,8 +536,18 @@ public class EventRequestService {
     }
 
     private EventRequest findOwnedDraft(String organisation, UUID requestId) {
-        EventRequest entity = findOwned(organisation, requestId);
+        EventRequest entity = findOwned(organisation, requestId, true);
         if (entity.getStatus() != EventRequestStatus.draft) {
+            throw new EventRequestNotEditableException(requestId, entity.getStatus());
+        }
+        return entity;
+    }
+
+    /** Draft (EO01), or returned for clarification (EO26). */
+    private EventRequest findOwnedEditable(String organisation, UUID requestId) {
+        EventRequest entity = findOwned(organisation, requestId, true);
+        if (entity.getStatus() != EventRequestStatus.draft
+                && entity.getStatus() != EventRequestStatus.clarification_required) {
             throw new EventRequestNotEditableException(requestId, entity.getStatus());
         }
         return entity;

@@ -27,7 +27,29 @@ export const ACCESSIBILITY_LABELS: Record<AccessibilityFeature, string> = {
   none: 'No accessibility requirements needed',
 }
 
-export type EventRequestStatus = 'draft' | 'pending' | 'approved' | 'rejected' | 'cancelled'
+export type EventRequestStatus =
+  | 'draft'
+  | 'pending'
+  // EC01: the coordinator asked for more information; EO26 resubmits it.
+  | 'clarification_required'
+  | 'approved'
+  | 'rejected'
+  | 'cancelled'
+
+/** Every field a coordinator can flag for clarification (EC01), keyed the
+ * same as SaveEventRequestRequest so a flag maps straight onto a form field. */
+export const FIELD_LABELS: Record<string, string> = {
+  eventName: 'Event name',
+  purpose: 'Purpose',
+  description: 'Description',
+  startDatetime: 'Start date & time',
+  endDatetime: 'End date & time',
+  expectedAttendance: 'Expected attendance',
+  venueRequirements: 'Venue requirements',
+  equipmentRequirements: 'Equipment requirements',
+  accessibilityNeeds: 'Accessibility requirements',
+  registrationNeeds: 'Registration',
+}
 
 export interface EventRequestDto {
   requestId: string
@@ -49,6 +71,8 @@ export interface EventRequestDto {
   organisation: string
   coordinatorId: string | null
   rejectionReason: string | null
+  /** Username of the organiser who created the request. */
+  createdByName?: string | null
 }
 
 /** Every field optional — a draft may be saved incomplete (EO01). */

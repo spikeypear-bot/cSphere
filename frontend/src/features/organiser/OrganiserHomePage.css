@@ -98,3 +98,9 @@
   font-size: 1.05rem;
   margin: 0;
 }
+
+.organiser-home__row[data-attention='true'] { border-inline-start: 4px solid var(--role-coordinator); }
+.organiser-home__question {
+  margin: 0.6rem 0 0; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); white-space: pre-wrap;
+  background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel)); font-size: 0.9rem;
+}

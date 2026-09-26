@@ -15,9 +15,14 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.eventrequest.dto.AssignCoordinatorRequest;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
+import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.RejectEventRequestRequest;
+import com.example.connect_sphere.eventrequest.dto.RequestClarificationRequest;
+import com.example.connect_sphere.eventrequest.dto.ResubmitEventRequestRequest;
+import com.example.connect_sphere.eventrequest.dto.ReviewQueueDto;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
@@ -107,15 +112,49 @@ public class EventRequestController {
     public EventRequestDto submit(
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") UUID id) {
-        return service.submit(organisationOf(jwt), id);
+        return service.submit(organisationOf(jwt), userIdOf(jwt), id);
+    }
+
+    /** EO26: answer a clarification request and send the request back. */
+    @PostMapping("/{id}/resubmit")
+    public EventRequestDto resubmit(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody ResubmitEventRequestRequest request) {
+        return service.resubmit(organisationOf(jwt), userIdOf(jwt), id, request.response());
+    }
+
+    /** EO26: the Organiser-visible timeline of one of their own requests. */
+    @GetMapping("/{id}/timeline")
+    public List<ActivityDto> timeline(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id) {
+        return service.timelineForOrganiser(organisationOf(jwt), id);
     }
 
     // ---- Event Coordinator side --------------------------------------
 
-    /** EC review queue — every organisation's pending requests. */
+    /** EC02 review queue for the calling coordinator. */
     @GetMapping("/queue")
-    public List<EventRequestDto> listPendingReview() {
-        return service.listPendingReview();
+    public ReviewQueueDto reviewQueue(@AuthenticationPrincipal Jwt jwt) {
+        return service.reviewQueue(userIdOf(jwt));
+    }
+
+    /** EC02: the review screen (request, readiness, timeline). */
+    @GetMapping("/{id}/review")
+    public EventRequestReviewDto review(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id) {
+        return service.getForReview(userIdOf(jwt), id);
+    }
+
+    /** EC01: ask the organiser for clarification. */
+    @PostMapping("/{id}/clarifications")
+    public EventRequestDto requestClarification(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody RequestClarificationRequest request) {
+        return service.requestClarification(userIdOf(jwt), id, request.message(), request.flaggedFields());
     }
 
     @PostMapping("/{id}/assign-coordinator")

@@ -1,0 +1,30 @@
+.clarify { display: flex; flex-direction: column; gap: 1rem; }
+.clarify h1 { margin: 0; }
+.clarify__layout { display: grid; grid-template-columns: minmax(0, 3fr) minmax(0, 2fr); gap: 1.25rem; align-items: start; }
+@media (max-width: 900px) {
+  .clarify__layout { grid-template-columns: minmax(0, 1fr); }
+}
+.clarify__main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.clarify .card { padding: 1.25rem; }
+.clarify__history { position: sticky; top: 1rem; min-width: 0; }
+.clarify__history h2, .clarify__form h2 { margin-top: 0; font-size: 1.05rem; }
+
+.clarify__question { border-inline-start: 4px solid var(--role-coordinator); }
+.clarify__who { margin: 0 0 0.5rem; }
+.clarify__question blockquote {
+  margin: 0; padding: 0.75rem 1rem; border-radius: var(--radius-md); white-space: pre-wrap;
+  background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel));
+}
+
+.clarify__field { position: relative; padding: 0.25rem 0.5rem; border-radius: var(--radius-sm); }
+.clarify__field[data-flagged='true'] {
+  background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel));
+  outline: 1px solid var(--role-coordinator);
+  margin-block: 0.5rem;
+}
+.clarify__tag { display: inline-block; margin-top: 0.4rem; font-size: 0.72rem; font-weight: 700; color: var(--role-coordinator); text-transform: uppercase; letter-spacing: 0.03em; }
+.clarify__save { display: flex; gap: 0.75rem; align-items: center; flex-wrap: wrap; margin-top: 0.75rem; }
+
+.clarify__reply { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
+.clarify__reply textarea { width: 100%; box-sizing: border-box; font: inherit; }
+.clarify__error { color: var(--danger); margin: 0; }

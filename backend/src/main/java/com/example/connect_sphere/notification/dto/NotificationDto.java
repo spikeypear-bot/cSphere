@@ -23,5 +23,6 @@ public record NotificationDto(
         Boolean isReassignment,
         OffsetDateTime occurredAt,
         boolean read,
-        String linkPath) {
+        String linkPath,
+        String message) {
 }

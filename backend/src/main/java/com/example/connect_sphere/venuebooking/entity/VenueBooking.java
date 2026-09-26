@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venuebooking.entity;
 
+import java.time.OffsetDateTime;
 import java.util.UUID;
 import org.hibernate.annotations.Immutable;
 import org.hibernate.annotations.JdbcTypeCode;
@@ -27,4 +28,14 @@ public class VenueBooking {
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "event_id", insertable = false, updatable = false)
     private VenueEvent event;
+
+    // EC03 (V13): what the coordinator told Venue Staff when requesting.
+    @Column(name = "booking_notes", insertable = false, updatable = false)
+    private String bookingNotes;
+
+    @Column(name = "suitability_note", insertable = false, updatable = false)
+    private String suitabilityNote;
+
+    @Column(name = "submitted_at", insertable = false, updatable = false)
+    private OffsetDateTime submittedAt;
 }

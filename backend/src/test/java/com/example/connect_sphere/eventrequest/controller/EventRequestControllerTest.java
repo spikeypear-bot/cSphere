@@ -75,13 +75,13 @@ class EventRequestControllerTest {
     private static EventRequestDto draft(UUID id, String organisation) {
         return new EventRequestDto(id, 'C', null, null, null, null, null, null, null, null, null,
                 List.of(), null, EventRequestStatus.draft, OffsetDateTime.now(), OffsetDateTime.now(),
-                organisation, null, null);
+                organisation, null, null, null);
     }
 
     @Test
     void invalidScheduleReturns422WithAnActionableMessage() throws Exception {
         UUID id = UUID.randomUUID();
-        when(service.submit(ACME, id)).thenThrow(new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException());
+        when(service.submit(ACME, USER_ID, id)).thenThrow(new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException());
         mockMvc.perform(post("/api/event-requests/" + id + "/submit"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("End date & time must be on or after start date & time."));

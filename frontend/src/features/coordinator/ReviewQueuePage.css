@@ -69,3 +69,10 @@
   margin: 0;
   font-size: 0.85rem;
 }
+
+.review-queue__section { margin-top: 1.5rem; }
+.review-queue__section h2 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 1.1rem; }
+.review-queue__count {
+  display: inline-grid; place-items: center; min-width: 1.5rem; height: 1.5rem; padding: 0 0.4rem;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent-strong); font-size: 0.8rem;
+}

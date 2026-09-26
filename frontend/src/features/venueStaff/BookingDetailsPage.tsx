@@ -33,6 +33,7 @@ export function BookingDetailsPage() {
             <section aria-labelledby="event-requirements-heading">
               <EventRequirementsPanel event={data.event} />
             </section>
+            {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
             {!fromApprovals && <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />}
           </div>
         </div>
@@ -40,6 +41,16 @@ export function BookingDetailsPage() {
   </div>
 }
 
+/** EC03: what the Event Coordinator wrote when requesting this venue. */
+function CoordinatorNotes({ booking }: { booking: VenueBookingDto }) {
+  return <section aria-labelledby="coordinator-notes-heading" className="booking-coordinator-notes">
+    <h2 id="coordinator-notes-heading">From the Event Coordinator</h2>
+    {booking.suitabilityNote && <p className="booking-coordinator-notes__warning">
+      <strong>Does not meet every accessibility requirement.</strong> Coordinator's justification: {booking.suitabilityNote}
+    </p>}
+    {booking.bookingNotes && <p>{booking.bookingNotes}</p>}
+  </section>
+}
 
 function BookingPagination({ venueId, bookingId, busy }: { venueId: string; bookingId: string; busy: boolean }) {
   const navigate = useNavigate()

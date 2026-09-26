@@ -7,6 +7,7 @@ import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import { formatRelativeTime } from '../../lib/relativeTime'
+import type { ActivityDto } from '../../types/activity'
 import type { EventRequestDto } from '../../types/eventRequest'
 import { getCompletionPercent } from './eventRequestCompletion'
 import { organiserExtraFeatures } from './organiserExtraFeatures'
@@ -25,8 +26,10 @@ export function OrganiserHomePage() {
   // drop it from history state so refreshing or navigating back here later
   // doesn't re-show it.
   const [justSubmitted] = useState(() => Boolean((location.state as { justSubmitted?: boolean } | null)?.justSubmitted))
+  const [justResubmitted] = useState(() =>
+    Boolean((location.state as { justResubmitted?: boolean } | null)?.justResubmitted))
   useEffect(() => {
-    if (justSubmitted) navigate('.', { replace: true, state: null })
+    if (justSubmitted || justResubmitted) navigate('.', { replace: true, state: null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -64,6 +67,12 @@ export function OrganiserHomePage() {
         </p>
       ) : null}
 
+      {justResubmitted ? (
+        <p className="organiser-home__confirmation" role="status">
+          Your updated request has been sent back to your Event Coordinator.
+        </p>
+      ) : null}
+
       {error ? <p role="alert">{error}</p> : null}
 
       {requests === null && !error ? <p>Loading…</p> : null}
@@ -77,7 +86,8 @@ export function OrganiserHomePage() {
       <ul className="organiser-home__list">
         {requests?.map((request) => (
           <li key={request.requestId}>
-            <Card className="organiser-home__row">
+            <Card className="organiser-home__row"
+              data-attention={request.status === 'clarification_required' ? 'true' : undefined}>
               <div className="organiser-home__row-main">
                 <div className="organiser-home__row-heading">
                   {request.status === 'draft' ? (
@@ -96,11 +106,17 @@ export function OrganiserHomePage() {
                     : `Last updated ${formatRelativeTime(request.updatedAt)}`}
                 </p>
                 <StatusTimeline status={request.status} />
+                {request.status === 'clarification_required' ? <LatestQuestion requestId={request.requestId} /> : null}
               </div>
               <StatusBadge status={request.status} />
               {request.status === 'draft' ? (
                 <Link className="button button--secondary" to={`/organiser/requests/${request.requestId}`}>
                   Continue editing
+                </Link>
+              ) : null}
+              {request.status === 'clarification_required' ? (
+                <Link className="button button--primary" to={`/organiser/requests/${request.requestId}/respond`}>
+                  Respond
                 </Link>
               ) : null}
               {request.status === 'approved' && request.eventId ? (
@@ -119,6 +135,30 @@ export function OrganiserHomePage() {
         <SkeletonFeatureGrid basePath="/organiser" features={organiserExtraFeatures} />
       </div>
     </div>
+  )
+}
+
+/** EO26: the coordinator's latest question, right on the list, so the
+ * organiser knows what is being asked before opening the request. */
+function LatestQuestion({ requestId }: { requestId: string }) {
+  const [question, setQuestion] = useState<ActivityDto | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get<ActivityDto[]>(`/event-requests/${requestId}/timeline`)
+      .then((entries) => {
+        if (cancelled || !Array.isArray(entries)) return
+        setQuestion([...entries].reverse().find((e) => e.type === 'clarification_requested') ?? null)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [requestId])
+  if (!question?.message) return null
+  return (
+    <p className="organiser-home__question">
+      <strong>{question.actorName} asked:</strong> {question.message}
+    </p>
   )
 }
 

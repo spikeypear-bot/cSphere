@@ -27,3 +27,8 @@
 .booking-loading-notice { position: absolute; top: 0.5rem; right: 0.5rem; z-index: 1; padding: 0.4rem 0.6rem; border-radius: var(--radius-sm); background: var(--panel); color: var(--ink-soft); font-size: 0.8rem; }
 
 .booking-pagination .button[aria-disabled="true"] { opacity: .5; cursor: default; }
+
+.booking-coordinator-notes { border: 1px solid var(--hairline); border-radius: var(--radius-md, 12px); padding: 1rem; background: var(--panel); }
+.booking-coordinator-notes h2 { margin: 0 0 0.5rem; font-size: 1rem; }
+.booking-coordinator-notes p { margin: 0.4rem 0; white-space: pre-wrap; }
+.booking-coordinator-notes__warning { color: var(--role-coordinator); }

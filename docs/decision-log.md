@@ -164,6 +164,10 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
   | `POST`, `DELETE /api/equipment/**` | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. |
   | `/api/mock` | `denyAll()` or delete the package | Demo vertical slice illustrating the MVC convention. It is currently reachable by any authenticated user of any role. |
+  | `GET /api/event-requests/queue`, `GET /api/event-requests/{id}/review`, `POST /api/event-requests/{id}/clarifications\|approve\|reject\|assign-coordinator` | `hasRole('EC')` **plus assignment check in the service** | EC01/EC02 (D21). The queue is the caller's own requests plus unassigned ones. |
+  | `POST /api/event-requests/{id}/resubmit`, `GET /api/event-requests/{id}/timeline` | `hasRole('EO')` (blanket rule) **plus organisation scoping** | EO26 (D21). |
+  | `GET /api/events/{id}/timeline` | `hasAnyRole('EO','EC')` (existing events rule) **plus organisation or assignment check** | D21: the event's whole journey, filtered by role. |
+  | `GET /api/events/{id}/venue-options`, `GET\|POST /api/events/{id}/venue-bookings` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus assignment check** | EC03 (D21). |
   | `/swagger-ui/**`, `/v3/api-docs/**` | dev profile only, or accept 401 | springdoc is on the classpath; under `anyRequest().authenticated()` the docs page 401s, and a browser navigation cannot attach a Bearer token. |
 
 - **Open for the team to settle:**
@@ -175,6 +179,20 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Sequencing:** ~~the `X-Organisation` header must be replaced by the token's `organisation` claim **before** these rules go in.~~ **Done, 2026-09-22.** `EventRequestController` now reads `organisation` from the access token's claim and the header is gone. Verified by reproducing the leak first: a valid `eo3` (Globex Holdings) token returned another organisation's draft in full when `X-Organisation: Acme Pte Ltd` was sent, and returns 404 after the change.
 - **Consequences:** implements the server-side half of `AU04` and generalises to `DEV05`. Answers Q2(a) by making it moot — the role arrives in a verified claim, so there is no interim "acting-as-role" question left. Each row needs a negative test (wrong role rejected) to satisfy `AU04`'s DoD; `VenueControllerTest` already has the pattern.
 - **Source:** Endpoint inventory taken from the controllers on `feat/auth` after the 2026-09-22 rebase; role responsibilities from `docs/product-context.md` §5 and the EC/VS/TS story rows.
+
+### D21 — EC01/EC02/EO26/EC03: request timeline instead of a chat, clarification loop, venue booking requests
+
+Built on `feature/ec01-ec02-ec03-review-clarification-booking` (2026-09-26), migration **V13**.
+
+- **Why a timeline and not a chat.** Week 4's core features include "request clarification or amendments from the Event Organiser" (Event Review and Approval) but not the briefing's separate "Comments and Discussion" feature (EO18, Out of Scope). So the clarification exchange is structured: every entry is created by a workflow action (submit, assign, clarify, respond, approve, reject, request a venue) in the same transaction as the status change it records. The result is the audit trail EC01/EC02 ask for, and the first slice of DEV07. New kinds of entry (e.g. VS04 rejection reasons, TS09 issue reports) are one `ActivityType` constant each; see its Javadoc.
+- **Append-only by database trigger**, not only by convention: EC01 says clarifications and responses "cannot be edited or deleted".
+- **Audience per entry type**, filtered in the SQL query: Organisers see their request's journey but not internal planning steps such as which venue was requested.
+- **New status `clarification_required`.** "Submitted" and "Under review" both remain `pending` (D7). Approval is refused while waiting on the organiser; rejection is still allowed (e.g. no response).
+- **Approval re-checks EO02's submission rules** instead of trusting that nothing changed.
+- **Not-assigned coordinator now gets 403, not 409** (`ApiExceptionHandler`), per EC02's refined AC ("access-denied").
+- **Notifications for assignment and rejection are now sent after commit**, like approval already was (d1033d8). Before, a failing notification insert surfaced at commit, outside the try/catch meant to swallow it, and failed the whole request; it could also announce a change that was then rolled back.
+- **EC03 rules:** the booking uses the event's own times (no second copy); capacity blocks (attendance equal to capacity fits); a missing requested accessibility feature needs a written justification for Venue Staff; only *confirmed* bookings overlapping the event block a venue, and back-to-back is not an overlap; at most one pending/confirmed request per event, enforced under a row lock on the event. Facilities cannot be checked automatically because event requests store them only as free text (EC05 follow-up). Venue unavailable periods (VS01/VS05) are not built yet, so they are not checked.
+- **Open, for the team:** (1) Customer Q&A: may a coordinator request a venue that is over capacity or missing a facility, with a justification? Changing the answer touches only `VenueSuitability`. (2) VS03/VS08 must re-run the overlap check when confirming. (3) "Venue Staff responsible for the venue" is not modelled; every VS user is notified.
 
 ## Awaiting Team Confirmation
 

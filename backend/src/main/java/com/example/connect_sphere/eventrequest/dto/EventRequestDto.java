@@ -7,9 +7,10 @@ import java.util.UUID;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
 
-/** Read shape returned to the frontend. Deliberately omits createdBy — no
- * real accounts exist yet (see EventRequest's class-level note), so there is
- * nothing meaningful to show for it. */
+/** Read shape returned to the frontend. Carries the creator's username, not
+ * their id: the page shows "submitted by eo1" (or "by you"), and requests
+ * submitted before the V13 timeline have no other record of who that was.
+ * Only ever returned to the creator's own organisation or to Coordinators. */
 public record EventRequestDto(
         UUID requestId,
         Character requestType,
@@ -29,5 +30,6 @@ public record EventRequestDto(
         OffsetDateTime updatedAt,
         String organisation,
         UUID coordinatorId,
-        String rejectionReason) {
+        String rejectionReason,
+        String createdByName) {
 }

@@ -47,6 +47,7 @@ public class VenueBookingService {
                 venueMapper.toDto(booking.getVenue()), new VenueBookingDto.EventRequirements(
                         event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
                         event.getExpectedAttendance(), event.getVenueRequirements(),
-                        List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()));
+                        List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()),
+                booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt());
     }
 }

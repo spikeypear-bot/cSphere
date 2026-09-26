@@ -1,5 +1,6 @@
 package com.example.connect_sphere.event.controller;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -10,8 +11,11 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.service.EventService;
+import com.example.connect_sphere.eventrequest.service.EventRequestService;
+import com.example.connect_sphere.user.entity.UserRole;
 
 /**
  * EO09's "Confirmed" transition and "view confirmed event arrangements".
@@ -23,9 +27,11 @@ import com.example.connect_sphere.event.service.EventService;
 public class EventController {
 
     private final EventService service;
+    private final EventRequestService eventRequestService;
 
-    public EventController(EventService service) {
+    public EventController(EventService service, EventRequestService eventRequestService) {
         this.service = service;
+        this.eventRequestService = eventRequestService;
     }
 
     private static UUID userIdOf(Jwt jwt) {
@@ -50,6 +56,13 @@ public class EventController {
             return service.getForCoordinator(id);
         }
         return service.get(organisationOf(jwt), id);
+    }
+
+    /** The event's full timeline, filtered to what the caller's role may see. */
+    @GetMapping("/{id}/timeline")
+    public List<ActivityDto> timeline(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        UserRole role = "ec".equalsIgnoreCase(roleOf(jwt)) ? UserRole.ec : UserRole.eo;
+        return eventRequestService.timelineForEvent(role, organisationOf(jwt), userIdOf(jwt), id);
     }
 
     @PostMapping("/{id}/confirm")

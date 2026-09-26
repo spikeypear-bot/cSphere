@@ -43,3 +43,11 @@
   gap: 0.75rem;
   align-items: flex-start;
 }
+
+.event-details__flash {
+  margin: 0; padding: 0.75rem 1rem; border-radius: var(--radius-md);
+  background: var(--success-soft); color: var(--success); font-weight: 600;
+}
+.event-details__venue, .event-details__history { padding: 1.25rem; }
+.event-details__venue h2, .event-details__history h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+.event-details__venue p { margin: 0 0 0.75rem; }
