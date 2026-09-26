@@ -122,6 +122,19 @@ public class NotificationService {
         }
     }
 
+    /** EC03: tell Venue Staff a pending request they may be reviewing was withdrawn. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createVenueBookingCancelledNotifications(
+            List<UUID> recipientUserIds, UUID bookingId, UUID eventId, String eventName, String reason) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, NotificationType.venue_booking_cancelled, eventName);
+            notification.setEventId(eventId);
+            notification.setVenueBookingId(bookingId);
+            notification.setReason(reason);
+            saveBestEffort(notification);
+        }
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -204,7 +217,7 @@ public class NotificationService {
         return switch (n.getType()) {
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
-            case venue_booking_requested -> "/venue-staff/bookings/" + n.getVenueBookingId();
+            case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
             case status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()
                     : n.getEventRequestId() != null

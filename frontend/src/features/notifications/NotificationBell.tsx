@@ -21,6 +21,7 @@ function describe(n: NotificationDto): string {
   if (n.type === 'clarification_requested') return `Clarification needed on "${n.eventName}"`
   if (n.type === 'clarification_responded') return `"${n.eventName}" was updated and resubmitted`
   if (n.type === 'venue_booking_requested') return `New venue booking request for "${n.eventName}"`
+  if (n.type === 'venue_booking_cancelled') return `Venue booking request for "${n.eventName}" was cancelled`
   if (n.type === 'coordinator_assignment') {
     const verb = n.isReassignment ? 'reassigned to' : 'assigned to'
     return `"${n.eventName}" ${verb} ${n.coordinatorName ?? 'a coordinator'}`

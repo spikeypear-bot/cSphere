@@ -3,6 +3,7 @@ package com.example.connect_sphere.activity.entity;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.hibernate.annotations.Immutable;
@@ -72,6 +73,17 @@ public class RequestActivity {
 
     @Column(name = "occurred_at")
     private OffsetDateTime occurredAt;
+
+    /** V14: one question per flagged field (clarification_requested). */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "field_questions", columnDefinition = "jsonb")
+    private Map<String, String> fieldQuestions;
+
+    /** V14: the request's field values at this moment (clarification
+     * requested / responded), so the pair shows what changed. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "field_values", columnDefinition = "jsonb")
+    private Map<String, Object> fieldValues;
 
     public RequestActivity() {
     }

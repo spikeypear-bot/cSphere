@@ -2,6 +2,7 @@ package com.example.connect_sphere.activity.dto;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /** One timeline entry as a client sees it. Deliberately omits the actor's user
@@ -15,5 +16,7 @@ public record ActivityDto(
         List<String> flaggedFields,
         String fromStatus,
         String toStatus,
-        OffsetDateTime occurredAt) {
+        OffsetDateTime occurredAt,
+        Map<String, String> fieldQuestions,
+        Map<String, Object> fieldValues) {
 }

@@ -8,6 +8,7 @@ export type ActivityTypeName =
   | 'approved'
   | 'rejected'
   | 'venue_booking_requested'
+  | 'venue_booking_cancelled'
 
 /** One entry of a request's timeline (V13 event_request_activity). The
  * server has already filtered out entries the viewer's role may not see. */
@@ -21,4 +22,8 @@ export interface ActivityDto {
   fromStatus: string | null
   toStatus: string | null
   occurredAt: string
+  /** V14: one question per flagged field (clarification_requested). */
+  fieldQuestions?: Record<string, string> | null
+  /** V14: field values at this moment (clarification requested/responded). */
+  fieldValues?: Record<string, unknown> | null
 }

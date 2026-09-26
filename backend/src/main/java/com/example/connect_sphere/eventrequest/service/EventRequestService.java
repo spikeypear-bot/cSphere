@@ -2,7 +2,9 @@ package com.example.connect_sphere.eventrequest.service;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 
@@ -144,6 +146,18 @@ public class EventRequestService {
      */
     @Transactional
     public EventRequestDto resubmit(String organisation, UUID actingUserId, UUID requestId, String response) {
+        return resubmit(organisation, actingUserId, requestId, response, null);
+    }
+
+    /**
+     * As above, applying the organiser's edited {@code details} first, in the
+     * same transaction: if any check then fails, the whole call rolls back and
+     * the request is exactly as it was (EO26: "status, request details,
+     * timeline and notifications are unchanged").
+     */
+    @Transactional
+    public EventRequestDto resubmit(String organisation, UUID actingUserId, UUID requestId, String response,
+            SaveEventRequestRequest details) {
         requireOrganisation(organisation);
         String reply = requireMessage(response, "Please add a short response for the Event Coordinator.");
         EventRequest entity = findOwned(organisation, requestId, true);
@@ -152,13 +166,23 @@ public class EventRequestService {
                     "Only a request that is waiting for your clarification can be resubmitted (current status: "
                             + label(entity.getStatus()) + ").");
         }
+        if (details != null) {
+            // Check the edited details on a throwaway copy first, and only then
+            // touch the real row: a refusal leaves the request exactly as it
+            // was even when this runs inside a caller's larger transaction.
+            EventRequest candidate = new EventRequest();
+            applyFields(candidate, details);
+            requireSubmittable(candidate);
+            applyFields(entity, details);
+        }
         requireSubmittable(entity);
         entity.setStatus(EventRequestStatus.pending);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
                 ActivityType.clarification_responded, actingUserId, reply, null,
-                EventRequestStatus.clarification_required.name(), EventRequestStatus.pending.name()));
+                EventRequestStatus.clarification_required.name(), EventRequestStatus.pending.name(),
+                null, fieldValues(saved)));
         if (saved.getCoordinatorId() != null) {
             UUID coordinatorId = saved.getCoordinatorId();
             afterThisTransactionCommits(() -> notificationService.createClarificationRespondedNotification(
@@ -250,8 +274,17 @@ public class EventRequestService {
     @Transactional
     public EventRequestDto requestClarification(
             UUID coordinatorId, UUID requestId, String message, List<String> flaggedFields) {
+        return requestClarification(coordinatorId, requestId, message, flaggedFields, null);
+    }
+
+    /** As above, with (V14) one question per flagged field. When given, every
+     * flagged field needs a question and no other field may have one. */
+    @Transactional
+    public EventRequestDto requestClarification(UUID coordinatorId, UUID requestId, String message,
+            List<String> flaggedFields, Map<String, String> fieldQuestions) {
         String text = requireMessage(message, "Please describe what needs clarifying.");
         List<String> flags = normaliseFlags(flaggedFields);
+        Map<String, String> questions = normaliseQuestions(flags, fieldQuestions);
         EventRequest entity = repository.findForUpdate(requestId)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
         requireAssigned(coordinatorId, entity);
@@ -266,7 +299,8 @@ public class EventRequestService {
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
                 ActivityType.clarification_requested, coordinatorId, text, flags,
-                EventRequestStatus.pending.name(), EventRequestStatus.clarification_required.name()));
+                EventRequestStatus.pending.name(), EventRequestStatus.clarification_required.name(),
+                questions, fieldValues(saved)));
 
         List<UUID> organisers = userRepository.findByRoleAndOrganisation(UserRole.eo, saved.getOrganisation())
                 .stream().map(User::getUserId).toList();
@@ -481,6 +515,40 @@ public class EventRequestService {
                     "Messages can be at most " + MAX_MESSAGE_LENGTH + " characters (this one is " + text.length() + ").");
         }
         return text;
+    }
+
+    /** Trimmed questions keyed by flagged field, or null when none were sent. */
+    private static Map<String, String> normaliseQuestions(List<String> flags, Map<String, String> fieldQuestions) {
+        if (fieldQuestions == null || fieldQuestions.isEmpty()) {
+            return null;
+        }
+        if (!flags.containsAll(fieldQuestions.keySet())) {
+            throw new InvalidMessageException("Questions can only be asked about flagged fields.");
+        }
+        Map<String, String> questions = new LinkedHashMap<>();
+        for (String field : flags) {
+            questions.put(field, requireMessage(fieldQuestions.get(field),
+                    "Every flagged field needs a question (missing: " + field + ")."));
+        }
+        return questions;
+    }
+
+    /** The request's field values right now, for the timeline (V14). Plain
+     * JSON values: text, numbers, booleans, ISO date-times, lists of names. */
+    private static Map<String, Object> fieldValues(EventRequest e) {
+        Map<String, Object> values = new LinkedHashMap<>();
+        values.put("eventName", e.getEventName());
+        values.put("purpose", e.getPurpose());
+        values.put("description", e.getDescription());
+        values.put("startDatetime", e.getStartDatetime() == null ? null : e.getStartDatetime().toString());
+        values.put("endDatetime", e.getEndDatetime() == null ? null : e.getEndDatetime().toString());
+        values.put("expectedAttendance", e.getExpectedAttendance());
+        values.put("venueRequirements", e.getVenueRequirements());
+        values.put("equipmentRequirements", e.getEquipmentRequirements());
+        values.put("accessibilityNeeds", e.getAccessibilityNeeds() == null ? List.of()
+                : e.getAccessibilityNeeds().stream().map(Enum::name).toList());
+        values.put("registrationNeeds", e.getRegistrationNeeds());
+        return values;
     }
 
     /** De-duplicated, order-preserving, and only real field keys. */

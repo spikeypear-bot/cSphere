@@ -2,6 +2,7 @@ package com.example.connect_sphere.activity.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -50,7 +51,15 @@ public class ActivityService {
             String message,
             List<String> flaggedFields,
             String fromStatus,
-            String toStatus) {
+            String toStatus,
+            Map<String, String> fieldQuestions,
+            Map<String, Object> fieldValues) {
+
+        /** An entry with no per-field questions or captured values. */
+        public Entry(UUID requestId, UUID eventId, ActivityType type, UUID actorUserId, String message,
+                List<String> flaggedFields, String fromStatus, String toStatus) {
+            this(requestId, eventId, type, actorUserId, message, flaggedFields, fromStatus, toStatus, null, null);
+        }
     }
 
     @Transactional(propagation = Propagation.MANDATORY)
@@ -71,6 +80,8 @@ public class ActivityService {
         row.setToStatus(entry.toStatus());
         row.setAudienceRoles(entry.type().audience().stream().map(Enum::name).sorted().toList());
         row.setOccurredAt(OffsetDateTime.now());
+        row.setFieldQuestions(entry.fieldQuestions());
+        row.setFieldValues(entry.fieldValues());
         repository.save(row);
     }
 
@@ -83,7 +94,7 @@ public class ActivityService {
                 .map(a -> new ActivityDto(
                         a.getActivityId(), a.getActivityType().name(), a.getActorName(), a.getActorRole(),
                         a.getMessage(), List.copyOf(a.getFlaggedFields()), a.getFromStatus(), a.getToStatus(),
-                        a.getOccurredAt()))
+                        a.getOccurredAt(), a.getFieldQuestions(), a.getFieldValues()))
                 .toList();
     }
 }

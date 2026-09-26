@@ -14,6 +14,12 @@ import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
  * approve/reject call racing or retrying. */
 public class EventRequestNotPendingException extends RuntimeException {
     public EventRequestNotPendingException(UUID requestId, EventRequestStatus status) {
-        super("Event request " + requestId + " is not awaiting review (status: " + status + ")");
+        super(switch (status) {
+            case approved -> "This request has already been approved.";
+            case rejected -> "This request has already been rejected.";
+            case cancelled -> "This request was cancelled.";
+            case draft -> "This request has not been submitted yet.";
+            default -> "This request is not awaiting review.";
+        });
     }
 }

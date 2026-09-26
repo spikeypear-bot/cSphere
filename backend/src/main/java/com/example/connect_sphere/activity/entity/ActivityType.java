@@ -34,7 +34,9 @@ public enum ActivityType {
     rejected(Set.of(UserRole.eo, UserRole.ec)),
     /** EC03: internal planning step; the organiser sees the outcome once the
      * booking is decided and the event confirmed, not every venue tried. */
-    venue_booking_requested(Set.of(UserRole.ec, UserRole.vs));
+    venue_booking_requested(Set.of(UserRole.ec, UserRole.vs)),
+    /** EC03: the coordinator withdrew a pending booking request. */
+    venue_booking_cancelled(Set.of(UserRole.ec, UserRole.vs));
 
     private final Set<UserRole> audience;
 

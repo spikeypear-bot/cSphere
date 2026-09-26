@@ -74,9 +74,8 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(await screen.findByRole('button', { name: 'Save and resubmit' })).toBeDisabled()
   })
 
-  it('saves the edited details, then resubmits with the reply, and returns home', async () => {
+  it('sends the edited details and the reply together in one call, and returns home', async () => {
     const calls = stubApi(routes({
-      [`PUT /api/event-requests/${ID}`]: () => jsonResponse(200, request),
       [`POST /api/event-requests/${ID}/resubmit`]: () => jsonResponse(200, { ...request, status: 'pending' }),
     }))
     const user = userEvent.setup()
@@ -90,9 +89,11 @@ describe('ClarificationResponsePage (EO26)', () => {
 
     expect(await screen.findByText('Organiser home')).toBeInTheDocument()
     const writes = calls.filter((c) => c.method !== 'GET')
-    expect(writes.map((c) => c.method)).toEqual(['PUT', 'POST'])
-    expect(writes[0].body).toMatchObject({ expectedAttendance: 120, purpose: 'Quarterly update' })
-    expect(writes[1].body).toEqual({ response: '120 confirmed' })
+    expect(writes.map((c) => c.method)).toEqual(['POST'])
+    expect(writes[0].body).toMatchObject({
+      response: '120 confirmed',
+      details: { expectedAttendance: 120, purpose: 'Quarterly update' },
+    })
   })
 
   it('saving alone keeps the request with the organiser', async () => {
@@ -108,7 +109,6 @@ describe('ClarificationResponsePage (EO26)', () => {
 
   it('shows which required details are missing when resubmission is refused', async () => {
     stubApi(routes({
-      [`PUT /api/event-requests/${ID}`]: () => jsonResponse(200, request),
       [`POST /api/event-requests/${ID}/resubmit`]: () => jsonResponse(422, {
         message: 'Event request is missing required fields: purpose', missingFields: ['purpose'],
       }),
@@ -121,6 +121,18 @@ describe('ClarificationResponsePage (EO26)', () => {
 
     expect(await screen.findByText('Purpose is required')).toBeInTheDocument()
     expect(screen.queryByText('Organiser home')).not.toBeInTheDocument()
+  })
+
+  it("shows the coordinator's question for each field right beside that field", async () => {
+    stubApi(routes({
+      [`GET /api/event-requests/${ID}/timeline`]: () => jsonResponse(200, [timeline[0], {
+        ...timeline[1], fieldQuestions: { expectedAttendance: 'Is 150 the final headcount?' },
+      }]),
+    }))
+    renderPage()
+
+    const field = (await screen.findByLabelText('Expected attendance')).closest('.clarify__field')
+    expect(field).toHaveTextContent('“Is 150 the final headcount?”')
   })
 
   it('says so when the request is no longer waiting for clarification', async () => {

@@ -28,3 +28,5 @@
 .clarify__reply { display: flex; flex-direction: column; gap: 0.5rem; align-items: flex-start; }
 .clarify__reply textarea { width: 100%; box-sizing: border-box; font: inherit; }
 .clarify__error { color: var(--danger); margin: 0; }
+
+.clarify__field-question { margin: 0.25rem 0 0; font-style: italic; color: var(--ink); white-space: pre-wrap; }

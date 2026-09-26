@@ -156,7 +156,7 @@ export function EventDetailsPage() {
 
 /** Loads one side panel's data independently of the event itself, so a
  * failure here never hides the event details. */
-function useSideData<T>(path: string, isValid: (value: unknown) => boolean) {
+function useSideData<T>(path: string, isValid: (value: unknown) => boolean, reloadKey = 0) {
   const [data, setData] = useState<T | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
@@ -175,25 +175,64 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean) {
     }
     // isValid is a stable module-level check at every call site.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path])
+  }, [path, reloadKey])
   return { data, failed }
 }
 
 /** EC03 from the event page: the current booking request, or the way to make one. */
 function VenueBookingCard({ eventId, planning }: { eventId: string; planning: boolean }) {
-  const { data: bookings, failed } = useSideData<EventVenueBookingDto[]>(`/events/${eventId}/venue-bookings`, Array.isArray)
+  const [reload, setReload] = useState(0)
+  const { data: bookings, failed } = useSideData<EventVenueBookingDto[]>(
+    `/events/${eventId}/venue-bookings`, Array.isArray, reload)
+  const [cancelling, setCancelling] = useState(false)
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   if (failed) return null
   if (!bookings) return null
   const active = bookings.find((b) => b.status === 'pending' || b.status === 'confirmed')
   const latestRejected = bookings.find((b) => b.status === 'rejected')
+
+  async function cancelRequest(bookingId: string) {
+    setBusy(true)
+    setError(null)
+    try {
+      await apiClient.post(`/events/${eventId}/venue-bookings/${bookingId}/cancel`, { reason: reason.trim() || null })
+      setCancelling(false)
+      setReason('')
+      setReload((n) => n + 1)
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : 'The request could not be cancelled.')
+    } finally {
+      setBusy(false)
+    }
+  }
   return (
     <Card className="event-details__venue">
       <h2>Venue</h2>
       {active ? (
-        <p>
-          <strong>{active.venueAddress}</strong>: {BOOKING_STATUS_LABELS[active.status]}
-          {active.submittedAt ? <span className="field-hint"> · requested {new Date(active.submittedAt).toLocaleString()}</span> : null}
-        </p>
+        <>
+          <p>
+            <strong>{active.venueAddress}</strong>: {BOOKING_STATUS_LABELS[active.status]}
+            {active.submittedAt ? <span className="field-hint"> · requested {new Date(active.submittedAt).toLocaleString()}</span> : null}
+          </p>
+          {active.status === 'pending' && !cancelling ? (
+            <Button variant="secondary" onClick={() => setCancelling(true)}>Cancel this request</Button>
+          ) : null}
+          {active.status === 'pending' && cancelling ? (
+            <div className="event-details__cancel">
+              <label htmlFor="cancel-reason">Reason for Venue Staff (optional)</label>
+              <textarea id="cancel-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+              <div className="event-details__cancel-actions">
+                <Button variant="secondary" onClick={() => { setCancelling(false); setReason('') }}>Keep request</Button>
+                <Button disabled={busy} onClick={() => void cancelRequest(active.bookingId)}>
+                  {busy ? 'Cancelling…' : 'Confirm cancellation'}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+          {error ? <p role="alert">{error}</p> : null}
+        </>
       ) : (
         <>
           <p>No venue has been requested yet.</p>

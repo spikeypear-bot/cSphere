@@ -14,6 +14,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundExcep
 import com.example.connect_sphere.eventrequest.service.EventRequestNotPendingException;
 import com.example.connect_sphere.eventrequest.service.EventRequestStateException;
 import com.example.connect_sphere.venuebooking.service.InvalidVenueBookingException;
+import com.example.connect_sphere.venuebooking.service.VenueBookingNotFoundException;
 import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
 import com.example.connect_sphere.eventrequest.service.InvalidMessageException;
 import com.example.connect_sphere.eventrequest.service.IncompleteEventRequestException;
@@ -96,6 +97,11 @@ public class ApiExceptionHandler {
     @ExceptionHandler(InvalidVenueBookingException.class)
     public ResponseEntity<ApiError> handleInvalidVenueBooking(InvalidVenueBookingException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(VenueBookingNotFoundException.class)
+    public ResponseEntity<ApiError> handleVenueBookingNotFound(VenueBookingNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(VenueBookingStateException.class)

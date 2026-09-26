@@ -121,6 +121,76 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    void eachFlaggedFieldsQuestionAndTheValuesAtThatMomentReachTheOrganiser() throws Exception {
+        UUID id = submittedRequest();
+
+        clarify(id, "ec1", """
+                {"message":"Expected attendance: Is 150 final?","flaggedFields":["expectedAttendance"],
+                 "fieldQuestions":{"expectedAttendance":"Is 150 final?"}}""", 200);
+
+        mvc.perform(get("/api/event-requests/" + id + "/timeline").with(flow.as("eo1")))
+                .andExpect(jsonPath("$[2].fieldQuestions.expectedAttendance").value("Is 150 final?"))
+                .andExpect(jsonPath("$[2].fieldValues.expectedAttendance").value(150));
+    }
+
+    @Test
+    void aQuestionAboutAnUnflaggedFieldOrABlankQuestionIsRefused() throws Exception {
+        UUID id = submittedRequest();
+
+        clarify(id, "ec1", """
+                {"message":"x","flaggedFields":["purpose"],"fieldQuestions":{"eventName":"Why?"}}""", 422);
+        clarify(id, "ec1", """
+                {"message":"x","flaggedFields":["purpose","eventName"],"fieldQuestions":{"purpose":"Why?"}}""", 422);
+        assertThat(statusOf(id)).isEqualTo("pending");
+    }
+
+    @Test
+    void aRefusedResubmissionLeavesTheOrganisersEditsUnsaved() throws Exception {
+        UUID id = submittedRequest();
+        clarify(id, "ec1", "{\"message\":\"Please confirm.\"}", 200);
+
+        String blankPurpose = FlowSupport.requestBody("Town Hall", 99, "none").replace("Quarterly update", "  ");
+        mvc.perform(post("/api/event-requests/" + id + "/resubmit").with(flow.as("eo1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"response\":\"Updated\",\"details\":" + blankPurpose + "}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.missingFields[0]").value("purpose"));
+
+        flush();
+        assertThat(jdbc.queryForObject("SELECT expected_attendance FROM event_requests WHERE request_id = ?",
+                Integer.class, id)).isEqualTo(150);
+        assertThat(statusOf(id)).isEqualTo("clarification_required");
+    }
+
+    @Test
+    void aSuccessfulResubmissionSavesTheEditsAndRecordsTheNewValues() throws Exception {
+        UUID id = submittedRequest();
+        clarify(id, "ec1", "{\"message\":\"Is 150 final?\",\"flaggedFields\":[\"expectedAttendance\"]}", 200);
+
+        mvc.perform(post("/api/event-requests/" + id + "/resubmit").with(flow.as("eo1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"response\":\"120 confirmed\",\"details\":"
+                                + FlowSupport.requestBody("Town Hall", 120, "none") + "}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expectedAttendance").value(120));
+
+        mvc.perform(get("/api/event-requests/" + id + "/review").with(flow.as("ec1")))
+                .andExpect(jsonPath("$.timeline[2].fieldValues.expectedAttendance").value(150))
+                .andExpect(jsonPath("$.timeline[3].type").value("clarification_responded"))
+                .andExpect(jsonPath("$.timeline[3].fieldValues.expectedAttendance").value(120));
+    }
+
+    @Test
+    void decidingTwiceIsRefusedWithAPlainMessage() throws Exception {
+        UUID id = submittedRequest();
+        mvc.perform(post("/api/event-requests/" + id + "/approve").with(flow.as("ec1"))).andExpect(status().isOk());
+
+        mvc.perform(post("/api/event-requests/" + id + "/approve").with(flow.as("ec1")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This request has already been approved."));
+    }
+
+    @Test
     void theReviewScreenNamesTheOrganiserWhoCreatedTheRequest() throws Exception {
         UUID id = submittedRequest();
 

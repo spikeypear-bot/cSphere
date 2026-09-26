@@ -40,3 +40,31 @@ describe('ActivityTimeline', () => {
     expect(screen.getByText('No history yet.')).toBeInTheDocument()
   })
 })
+
+describe('ActivityTimeline (V14 details)', () => {
+  afterEach(cleanup)
+
+  it('lists each question under its field instead of one block of text', () => {
+    render(<ActivityTimeline entries={[{ ...entries[1], fieldQuestions: {
+      expectedAttendance: 'Is 150 final?', endDatetime: 'Can it end at 5pm?' } }]} />)
+
+    const questions = screen.getByLabelText('Questions by field')
+    expect(questions).toHaveTextContent('Expected attendanceIs 150 final?')
+    expect(questions).toHaveTextContent('End date & timeCan it end at 5pm?')
+    expect(screen.queryByRole('list', { name: 'Fields that need attention' })).not.toBeInTheDocument()
+  })
+
+  it("shows what the organiser changed in their response, ignoring values that didn't change", () => {
+    const asked = { ...entries[1], fieldValues: { expectedAttendance: 150, purpose: 'Update',
+      startDatetime: '2027-03-10T01:00:00Z' } }
+    const answered: ActivityDto = { activityId: 'a3', type: 'clarification_responded', actorName: 'eo1', actorRole: 'eo',
+      message: '120 confirmed', flaggedFields: [], fromStatus: 'clarification_required', toStatus: 'pending',
+      occurredAt: '2026-09-22T01:00:00Z',
+      fieldValues: { expectedAttendance: 120, purpose: 'Update', startDatetime: '2027-03-10T09:00:00+08:00' } }
+    render(<ActivityTimeline entries={[asked, answered]} />)
+
+    const changes = within(screen.getByRole('list', { name: 'What changed' })).getAllByRole('listitem')
+    expect(changes).toHaveLength(1)
+    expect(changes[0]).toHaveTextContent('Expected attendance: 150 → 120')
+  })
+})

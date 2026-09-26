@@ -194,6 +194,13 @@ Built on `feature/ec01-ec02-ec03-review-clarification-booking` (2026-09-26), mig
 - **EC03 rules:** the booking uses the event's own times (no second copy); capacity blocks (attendance equal to capacity fits); a missing requested accessibility feature needs a written justification for Venue Staff; only *confirmed* bookings overlapping the event block a venue, and back-to-back is not an overlap; at most one pending/confirmed request per event, enforced under a row lock on the event. Facilities cannot be checked automatically because event requests store them only as free text (EC05 follow-up). Venue unavailable periods (VS01/VS05) are not built yet, so they are not checked.
 - **Open, for the team:** (1) Customer Q&A: may a coordinator request a venue that is over capacity or missing a facility, with a justification? Changing the answer touches only `VenueSuitability`. (2) VS03/VS08 must re-run the overlap check when confirming. (3) "Venue Staff responsible for the venue" is not modelled; every VS user is notified.
 
+- **V14 follow-up (2026-09-26):**
+  - Per-field clarification questions are stored in `field_questions`, and each question is shown beside its field on the organiser's form.
+  - Field values are captured in `field_values` when clarification is asked and when the organiser resubmits. The pair shows the coordinator "what changed since you asked". This is limited to the clarification loop; EO16's general change history stays out of scope.
+  - Resubmission now saves the organiser's edits and resubmits in one call. The edits are checked on a copy first, so a refusal changes nothing (EO26's last AC).
+  - A coordinator can cancel their own *pending* booking request, with an optional reason. Venue Staff are notified. A confirmed booking cannot be cancelled this way; that is change-request territory.
+  - "Already decided" conflicts now say so in plain words.
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?

@@ -140,6 +140,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
       message: 'Expected attendance: Is 150 final?\n\nVenue requirements: Theatre or banquet?',
       flaggedFields: ['expectedAttendance', 'venueRequirements'],
+      fieldQuestions: { expectedAttendance: 'Is 150 final?', venueRequirements: 'Theatre or banquet?' },
     })
   })
 
@@ -196,6 +197,27 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /Request clarification/ })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
+  })
+
+  it('after a resubmission, shows the reply and what changed since the question, and marks changed rows', async () => {
+    stubApi({
+      [REVIEW_URL]: () => jsonResponse(200, review({ expectedAttendance: 120 }, {
+        timeline: [
+          { activityId: 'a2', type: 'clarification_requested', actorName: 'ec1', actorRole: 'ec', message: 'Is 150 final?',
+            flaggedFields: ['expectedAttendance'], fromStatus: 'pending', toStatus: 'clarification_required',
+            occurredAt: '2026-09-21T01:00:00Z', fieldValues: { expectedAttendance: 150, purpose: 'Quarterly update' } },
+          { activityId: 'a3', type: 'clarification_responded', actorName: 'eo1', actorRole: 'eo', message: '120 confirmed',
+            flaggedFields: [], fromStatus: 'clarification_required', toStatus: 'pending',
+            occurredAt: '2026-09-22T01:00:00Z', fieldValues: { expectedAttendance: 120, purpose: 'Quarterly update' } },
+        ],
+      })),
+    })
+    renderPage()
+
+    const changes = await screen.findByRole('list', { name: 'What changed since you asked' })
+    expect(changes).toHaveTextContent('Expected attendance: 150 → 120')
+    expect(changes).not.toHaveTextContent('Purpose')
+    expect(screen.getByText('Updated').closest('.request-review__row')).toHaveTextContent('120 people')
   })
 
   it('tells a coordinator who is not assigned that they cannot review it', async () => {
