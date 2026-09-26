@@ -173,6 +173,41 @@ public class VenueBookingRequestService {
         return toDto(saved);
     }
 
+    /**
+     * EC03: the coordinator withdraws their own pending request (e.g. they
+     * picked the wrong venue), which frees the event to request another.
+     * A confirmed booking cannot be withdrawn here: undoing a commitment Venue
+     * Staff have made is a change request (EO03/EC-NEW3), not a cancellation.
+     */
+    @Transactional
+    public EventVenueBookingDto cancel(UUID coordinatorId, UUID eventId, UUID bookingId, String reason) {
+        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        requireAssigned(coordinatorId, event);
+        VenueBookingRecord booking = bookings.findById(bookingId)
+                .filter(b -> eventId.equals(b.getEventId()))
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        if (booking.getStatus() != VenueBookingStatus.pending) {
+            throw new VenueBookingStateException("Only a pending booking request can be cancelled (this one is "
+                    + booking.getStatus().name() + ").");
+        }
+        String why = optionalText(reason, "The reason");
+        booking.setStatus(VenueBookingStatus.cancelled);
+        VenueBookingRecord saved = bookings.save(booking);
+
+        String venueName = venues.findById(saved.getVenueId()).map(Venue::getVenueAddress).orElse("the venue");
+        eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
+                new ActivityService.Entry(origin.getRequestId(), eventId, ActivityType.venue_booking_cancelled,
+                        coordinatorId, "Cancelled the request for " + venueName + (why == null ? "" : ". " + why),
+                        null, VenueBookingStatus.pending.name(), VenueBookingStatus.cancelled.name())));
+
+        List<UUID> venueStaff = users.findByRole(UserRole.vs).stream().map(User::getUserId).toList();
+        if (!venueStaff.isEmpty()) {
+            afterCommit(() -> notificationService.createVenueBookingCancelledNotifications(
+                    venueStaff, saved.getBookingId(), eventId, event.getEventName(), why));
+        }
+        return toDto(saved);
+    }
+
     private VenueOptionDto option(Event event, Venue venue, List<VenueOptionDto.ConflictDto> conflicts) {
         VenueSuitability suitability = VenueSuitability.of(event, venue);
         List<String> reasons = new ArrayList<>();

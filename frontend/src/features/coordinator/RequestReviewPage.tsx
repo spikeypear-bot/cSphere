@@ -8,6 +8,7 @@ import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { RequestByline } from '../../components/ui/RequestByline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { formatRelativeTime } from '../../lib/relativeTime'
+import { changedFields } from '../../lib/fieldChanges'
 import type { ActivityDto } from '../../types/activity'
 import { ACCESSIBILITY_LABELS, FIELD_LABELS, type EventRequestDto } from '../../types/eventRequest'
 import { composeClarification, MAX_MESSAGE } from './clarificationDraft'
@@ -115,6 +116,11 @@ export function RequestReviewPage() {
   const waiting = request.status === 'clarification_required'
   const ready = missingFields.length === 0 && scheduleValid
   const lastClarification = [...timeline].reverse().find((e) => e.type === 'clarification_requested')
+  // EC02: after a resubmission, what the organiser changed since you asked.
+  const latest = timeline.length > 0 ? timeline[timeline.length - 1] : null
+  const lastResponse = isOpen && latest?.type === 'clarification_responded' ? latest : null
+  const changes = lastResponse ? changedFields(lastClarification?.fieldValues, lastResponse.fieldValues) : []
+  const changedKeys = new Set(changes.map((c) => c.field))
 
   function toggleFlag(field: string) {
     setFlags((prev) => (prev.includes(field) ? prev.filter((f) => f !== field) : [...prev, field]))
@@ -207,6 +213,27 @@ export function RequestReviewPage() {
             </Card>
           ) : null}
 
+          {lastResponse ? (
+            <Card className="request-review__response">
+              <p><strong>{lastResponse.actorName} responded</strong> {formatRelativeTime(lastResponse.occurredAt)}:</p>
+              <blockquote>{lastResponse.message}</blockquote>
+              {changes.length > 0 ? (
+                <>
+                  <p className="request-review__changes-title">What changed since you asked</p>
+                  <ul className="request-review__changes" aria-label="What changed since you asked">
+                    {changes.map((c) => (
+                      <li key={c.field}>
+                        <strong>{c.label}</strong>: <del>{c.before}</del> → <ins>{c.after}</ins>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              ) : (
+                <p className="field-hint">No details were changed. The organiser answered in their reply.</p>
+              )}
+            </Card>
+          ) : null}
+
           {waiting && lastClarification ? (
             <Card className="request-review__waiting">
               <p><strong>Waiting for the organiser</strong> since {formatRelativeTime(lastClarification.occurredAt)}.
@@ -226,8 +253,12 @@ export function RequestReviewPage() {
                 const flagged = flags.includes(field)
                 const missing = missingFields.includes(field)
                 return (
-                  <div key={field} className="request-review__row" data-flagged={flagged} data-missing={missing}>
-                    <dt>{FIELD_LABELS[field]}</dt>
+                  <div key={field} className="request-review__row" data-flagged={flagged} data-missing={missing}
+                    data-changed={changedKeys.has(field) || undefined}>
+                    <dt>
+                      {FIELD_LABELS[field]}
+                      {changedKeys.has(field) ? <span className="request-review__updated">Updated</span> : null}
+                    </dt>
                     <dd>{value ?? <span className="request-review__missing">{missing ? 'Missing' : 'Not provided'}</span>}</dd>
                     {isOpen ? (
                       <button type="button" className="request-review__flag" aria-pressed={flagged}
@@ -313,7 +344,12 @@ export function RequestReviewPage() {
                     request comes back to you.</p>
                   <Button disabled={busy || !messageValid} onClick={() => void run(
                     () => apiClient.post(`/event-requests/${request.requestId}/clarifications`,
-                      { message: outgoing, flaggedFields: flags }),
+                      {
+                        message: outgoing,
+                        flaggedFields: flags,
+                        fieldQuestions: flags.length > 0
+                          ? Object.fromEntries(flags.map((f) => [f, (questions[f] ?? '').trim()])) : null,
+                      }),
                     `Clarification sent. ${request.organisation}'s organisers have been notified.`)}>
                     {busy ? 'Sending…' : 'Send clarification request'}
                   </Button>

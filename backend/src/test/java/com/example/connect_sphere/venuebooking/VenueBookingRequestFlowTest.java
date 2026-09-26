@@ -247,6 +247,50 @@ class VenueBookingRequestFlowTest {
         assertThat(blocked).isEqualTo("blocked");
     }
 
+    private String bookingIdOf(ResultActions result) throws Exception {
+        return flow.read(result.andReturn().getResponse().getContentAsString()).get("bookingId").asString();
+    }
+
+    private ResultActions cancel(UUID eventId, String bookingId, String as) throws Exception {
+        return mvc.perform(post("/api/events/" + eventId + "/venue-bookings/" + bookingId + "/cancel").with(flow.as(as))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Wrong venue\"}"));
+    }
+
+    @Test
+    void theCoordinatorCanCancelAPendingRequestAndThenRequestAnotherVenue() throws Exception {
+        UUID eventId = event(150, "none");
+        String first = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
+
+        cancel(eventId, first, "ec1").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("cancelled"));
+
+        submit(eventId, "ec1", bookingFor(venue(300, List.of()))).andExpect(status().isCreated());
+        mvc.perform(get("/api/events/" + eventId + "/timeline").with(flow.as("ec1")))
+                .andExpect(jsonPath("$[?(@.type == 'venue_booking_cancelled')].message")
+                        .value(org.hamcrest.Matchers.hasItem(org.hamcrest.Matchers.containsString("Wrong venue"))));
+    }
+
+    @Test
+    void aConfirmedBookingCannotBeCancelledHere() throws Exception {
+        UUID eventId = event(150, "none");
+        String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
+        sync();
+        jdbc.update("UPDATE venue_bookings SET status = 'confirmed' WHERE booking_id = ?::uuid", id);
+        sync();
+
+        cancel(eventId, id, "ec1").andExpect(status().isConflict());
+    }
+
+    @Test
+    void onlyTheAssignedCoordinatorCanCancelAndOnlyForTheirOwnEvent() throws Exception {
+        UUID eventId = event(150, "none");
+        String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
+        UUID otherEvent = event(50, "none");
+
+        cancel(eventId, id, "ec2").andExpect(status().isForbidden());
+        cancel(otherEvent, id, "ec1").andExpect(status().isNotFound());
+        cancel(eventId, id, "vs1").andExpect(status().isForbidden());
+    }
+
     @Test
     void theRequestIsOnTheCoordinatorsTimelineButNotTheOrganisers() throws Exception {
         UUID eventId = event(150, "none");

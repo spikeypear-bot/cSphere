@@ -51,3 +51,7 @@
 .event-details__venue, .event-details__history { padding: 1.25rem; }
 .event-details__venue h2, .event-details__history h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
 .event-details__venue p { margin: 0 0 0.75rem; }
+
+.event-details__cancel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
+.event-details__cancel textarea { font: inherit; width: 100%; box-sizing: border-box; }
+.event-details__cancel-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }

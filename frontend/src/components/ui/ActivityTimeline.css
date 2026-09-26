@@ -84,3 +84,14 @@
 }
 
 .activity-timeline__status { margin: 0.35rem 0 0; font-size: 0.8rem; color: var(--ink-soft); }
+
+.activity-timeline__questions { margin: 0.5rem 0 0; display: grid; gap: 0.4rem; }
+.activity-timeline__questions div {
+  padding: 0.5rem 0.75rem; border-radius: var(--radius-md); border-inline-start: 3px solid var(--role-coordinator);
+  background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel));
+}
+.activity-timeline__questions dt { font-size: 0.75rem; font-weight: 700; color: var(--role-coordinator); }
+.activity-timeline__questions dd { margin: 0.15rem 0 0; white-space: pre-wrap; }
+.activity-timeline__changes { margin: 0.5rem 0 0; padding-inline-start: 1.1rem; font-size: 0.85rem; }
+.activity-timeline__changes del { color: var(--ink-faint); }
+.activity-timeline__changes ins { text-decoration: none; font-weight: 600; color: var(--success); }

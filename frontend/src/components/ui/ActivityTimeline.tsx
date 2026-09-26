@@ -1,6 +1,7 @@
 import type { ActivityDto, ActivityTypeName } from '../../types/activity'
 import { FIELD_LABELS } from '../../types/eventRequest'
 import { formatRelativeTime } from '../../lib/relativeTime'
+import { changedFields } from '../../lib/fieldChanges'
 import './ActivityTimeline.css'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -29,6 +30,28 @@ const TITLES: Record<ActivityTypeName, string> = {
   approved: 'approved the request. Planning has started',
   rejected: 'rejected the request',
   venue_booking_requested: 'requested a venue',
+  venue_booking_cancelled: 'cancelled a venue booking request',
+}
+
+/** Venue entries move through booking statuses, not request statuses. */
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  pending: 'Pending venue review',
+  confirmed: 'Confirmed',
+  rejected: 'Rejected',
+  cancelled: 'Cancelled',
+}
+
+function statusLabel(entry: ActivityDto, status: string) {
+  const labels = entry.type.startsWith('venue_booking') ? BOOKING_STATUS_LABELS : STATUS_LABELS
+  return labels[status] ?? status
+}
+
+/** The values captured by the clarification this response answers. */
+function askedValues(entries: ActivityDto[], index: number) {
+  for (let i = index - 1; i >= 0; i -= 1) {
+    if (entries[i].type === 'clarification_requested') return entries[i].fieldValues
+  }
+  return null
 }
 
 /** Entries whose message is a conversation turn, shown as a speech bubble. */
@@ -56,7 +79,11 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
   }
   return (
     <ol className="activity-timeline" aria-label="Request timeline">
-      {entries.map((entry) => (
+      {entries.map((entry, index) => {
+        const questions = entry.fieldQuestions ? Object.entries(entry.fieldQuestions) : []
+        const changes = entry.type === 'clarification_responded'
+          ? changedFields(askedValues(entries, index), entry.fieldValues) : []
+        return (
         <li key={entry.activityId} className="activity-timeline__entry" data-type={entry.type}
           data-side={entry.actorRole === 'eo' ? 'organiser' : 'internal'}>
           <span className="activity-timeline__dot" aria-hidden="true" />
@@ -73,12 +100,30 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
               <span aria-hidden="true"> · </span>
               <span>{exactTime(entry.occurredAt)}</span>
             </p>
-            {entry.message ? (
+            {questions.length > 0 ? (
+              <dl className="activity-timeline__questions" aria-label="Questions by field">
+                {questions.map(([field, question]) => (
+                  <div key={field}>
+                    <dt>{FIELD_LABELS[field] ?? field}</dt>
+                    <dd>{question}</dd>
+                  </div>
+                ))}
+              </dl>
+            ) : entry.message ? (
               CONVERSATIONAL.includes(entry.type)
                 ? <blockquote className="activity-timeline__message">{entry.message}</blockquote>
                 : <p className="activity-timeline__note">{entry.message}</p>
             ) : null}
-            {entry.flaggedFields.length > 0 ? (
+            {changes.length > 0 ? (
+              <ul className="activity-timeline__changes" aria-label="What changed">
+                {changes.map((c) => (
+                  <li key={c.field}>
+                    <strong>{c.label}</strong>: <del>{c.before}</del> <span aria-label="changed to">→</span> <ins>{c.after}</ins>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
+            {entry.flaggedFields.length > 0 && questions.length === 0 ? (
               <ul className="activity-timeline__flags" aria-label="Fields that need attention">
                 {entry.flaggedFields.map((field) => (
                   <li key={field}>{FIELD_LABELS[field] ?? field}</li>
@@ -87,14 +132,15 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
             ) : null}
             {entry.fromStatus && entry.toStatus ? (
               <p className="activity-timeline__status">
-                {STATUS_LABELS[entry.fromStatus] ?? entry.fromStatus}
+                {statusLabel(entry, entry.fromStatus)}
                 <span aria-label="changed to"> → </span>
-                {STATUS_LABELS[entry.toStatus] ?? entry.toStatus}
+                {statusLabel(entry, entry.toStatus)}
               </p>
             ) : null}
           </div>
         </li>
-      ))}
+        )
+      })}
     </ol>
   )
 }

@@ -121,7 +121,7 @@ public class EventRequestController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") UUID id,
             @RequestBody ResubmitEventRequestRequest request) {
-        return service.resubmit(organisationOf(jwt), userIdOf(jwt), id, request.response());
+        return service.resubmit(organisationOf(jwt), userIdOf(jwt), id, request.response(), request.details());
     }
 
     /** EO26: the Organiser-visible timeline of one of their own requests. */
@@ -154,7 +154,8 @@ public class EventRequestController {
             @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") UUID id,
             @RequestBody RequestClarificationRequest request) {
-        return service.requestClarification(userIdOf(jwt), id, request.message(), request.flaggedFields());
+        return service.requestClarification(
+                userIdOf(jwt), id, request.message(), request.flaggedFields(), request.fieldQuestions());
     }
 
     @PostMapping("/{id}/assign-coordinator")

@@ -49,6 +49,16 @@ public class EventVenueBookingController {
         return service.bookingsForEvent(userIdOf(jwt), eventId);
     }
 
+    /** EC03: withdraw a pending request. Body: {"reason": "..."} (optional). */
+    @PostMapping("/venue-bookings/{bookingId}/cancel")
+    public EventVenueBookingDto cancel(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @PathVariable UUID bookingId,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        return service.cancel(userIdOf(jwt), eventId, bookingId, body == null ? null : body.get("reason"));
+    }
+
     @PostMapping("/venue-bookings")
     public ResponseEntity<EventVenueBookingDto> submit(
             @AuthenticationPrincipal Jwt jwt,

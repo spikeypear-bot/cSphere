@@ -390,6 +390,10 @@ a workflow action in the same transaction as the change it describes. **A trigge
 | `audience_roles` | `TEXT[]` | no | | Roles allowed to see the entry; filtered in the repository query |
 | `occurred_at` | `TIMESTAMPTZ` | no | | When |
 
+V14 added `field_questions JSONB` (one question per flagged field, on `clarification_requested`) and
+`field_values JSONB` (the request's values when clarification was asked or answered; the pair
+shows what changed), plus the `venue_booking_cancelled` notification type.
+
 V13 also added `notifications.message` and `notifications.venue_booking_id` (no FK, on purpose:
 a notification is a historical record) and three `notification_type` values:
 `clarification_requested`, `clarification_responded`, `venue_booking_requested`.

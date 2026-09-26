@@ -99,6 +99,7 @@ export function ClarificationResponsePage() {
 
   const question = [...timeline].reverse().find((e) => e.type === 'clarification_requested')
   const flagged = question?.flaggedFields ?? []
+  const fieldQuestions = question?.fieldQuestions ?? {}
   const ordered = [...FIELD_ORDER].sort((a, b) => Number(flagged.includes(b)) - Number(flagged.includes(a)))
   const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
   const responseLength = response.trim().length
@@ -135,8 +136,9 @@ export function ClarificationResponsePage() {
     setError(null)
     setMissing([])
     try {
-      await save()
-      await apiClient.post<EventRequestDto>(`/event-requests/${requestId}/resubmit`, { response })
+      // One call: the edits and the resubmission succeed or fail together, so
+      // a refused resubmission leaves the request exactly as it was (EO26).
+      await apiClient.post<EventRequestDto>(`/event-requests/${requestId}/resubmit`, { response, details: fields })
       navigate('/organiser', { state: { justResubmitted: true } })
     } catch (err) {
       if (err instanceof ApiClientError && err.missingFields) setMissing(err.missingFields)
@@ -203,6 +205,7 @@ export function ClarificationResponsePage() {
             {ordered.map((field) => (
               <div key={field} className="clarify__field" data-flagged={flagged.includes(field)}>
                 {flagged.includes(field) ? <span className="clarify__tag">Requested by your coordinator</span> : null}
+                {fieldQuestions[field] ? <p className="clarify__field-question">“{fieldQuestions[field]}”</p> : null}
                 {renderField(field)}
               </div>
             ))}

@@ -78,6 +78,33 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
   })
 })
 
+describe('Cancelling a pending venue booking request (EC03)', () => {
+  it('cancels with an optional reason and then offers a new request', async () => {
+    seedSession('coordinator')
+    let cancelled = false
+    const booking = { bookingId: 'b1', status: 'pending', venueId: 'v1', venueAddress: '1 Harbour Road', venueCapacity: 160,
+      bookingNotes: null, suitabilityNote: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1' }
+    const calls = stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [cancelled ? { ...booking, status: 'cancelled' } : booking]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+      [`POST /api/events/${EVENT}/venue-bookings/b1/cancel`]: () => {
+        cancelled = true
+        return jsonResponse(200, { ...booking, status: 'cancelled' })
+      },
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    await user.click(await screen.findByRole('button', { name: 'Cancel this request' }))
+    await user.type(screen.getByLabelText('Reason for Venue Staff (optional)'), 'Wrong venue')
+    await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
+
+    expect(await screen.findByRole('link', { name: 'Request a venue' })).toBeInTheDocument()
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Wrong venue' })
+  })
+})
+
 describe('OrganiserHomePage clarification row (EO26)', () => {
   it("highlights a request that needs clarification, shows the question, and links to Respond", async () => {
     seedSession('organiser')

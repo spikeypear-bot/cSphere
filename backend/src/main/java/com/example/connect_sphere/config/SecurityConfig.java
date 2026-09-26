@@ -131,7 +131,8 @@ public class SecurityConfig{
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.
-		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings").hasRole("EC")
+		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings",
+			    "/api/events/*/venue-bookings/**").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC")
 		    // EO09/EO19: any signed-in role may read/mark-read their own
 		    // notifications — scoping is always by the caller's own `sub`
