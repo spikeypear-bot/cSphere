@@ -3,7 +3,8 @@
     "scripts": {
 	"dev": "npm --prefix frontend run dev",
 	"install:frontend": "npm --prefix frontend install",
-	"ci:frontend": "npm --prefix frontend ci"
+	"ci:frontend": "npm --prefix frontend ci",
+	"coverage:frontend": "npm --prefix frontend run test:coverage"
     }
 
 
