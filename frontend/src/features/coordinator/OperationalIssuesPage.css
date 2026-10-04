@@ -1,0 +1,46 @@
+.operational-issues-page {
+  gap: 1.5rem;
+}
+
+.operational-issues-page .coordinator-home__header {
+  align-items: center;
+}
+
+.operational-issues-page .coordinator-home__header h1 {
+  margin-bottom: 0.5rem;
+}
+
+.operational-issues-page .coordinator-home__header p {
+  max-width: 42rem;
+  margin: 0;
+}
+
+.operational-issues-page__empty {
+  max-width: 46rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.operational-issues-page__empty p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.operational-issues-page .review-queue__row {
+  padding: 1.25rem 1.5rem;
+}
+
+.operational-issues-page .review-queue__row h2,
+.operational-issues-page .review-queue__row h3 {
+  margin-top: 0;
+}
+
+.operational-issues-page .review-queue__row p {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 700px) {
+  .operational-issues-page__empty,
+  .operational-issues-page .review-queue__row {
+    padding: 1rem;
+  }
+}

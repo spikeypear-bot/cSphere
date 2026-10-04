@@ -16,7 +16,10 @@ function periodLabel(issue: VenueOperationalIssueDto): string {
   return `${formatEventDateTime(issue.affectedFrom)} – ${formatEventDateTime(issue.affectedUntil)}`
 }
 
-export function VenueOperationalIssuesPanel({ venueId }: { venueId: string }) {
+export function VenueOperationalIssuesPanel({ venueId, venueAddress }: {
+  venueId: string
+  venueAddress: string
+}) {
   const [issues, setIssues] = useState<VenueOperationalIssueDto[] | null>(null)
   const [description, setDescription] = useState('')
   const [affectedFrom, setAffectedFrom] = useState('')
@@ -112,7 +115,7 @@ export function VenueOperationalIssuesPanel({ venueId }: { venueId: string }) {
           <input id="operational-issue-until" type="datetime-local" value={affectedUntil}
             onChange={event => setAffectedUntil(event.target.value)} />
         </div>
-        {error ? <p role="alert">{error}</p> : null}
+        {error ? <p className="field-error" role="alert">{error}</p> : null}
         {success ? <p role="status">Operational issue reported successfully.</p> : null}
         <Button onClick={() => void submit()} disabled={saving}>
           {saving ? 'Saving…' : 'Report issue'}
@@ -125,6 +128,7 @@ export function VenueOperationalIssuesPanel({ venueId }: { venueId: string }) {
           {issues.map(issue => (
             <li key={issue.issueId}>
               <Card>
+                <p><strong>Venue:</strong> {venueAddress}</p>
                 <p>{issue.description}</p>
                 <p><strong>Affected period:</strong> {periodLabel(issue)}</p>
                 <p className="field-hint">Reported {formatEventDateTime(issue.createdAt)}</p>

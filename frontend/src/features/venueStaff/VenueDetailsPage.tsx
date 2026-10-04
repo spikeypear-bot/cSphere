@@ -1,4 +1,4 @@
-import { Link, useParams } from 'react-router-dom'
+now import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { Card } from '../../components/ui/Card'
@@ -26,7 +26,8 @@ export function VenueDetailsPage() {
     {venue.error ? <div><p role="alert">{venue.error}</p><Button onClick={venue.retry}>Retry venue</Button></div>
       : !venue.data ? <p role="status">Loading venue…</p> : <VenueDetailsPanel venue={venue.data} />}
     {venue.data && <AssociatedBookings key={venue.data.venueId} venueId={venue.data.venueId} />}
-    {venue.data && <VenueOperationalIssuesPanel key={venue.data.venueId} venueId={venue.data.venueId} />}
+    {venue.data && <VenueOperationalIssuesPanel key={venue.data.venueId}
+      venueId={venue.data.venueId} venueAddress={venue.data.venueAddress} />}
   </div>
 }
 
