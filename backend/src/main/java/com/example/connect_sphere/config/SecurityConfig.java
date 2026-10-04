@@ -81,6 +81,8 @@ public class SecurityConfig{
 		    // venues while planning, Coordinators search them (EC04). This
 		    // must precede the VS rule below, which would otherwise swallow
 		    // every method on the same paths.
+		    .requestMatchers("/api/venues/*/operational-issues/**").hasRole("VS")
+		    .requestMatchers("/api/coordinator/operational-issues").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/venues", "/api/venues/**").authenticated()
 		    // Catalogue authoring: VS07/VS18, widened to Coordinators by
 		    // D20 open question 1. The only place this rule lives — the

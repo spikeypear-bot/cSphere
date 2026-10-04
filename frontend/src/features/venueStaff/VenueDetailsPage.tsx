@@ -5,6 +5,7 @@ import { Card } from '../../components/ui/Card'
 import type { VenueDto } from '../../types/venue'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { VenueDetailsPanel } from './VenueDetailsPanel'
+import { VenueOperationalIssuesPanel } from './VenueOperationalIssuesPanel'
 import { formatEventDateTime } from './formatEventDateTime'
 import { useVenueRead } from './useVenueRead'
 import './BookingDetailsPage.css'
@@ -25,6 +26,8 @@ export function VenueDetailsPage() {
     {venue.error ? <div><p role="alert">{venue.error}</p><Button onClick={venue.retry}>Retry venue</Button></div>
       : !venue.data ? <p role="status">Loading venue…</p> : <VenueDetailsPanel venue={venue.data} />}
     {venue.data && <AssociatedBookings key={venue.data.venueId} venueId={venue.data.venueId} />}
+    {venue.data && <VenueOperationalIssuesPanel key={venue.data.venueId}
+      venueId={venue.data.venueId} venueAddress={venue.data.venueAddress} />}
   </div>
 }
 

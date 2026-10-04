@@ -40,7 +40,8 @@ it('keeps rooms at the same location separate and layouts within their room', as
 it('reads full characteristics and latest values on refresh and reopening without writes', async () => {
   let saved = venue
   const fetch = vi.fn().mockImplementation(async (url: string) => response(
-    url.endsWith('/bookings') ? [] : url.endsWith('/venues') ? [saved] : saved))
+    url.endsWith('/bookings') || url.endsWith('/operational-issues') ? []
+      : url.endsWith('/venues') ? [saved] : saved))
   vi.stubGlobal('fetch', fetch)
   page()
   const user = userEvent.setup()
@@ -69,6 +70,21 @@ it('reads full characteristics and latest values on refresh and reopening withou
   await user.click(screen.getByRole('link', { name: 'View venue details' }))
   expect(await screen.findByText('80 people')).toBeInTheDocument()
   expect(fetch.mock.calls.every(call => call[1].method === 'GET' && call[1].cache === 'no-store')).toBe(true)
+})
+
+it('validates an operational issue before posting', async () => {
+  const fetch = vi.fn().mockImplementation(async (url: string) => {
+    if (url.endsWith('/bookings') || url.endsWith('/operational-issues')) return response([])
+    return response(venue)
+  })
+  vi.stubGlobal('fetch', fetch)
+  page('/venue-staff/catalogue/room-1')
+  const user = userEvent.setup()
+
+  await screen.findByRole('heading', { name: 'Operational issues' })
+  await user.click(screen.getByRole('button', { name: 'Report issue' }))
+  expect(screen.getByRole('alert')).toHaveTextContent('Issue description is required.')
+  expect(fetch.mock.calls.every(call => call[1].method !== 'POST')).toBe(true)
 })
 
 it.each([403, 404])('hides details and never requests bookings when venue read returns %s', async status => {

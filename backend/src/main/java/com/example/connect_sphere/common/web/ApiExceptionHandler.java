@@ -27,6 +27,7 @@ import com.example.connect_sphere.notification.service.NotificationNotFoundExcep
 import com.example.connect_sphere.venue.service.InvalidVenueException;
 import com.example.connect_sphere.user.service.InvalidRefreshTokenException;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
+import com.example.connect_sphere.venueissue.service.InvalidVenueOperationalIssueException;
 
 /** One place that turns domain exceptions into HTTP responses, so every
  * controller can just let them propagate. Add a handler here per new domain
@@ -43,6 +44,11 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleInvalidVenue(InvalidVenueException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidVenueOperationalIssueException.class)
+    public ResponseEntity<ApiError> handleInvalidVenueOperationalIssue(InvalidVenueOperationalIssueException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(EventRequestNotFoundException.class)

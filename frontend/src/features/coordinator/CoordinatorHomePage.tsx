@@ -17,6 +17,9 @@ export function CoordinatorHomePage() {
         <Link to="/coordinator/review-queue" className="button button--primary">
           Review requests
         </Link>
+        <Link to="/coordinator/operational-issues" className="button button--secondary">
+          Venue issues
+        </Link>
       </div>
 
       <div className="coordinator-home__more">
