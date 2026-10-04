@@ -10,4 +10,6 @@ import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
 public interface VenueOperationalIssueRepository extends JpaRepository<VenueOperationalIssue, UUID> {
 
     List<VenueOperationalIssue> findByVenueIdOrderByAffectedFromAscCreatedAtDesc(UUID venueId);
+
+    List<VenueOperationalIssue> findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List<UUID> venueIds);
 }

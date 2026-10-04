@@ -35,6 +35,27 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
         OffsetDateTime getEndDatetime();
     }
 
+    interface CoordinatorBooking {
+        UUID getVenueId();
+        UUID getEventId();
+        String getEventName();
+        OffsetDateTime getStartDatetime();
+        OffsetDateTime getEndDatetime();
+    }
+
+    @Query("""
+            SELECT b.venueId AS venueId, e.eventId AS eventId, e.eventName AS eventName,
+                   e.startDatetime AS startDatetime, e.endDatetime AS endDatetime
+            FROM VenueBookingRecord b, Event e
+            WHERE e.eventId = b.eventId
+              AND e.coordinatorId = :coordinatorId
+              AND b.status = :status
+            ORDER BY e.startDatetime
+            """)
+    List<CoordinatorBooking> findConfirmedForCoordinator(
+            @Param("coordinatorId") UUID coordinatorId,
+            @Param("status") VenueBookingStatus status);
+
     @Query("""
             SELECT b.venueId AS venueId, e.eventName AS eventName,
                    e.startDatetime AS startDatetime, e.endDatetime AS endDatetime
