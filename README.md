@@ -64,6 +64,21 @@ the `db` service: `docker compose up -d db`, then from `backend/`:
 its line endings were re-saved as CRLF by your editor/checkout — run
 `sed -i 's/\r$//' backend/mvnw` and it'll work again; `.gitattributes` at the
 repo root should prevent this going forward.)
+### Jacoco
+
+To run jacoco , 
+
+```
+docker compose run --rm backend-test clean verify
+xdg-open backend/target/site/jacoco/index.html 
+```
+
+to view the htmls.
+
+Shows each package-> classes
+Red diamond shows not ran at all, Yellow some missing branches, Green is all ran.
+
+Jacoco only show whats ran during tests, but not whats actually test, so check to make sure
 
 ## Development
 ### Frontend
@@ -75,3 +90,4 @@ repo root should prevent this going forward.)
 2) Unit tests to be created for each features/functions when the time is right
 ### DB
 1) All db tables to exist and created via migration files, do not auto create in the springboot, keep auto-ddl to validate.
+

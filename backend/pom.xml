@@ -20,6 +20,8 @@
 		<java.version>25</java.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<springdoc.version>3.1.0</springdoc.version>
+		<!-- 0.8.14+ is needed to read Java 25 class files -->
+		<jacoco.version>0.8.15</jacoco.version>
 	</properties>
 
 	<dependencies>
@@ -153,6 +155,40 @@
 						</path>
 					</annotationProcessorPaths>
 				</configuration>
+			</plugin>
+			<!-- Test coverage. prepare-agent sets the argLine property Surefire
+			     uses to launch the test JVM with the JaCoCo agent; if Surefire
+			     ever gets its own <argLine>, it must include @{argLine} or
+			     coverage silently drops to 0%. report writes
+			     target/site/jacoco/index.html during `verify`. -->
+			<plugin>
+				<groupId>org.jacoco</groupId>
+				<artifactId>jacoco-maven-plugin</artifactId>
+				<version>${jacoco.version}</version>
+				<configuration>
+					<excludes>
+						<!-- MapStruct output isn't marked @Generated, so JaCoCo can't skip it on its own -->
+						<exclude>**/*MapperImpl.class</exclude>
+						<!-- MVC-convention scaffolding, not domain code -->
+						<exclude>com/example/connect_sphere/mock/**</exclude>
+						<exclude>com/example/connect_sphere/ConnectSphereApplication.class</exclude>
+					</excludes>
+				</configuration>
+				<executions>
+					<execution>
+						<id>prepare-agent</id>
+						<goals>
+							<goal>prepare-agent</goal>
+						</goals>
+					</execution>
+					<execution>
+						<id>report</id>
+						<phase>verify</phase>
+						<goals>
+							<goal>report</goal>
+						</goals>
+					</execution>
+				</executions>
 			</plugin>
 		</plugins>
 	</build>
