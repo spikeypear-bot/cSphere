@@ -53,6 +53,20 @@ Backlog stories: EO04, EC07, EC08, EC-NEW1, EC-NEW2, VS08, VS09, VS13, VS25, TS0
 
 **DEV06 (concurrency-safe booking checks) is the highest-risk item in the whole roadmap** — the schema has no DB-level overlap constraint (`SCHEMA.md` gap #1), and the customer briefing explicitly calls out double-booking as a real operational failure today. Do not defer this past Slice 2; a demo that can still double-book a venue under concurrent requests will read as a core-feature failure, not a polish gap.
 
+## EC07 — Coordinator equipment requests (implemented 2026-10-05)
+
+The Event Coordinator can open an event in Planning, submit itemised equipment
+quantities and/or technical notes, and see whether the request is awaiting
+Technical Support review or has been approved. The request is saved with
+`processing` status and appears in the existing Technical Support reservation
+queue. The API requires the assigned Coordinator, rejects requests outside
+Planning, validates selections/quantities, and prevents another active request
+for the same event.
+
+Verified: four backend service tests, focused frontend tests, and the frontend
+production build. A live end-to-end check against a running database has not
+been performed in this workspace.
+
 ## Slice 3 — Changes, Cancellation, Registration, Notifications (Sprint 4 per backlog)
 
 Goal: the remaining core-feature surface — event changes/cancellation, attendee registration, and notifications — closing out the 20 core features.
