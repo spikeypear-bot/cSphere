@@ -124,6 +124,10 @@ public class SecurityConfig{
 		    // is TS02, so writes narrow to the technician below.
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
+		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
+			    "/api/equipment-requests/*/lines").hasRole("TECHNICIAN")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasRole("EC")
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
 		    // EO09 "Confirmed": only the assigned Coordinator confirms
 		    // (enforced in EventService.confirm() itself, same pattern as
 		    // approve/reject). Reads are open to both roles that can

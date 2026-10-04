@@ -77,13 +77,17 @@ describe('EventDetailsPage — EO09 confirmed-arrangements view and Confirm acti
     expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
   })
 
-  it('shows a Confirm button to the assigned Coordinator while pending', async () => {
+  it('shows coordinator planning actions while the event is pending', async () => {
     seedSession('coordinator')
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, pendingEvent())))
 
     renderPage('/coordinator')
 
     expect(await screen.findByRole('button', { name: 'Confirm event' })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Request equipment' })).toHaveAttribute(
+      'href',
+      `/coordinator/events/${EVENT_ID}/equipment-request`,
+    )
   })
 
   it('confirming reloads the event and hides the Confirm button once confirmed', async () => {

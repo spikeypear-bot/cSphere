@@ -31,6 +31,13 @@ public class EquipmentRequest {
 
     protected EquipmentRequest() {}
 
+    public EquipmentRequest(UUID id, UUID eventId, EquipmentRequestStatus status, String technicalRequirement) {
+        this.id = id;
+        this.eventId = eventId;
+        this.status = status;
+        this.technicalRequirement = technicalRequirement;
+    }
+
     public UUID getId() { return id; }
     public UUID getEventId() { return eventId; }
     public EquipmentRequestStatus getStatus() { return status; }

@@ -138,6 +138,15 @@ export function EventDetailsPage() {
       ) : null}
 
       {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={event.status === 'pending'} /> : null}
+      {role === 'coordinator' && event.status === 'pending' ? (
+        <Card className="event-details__venue">
+          <h2>Equipment</h2>
+          <p>Submit the equipment needs for Technical Support Staff to review and prepare.</p>
+          <Link className="button button--primary" to={`/coordinator/events/${event.eventId}/equipment-request`}>
+            Request equipment
+          </Link>
+        </Card>
+      ) : null}
 
       {canConfirm ? (
         <Card className="event-details__confirm">

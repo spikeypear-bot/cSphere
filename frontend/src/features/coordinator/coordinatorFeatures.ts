@@ -22,16 +22,6 @@ export const coordinatorFeatures: SkeletonFeature[] = [
     suggestedBackendPackage: 'com.example.connect_sphere.venue',
   },
   {
-    path: 'equipment-request',
-    navLabel: 'Request equipment',
-    pageTitle: 'Equipment Request',
-    storyIds: ['EC07'],
-    featureArea: 'Equipment Request Management',
-    summary: 'Request equipment for an event from Technical Support Staff.',
-    layout: 'form',
-    suggestedBackendPackage: 'com.example.connect_sphere.equipmentrequest',
-  },
-  {
     path: 'confirm-event',
     navLabel: 'Confirm an event',
     pageTitle: 'Event Confirmation',

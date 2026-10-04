@@ -24,6 +24,11 @@ public class EquipmentRequestLine {
 
     protected EquipmentRequestLine() {}
 
+    public EquipmentRequestLine(EquipmentRequestLineId id, int quantity) {
+        this.id = id;
+        this.quantity = quantity;
+    }
+
     public EquipmentRequestLineId getId() { return id; }
     public Equipment getEquipment() { return equipment; }
     public int getQuantity() { return quantity; }

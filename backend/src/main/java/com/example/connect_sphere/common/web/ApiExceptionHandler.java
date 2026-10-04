@@ -1,6 +1,7 @@
 package com.example.connect_sphere.common.web;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -9,6 +10,8 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestStateException;
+import com.example.connect_sphere.equipmentrequest.InvalidEquipmentRequestException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotEditableException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotPendingException;
@@ -138,6 +141,16 @@ public class ApiExceptionHandler {
     @ExceptionHandler(EventNotPendingException.class)
     public ResponseEntity<ApiError> handleEventNotPending(EventNotPendingException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EquipmentRequestStateException.class)
+    public ResponseEntity<ApiError> handleEquipmentRequestState(EquipmentRequestStateException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidEquipmentRequestException.class)
+    public ResponseEntity<ApiError> handleInvalidEquipmentRequest(InvalidEquipmentRequestException ex) {
+        return ResponseEntity.status(HttpStatusCode.valueOf(422)).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(NotificationNotFoundException.class)
