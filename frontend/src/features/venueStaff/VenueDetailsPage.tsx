@@ -1,4 +1,4 @@
-now import { Link, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { Card } from '../../components/ui/Card'
