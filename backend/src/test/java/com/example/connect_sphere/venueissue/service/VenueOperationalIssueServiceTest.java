@@ -19,11 +19,13 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venueissue.dto.CreateVenueOperationalIssueRequest;
 import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
 import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRepository;
+import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
 class VenueOperationalIssueServiceTest {
 
     @Mock private VenueOperationalIssueRepository issues;
     @Mock private VenueRepository venues;
+    @Mock private VenueBookingRecordRepository bookings;
 
     private VenueOperationalIssueService service;
     private final UUID venueId = UUID.randomUUID();
@@ -32,7 +34,7 @@ class VenueOperationalIssueServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new VenueOperationalIssueService(issues, venues);
+        service = new VenueOperationalIssueService(issues, venues, bookings);
         when(issues.save(any(VenueOperationalIssue.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
@@ -52,6 +54,7 @@ class VenueOperationalIssueServiceTest {
         assertThat(saved.affectedUntil()).isEqualTo(until);
         assertThat(saved.createdBy()).isEqualTo(userId);
         verify(issues).save(any(VenueOperationalIssue.class));
+        org.mockito.Mockito.verifyNoInteractions(bookings);
     }
 
     @Test
@@ -113,4 +116,5 @@ class VenueOperationalIssueServiceTest {
         assertThat(service.list(venueId)).isEmpty();
         verify(issues).findByVenueIdOrderByAffectedFromAscCreatedAtDesc(venueId);
     }
+
 }
