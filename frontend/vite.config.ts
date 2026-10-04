@@ -20,5 +20,15 @@ export default defineConfig({
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
     globals: false,
+    // Only collected by `npm run test:coverage`; plain `npm test` skips it.
+    // `include` lists every source file, so files no test imports still show
+    // up at 0% instead of silently missing from the report.
+    coverage: {
+      provider: 'v8',
+      reporter: ['text-summary', 'html'],
+      reportsDirectory: './coverage',
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/**/*.d.ts'],
+    },
   },
 })
