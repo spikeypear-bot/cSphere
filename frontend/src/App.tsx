@@ -13,6 +13,7 @@ import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
 import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
 import { RequestReviewPage } from './features/coordinator/RequestReviewPage'
 import { VenueBookingRequestPage } from './features/coordinator/VenueBookingRequestPage'
+import { VenueSearchPage } from './features/coordinator/VenueSearchPage'
 import { OperationalIssuesPage } from './features/coordinator/OperationalIssuesPage'
 import { EquipmentRequestPage } from './features/coordinator/EquipmentRequestPage'
 import { ClarificationResponsePage } from './features/organiser/ClarificationResponsePage'
@@ -90,6 +91,7 @@ function CoordinatorRoutes() {
       <Route path="requests/:requestId" element={<RequestReviewPage />} />
       <Route path="events/:eventId" element={<EventDetailsPage />} />
       <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
+      <Route path="venue-search" element={<VenueSearchPage />} />
       <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
       <Route path="operational-issues" element={<OperationalIssuesPage />} />
       {skeletonRoutes(coordinatorFeatures)}

@@ -1,17 +1,15 @@
-import type { ApiError } from './reservationApi'
+import { ApiError } from './reservationApi'
 
 // Turns a raw error into the message shown to the user (AC 9).
 export function describeReserveError(error: unknown): string {
-  if (error && typeof error === 'object' && 'status' in error) {
-    const apiError = error as ApiError
-    if (apiError.status === 409) {
-      // The backend already writes a specific, readable message for 409s.
-      return apiError.body || 'That equipment is not available for the selected period.'
+  if (error instanceof ApiError) {
+    if (error.status === 409) {
+      return error.body || 'That equipment is not available for the selected period.'
     }
-    if (apiError.status === 400) {
-      return apiError.body || 'That reservation request was invalid.'
+    if (error.status === 400) {
+      return error.body || 'That reservation request was invalid.'
     }
-    if (apiError.status === 404) {
+    if (error.status === 404) {
       return 'That equipment could not be found.'
     }
   }

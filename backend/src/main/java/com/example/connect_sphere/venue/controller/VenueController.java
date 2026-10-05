@@ -14,16 +14,20 @@ import com.example.connect_sphere.common.web.ApiError;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
 import com.example.connect_sphere.venue.dto.UpdateVenueDto;
 import com.example.connect_sphere.venue.dto.VenueDto;
+import com.example.connect_sphere.venue.service.InvalidVenueSearchException;
 import com.example.connect_sphere.venue.service.VenueService;
+import com.example.connect_sphere.venue.service.VenueSearchService;
 
 /** Catalogue API. Authentication and endpoint roles are enforced by SecurityConfig; no per-venue scoping. */
 @RestController
 @RequestMapping("/api/venues")
 public class VenueController {
     private final VenueService service;
+    private final VenueSearchService searchService;
 
-    public VenueController(VenueService service) {
+    public VenueController(VenueService service, VenueSearchService searchService) {
         this.service = service;
+        this.searchService = searchService;
     }
 
     @PostMapping
@@ -40,6 +44,15 @@ public class VenueController {
     @GetMapping
     public List<VenueDto> list() {
         return service.list();
+    }
+
+    @GetMapping("/search")
+    public List<VenueDto> search(
+            @RequestParam(required = false) String startDatetime,
+            @RequestParam(required = false) String endDatetime,
+            @RequestParam(required = false) String capacity,
+            @RequestParam(required = false) List<String> facility) {
+        return searchService.search(startDatetime, endDatetime, capacity, facility);
     }
 
     @GetMapping("/{id}")
@@ -75,5 +88,10 @@ public class VenueController {
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> handleInvalidId(MethodArgumentTypeMismatchException ex) {
         return ResponseEntity.badRequest().body(ApiError.of("Venue ID must be a valid UUID."));
+    }
+
+    @ExceptionHandler(InvalidVenueSearchException.class)
+    public ResponseEntity<ApiError> handleInvalidSearch(InvalidVenueSearchException ex) {
+        return ResponseEntity.badRequest().body(ApiError.of(ex.getMessage()));
     }
 }

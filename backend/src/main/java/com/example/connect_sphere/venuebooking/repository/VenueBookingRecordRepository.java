@@ -72,6 +72,18 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
             @Param("start") OffsetDateTime start,
             @Param("end") OffsetDateTime end);
 
+    @Query("""
+            SELECT DISTINCT b.venueId
+            FROM VenueBookingRecord b, Event e
+            WHERE e.eventId = b.eventId
+              AND b.status = :status
+              AND e.startDatetime < :end AND e.endDatetime > :start
+            """)
+    List<UUID> findVenueIdsWithOverlappingBookings(
+            @Param("status") VenueBookingStatus status,
+            @Param("start") OffsetDateTime start,
+            @Param("end") OffsetDateTime end);
+
     /** Bound as a parameter, not a JPQL enum literal: Hibernate renders a
      * literal as a cast to a type named after the Java enum, which does not
      * exist in Postgres (the type is venue_booking_status). */
