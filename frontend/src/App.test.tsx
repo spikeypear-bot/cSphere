@@ -61,7 +61,7 @@ describe('App routing — role consoles', () => {
     signInAs('technical-support', 'tech1', 'ConnectSphere')
     renderApp('/technical-support')
 
-    await user.click(screen.getByRole('link', { name: /Check availability/i }))
+    await user.click(screen.getByRole('link', { name: /Skeleton Check availability/i }))
 
     expect(await screen.findByRole('heading', { name: 'Equipment Availability' })).toBeInTheDocument()
     expect(screen.getByText('TS01')).toBeInTheDocument()
