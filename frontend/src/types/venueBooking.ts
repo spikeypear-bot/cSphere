@@ -18,5 +18,6 @@ export interface VenueBookingDto {
    * accessibility feature, their justification. Absent on older bookings. */
   bookingNotes?: string | null
   suitabilityNote?: string | null
+  rejectReason?: string | null
   submittedAt?: string | null
 }

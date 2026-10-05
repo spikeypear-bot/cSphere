@@ -50,7 +50,7 @@ it('renders pending summaries with status and opens the selected existing bookin
     expect(screen.queryByRole('heading', { name: status })).not.toBeInTheDocument()
   }
   await userEvent.click(link)
-  expect(await screen.findByRole('region', { name: 'Event requirements' })).toHaveTextContent('Workshop')
+  expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Workshop')
   expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
 })
 
@@ -122,10 +122,10 @@ it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
     })
     vi.stubGlobal('fetch', fetch); page()
     await userEvent.click(await screen.findByRole('link', { name: 'View booking details' }))
-    expect(await screen.findByRole('region', { name: 'Event requirements' })).toHaveTextContent('150 people')
+    expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('150 people')
     expect(screen.getByText('Updated seating')).toBeInTheDocument()
     expect(screen.getByLabelText(`Status: ${status}`)).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(`This booking request is no longer pending. Its current status is ${status}.`)
+    expect(screen.queryByText(/This booking request is no longer pending/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Back to Pending Booking Requests' }))
@@ -161,10 +161,10 @@ it.each([
     .mockResolvedValue(response(booking))
   vi.stubGlobal('fetch', fetch); page('venue-staff', `/venue-staff/bookings/${id}?from=booking-approvals`)
   expect(await screen.findByRole('alert')).toHaveTextContent(message as string)
-  expect(screen.queryByRole('region', { name: 'Event requirements' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Event Requirements' })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Back to Pending Booking Requests' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
-  expect(await screen.findByRole('region', { name: 'Event requirements' })).toHaveTextContent('Workshop')
+  expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Workshop')
 })
 
 it('ignores a late detail response after returning to the queue', async () => {
@@ -176,7 +176,7 @@ it('ignores a late detail response after returning to the queue', async () => {
   vi.stubGlobal('fetch', fetch); page()
   await userEvent.click(await screen.findByRole('link', { name: 'View booking details' }))
   expect(screen.getByRole('status')).toHaveTextContent('Loading booking details')
-  expect(screen.queryByRole('region', { name: 'Event requirements' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Event Requirements' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('link', { name: 'Back to Pending Booking Requests' }))
   await screen.findByRole('link', { name: 'View booking details' })
   await act(async () => { finish(response({ ...booking, event: { ...booking.event, eventName: 'Late response' } })) })

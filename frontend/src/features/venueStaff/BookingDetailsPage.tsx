@@ -12,21 +12,19 @@ export function BookingDetailsPage() {
   const { bookingId } = useParams()
   const [searchParams] = useSearchParams()
   const fromApprovals = searchParams.get('from') === 'booking-approvals'
-  const { data, error, retry, loading, replaceData, failRead } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, !fromApprovals)
+  const { data: booking, error, retry, loading, replaceData, failRead } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, !fromApprovals)
+  const data = booking ? { ...booking, status: booking.status ?? 'pending' } : undefined
   return <div className="feature-skeleton booking-details-page">
     <Link to={fromApprovals ? '/venue-staff/booking-approvals' : data ? `/venue-staff/catalogue/${data.venue.venueId}` : '/venue-staff/catalogue'}>
       {fromApprovals ? 'Back to Pending Booking Requests' : data ? 'Back to venue details' : 'Back to venue catalogue'}
     </Link>
     <h1>Booking details</h1>
-    {fromApprovals && data && !loading && !error && data.status !== 'pending' && <p role="status">
-      This booking request is no longer pending. Its current status is {data.status}.
-    </p>}
     {error && <div><p role="alert">{error}{data && " Showing the previously loaded booking; the requested booking could not be loaded."}</p><Button onClick={retry}>Try again</Button></div>}
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>
         {!loading && !error && data.bookingId === bookingId
           ? <BookingApproval key={bookingId} booking={data} onApproved={replaceData} onUnavailable={failRead} />
-          : <div className="booking-details-page__section-header"><BookingInformationHeading status={data.status} /></div>}
+          : <div className="booking-details-page__section-header"><BookingInformationHeading /></div>}
         <div className="booking-detail-layout">
           <section aria-labelledby="venue-information-heading">
             <VenueDetailsPanel venue={data.venue} />
@@ -34,7 +32,7 @@ export function BookingDetailsPage() {
           <div className="booking-requirements-column" aria-busy={loading}>
             {loading && <span className="booking-loading-notice" role="status">Loading next booking…</span>}
             <section aria-labelledby="event-requirements-heading">
-              <EventRequirementsPanel event={data.event} />
+              <EventRequirementsPanel event={data.event} status={data.status} rejectReason={data.rejectReason} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
             {!fromApprovals && <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />}

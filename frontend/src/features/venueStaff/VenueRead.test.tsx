@@ -21,6 +21,20 @@ function page(path = '/venue-staff/catalogue') {
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+it('opens venue panels without duplicate sibling keys', async () => {
+  const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
+  try {
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => response(
+      url.endsWith('/bookings') || url.endsWith('/operational-issues') ? [] : venue)))
+    page('/venue-staff/catalogue/room-1')
+    await screen.findByText('No associated bookings.')
+    expect(screen.getByRole('heading', { name: 'Operational issues' })).toBeInTheDocument()
+    expect(errors.mock.calls.flat().join(' ')).not.toContain('same key')
+  } finally {
+    errors.mockRestore()
+  }
+})
+
 it('keeps rooms at the same location separate and layouts within their room', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([venue,
     { ...venue, venueId: 'room-2', venueAddress: 'School A - Classroom 2, Level 2', venueCapacity: 50 },

@@ -360,3 +360,21 @@ The booking details header displays its backend status as a pill below **Venue
 information**, using the same style as the venue layout tags. The heading and
 status form a two-row block aligned beside the approval action. This shared header
 is used by both catalogue navigation and `?from=booking-approvals` navigation.
+
+## VS04 rejection
+
+`PATCH /api/venue-bookings/{bookingId}/reject` requires Venue Staff access and
+JSON `{ "reason": "Venue unavailable due to maintenance." }`. A nonblank reason
+is required and saved after trimming. Returns the updated booking including
+`rejectReason`, also available in coordinator booking history.
+
+The event lock shared with approval/submission/cancellation and a pending-only
+conditional update ensure status and reason commit together. Non-pending decisions
+return 409 without overwriting the reason; missing bookings return 404, invalid
+reasons 422, and database update failures 503.
+
+The existing booking details page provides a textarea and confirmation. Both
+decision actions disappear after rejection, and the saved reason is displayed.
+The pending queue excludes rejected records. After an uncertain response the UI
+reads current booking data before allowing another decision. Booking relationships
+and event details remain unchanged; rejection creates no venue commitment.

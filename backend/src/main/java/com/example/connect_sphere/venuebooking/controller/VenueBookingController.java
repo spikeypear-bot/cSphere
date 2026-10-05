@@ -21,6 +21,12 @@ public class VenueBookingController {
     @PatchMapping("/venue-bookings/{bookingId}/approve")
     public VenueBookingDto approve(@PathVariable UUID bookingId) { return service.approve(bookingId); }
 
+    @PatchMapping("/venue-bookings/{bookingId}/reject")
+    public VenueBookingDto reject(@PathVariable UUID bookingId,
+            @RequestBody com.example.connect_sphere.venuebooking.dto.RejectVenueBookingRequest request) {
+        return service.reject(bookingId, request.reason());
+    }
+
     @ExceptionHandler({org.springframework.dao.DataAccessException.class,
             org.springframework.transaction.TransactionException.class})
     public ResponseEntity<ApiError> updateFailed(RuntimeException ex) {

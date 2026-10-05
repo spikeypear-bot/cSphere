@@ -301,4 +301,20 @@ class VenueBookingRequestFlowTest {
         mvc.perform(get("/api/events/" + eventId + "/timeline").with(flow.as("eo1")))
                 .andExpect(jsonPath("$[?(@.type == 'venue_booking_requested')]").isEmpty());
     }
+    @Test
+    void staffRejectionIsVisibleToAssignedCoordinator() throws Exception {
+        UUID eventId = event(150, "none");
+        UUID venueId = venue(200, List.of());
+        String created = submit(eventId, "ec1", bookingFor(venueId))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String id = flow.read(created).get("bookingId").asString();
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch("/api/venue-bookings/" + id + "/reject")
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("staff").roles("VS"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Maintenance\"}"))
+                .andExpect(status().isOk());
+        sync();
+        mvc.perform(get("/api/events/" + eventId + "/venue-bookings").with(flow.as("ec1")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("rejected"))
+                .andExpect(jsonPath("$[0].rejectReason").value("Maintenance"));
+    }
 }

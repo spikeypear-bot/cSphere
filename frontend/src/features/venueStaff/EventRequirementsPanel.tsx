@@ -5,11 +5,22 @@ import type { VenueBookingDto } from '../../types/venueBooking'
 
 import { formatEventDateTime } from './formatEventDateTime'
 
-export function EventRequirementsPanel({ event }: { event: VenueBookingDto['event'] }) {
+export function EventRequirementsPanel({ event, status, rejectReason }: {
+  event: VenueBookingDto['event']
+  status: VenueBookingDto['status']
+  rejectReason?: string | null
+}) {
   const accessibility = event.accessibilityNeeds.map(value => value === 'none' ? 'No accessibility requirements'
     : venueAccessibilityLabels[value as AccessibilityFeature] ?? value).join(', ')
   return <Card className="feature-skeleton__body event-requirements-panel">
-    <h2 id="event-requirements-heading">Event requirements</h2>
+    <div className="event-requirements-panel__header">
+      <h2 id="event-requirements-heading">Event Requirements</h2>
+      <span className="venue-card-preview__tag booking-status-tag" aria-label={'Status: ' + status} aria-live="polite">{status}</span>
+    </div>
+    {status === 'rejected' && rejectReason?.trim() && <Card className="booking-rejection-banner" role="status" aria-label="Rejection reason">
+      <strong>Rejection Reason</strong>
+      <p>{rejectReason}</p>
+    </Card>}
     <h3>{event.eventName}</h3>
     <dl className="venue-card-preview__information">
       <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(event.startDatetime)}</dd></div>

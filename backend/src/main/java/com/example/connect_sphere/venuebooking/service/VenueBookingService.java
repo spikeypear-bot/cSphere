@@ -59,6 +59,29 @@ public class VenueBookingService {
         return get(bookingId);
     }
 
+    /** VS04: use the same event lock as approval, submission and cancellation. */
+    @Transactional
+    public VenueBookingDto reject(UUID bookingId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new InvalidVenueBookingException("A rejection reason is required.");
+        }
+        String trimmedReason = reason.strip();
+        UUID eventId = records.findEventId(bookingId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        events.findForUpdate(eventId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        var booking = records.findById(bookingId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        if (booking.getStatus() != VenueBookingStatus.pending) {
+            throw new VenueBookingStateException("Only pending bookings can be rejected. This booking is "
+                    + booking.getStatus().name() + ".");
+        }
+        if (records.rejectPending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.rejected, trimmedReason) != 1) {
+            throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
+        }
+        return get(bookingId);
+    }
+
     public List<VenueBookingDto> listPending() {
         return bookings.findByStatusOrderByEventStartDatetimeAscBookingIdAsc(VenueBookingStatus.pending)
                 .stream().map(this::toDto).toList();
@@ -82,6 +105,6 @@ public class VenueBookingService {
                         event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
                         event.getExpectedAttendance(), event.getVenueRequirements(),
                         List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()),
-                booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt());
+                booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt(), booking.getRejectReason());
     }
 }

@@ -25,8 +25,8 @@ export function VenueDetailsPage() {
     </div>
     {venue.error ? <div><p role="alert">{venue.error}</p><Button onClick={venue.retry}>Retry venue</Button></div>
       : !venue.data ? <p role="status">Loading venue…</p> : <VenueDetailsPanel venue={venue.data} />}
-    {venue.data && <AssociatedBookings key={venue.data.venueId} venueId={venue.data.venueId} />}
-    {venue.data && <VenueOperationalIssuesPanel key={venue.data.venueId}
+    {venue.data && <AssociatedBookings key={`bookings-${venue.data.venueId}`} venueId={venue.data.venueId} />}
+    {venue.data && <VenueOperationalIssuesPanel key={`issues-${venue.data.venueId}`}
       venueId={venue.data.venueId} venueAddress={venue.data.venueAddress} />}
   </div>
 }
@@ -42,7 +42,7 @@ function AssociatedBookings({ venueId }: { venueId: string }) {
           <Card className="feature-skeleton__body">
             <h3>{booking.event.eventName}</h3>
             <p>{formatEventDateTime(booking.event.startDatetime)} (Singapore time)</p>
-            <p>Status: {booking.status}</p>
+            <p>Status: {booking.status ?? 'pending'}</p>
             <Link to={`/venue-staff/bookings/${booking.bookingId}`}>View booking details</Link>
           </Card>
         </li>)}</ul>}

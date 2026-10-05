@@ -29,6 +29,9 @@ public class VenueBooking {
     @JoinColumn(name = "event_id", insertable = false, updatable = false)
     private VenueEvent event;
 
+    @Column(name = "reject_reason", insertable = false, updatable = false)
+    private String rejectReason;
+
     // EC03 (V13): what the coordinator told Venue Staff when requesting.
     @Column(name = "booking_notes", insertable = false, updatable = false)
     private String bookingNotes;
