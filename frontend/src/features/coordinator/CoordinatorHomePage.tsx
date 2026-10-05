@@ -20,6 +20,9 @@ export function CoordinatorHomePage() {
         <Link to="/coordinator/operational-issues" className="button button--secondary">
           Venue issues
         </Link>
+        <Link to="/coordinator/venue-search" className="button button--secondary">
+          Search venues
+        </Link>
       </div>
 
       <div className="coordinator-home__more">

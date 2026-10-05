@@ -19,11 +19,17 @@ public class EquipmentStatusService {
 
     private final SerialisedEquipmentRepository unitRepository;
     private final EquipmentStatusPeriodRepository periodRepository;
+    private final EquipmentRepository equipmentRepository;
+    private final EquipmentLogRepository logRepository;
 
     public EquipmentStatusService(SerialisedEquipmentRepository unitRepository,
-                                  EquipmentStatusPeriodRepository periodRepository) {
+                                  EquipmentStatusPeriodRepository periodRepository,
+                                  EquipmentRepository equipmentRepository,
+                                  EquipmentLogRepository logRepository) {
         this.unitRepository = unitRepository;
         this.periodRepository = periodRepository;
+        this.equipmentRepository = equipmentRepository;
+        this.logRepository = logRepository;
     }
 
     // Status of every unit for the viewed period: a block if one overlaps, else Available.
@@ -59,30 +65,43 @@ public class EquipmentStatusService {
 
     // Add a Faulty/Unavailable block. end == null means no end date.
     @Transactional
-    public StatusPeriodResponse addPeriod(UUID equipmentId, String serialNumber,
-                                          EquipmentStatus status, Instant start, Instant end) {
+    public void addPeriod(UUID equipmentId, String serialNumber,
+                          EquipmentStatus status, Instant start, Instant end) {
         if (status == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status is required");
-        }
-        if (status == EquipmentStatus.AVAILABLE) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Units are available by default. Remove a block to make a unit available.");
         }
         if (start == null || (end != null && !end.isAfter(start))) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                     "start is required, and end must be after start");
         }
         requireUnit(equipmentId, serialNumber);
+        lockEquipment(equipmentId);
 
         Instant checkEnd = (end != null) ? end : FAR_FUTURE;
-        if (!periodRepository.findOverlappingForUnit(
-                equipmentId, serialNumber, start, checkEnd).isEmpty()) {
+        List<EquipmentStatusPeriod> overlapping = periodRepository.findOverlappingForUnit(
+                equipmentId, serialNumber, start, checkEnd);
+        if (status != EquipmentStatus.AVAILABLE
+                && !logRepository.findOverlappingForUnit(equipmentId, serialNumber, start, checkEnd).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "This unit already has a status for part of that time");
+                    "This unit is already committed to an event during that time.");
         }
 
-        return StatusPeriodResponse.from(periodRepository.save(
-                new EquipmentStatusPeriod(equipmentId, serialNumber, status, start, end)));
+        List<EquipmentStatusPeriod> preserved = new java.util.ArrayList<>();
+        for (EquipmentStatusPeriod period : overlapping) {
+            periodRepository.delete(period);
+            if (period.getPeriodStart().isBefore(start)) {
+                preserved.add(new EquipmentStatusPeriod(equipmentId, serialNumber, period.getStatus(),
+                        period.getPeriodStart(), start));
+            }
+            if (end != null && (period.getPeriodEnd() == null || period.getPeriodEnd().isAfter(end))) {
+                preserved.add(new EquipmentStatusPeriod(equipmentId, serialNumber, period.getStatus(),
+                        end, period.getPeriodEnd()));
+            }
+        }
+        periodRepository.saveAll(preserved);
+        if (status != EquipmentStatus.AVAILABLE) {
+            periodRepository.save(new EquipmentStatusPeriod(equipmentId, serialNumber, status, start, end));
+        }
     }
 
     // Removing a block makes the unit Available again for that time.
@@ -91,7 +110,13 @@ public class EquipmentStatusService {
         EquipmentStatusPeriod period = periodRepository.findById(periodId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND, "Status period not found"));
+        lockEquipment(period.getEquipmentId());
         periodRepository.delete(period);
+    }
+
+    private void lockEquipment(UUID equipmentId) {
+        equipmentRepository.findForUpdate(equipmentId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
     }
 
     private void requireUnit(UUID equipmentId, String serialNumber) {

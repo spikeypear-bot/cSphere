@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import {
-  BLOCK_STATUSES,
-  type BlockStatus,
+  EQUIPMENT_STATUSES,
+  type EquipmentStatus,
   type EquipmentUnit,
   type StatusPeriod,
   type TimePeriod,
@@ -30,8 +30,8 @@ export function EquipmentStatusPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [blocks, setBlocks] = useState<StatusPeriod[]>([])
 
-  // ---- The "mark as faulty/unavailable" form (a draft until saved) ----
-  const [draftStatus, setDraftStatus] = useState<BlockStatus>('Unavailable')
+  // ---- The status change form (a draft until saved) ----
+  const [draftStatus, setDraftStatus] = useState<EquipmentStatus>('Unavailable')
   const [draftStart, setDraftStart] = useState('')
   const [draftEnd, setDraftEnd] = useState('')
   const [indefinite, setIndefinite] = useState(false)
@@ -111,15 +111,13 @@ export function EquipmentStatusPage() {
         draftStart,
         indefinite ? null : draftEnd,
       )
-      setMessage(
-        `${selectedUnit.equipmentName} ${selectedUnit.serialNumber} marked ${draftStatus} ` +
-          (indefinite ? 'until you change it back.' : 'for the chosen dates.'),
-      )
+      setMessage(`${selectedUnit.equipmentName} ${selectedUnit.serialNumber} marked ${draftStatus} ` +
+        (indefinite ? 'until changed again.' : 'for the chosen dates.'))
       resetForm()
       setReloadCount((n) => n + 1)
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
-        setError('This unit already has a status for part of those dates. Remove that period first.')
+        setError(e.message || 'This unit cannot be changed for part of those dates.')
       } else {
         setError('Could not save the change. The previous status has been kept.')
       }
@@ -219,15 +217,15 @@ export function EquipmentStatusPage() {
             </ul>
           )}
 
-          <h3>Mark as faulty or unavailable</h3>
+          <h3>Change operational status</h3>
           <label htmlFor="block-status">Status</label>
           <select
             id="block-status"
             value={draftStatus}
-            onChange={(e) => setDraftStatus(e.target.value as BlockStatus)}
+            onChange={(e) => setDraftStatus(e.target.value as EquipmentStatus)}
             disabled={saving}
           >
-            {BLOCK_STATUSES.map((s) => (
+            {EQUIPMENT_STATUSES.map((s) => (
               <option key={s} value={s}>{s}</option>
             ))}
           </select>

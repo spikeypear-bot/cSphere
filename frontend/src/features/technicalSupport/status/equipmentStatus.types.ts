@@ -1,8 +1,6 @@
 export type EquipmentStatus = 'Available' | 'Faulty' | 'Unavailable'
-
-// Only these two can be saved as a block. "Available" is the default state.
-export type BlockStatus = 'Faulty' | 'Unavailable'
-export const BLOCK_STATUSES: BlockStatus[] = ['Faulty', 'Unavailable']
+export const EQUIPMENT_STATUSES: EquipmentStatus[] = ['Available', 'Faulty', 'Unavailable']
+export type BlockStatus = Exclude<EquipmentStatus, 'Available'>
 
 export interface EquipmentUnit {
   equipmentId: string

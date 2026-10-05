@@ -159,6 +159,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | --- | --- | --- |
   | `POST /api/auth/login\|refresh\|logout` | `permitAll` | Each carries its own credential; already implemented (D19). |
   | `GET /api/venues`, `GET /api/venues/{id}` | `authenticated()` | Organisers browse venues when planning; Coordinators search them against requirements (EC04). Read is not Venue-Staff-only. |
+  | `GET /api/venues/search` | `hasRole('EC')` | EC04's date/time, capacity and facility search is a Coordinator workflow; server-side availability excludes overlapping confirmed bookings. Per D12, free-text operating information is displayed but not parsed into opening-hour availability. |
   | `POST /api/venues`, `PUT /api/venues/{id}` | `hasAnyRole('EC','VS')` | Catalogue authoring is VS07/VS18; widened to Coordinators per open question 1 below. |
   | `/api/event-requests/**` | `hasRole('EO')` **plus organisation scoping from the token claim** | EO01/EO02/EO15. Narrowed from `hasAnyRole('EO','EC')` — see open question 2. |
   | `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |

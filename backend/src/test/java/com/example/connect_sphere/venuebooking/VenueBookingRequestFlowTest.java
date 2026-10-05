@@ -21,6 +21,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
+import com.example.connect_sphere.common.enums.Facility;
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
@@ -60,6 +61,13 @@ class VenueBookingRequestFlowTest {
     private UUID venue(int capacity, List<AccessibilityFeature> accessibility) {
         UUID id = venueService.createVenue(new CreateVenueDto("EC03 Hall " + UUID.randomUUID(), capacity,
                 List.of(VenueLayout.theatre), "08:00-22:00 daily", null, accessibility, List.of())).venueId();
+        entityManager.flush();
+        return id;
+    }
+
+    private UUID searchableVenue(int capacity, List<Facility> facilities) {
+        UUID id = venueService.createVenue(new CreateVenueDto("EC04 Hall " + UUID.randomUUID(), capacity,
+                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, List.of(), facilities)).venueId();
         entityManager.flush();
         return id;
     }
@@ -245,6 +253,62 @@ class VenueBookingRequestFlowTest {
                 .filter(o -> o.get("venue").get("venueId").asString().equals(tooSmall.toString()))
                 .findFirst().orElseThrow().get("verdict").asString();
         assertThat(blocked).isEqualTo("blocked");
+    }
+
+    @Test
+    void venueSearchCombinesAvailabilityCapacityAndAllRequiredFacilities() throws Exception {
+        UUID exactCapacity = searchableVenue(100, List.of(Facility.stage, Facility.projection));
+        UUID insufficientCapacity = searchableVenue(99, List.of(Facility.stage, Facility.projection));
+        UUID missingFacility = searchableVenue(150, List.of(Facility.stage));
+        UUID overlappingBooking = searchableVenue(150, List.of(Facility.stage, Facility.projection));
+        UUID adjacentBooking = searchableVenue(100, List.of(Facility.stage, Facility.projection));
+        UUID pendingBooking = searchableVenue(100, List.of(Facility.stage, Facility.projection));
+        otherBooking(overlappingBooking, "2027-03-10T11:59:00+08:00", "2027-03-10T14:00:00+08:00", "confirmed");
+        otherBooking(adjacentBooking, "2027-03-10T06:00:00+08:00", "2027-03-10T09:00:00+08:00", "confirmed");
+        otherBooking(pendingBooking, "2027-03-10T10:00:00+08:00", "2027-03-10T11:00:00+08:00", "pending");
+
+        String body = mvc.perform(get("/api/venues/search").with(flow.as("ec1"))
+                        .param("startDatetime", "2027-03-10T09:00:00+08:00")
+                        .param("endDatetime", "2027-03-10T12:00:00+08:00")
+                        .param("capacity", "100")
+                        .param("facility", "stage", "projection"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        List<String> venueIds = flow.read(body).valueStream()
+                .map(venue -> venue.get("venueId").asString())
+                .toList();
+        assertThat(venueIds).contains(
+                exactCapacity.toString(), adjacentBooking.toString(), pendingBooking.toString());
+        assertThat(venueIds).doesNotContain(
+                insufficientCapacity.toString(), missingFacility.toString(), overlappingBooking.toString());
+    }
+
+    @Test
+    void venueSearchRejectsInvalidDateTimeAndCapacityAndIsCoordinatorOnly() throws Exception {
+        mvc.perform(get("/api/venues/search").with(flow.as("ec1"))
+                        .param("startDatetime", "not-a-date")
+                        .param("endDatetime", "2027-03-10T12:00:00+08:00"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("valid ISO-8601")));
+
+        mvc.perform(get("/api/venues/search").with(flow.as("ec1"))
+                        .param("startDatetime", "2027-03-10T09:00:00+08:00")
+                        .param("endDatetime", "2027-03-10T12:00:00+08:00")
+                        .param("capacity", "-1"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("greater than 0")));
+
+        mvc.perform(get("/api/venues/search").with(flow.as("ec1"))
+                        .param("startDatetime", "2027-03-10T12:00:00+08:00")
+                        .param("endDatetime", "2027-03-10T09:00:00+08:00"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("after the start")));
+
+        mvc.perform(get("/api/venues/search").with(flow.as("vs1"))
+                        .param("startDatetime", "2027-03-10T09:00:00+08:00")
+                        .param("endDatetime", "2027-03-10T12:00:00+08:00"))
+                .andExpect(status().isForbidden());
     }
 
     private String bookingIdOf(ResultActions result) throws Exception {
