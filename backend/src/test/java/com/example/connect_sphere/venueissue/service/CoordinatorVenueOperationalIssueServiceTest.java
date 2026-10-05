@@ -40,7 +40,7 @@ class CoordinatorVenueOperationalIssueServiceTest {
     }
 
     @Test
-    void returnsOverlappingIssuesForConfirmedManagedBookings() {
+    void returnsOverlappingIssuesForApprovedManagedBookings() {
         UUID eventId = UUID.randomUUID();
         var from = OffsetDateTime.parse("2027-03-10T09:00:00+08:00");
         var until = OffsetDateTime.parse("2027-03-10T12:00:00+08:00");
@@ -50,7 +50,7 @@ class CoordinatorVenueOperationalIssueServiceTest {
         when(booking.getEventName()).thenReturn("Town Hall");
         when(booking.getStartDatetime()).thenReturn(from);
         when(booking.getEndDatetime()).thenReturn(until);
-        when(bookings.findConfirmedForCoordinator(coordinatorId, VenueBookingStatus.confirmed))
+        when(bookings.findApprovedForCoordinator(coordinatorId, VenueBookingStatus.approved))
                 .thenReturn(List.of(booking));
 
         var venue = mock(Venue.class);
@@ -72,8 +72,8 @@ class CoordinatorVenueOperationalIssueServiceTest {
     }
 
     @Test
-    void hidesIssuesWhenCoordinatorHasNoConfirmedManagedBookings() {
-        when(bookings.findConfirmedForCoordinator(coordinatorId, VenueBookingStatus.confirmed))
+    void hidesIssuesWhenCoordinatorHasNoApprovedManagedBookings() {
+        when(bookings.findApprovedForCoordinator(coordinatorId, VenueBookingStatus.approved))
                 .thenReturn(List.of());
 
         assertThat(service.listForCoordinator(coordinatorId)).isEmpty();

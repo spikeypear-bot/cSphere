@@ -16,5 +16,7 @@ export function useVenueRead<T>(path: string, retainPreviousData = false) {
   const current = result?.path === path && result.attempt === attempt ? result : null
   return { data: current?.data ?? (retainPreviousData ? result?.data : undefined), error: current?.error,
     loading: !current,
+    failRead: (message: string) => { setResult({ path, attempt, error: message }) },
+    replaceData: (data: T) => { setResult({ path, attempt, data }) },
     retry: () => { setAttempt(value => value + 1) } }
 }

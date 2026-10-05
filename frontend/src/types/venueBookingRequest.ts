@@ -14,7 +14,7 @@ export interface VenueOptionDto {
   reasons: string[]
 }
 
-export type VenueBookingStatus = 'pending' | 'confirmed' | 'changed' | 'rejected' | 'cancelled'
+export type VenueBookingStatus = 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
 
 export interface EventVenueBookingDto {
   bookingId: string
@@ -31,7 +31,7 @@ export interface EventVenueBookingDto {
 
 export const BOOKING_STATUS_LABELS: Record<VenueBookingStatus, string> = {
   pending: 'Pending venue review',
-  confirmed: 'Confirmed',
+  approved: 'Approved',
   changed: 'Changed',
   rejected: 'Rejected',
   cancelled: 'Cancelled',

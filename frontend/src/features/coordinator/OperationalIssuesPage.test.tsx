@@ -55,7 +55,7 @@ describe('OperationalIssuesPage (VS13)', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('No operational issues affect your confirmed venue arrangements.'))
+    expect(await screen.findByText('No operational issues affect your approved venue bookings.'))
       .toBeInTheDocument()
   })
 

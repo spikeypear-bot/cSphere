@@ -68,7 +68,7 @@ painful. Settle these before there is production data.
 | `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
-| `venue_booking_status` | `pending`, `confirmed`, `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
+| `venue_booking_status` | `pending`, `approved` (renamed from `confirmed` in V16), `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
 | `accessibilities` | `accessible_parking`, `drop_off_zone`, `public_transport`, `step_free_access`, `wide_doorways`, `elevators`, `wheelchair_support`, `none` (added V5 — see EO02) | `venues.venue_accessibilities`, `events.accessibility_needs`, `event_requests.accessibility_needs` |
 | `facilities` | `audio_visual_equipment`, `air_conditioning`, `breakout_spaces`, `projection`, `stage`, `dining_area`, `barbeque_pit` | `venues.venue_facilities` |
 
@@ -363,7 +363,7 @@ over its life.
 | `suitability_note` | `TEXT` | yes | | V13, EC03: coordinator's justification when the venue lacks a requested accessibility feature |
 
 The booking's time window is the event's `start_datetime`/`end_datetime`, never a copy. EC03
-allows at most one `pending`/`confirmed` booking per event; that rule is enforced in
+allows at most one `pending`/`approved` booking per event; that rule is enforced in
 `VenueBookingRequestService` under a row lock on the event, not by a unique index (VS02's test
 fixtures deliberately hold several bookings per event).
 
@@ -422,7 +422,7 @@ delete once real entities exist.
 
 | # | Item | Notes |
 |---|---|---|
-| 1 | No overlap protection on `venue_bookings` | Two confirmed bookings can hold the same venue at the same time. EC03 (V13) refuses a *request* that overlaps a confirmed booking, but pending requests may compete, so **VS03/VS08 must re-check overlap, under a lock, when Venue Staff confirm**. |
+| 1 | No overlap protection on `venue_bookings` | VS03 checks overlapping approved bookings under an event lock followed by a venue lock before updating status. Concurrent approvals through this service are serialised; direct SQL and future schedule-changing workflows still require equivalent protection. |
 | 2 | `organisation` is free text in 3 tables | Accepted for now; risks `connectSphere` / `ConnectSphere` drift |
 | 3 | ~~`CHAR(1)` code mappings undocumented~~ | **Resolved in V3** for `request_type` (`C`/`A`) — see §2. `equipment_type` still TODO. |
 | 4 | `event_requests` has several nullable fields that `events` requires | Approval path must handle this. Widened in V3 (`event_name`, `purpose`, `expected_attendance`, `venue_requirements` are now also nullable, to support `draft` status) — `EventRequestService.submit()` is where completeness is enforced before a request may leave `draft`. |

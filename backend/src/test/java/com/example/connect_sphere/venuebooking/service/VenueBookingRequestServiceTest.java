@@ -61,7 +61,7 @@ class VenueBookingRequestServiceTest {
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
                 activityService, notificationService);
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(bookings.findConfirmedOverlapping(any(), any(), any())).thenReturn(List.of());
+        when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());
         when(users.findByRole(UserRole.vs)).thenReturn(List.of(user(VS_ONE), user(VS_TWO)));
     }
 

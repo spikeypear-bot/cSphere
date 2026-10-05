@@ -179,6 +179,7 @@ it('retains the displayed booking and navigation after failure and throughout re
   const user = userEvent.setup()
   await user.click(screen.getByRole('button', { name: 'Next' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Showing the previously loaded booking')
+  expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
   expect(screen.getByRole('region', { name: 'Event requirements' })).toBe(requirements)
   expect(screen.getByText('Workshop')).toBeInTheDocument()
   await user.click(screen.getByRole('button', { name: 'Try again' }))
@@ -193,4 +194,119 @@ it('retains the displayed booking and navigation after failure and throughout re
   expect(screen.getByRole('region', { name: 'Event requirements' })).toBe(requirements)
   expect(fetch.mock.calls.filter(call => call[0].endsWith('/venues/v1/bookings'))).toHaveLength(1)
   expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
+})
+
+it('reviews the booking, cancels without writing, then approves exactly once and displays the response', async () => {
+  let finish!: (value: Response) => void
+  const pending = new Promise<Response>(resolve => { finish = resolve })
+  const fetch = vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') return pending
+    if (url.endsWith('/bookings')) return response([booking])
+    return response(booking)
+  })
+  vi.stubGlobal('fetch', fetch); page('/venue-staff/bookings/b1')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  const approval = screen.getByRole('region', { name: 'Booking approval' })
+  expect(approval).toHaveTextContent('Workshop')
+  expect(approval).toHaveTextContent('Seminar Room')
+  expect(approval).toHaveTextContent('Singapore time')
+  await user.click(within(approval).getByRole('button', { name: 'Cancel' }))
+  expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
+  await user.click(screen.getByRole('button', { name: 'Approve Booking' }))
+  await user.dblClick(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(screen.getByRole('button', { name: 'Approving…' })).toBeDisabled()
+  expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+  expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
+  expect(fetch.mock.calls.find(call => call[1].method === 'PATCH')?.[0]).toBe('/api/venue-bookings/b1/approve')
+  await act(async () => { finish(response({ ...booking, status: 'approved' })) })
+  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
+})
+
+it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)('does not offer approval for %s', async status => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...booking, status })))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  await screen.findByLabelText('Status: ' + status)
+  expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
+})
+
+it.each([404, 409, 503, 0])('keeps the booking pending and shows an error for failure %s', async code => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') {
+      if (!code) throw new TypeError('Network failure')
+      return response({ message: 'Approval unavailable' }, code)
+    }
+    return response(booking)
+  }))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByRole('alert')).toBeInTheDocument()
+  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Status: approved')).not.toBeInTheDocument()
+  expect(await screen.findByRole('button', { name: 'Approve Booking' })).toBeEnabled()
+})
+
+it.each(['approved', 'cancelled'] as const)('reconciles a stale approval conflict to the backend %s status', async status => {
+  let attempted = false
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') { attempted = true; return response({ message: 'This booking is no longer pending.' }, 409) }
+    return response({ ...booking, status: attempted ? status : 'pending' })
+  }))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByLabelText('Status: ' + status)).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
+  expect(screen.getByRole('alert')).toHaveTextContent('no longer pending')
+})
+
+it('removes a booking deleted between review and approval', async () => {
+  let attempted = false
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') attempted = true
+    return attempted ? response({ message: 'Booking not found' }, 404) : response(booking)
+  }))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('could not be found')
+  expect(screen.queryByLabelText('Status: pending')).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
+})
+
+it('requires a successful refresh after a lost response and failed read, then shows the committed status', async () => {
+  let attempted = false
+  let online = false
+  const fetch = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') { attempted = true; throw new TypeError('Lost response') }
+    if (attempted && !online) throw new TypeError('Offline')
+    return response({ ...booking, status: attempted ? 'approved' : 'pending' })
+  })
+  vi.stubGlobal('fetch', fetch)
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Refresh before attempting approval again')
+  expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  online = true
+  await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
+  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
+  expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
+})
+
+it('places the approval action in the venue information header', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(booking)))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const button = await screen.findByRole('button', { name: 'Approve Booking' })
+  const heading = screen.getByRole('heading', { name: 'Venue information' })
+  expect(button.parentElement).toBe(heading.parentElement?.parentElement)
+  expect(heading.parentElement?.parentElement).toHaveClass('booking-details-page__section-header')
 })

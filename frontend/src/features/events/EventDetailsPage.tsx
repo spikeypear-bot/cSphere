@@ -199,7 +199,7 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
   const [error, setError] = useState<string | null>(null)
   if (failed) return null
   if (!bookings) return null
-  const active = bookings.find((b) => b.status === 'pending' || b.status === 'confirmed')
+  const active = bookings.find((b) => b.status === 'pending' || b.status === 'approved')
   const latestRejected = bookings.find((b) => b.status === 'rejected')
 
   async function cancelRequest(bookingId: string) {

@@ -127,21 +127,21 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
-    void aConfirmedBookingOverlappingTheEventBlocksTheVenue() throws Exception {
+    void anApprovedBookingOverlappingTheEventBlocksTheVenue() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());
-        otherBooking(venueId, "2027-03-10T11:59:00+08:00", "2027-03-10T14:00:00+08:00", "confirmed");
+        otherBooking(venueId, "2027-03-10T11:59:00+08:00", "2027-03-10T14:00:00+08:00", "approved");
 
         submit(eventId, "ec1", bookingFor(venueId)).andExpect(status().isUnprocessableEntity());
         assertThat(bookingsFor(eventId)).isZero();
     }
 
     @Test
-    void aBackToBackConfirmedBookingIsNotAnOverlap() throws Exception {
+    void aBackToBackApprovedBookingIsNotAnOverlap() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());
-        otherBooking(venueId, "2027-03-10T12:00:00+08:00", "2027-03-10T14:00:00+08:00", "confirmed");
-        otherBooking(venueId, "2027-03-10T07:00:00+08:00", "2027-03-10T09:00:00+08:00", "confirmed");
+        otherBooking(venueId, "2027-03-10T12:00:00+08:00", "2027-03-10T14:00:00+08:00", "approved");
+        otherBooking(venueId, "2027-03-10T07:00:00+08:00", "2027-03-10T09:00:00+08:00", "approved");
 
         submit(eventId, "ec1", bookingFor(venueId)).andExpect(status().isCreated());
     }
@@ -270,11 +270,11 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
-    void aConfirmedBookingCannotBeCancelledHere() throws Exception {
+    void anApprovedBookingCannotBeCancelledHere() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
         sync();
-        jdbc.update("UPDATE venue_bookings SET status = 'confirmed' WHERE booking_id = ?::uuid", id);
+        jdbc.update("UPDATE venue_bookings SET status = 'approved' WHERE booking_id = ?::uuid", id);
         sync();
 
         cancel(eventId, id, "ec1").andExpect(status().isConflict());

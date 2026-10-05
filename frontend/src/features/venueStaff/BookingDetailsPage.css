@@ -44,3 +44,17 @@
 @media (max-width: 700px) {
   .venue-operational-issues__period { grid-template-columns: minmax(0, 1fr); }
 }
+
+.booking-approval { margin-bottom: 1rem; }
+.booking-approval__confirmation { padding: 1rem; border: 1px solid var(--hairline); border-radius: var(--radius-md, 12px); background: var(--panel); overflow-wrap: anywhere; }
+.booking-approval__confirmation h3 { margin-top: 0; }
+.booking-approval__confirmation dt { font-weight: 600; }
+.booking-approval__confirmation dd { margin: 0.25rem 0 0.75rem; }
+.booking-approval__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.booking-details-page__section-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.booking-details-page__section-header h2 { margin: 0; }
+.booking-details-page__section-header .button { flex-shrink: 0; }
+
+.booking-information-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+.booking-status-tag { text-transform: capitalize; }

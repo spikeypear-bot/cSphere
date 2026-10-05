@@ -50,7 +50,7 @@ export function OperationalIssuesPage() {
         <div>
           <h1>Venue operational issues</h1>
           <p className="field-hint">
-            Issues affecting venues with your confirmed event arrangements.
+            Issues affecting venues with your approved bookings.
           </p>
         </div>
         <Button variant="secondary" onClick={() => void load()}>Refresh issues</Button>
@@ -60,7 +60,7 @@ export function OperationalIssuesPage() {
       {issues === null && !error ? <p role="status">Loading operational issues…</p> : null}
       {issues?.length === 0 ? (
         <Card className="operational-issues-page__empty">
-          <p>No operational issues affect your confirmed venue arrangements.</p>
+          <p>No operational issues affect your approved venue bookings.</p>
         </Card>
       ) : null}
       {issues && issues.length > 0 ? (
@@ -87,7 +87,7 @@ export function OperationalIssuesPage() {
                     </p>
                   </div>
                 ) : (
-                  <p className="field-hint">No confirmed managed event overlaps this period.</p>
+                  <p className="field-hint">No event with an approved booking overlaps this period.</p>
                 )}
                 <p className="field-hint">Reported {formatEventDateTime(issue.createdAt)}</p>
               </Card>

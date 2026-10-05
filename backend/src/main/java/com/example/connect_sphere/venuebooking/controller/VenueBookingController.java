@@ -10,13 +10,22 @@ import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
 import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 import com.example.connect_sphere.venuebooking.service.VenueBookingNotFoundException;
 
-/** Read-only booking endpoints. Queue role access is enforced by SecurityConfig; ownership is deferred. */
+/** Booking reads and VS03 approval. Role access is enforced by SecurityConfig; ownership is deferred. */
 @RestController
 @RequestMapping("/api")
 public class VenueBookingController {
     private final VenueBookingService service;
 
     public VenueBookingController(VenueBookingService service) { this.service = service; }
+
+    @PatchMapping("/venue-bookings/{bookingId}/approve")
+    public VenueBookingDto approve(@PathVariable UUID bookingId) { return service.approve(bookingId); }
+
+    @ExceptionHandler({org.springframework.dao.DataAccessException.class,
+            org.springframework.transaction.TransactionException.class})
+    public ResponseEntity<ApiError> updateFailed(RuntimeException ex) {
+        return ResponseEntity.status(503).body(ApiError.of("The booking could not be updated. Refresh its details and try again."));
+    }
 
     @GetMapping("/venue-staff/booking-requests")
     public List<VenueBookingDto> pending() { return service.listPending(); }

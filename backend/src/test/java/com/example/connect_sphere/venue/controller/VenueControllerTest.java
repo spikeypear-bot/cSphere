@@ -290,7 +290,7 @@ class VenueControllerTest {
                 VALUES (:id,'VS07 booking isolation test','Test',CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP + interval '1 hour',50,'Test','confirmed')
                 """).setParameter("id", eventId).executeUpdate();
-        for (String bookingStatus : java.util.List.of("pending", "confirmed", "changed", "rejected", "cancelled")) {
+        for (String bookingStatus : java.util.List.of("pending", "approved", "changed", "rejected", "cancelled")) {
             for (UUID bookedVenue : java.util.List.of(venueId, otherVenueId)) {
                 entityManager.createNativeQuery("""
                         INSERT INTO venue_bookings (booking_id,venue_id,event_id,status,booking_notes,reject_reason)
@@ -340,7 +340,7 @@ class VenueControllerTest {
                 VALUES (:id,'VS18 read isolation','Test',CURRENT_TIMESTAMP,
                     CURRENT_TIMESTAMP + interval '1 hour',40,'Test','confirmed',:venue)
                 """).setParameter("id", eventId).setParameter("venue", venueId).executeUpdate();
-        for (String state : java.util.List.of("pending", "confirmed", "changed", "rejected", "cancelled")) {
+        for (String state : java.util.List.of("pending", "approved", "changed", "rejected", "cancelled")) {
             entityManager.createNativeQuery("""
                     INSERT INTO venue_bookings (booking_id,venue_id,event_id,status,booking_notes)
                     VALUES (:id,:venue,:event,cast(:status as venue_booking_status),'Preserve me')

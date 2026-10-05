@@ -66,7 +66,7 @@ class VenueBookingReadTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"pending", "confirmed", "changed", "rejected", "cancelled"})
+    @ValueSource(strings = {"pending", "approved", "changed", "rejected", "cancelled"})
     void readsCurrentLinkedEventWithoutChangingAnyRecord(String status) throws Exception {
         UUID venueId = venue();
         UUID eventId = event();
@@ -127,7 +127,7 @@ class VenueBookingReadTest {
     void listsOnlyAssociatedBookingsAndReturnsEmptyForUnbookedVenue() throws Exception {
         UUID selected = venue(); UUID other = venue(); UUID eventId = event();
         UUID first = booking(selected, eventId, "pending");
-        UUID second = booking(selected, eventId, "confirmed");
+        UUID second = booking(selected, eventId, "approved");
         booking(other, eventId, "pending");
         List<String> ordered = List.of(first.toString(), second.toString()).stream().sorted().toList();
         mvc.perform(get("/api/venues/" + selected + "/bookings"))
@@ -146,7 +146,7 @@ class VenueBookingReadTest {
         jdbc.update("UPDATE events SET start_datetime='2026-09-25T09:00:00+08:00', end_datetime='2026-09-25T12:00:00+08:00', expected_attendance=75 WHERE event_id=?", secondEvent);
         UUID first = booking(firstVenue, firstEvent, "pending");
         UUID second = booking(secondVenue, secondEvent, "pending");
-        for (String value : List.of("confirmed", "changed", "rejected", "cancelled")) {
+        for (String value : List.of("approved", "changed", "rejected", "cancelled")) {
             booking(firstVenue, firstEvent, value);
         }
         var tables = List.of("events", "venues", "venue_bookings", "event_requests");
@@ -171,7 +171,7 @@ class VenueBookingReadTest {
         assertThat(tables.stream().map(this::snapshot).toList()).isEqualTo(before);
 
         jdbc.update("UPDATE events SET expected_attendance=150 WHERE event_id=?", secondEvent);
-        jdbc.update("UPDATE venue_bookings SET status='confirmed' WHERE booking_id=?", first);
+        jdbc.update("UPDATE venue_bookings SET status='approved' WHERE booking_id=?", first);
         entityManager.clear();
         mvc.perform(get("/api/venue-staff/booking-requests"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
@@ -182,7 +182,7 @@ class VenueBookingReadTest {
     @Test
     void pendingQueueReturnsEmptyWhenOnlyNonPendingBookingsExist() throws Exception {
         jdbc.update("DELETE FROM venue_bookings");
-        booking(venue(), event(), "confirmed");
+        booking(venue(), event(), "approved");
         mvc.perform(get("/api/venue-staff/booking-requests"))
                 .andExpect(status().isOk()).andExpect(content().json("[]"));
     }

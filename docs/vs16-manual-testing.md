@@ -6,7 +6,7 @@ creation workflow exists. It does not implement that workflow.
 
 ## Location and sharing
 
-- `backend/dev/seed/vs16-seed.sql`: creates one venue, three events and three pending bookings.
+- `backend/dev/seed/vs16-seed.sql`: creates one venue, 13 events and 13 initially pending bookings.
 - `backend/dev/seed/vs16-cleanup.sql`: removes only the identified demo records.
 - These are manual scripts, not Flyway migrations or startup operations.
 - Commit/share these scripts and this guide. Pulling them does not modify anyone's
@@ -199,3 +199,17 @@ refresh the queue. An empty queue should return 200 with `[]`, not 404.
 Automated verification on 2026-09-22: all 35 Venue Staff UI tests, scoped ESLint,
 and the frontend production build passed. Browser scroll geometry remains a manual
 check; the automated regression tests verify retained DOM panels and keyboard focus.
+
+## Additional pending bookings (2026-10-06)
+
+The seed now includes ten additional bookings on the existing demo venue, one per
+weekday from 7 to 20 October 2026, 09:00–12:00 Singapore time. Attendance ranges
+from 35 to 180, within the venue capacity of 200. These dates do not overlap.
+Their event UUID suffixes are `000000000008`, `000000000010`, …, `000000000026`;
+booking suffixes are `000000000009`, `000000000011`, …, `000000000027`.
+All use the existing `16000000-0000-4000-8000-` prefix and seed identity markers.
+
+Run the same seed command above to add missing fixtures. Every new booking starts
+as `pending`; rerunning preserves existing statuses, including approved bookings.
+The cleanup script recognises all 13 pairs and retains its identity and reference
+guards. Open `/venue-staff/booking-approvals` and refresh to view the pending queue.

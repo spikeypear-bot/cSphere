@@ -67,7 +67,7 @@ public class VenueOperationalIssueService {
     @Transactional(readOnly = true)
     public List<CoordinatorVenueOperationalIssueDto> listForCoordinator(UUID coordinatorId) {
         List<VenueBookingRecordRepository.CoordinatorBooking> managedBookings =
-                bookings.findConfirmedForCoordinator(coordinatorId, VenueBookingStatus.confirmed);
+                bookings.findApprovedForCoordinator(coordinatorId, VenueBookingStatus.approved);
         Set<UUID> venueIds = managedBookings.stream()
                 .map(VenueBookingRecordRepository.CoordinatorBooking::getVenueId)
                 .collect(Collectors.toSet());
