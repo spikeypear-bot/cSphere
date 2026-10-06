@@ -68,6 +68,11 @@ public class Event {
     @Column(name = "accessibility_needs", columnDefinition = "accessibilities[]")
     private List<String> accessibilityNeeds = new ArrayList<>();
 
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @ColumnTransformer(write = "cast(? as facilities[])")
+    @Column(name = "required_facilities", columnDefinition = "facilities[]")
+    private List<String> requiredFacilities = new ArrayList<>();
+
     @Column(name = "registration_needs")
     private Boolean registrationNeeds;
 

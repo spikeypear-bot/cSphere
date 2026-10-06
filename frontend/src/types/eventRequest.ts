@@ -64,6 +64,7 @@ export interface EventRequestDto {
   venueRequirements: string | null
   equipmentRequirements: string | null
   accessibilityNeeds: AccessibilityFeature[]
+  requiredFacilities?: Facility[]
   registrationNeeds: boolean | null
   status: EventRequestStatus
   createdAt: string
@@ -86,6 +87,7 @@ export interface SaveEventRequestRequest {
   venueRequirements?: string | null
   equipmentRequirements?: string | null
   accessibilityNeeds?: AccessibilityFeature[]
+  requiredFacilities?: Facility[]
   registrationNeeds?: boolean | null
 }
 
@@ -106,3 +108,4 @@ export const REQUIRED_FIELD_LABELS: Record<string, string> = {
  * this draft" UI (the live tracker, the completion-% ring) reads from, so it
  * can never drift from what REQUIRED_FIELD_LABELS names. */
 export const REQUIRED_FIELD_KEYS = Object.keys(REQUIRED_FIELD_LABELS)
+import type { Facility } from './venue'
