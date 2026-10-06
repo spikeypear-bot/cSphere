@@ -10,6 +10,8 @@ export interface VenueOptionDto {
   /** Capacity minus expected attendance; negative when too small. */
   spareCapacity: number
   missingAccessibility: string[]
+  missingFacilities?: string[]
+  unavailablePeriods?: { description: string; affectedFrom: string | null; affectedUntil: string | null }[]
   conflicts: { eventName: string; startDatetime: string; endDatetime: string }[]
   reasons: string[]
 }

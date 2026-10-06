@@ -74,7 +74,7 @@ it('POSTs trimmed input then GETs the catalogue and displays success', async () 
   expect(fetch.mock.calls[0][1].method).toBe('POST')
   expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ venueAddress: 'Example Road', venueCapacity: 50,
     supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null,
-    venueAccessibilities: [], venueFacilities: [] })
+    venueAccessibilities: [], venueFacilities: [], operatingHours: [] })
   expect(fetch.mock.calls[1][1].method).toBe('GET')
   await user.click(screen.getByRole('button', { name: 'Dismiss' }))
   expect(screen.queryByText('Venue saved successfully.')).not.toBeInTheDocument()

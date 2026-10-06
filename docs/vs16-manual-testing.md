@@ -68,6 +68,36 @@ Future VS02 / Event Coordinator integration should use the same booking relation
 and detail route. No Organiser `event_requests` row is seeded. Shared authentication now protects API reads; venue-management ownership checks
 remain deferred. VS16 does not alter the authorization configuration.
 
+## EC05 coordinator review fixture
+
+The VS16 fixture intentionally does not create an organiser request, so it cannot
+populate the Event Coordinator review queue. To test the full EC05 path, first
+start the database and wait for Flyway, then run the separate guarded fixture:
+
+```bash
+cat backend/dev/seed/ec05-seed.sql | docker compose exec -T db \
+  psql -X -U postgres -d csphere -v ON_ERROR_STOP=1 -v ec05_local_dev=on
+```
+
+The fixture creates one pending request with capacity, accessibility and
+projection requirements. It uses the first existing Event Organiser account as
+the request creator and leaves the request unassigned. It is safe to rerun and
+preserves test edits. The request is identified by
+`EC05 Venue Suitability Demonstration` and `EC05_LOCAL_SEED`.
+
+After seeding:
+
+1. Sign in as an Event Coordinator.
+2. Open **Review requests**.
+3. Under **Unassigned**, choose **Assign to me**.
+4. Choose **Review**, then approve the request.
+5. The approved event opens in Planning; choose **Request a venue**.
+6. Select the seeded venue and inspect the capacity, facility, accessibility,
+   conflict and operating-hours results before submitting the booking request.
+
+The request date is 7 October 2026, 09:00–12:00 Singapore time, which matches
+the first additional VS16 demo event date and the structured-hours demonstration.
+
 ## Test current data, optional values and long text
 
 Run this PowerShell command against the local database to change only the demo event:

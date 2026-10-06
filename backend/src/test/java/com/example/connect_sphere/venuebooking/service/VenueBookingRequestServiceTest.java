@@ -1,6 +1,7 @@
 package com.example.connect_sphere.venuebooking.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -36,6 +37,8 @@ import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
+import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRepository;
+import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
 
 /**
  * EC03 rules that the rolled-back flow test cannot observe (notifications are
@@ -52,6 +55,7 @@ class VenueBookingRequestServiceTest {
     @Mock private VenueMapper venueMapper;
     @Mock private ActivityService activityService;
     @Mock private NotificationService notificationService;
+    @Mock private VenueOperationalIssueRepository operationalIssues;
 
     private VenueBookingRequestService service;
 
@@ -63,9 +67,10 @@ class VenueBookingRequestServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
-                activityService, notificationService);
+                activityService, notificationService, operationalIssues);
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());
+        when(operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any())).thenReturn(List.of());
         when(users.findByRole(UserRole.vs)).thenReturn(List.of(user(VS_ONE), user(VS_TWO)));
     }
 
@@ -151,6 +156,36 @@ class VenueBookingRequestServiceTest {
 
         assertThat(suitability.missingAccessibility()).containsExactly("step_free_access");
         assertThat(suitability.needsJustification()).isTrue();
+    }
+
+    @Test
+    void onlyTheFacilitiesTheVenueLacksAreReported() {
+        Event event = event(10, List.of());
+        event.setRequiredFacilities(List.of("stage", "projection"));
+        Venue venue = venue(50, List.of());
+        venue.setVenueFacilities(List.of("stage"));
+
+        var suitability = VenueSuitability.of(event, venue);
+
+        assertThat(suitability.missingFacilities()).containsExactly("projection");
+        assertThat(suitability.facilitiesOk()).isFalse();
+    }
+
+    @Test
+    void operationalIssueOverlappingEventBlocksSubmission() {
+        Event event = event(10, List.of());
+        Venue venue = venue(50, List.of());
+        when(venues.findAll()).thenReturn(List.of(venue));
+        VenueOperationalIssue issue = new VenueOperationalIssue(venue.getVenueId(), "Emergency maintenance",
+                OffsetDateTime.parse("2027-03-10T10:00:00+08:00"),
+                OffsetDateTime.parse("2027-03-10T11:00:00+08:00"), VS_ONE);
+        when(operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any()))
+                .thenReturn(List.of(issue));
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Emergency maintenance");
     }
 
     private Event event(int attendance, List<String> accessibility) {

@@ -14,7 +14,7 @@ const event = {
   startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z', expectedAttendance: 150,
   venueId: null, accessibilityNeeds: ['step_free_access'], registrationNeeds: false, organisation: 'Acme Pte Ltd',
   venueRequirements: 'Theatre seating', equipmentRequirements: null, status: 'pending',
-  coordinatorName: 'ec1', coordinatorEmail: null,
+  coordinatorName: 'ec1', coordinatorEmail: null, requiredFacilities: ['stage'],
 }
 
 function option(id: string, address: string, capacity: number, verdict: VenueOptionDto['verdict'],
@@ -35,6 +35,15 @@ const OPTIONS = [
   option('v1', '1 Harbour Road', 160, 'suitable'),
   option('v2', '2 Garden Lane', 200, 'needs_justification', { reasons: ['Missing accessibility: step_free_access.'] }),
   option('v3', '3 Small Street', 100, 'blocked', { reasons: ['Capacity 100 is below the expected attendance of 150.'] }),
+  option('v4', '4 Missing Facility Road', 200, 'blocked', {
+    missingFacilities: ['projection'],
+    reasons: ['Missing facilities: projection.'],
+    venue: {
+      venueId: 'v4', venueAddress: '4 Missing Facility Road', venueCapacity: 200,
+      supportedLayouts: ['theatre'], operatingInformation: '08:00-22:00',
+      additionalInformation: null, venueAccessibilities: ['step_free_access'], venueFacilities: ['stage'],
+    },
+  }),
 ]
 
 function routes(bookings: unknown[] = [], post?: (body: unknown) => Response) {
@@ -77,12 +86,28 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(names[0]).toContain('1 Harbour Road')
     expect(names[1]).toContain('2 Garden Lane')
     expect(within(list).queryByText('3 Small Street')).not.toBeInTheDocument()
-    expect(screen.getByText('1 suitable · 1 need justification · 1 not available')).toBeInTheDocument()
+    expect(screen.getByText('1 suitable · 1 need justification · 2 not available')).toBeInTheDocument()
 
-    await user.click(screen.getByLabelText('Show unavailable venues'))
+    await user.click(await screen.findByLabelText('Show unavailable venues'))
     const blocked = screen.getByRole('button', { name: /3 Small Street/ })
-    expect(blocked).toBeDisabled()
+    expect(blocked).not.toBeDisabled()
     expect(blocked).toHaveTextContent('Capacity 100 is below the expected attendance of 150.')
+    await user.click(blocked)
+    expect(screen.getByRole('table')).toHaveTextContent('100 ✗')
+  })
+
+  it('explains missing facilities and prevents submitting the venue', async () => {
+    stubApi(routes())
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByLabelText('Show unavailable venues'))
+    const blocked = await screen.findByRole('button', { name: /4 Missing Facility Road/ })
+    expect(blocked).not.toBeDisabled()
+    expect(blocked).toHaveTextContent('Missing facilities: projection.')
+    await user.click(blocked)
+    expect(screen.getByRole('table')).toHaveTextContent('Missing: Projection')
+    expect(screen.getByRole('button', { name: 'Request 4 Missing Facility Road' })).toBeDisabled()
   })
 
   it('shows capacity against attendance for each venue', async () => {

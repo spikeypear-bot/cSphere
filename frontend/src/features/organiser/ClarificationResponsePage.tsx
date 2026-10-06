@@ -18,12 +18,14 @@ import {
 } from '../../types/eventRequest'
 import { dateRangeError } from './eventRequestValidation'
 import './ClarificationResponsePage.css'
+import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 
 const MAX_RESPONSE = 2000
 const ACCESSIBILITY_OPTIONS = Object.keys(ACCESSIBILITY_LABELS) as AccessibilityFeature[]
 const FIELD_ORDER = [
   'eventName', 'purpose', 'description', 'startDatetime', 'endDatetime', 'expectedAttendance',
   'venueRequirements', 'accessibilityNeeds', 'equipmentRequirements', 'registrationNeeds',
+  'requiredFacilities',
 ] as const
 
 type Fields = Required<SaveEventRequestRequest>
@@ -39,6 +41,7 @@ function fieldsFrom(request: EventRequestDto): Fields {
     venueRequirements: request.venueRequirements,
     equipmentRequirements: request.equipmentRequirements,
     accessibilityNeeds: request.accessibilityNeeds,
+    requiredFacilities: request.requiredFacilities ?? [],
     registrationNeeds: request.registrationNeeds,
   }
 }
@@ -169,6 +172,16 @@ export function ClarificationResponsePage() {
       case 'registrationNeeds':
         return <CheckboxField id={id} label="Attendees need to register" checked={Boolean(fields!.registrationNeeds)}
           onChange={(v) => setFields({ registrationNeeds: v })} />
+      case 'requiredFacilities':
+        return <fieldset><legend>{label}</legend>
+          {venueFacilities.map((facility: Facility) => <label key={facility}>
+            <input type="checkbox" checked={(fields!.requiredFacilities ?? []).includes(facility)}
+              onChange={(e) => setFields({ requiredFacilities: e.target.checked
+                ? [...(fields!.requiredFacilities ?? []), facility]
+                : (fields!.requiredFacilities ?? []).filter((value) => value !== facility) })} />
+            {venueFacilityLabels[facility]}
+          </label>)}
+        </fieldset>
       default:
         return <TextField id={id} label={label} value={fields![field] ?? ''} error={errorFor(field)}
           multiline={field !== 'eventName'} onChange={(v) => setFields({ [field]: v })} />
