@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -27,6 +28,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
 
 /** Committed isolated fixtures let each concurrent request use its own real transaction. */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
 class VenueBookingRejectionTest {

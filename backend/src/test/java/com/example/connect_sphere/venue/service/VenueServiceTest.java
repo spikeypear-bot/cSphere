@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -22,6 +23,7 @@ import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 
+@Tag("unit")
 class VenueServiceTest {
     private final VenueRepository repository = mock(VenueRepository.class);
     private final VenueService service = new VenueService(repository, Mappers.getMapper(VenueMapper.class));
