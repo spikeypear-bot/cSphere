@@ -31,6 +31,14 @@ public class AvailabilityService {
         requireVenue(id);
         return new Schedule(repository.settings(id), repository.bookings(id), repository.periods(id));
     }
+    public Schedule schedule(UUID id, OffsetDateTime start, OffsetDateTime end) {
+        if (start == null && end == null) return schedule(id);
+        if (start == null || end == null || !end.isAfter(start)
+                || java.time.Duration.between(start, end).compareTo(java.time.Duration.ofDays(93)) > 0)
+            throw new InvalidVenueBookingException("Provide both start and end, with a positive schedule range of at most 93 days.");
+        requireVenue(id);
+        return new Schedule(repository.settings(id), repository.bookings(id, start, end), repository.periods(id, start, end));
+    }
     public Settings settings(UUID id) { requireVenue(id); return repository.settings(id); }
 
     @Transactional

@@ -91,6 +91,49 @@ class VenueUnavailabilityTest {
             jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
         }
     }
+    @Test void calendarIncludesHistoryBuffersAndOverlapsWithoutChangingOperationalReads() throws Exception {
+        UUID v=venue();
+        availability.updateSettings(v, new Settings(30,45));
+        UUID approved=booking(v,"approved"), pending=booking(v,"pending");
+        booking(v,"cancelled"); booking(v,"changed"); booking(v,"rejected");
+        UUID cancelledEvent=booking(v,"approved");
+        jdbc.update("UPDATE events SET status='cancelled' WHERE event_id=?", event(cancelledEvent));
+        jdbc.update("UPDATE events SET status='completed' WHERE event_id=?", event(approved));
+        booking(venue(),"approved");
+        record(v,period("09:00","11:00"));
+        var start=OffsetDateTime.parse("2027-04-01T09:30:00+08:00");
+        var end=OffsetDateTime.parse("2027-04-01T09:45:00+08:00");
+        var calendar=availability.schedule(v,start,end);
+        assertThat(calendar.bookings()).extracting(Booking::bookingId).containsExactlyInAnyOrder(approved,pending);
+        assertThat(calendar.unavailablePeriods()).hasSize(1);
+        assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(pending);
+        assertThat(availability.schedule(v,OffsetDateTime.parse("2027-04-01T12:45:00+08:00"),
+                OffsetDateTime.parse("2027-04-01T13:00:00+08:00")).bookings()).isEmpty();
+        assertThat(availability.schedule(v,OffsetDateTime.parse("2027-04-01T08:00:00+08:00"),start).bookings()).isEmpty();
+        assertThat(availability.schedule(v,OffsetDateTime.parse("2027-04-01T11:00:00+08:00"),end.plusHours(3)).unavailablePeriods()).isEmpty();
+        mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1"))
+                .param("start",start.toString()).param("end",end.toString()))
+                .andExpect(status().isOk()).andExpect(header().string("Cache-Control","no-store"))
+                .andExpect(jsonPath("$.bookings.length()").value(2));
+        mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("ec1"))
+                .param("start",start.toString()).param("end",end.toString())).andExpect(status().isForbidden());
+    }
+
+    @Test void calendarRejectsInvalidRangesAndReturnsEmptyPeriods() throws Exception {
+        UUID v=venue();
+        String start="2027-04-01T00:00:00+08:00", end="2027-05-01T00:00:00+08:00";
+        mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1")).param("start",start).param("end",end))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.bookings").isEmpty()).andExpect(jsonPath("$.unavailablePeriods").isEmpty());
+        for (String invalidEnd : List.of(start,"2027-03-01T00:00:00+08:00","2028-05-01T00:00:00+08:00")) {
+            mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1")).param("start",start).param("end",invalidEnd))
+                    .andExpect(status().isUnprocessableEntity());
+        }
+        mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1")).param("start",start))
+                .andExpect(status().isUnprocessableEntity());
+        mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1")).param("start","invalid").param("end",end))
+                .andExpect(status().isBadRequest());
+    }
+
     @Test void overlappingPeriodsAreRejectedByPreviewAndCreateWithoutSideEffects() throws Exception {
         UUID v=venue(); record(v,period("10:00","12:00"));
         booking(v,"approved");

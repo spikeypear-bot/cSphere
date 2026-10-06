@@ -24,7 +24,7 @@ Venue Details includes setup/turnaround settings in whole minutes, 0–10080, de
 
 Unavailable periods for the same venue cannot overlap. Both preview and creation return `409` for duplicate, contained, enclosing or partially overlapping ranges, comparing complete timestamp instants. Touching boundaries are allowed: if an existing period ends on 20 October at 14:00, another may start at 14:00 or 17:00 that day. Different venues are checked independently. Creation rechecks existing periods while holding the venue lock, so simultaneous submissions and stale previews cannot insert overlapping periods. Existing historical records are preserved.
 
-The Venue Availability Calendar route now displays a chronological agenda of approved bookings, pending requests and unavailable periods. Each has a text label and distinct visual treatment; booking times include buffers. This is an agenda view rather than a month-grid calendar.
+VS15 upgrades the Venue Availability Calendar route to a read-only month grid of approved bookings, pending requests (labelled tentative holds) and unavailable periods. Event, setup and turnaround times appear as separate entries. Date-range calendar reads also include completed events. See [VS15 calendar documentation](venue-calendar-api.md) for navigation, details, scroll behaviour and the range-based API; operational availability rules remain unchanged.
 
 ## API
 
@@ -36,7 +36,7 @@ These endpoints require Venue Staff (`VS`). There is no venue-owner mapping in t
 | POST | `/api/venues/{id}/unavailability/preview` | Affected bookings and preview token; no writes |
 | POST | `/api/venues/{id}/unavailability` | `201` and saved period |
 | GET / PUT | `/api/venues/{id}/occupancy-settings` | Read/update setup and turnaround minutes |
-| GET | `/api/venues/{id}/schedule` | Settings, active bookings with effective occupancy, unavailable periods |
+| GET | `/api/venues/{id}/schedule` | Settings, active bookings with effective occupancy, unavailable periods; optional paired `start`/`end` parameters select calendar-range reads including completed events (see VS15) |
 
 Preview request:
 
@@ -105,7 +105,7 @@ Manual walkthrough:
 2. Request and approve an event from 10:00 to 12:00 at that venue.
 3. Record maintenance from 09:20 to 09:40. Verify the conflict appears even though the event starts later.
 4. Return to the form once and verify nothing was saved; then review and confirm.
-5. Verify the original booking is still approved, flagged, and present in Associated Bookings. Check the agenda shows both the booking and maintenance.
+5. Verify the original booking is still approved, flagged, and present in Associated Bookings. Select its month in the availability calendar and check that both the booking and maintenance are visible.
 6. As its assigned coordinator, open the notification, choose another available venue and submit the replacement. Verify the original remains approved.
 7. Approve the replacement as Venue Staff. Verify the original becomes changed, the replacement approved, and original notes/event information remain available.
 8. Repeat with replacement rejection/withdrawal and verify the original remains flagged and a retry is possible.

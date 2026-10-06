@@ -26,7 +26,12 @@ public class AvailabilityController {
     public Period create(@PathVariable UUID venueId, @AuthenticationPrincipal Jwt jwt, @RequestBody Request request) {
         return service.create(venueId, UUID.fromString(jwt.getSubject()), request);
     }
-    @GetMapping("/schedule") public Schedule schedule(@PathVariable UUID venueId) { return service.schedule(venueId); }
+    @GetMapping("/schedule") public org.springframework.http.ResponseEntity<Schedule> schedule(@PathVariable UUID venueId,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.OffsetDateTime start,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.OffsetDateTime end) {
+        return org.springframework.http.ResponseEntity.ok().cacheControl(org.springframework.http.CacheControl.noStore())
+                .body(service.schedule(venueId, start, end));
+    }
     @GetMapping("/occupancy-settings") public Settings settings(@PathVariable UUID venueId) { return service.settings(venueId); }
     @PutMapping("/occupancy-settings") public Settings settings(@PathVariable UUID venueId, @RequestBody Settings settings) {
         return service.updateSettings(venueId, settings);
