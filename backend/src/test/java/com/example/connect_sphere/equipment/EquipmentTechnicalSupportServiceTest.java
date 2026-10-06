@@ -19,11 +19,13 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 import org.springframework.web.server.ResponseStatusException;
 
+@Tag("unit")
 class EquipmentTechnicalSupportServiceTest {
 
     private static final UUID EQUIPMENT_ID = UUID.randomUUID();

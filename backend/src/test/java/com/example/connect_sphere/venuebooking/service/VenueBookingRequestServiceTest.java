@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -38,6 +39,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  * EC03 rules that the rolled-back flow test cannot observe (notifications are
  * sent after commit), plus the suitability boundaries in isolation.
  */
+@Tag("unit")
 class VenueBookingRequestServiceTest {
 
     @Mock private EventRepository events;

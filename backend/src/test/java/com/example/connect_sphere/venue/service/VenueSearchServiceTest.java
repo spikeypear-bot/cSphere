@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
 
@@ -24,6 +25,7 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
+@Tag("unit")
 class VenueSearchServiceTest {
     private final VenueRepository venues = mock(VenueRepository.class);
     private final VenueBookingRecordRepository bookings = mock(VenueBookingRecordRepository.class);

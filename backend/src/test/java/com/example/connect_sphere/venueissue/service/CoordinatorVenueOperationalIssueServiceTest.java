@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -23,6 +24,7 @@ import com.example.connect_sphere.venueissue.dto.CoordinatorVenueOperationalIssu
 import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
 import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRepository;
 
+@Tag("unit")
 class CoordinatorVenueOperationalIssueServiceTest {
 
     @Mock private VenueOperationalIssueRepository issues;
