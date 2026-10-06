@@ -6,6 +6,7 @@ import com.fasterxml.jackson.annotation.Nulls;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 import com.example.connect_sphere.venue.entity.VenueLayout;
+import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -30,4 +31,5 @@ public class UpdateVenueDto {
     private String operatingInformation;
     @JsonSetter(nulls = Nulls.FAIL)
     private String additionalInformation;
+    private List<VenueOperatingHourDto> operatingHours;
 }

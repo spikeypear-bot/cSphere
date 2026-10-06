@@ -5,6 +5,7 @@ import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
 import com.example.connect_sphere.venue.entity.VenueLayout;
+import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
 
 /**
  * Venue Staff's catalogue form input, not a booking or approval request.
@@ -18,5 +19,12 @@ public record CreateVenueDto(
         String operatingInformation,
         String additionalInformation,
         List<AccessibilityFeature> venueAccessibilities,
-        List<Facility> venueFacilities) {
+        List<Facility> venueFacilities,
+        List<VenueOperatingHourDto> operatingHours) {
+    public CreateVenueDto(String venueAddress, Integer venueCapacity, List<VenueLayout> supportedLayouts,
+            String operatingInformation, String additionalInformation,
+            List<AccessibilityFeature> venueAccessibilities, List<Facility> venueFacilities) {
+        this(venueAddress, venueCapacity, supportedLayouts, operatingInformation, additionalInformation,
+                venueAccessibilities, venueFacilities, List.of());
+    }
 }
