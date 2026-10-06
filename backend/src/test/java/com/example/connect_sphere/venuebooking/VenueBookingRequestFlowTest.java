@@ -263,8 +263,8 @@ class VenueBookingRequestFlowTest {
         UUID overlappingBooking = searchableVenue(150, List.of(Facility.stage, Facility.projection));
         UUID adjacentBooking = searchableVenue(100, List.of(Facility.stage, Facility.projection));
         UUID pendingBooking = searchableVenue(100, List.of(Facility.stage, Facility.projection));
-        otherBooking(overlappingBooking, "2027-03-10T11:59:00+08:00", "2027-03-10T14:00:00+08:00", "confirmed");
-        otherBooking(adjacentBooking, "2027-03-10T06:00:00+08:00", "2027-03-10T09:00:00+08:00", "confirmed");
+        otherBooking(overlappingBooking, "2027-03-10T11:59:00+08:00", "2027-03-10T14:00:00+08:00", "approved");
+        otherBooking(adjacentBooking, "2027-03-10T06:00:00+08:00", "2027-03-10T09:00:00+08:00", "approved");
         otherBooking(pendingBooking, "2027-03-10T10:00:00+08:00", "2027-03-10T11:00:00+08:00", "pending");
 
         String body = mvc.perform(get("/api/venues/search").with(flow.as("ec1"))

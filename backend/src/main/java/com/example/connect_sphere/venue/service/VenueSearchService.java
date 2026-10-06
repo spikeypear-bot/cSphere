@@ -49,7 +49,7 @@ public class VenueSearchService {
         Integer capacity = parseCapacity(rawCapacity);
         List<String> facilities = parseFacilities(rawFacilities);
         Set<UUID> unavailable = new HashSet<>(bookings.findVenueIdsWithOverlappingBookings(
-                VenueBookingStatus.confirmed, start, end));
+                VenueBookingStatus.approved, start, end));
 
         return venues.findAll(Sort.by("venueAddress", "venueId")).stream()
                 .filter(venue -> !unavailable.contains(venue.getVenueId()))

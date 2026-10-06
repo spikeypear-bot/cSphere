@@ -33,7 +33,7 @@ class VenueSearchServiceTest {
     @BeforeEach
     void setUp() {
         when(bookings.findVenueIdsWithOverlappingBookings(
-                eq(VenueBookingStatus.confirmed), any(), any())).thenReturn(List.of());
+                eq(VenueBookingStatus.approved), any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -52,7 +52,7 @@ class VenueSearchServiceTest {
 
         assertThat(results).extracting(VenueDto::venueId).containsExactly(exactFit.getVenueId());
         verify(bookings).findVenueIdsWithOverlappingBookings(
-                eq(VenueBookingStatus.confirmed), any(), any());
+                eq(VenueBookingStatus.approved), any(), any());
     }
 
     @Test
