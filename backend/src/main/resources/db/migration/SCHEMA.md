@@ -1,7 +1,7 @@
 # ConnectSphere — Schema Dictionary
 
 Reference for the initial schema and subsequent migrations, updated through
-`V17__venue_booking_alternative_suggestions.sql`.
+`V19__venue_booking_alternative_suggestions.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -362,15 +362,15 @@ over its life.
 | `submitted_by` | `UUID` | yes | FK → `users` | V13, EC03: coordinator who requested it (null on older rows) |
 | `submitted_at` | `TIMESTAMPTZ` | yes | | V13, EC03: when it was requested |
 | `suitability_note` | `TEXT` | yes | | V13, EC03: coordinator's justification when the venue lacks a requested accessibility feature |
-| `alternative_venue_id` | `UUID` | yes | FK → `venues` | V17, VS09: optional alternative venue suggested with a rejection; not a booking |
-| `alternative_arrangement` | `TEXT` | yes | | V17, VS09: optional free-text arrangement, at most 2,000 characters |
+| `alternative_venue_id` | `UUID` | yes | FK → `venues` | V19, VS09: optional alternative venue suggested with a rejection; not a booking |
+| `alternative_arrangement` | `TEXT` | yes | | V19, VS09: optional free-text arrangement, at most 2,000 characters |
 
 The booking's time window is the event's `start_datetime`/`end_datetime`, never a copy. EC03
 allows at most one `pending`/`approved` booking per event; that rule is enforced in
 `VenueBookingRequestService` under a row lock on the event, not by a unique index (VS02's test
 fixtures deliberately hold several bookings per event).
 
-V17 stores optional alternative suggestions on the rejected booking request. The suggested venue
+V19 stores optional alternative suggestions on the rejected booking request. The suggested venue
 must differ from the venue that was rejected. Suggestions do not create a booking or change the
 event's requirements.
 

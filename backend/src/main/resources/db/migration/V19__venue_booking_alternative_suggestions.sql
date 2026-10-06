@@ -1,3 +1,5 @@
+-- VS09: persist optional alternatives with a rejected booking without
+-- creating a booking or altering the event's requirements.
 ALTER TABLE venue_bookings
     ADD COLUMN alternative_venue_id UUID REFERENCES venues(venue_id),
     ADD COLUMN alternative_arrangement TEXT,
