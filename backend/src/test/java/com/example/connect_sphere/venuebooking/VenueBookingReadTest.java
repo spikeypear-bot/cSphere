@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -21,6 +22,7 @@ import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
 
 /** Real PostgreSQL fixtures roll back; no production creation/update workflow is added. */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -24,6 +25,7 @@ import tools.jackson.databind.ObjectMapper;
  * returns actually opening a protected endpoint, refresh rotation, reuse
  * detection and logout. Accounts come from DevUserSeeder.
  */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
