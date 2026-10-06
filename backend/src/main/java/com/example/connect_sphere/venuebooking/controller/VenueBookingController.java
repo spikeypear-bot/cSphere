@@ -6,11 +6,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.example.connect_sphere.common.web.ApiError;
+import com.example.connect_sphere.venuebooking.dto.RejectVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
 import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 import com.example.connect_sphere.venuebooking.service.VenueBookingNotFoundException;
 
-/** Booking reads and VS03 approval. Role access is enforced by SecurityConfig; ownership is deferred. */
+/** Booking reads and Venue Staff decisions. Role access is enforced by SecurityConfig; ownership is deferred. */
 @RestController
 @RequestMapping("/api")
 public class VenueBookingController {
@@ -23,8 +24,8 @@ public class VenueBookingController {
 
     @PatchMapping("/venue-bookings/{bookingId}/reject")
     public VenueBookingDto reject(@PathVariable UUID bookingId,
-            @RequestBody com.example.connect_sphere.venuebooking.dto.RejectVenueBookingRequest request) {
-        return service.reject(bookingId, request.reason());
+            @RequestBody RejectVenueBookingRequest request) {
+        return service.reject(bookingId, request.reason(), request.alternativeVenueId(), request.alternativeArrangement());
     }
 
     @ExceptionHandler({org.springframework.dao.DataAccessException.class,

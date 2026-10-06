@@ -250,9 +250,11 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
         <>
           <p>No venue has been requested yet.</p>
           {latestRejected ? (
-            <p className="field-hint">
-              {latestRejected.venueAddress} was rejected{latestRejected.rejectReason ? `: ${latestRejected.rejectReason}` : '.'}
-            </p>
+            <div className="field-hint">
+              <p>{latestRejected.venueAddress} was rejected{latestRejected.rejectReason ? `: ${latestRejected.rejectReason}` : '.'}</p>
+              {latestRejected.alternativeVenueAddress ? <p>Suggested alternative venue: {latestRejected.alternativeVenueAddress}</p> : null}
+              {latestRejected.alternativeArrangement ? <p>Alternative arrangement: {latestRejected.alternativeArrangement}</p> : null}
+            </div>
           ) : null}
           {planning ? (
             <Link className="button button--primary" to={`/coordinator/events/${eventId}/venue-booking`}>

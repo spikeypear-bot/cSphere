@@ -242,6 +242,8 @@ export function VenueBookingRequestPage() {
                     {b.requiresAlternative && <p>Alternative arrangements required</p>}
                     {b.replacesBookingId && <p>Replacement request</p>}
                     {b.rejectReason ? <> · Reason: {b.rejectReason}</> : null}
+                    {b.alternativeVenueAddress ? <> · Suggested venue: {b.alternativeVenueAddress}</> : null}
+                    {b.alternativeArrangement ? <> · Alternative arrangement: {b.alternativeArrangement}</> : null}
                   </li>
                 ))}
               </ul>

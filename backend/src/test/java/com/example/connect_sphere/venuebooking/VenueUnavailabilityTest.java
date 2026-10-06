@@ -207,7 +207,7 @@ class VenueUnavailabilityTest {
     @Test void rejectedAndWithdrawnReplacementsKeepOriginalAndAllowRetry() {
         UUID old=venue(), next=venue(), b=booking(old,"pending"); record(old,period("10:00","11:00"));
         var first=requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b));
-        bookings.reject(first.bookingId(),"No longer suitable");
+        bookings.reject(first.bookingId(),"No longer suitable",null,null);
         assertThat(statusOf(b)).isEqualTo("pending"); assertThat(availability.affected(b)).isTrue();
         var second=requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b));
         requests.cancel(coordinator,event(b),second.bookingId(),"Try another venue");

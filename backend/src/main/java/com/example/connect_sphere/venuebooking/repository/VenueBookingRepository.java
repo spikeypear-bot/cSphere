@@ -10,12 +10,12 @@ import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 
 /** Intentionally exposes reads only. Fetch both sides together to avoid N+1 queries. */
 public interface VenueBookingRepository extends Repository<VenueBooking, UUID> {
-    @EntityGraph(attributePaths = {"venue", "event"})
+    @EntityGraph(attributePaths = {"venue", "event", "alternativeVenue"})
     List<VenueBooking> findByStatusOrderByEventStartDatetimeAscBookingIdAsc(VenueBookingStatus status);
 
-    @EntityGraph(attributePaths = {"venue", "event"})
+    @EntityGraph(attributePaths = {"venue", "event", "alternativeVenue"})
     Optional<VenueBooking> findById(UUID id);
 
-    @EntityGraph(attributePaths = {"venue", "event"})
+    @EntityGraph(attributePaths = {"venue", "event", "alternativeVenue"})
     List<VenueBooking> findByVenueVenueIdOrderByEventStartDatetimeAscBookingIdAsc(UUID venueId);
 }

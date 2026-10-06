@@ -361,23 +361,31 @@ information**, using the same style as the venue layout tags. The heading and
 status form a two-row block aligned beside the approval action. This shared header
 is used by both catalogue navigation and `?from=booking-approvals` navigation.
 
-## VS04 rejection
+## VS04 rejection and VS09 alternatives
 
 `PATCH /api/venue-bookings/{bookingId}/reject` requires Venue Staff access and
-JSON `{ "reason": "Venue unavailable due to maintenance." }`. A nonblank reason
-is required and saved after trimming. Returns the updated booking including
-`rejectReason`, also available in coordinator booking history.
+JSON `{ "reason": "Venue unavailable due to maintenance.", "alternativeVenueId": "…", "alternativeArrangement": "Move the event to the afternoon." }`.
+A nonblank reason is required and saved after trimming. `alternativeVenueId`
+and `alternativeArrangement` are optional; the venue must exist and differ from
+the requested venue, and arrangement text is limited to 2,000 characters.
+Either suggestion may be provided independently or both together. Returns the
+updated booking including `rejectReason`, `alternativeVenueId`,
+`alternativeVenueAddress` and `alternativeArrangement`, also available in
+coordinator booking history.
 
 The event lock shared with approval/submission/cancellation and a pending-only
-conditional update ensure status and reason commit together. Non-pending decisions
-return 409 without overwriting the reason; missing bookings return 404, invalid
-reasons 422, and database update failures 503.
+conditional update ensure status, reason and any suggestions commit together.
+Non-pending decisions return 409 without overwriting the reason; missing
+bookings return 404, invalid reasons/suggestions 422, and database update
+failures 503.
 
-The existing booking details page provides a textarea and confirmation. Both
-decision actions disappear after rejection, and the saved reason is displayed.
-The pending queue excludes rejected records. After an uncertain response the UI
-reads current booking data before allowing another decision. Booking relationships
-and event details remain unchanged; rejection creates no venue commitment.
+The booking details page provides an optional alternative venue selector and
+free-text arrangement field along with the rejection reason. Both decision
+actions disappear after rejection, and the saved reason and suggestions are
+displayed to Venue Staff and the Event Coordinator. The pending queue excludes
+rejected records. After an uncertain response the UI reads current booking data
+before allowing another decision. Rejection does not create a second booking or
+modify the original event requirements.
 
 ## VS01 integration (6 October 2026)
 

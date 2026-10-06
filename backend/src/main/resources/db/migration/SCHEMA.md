@@ -1,6 +1,7 @@
 # ConnectSphere — Schema Dictionary
 
-Reference for `V2__init_tables.sql`, updated through `V7__event_request_updated_at.sql`.
+Reference for the initial schema and subsequent migrations, updated through
+`V19__venue_booking_alternative_suggestions.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -361,11 +362,17 @@ over its life.
 | `submitted_by` | `UUID` | yes | FK → `users` | V13, EC03: coordinator who requested it (null on older rows) |
 | `submitted_at` | `TIMESTAMPTZ` | yes | | V13, EC03: when it was requested |
 | `suitability_note` | `TEXT` | yes | | V13, EC03: coordinator's justification when the venue lacks a requested accessibility feature |
+| `alternative_venue_id` | `UUID` | yes | FK → `venues` | V19, VS09: optional alternative venue suggested with a rejection; not a booking |
+| `alternative_arrangement` | `TEXT` | yes | | V19, VS09: optional free-text arrangement, at most 2,000 characters |
 
 The booking's time window is the event's `start_datetime`/`end_datetime`, never a copy. EC03
 allows at most one `pending`/`approved` booking per event; that rule is enforced in
 `VenueBookingRequestService` under a row lock on the event, not by a unique index (VS02's test
 fixtures deliberately hold several bookings per event).
+
+V19 stores optional alternative suggestions on the rejected booking request. The suggested venue
+must differ from the venue that was rejected. Suggestions do not create a booking or change the
+event's requirements.
 
 ---
 
@@ -443,8 +450,8 @@ The schema uses Postgres types that plain JPA annotations do not map by default:
   `@IdClass` or `@EmbeddedId` — same pattern as the existing `MockReferenceId`.
 - Tables with no entity are ignored by `ddl-auto=validate`, so entities can land one at a time.
 
-## V19 update — venue unavailability
+## V20 update — venue unavailability
 
-V19 adds `venue_unavailability` (UUID primary key, required venue/creator foreign keys, required start/end `timestamptz`, trimmed nonblank reason up to 2000 characters, creation timestamp and strict end-after-start check). `venue_unavailability_bookings` links unavailable periods to affected bookings with a composite primary key. These links preserve history and do not replace operational issues.
+V20 adds `venue_unavailability` (UUID primary key, required venue/creator foreign keys, required start/end `timestamptz`, trimmed nonblank reason up to 2000 characters, creation timestamp and strict end-after-start check). `venue_unavailability_bookings` links unavailable periods to affected bookings with a composite primary key. These links preserve history and do not replace operational issues.
 
 `venues` now has `setup_minutes` and `turnaround_minutes`, non-null integers defaulting to zero, constrained to 0–10080. `venue_bookings.replaces_booking_id` is a nullable self-reference. A partial unique index permits at most one pending replacement per original. `notifications.type` includes `venue_unavailable`, requiring a booking reference. See [VS01 API and consistency rules](../../../../../../docs/venue-unavailability-api.md).

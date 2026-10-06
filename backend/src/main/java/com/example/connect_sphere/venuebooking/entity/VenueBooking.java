@@ -34,6 +34,16 @@ public class VenueBooking {
     @Column(name = "reject_reason", insertable = false, updatable = false)
     private String rejectReason;
 
+    @Column(name = "alternative_venue_id", insertable = false, updatable = false)
+    private UUID alternativeVenueId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "alternative_venue_id", insertable = false, updatable = false)
+    private Venue alternativeVenue;
+
+    @Column(name = "alternative_arrangement", insertable = false, updatable = false)
+    private String alternativeArrangement;
+
     // EC03 (V13): what the coordinator told Venue Staff when requesting.
     @Column(name = "booking_notes", insertable = false, updatable = false)
     private String bookingNotes;

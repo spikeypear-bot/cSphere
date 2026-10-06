@@ -18,6 +18,8 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRepository
 @Transactional(readOnly = true)
 public class VenueBookingService {
     private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
+    private static final int MAX_TEXT_LENGTH = 2000;
+
     private final VenueBookingRepository bookings;
     private final VenueRepository venues;
     private final VenueMapper venueMapper;
@@ -81,11 +83,12 @@ public class VenueBookingService {
 
     /** VS04: use the same event lock as approval, submission and cancellation. */
     @Transactional
-    public VenueBookingDto reject(UUID bookingId, String reason) {
+    public VenueBookingDto reject(UUID bookingId, String reason, UUID alternativeVenueId, String alternativeArrangement) {
         if (reason == null || reason.isBlank()) {
             throw new InvalidVenueBookingException("A rejection reason is required.");
         }
         String trimmedReason = reason.strip();
+        String trimmedArrangement = optionalText(alternativeArrangement, "Alternative arrangement");
         UUID eventId = records.findEventId(bookingId)
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         events.findForUpdate(eventId)
@@ -99,7 +102,15 @@ public class VenueBookingService {
         }
         if (records.existsByReplacesBookingIdAndStatus(bookingId, VenueBookingStatus.pending))
             throw new VenueBookingStateException("Resolve the pending replacement request before rejecting the original booking.");
-        if (records.rejectPending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.rejected, trimmedReason) != 1) {
+        if (alternativeVenueId != null) {
+            if (alternativeVenueId.equals(booking.getVenueId())) {
+                throw new InvalidVenueBookingException("The alternative venue must differ from the requested venue.");
+            }
+            venues.findById(alternativeVenueId)
+                    .orElseThrow(() -> new VenueNotFoundException(alternativeVenueId));
+        }
+        if (records.rejectPending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.rejected, trimmedReason,
+                alternativeVenueId, trimmedArrangement) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
         return get(bookingId);
@@ -123,12 +134,25 @@ public class VenueBookingService {
 
     private VenueBookingDto toDto(VenueBooking booking) {
         var event = booking.getEvent();
+        var alternativeVenue = booking.getAlternativeVenue();
         return new VenueBookingDto(booking.getBookingId(), booking.getStatus(),
                 venueMapper.toDto(booking.getVenue()), new VenueBookingDto.EventRequirements(
                         event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
                         event.getExpectedAttendance(), event.getVenueRequirements(),
                         List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()),
                 booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt(), booking.getRejectReason(),
-                availability.affected(booking.getBookingId()), booking.getReplacesBookingId());
+                availability.affected(booking.getBookingId()), booking.getReplacesBookingId(),
+                booking.getAlternativeVenueId(),
+                alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
+                booking.getAlternativeArrangement());
+    }
+
+    private static String optionalText(String raw, String what) {
+        if (raw == null || raw.isBlank()) return null;
+        String text = raw.strip();
+        if (text.length() > MAX_TEXT_LENGTH) {
+            throw new InvalidVenueBookingException(what + " can be at most " + MAX_TEXT_LENGTH + " characters.");
+        }
+        return text;
     }
 }

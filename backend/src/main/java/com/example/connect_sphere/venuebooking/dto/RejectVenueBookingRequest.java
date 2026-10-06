@@ -1,3 +1,5 @@
 package com.example.connect_sphere.venuebooking.dto;
 
-public record RejectVenueBookingRequest(String reason) {}
+import java.util.UUID;
+
+public record RejectVenueBookingRequest(String reason, UUID alternativeVenueId, String alternativeArrangement) {}

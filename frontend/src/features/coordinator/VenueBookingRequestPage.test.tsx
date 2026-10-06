@@ -183,6 +183,22 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.queryByRole('list', { name: 'Venues ranked for this event' })).not.toBeInTheDocument()
   })
 
+  it('shows rejection reason and alternative suggestions in coordinator booking history', async () => {
+    stubApi(routes([{
+      bookingId: 'b1', status: 'rejected', venueId: 'v1', venueAddress: '1 Harbour Road', venueCapacity: 160,
+      bookingNotes: null, suitabilityNote: null, rejectReason: 'Unavailable on that date',
+      alternativeVenueId: 'v2', alternativeVenueAddress: '2 Garden Lane',
+      alternativeArrangement: 'Move the event to the afternoon', submittedAt: null, submittedBy: 'vs1',
+    }]))
+    renderPage()
+
+    const heading = await screen.findByRole('heading', { name: 'Earlier requests for this event' })
+    const history = heading.closest('.venue-request__history')!
+    expect(history).toHaveTextContent('Unavailable on that date')
+    expect(history).toHaveTextContent('2 Garden Lane')
+    expect(history).toHaveTextContent('Move the event to the afternoon')
+  })
+
   it('shows the server reason when a submission is refused and stays on the page', async () => {
     stubApi(routes([], () => jsonResponse(422, {
       message: "This venue already has a approved booking that overlaps the event's time (Board Meeting). Choose another venue.",
