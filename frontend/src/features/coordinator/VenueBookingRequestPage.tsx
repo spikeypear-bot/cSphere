@@ -147,6 +147,7 @@ export function VenueBookingRequestPage() {
             <div><dt>When</dt><dd>{timeRange(event.startDatetime, event.endDatetime)}</dd></div>
             <div><dt>Expected attendance</dt><dd>{event.expectedAttendance.toLocaleString()} people</dd></div>
             <div><dt>Venue requirements</dt><dd>{event.venueRequirements}</dd></div>
+            <div><dt>Required facilities</dt><dd>{(event.requiredFacilities ?? []).map((f) => venueFacilityLabels[f]).join(', ') || 'None specified'}</dd></div>
             <div><dt>Accessibility</dt><dd>{event.accessibilityNeeds.map(accessibilityLabel).join(', ') || 'None stated'}</dd></div>
             {event.equipmentRequirements ? <div><dt>Equipment</dt><dd>{event.equipmentRequirements}</dd></div> : null}
           </dl>
@@ -193,6 +194,8 @@ export function VenueBookingRequestPage() {
               {selected ? (
                 <Card className="venue-request__review" aria-labelledby="compare-heading">
                   <h2 id="compare-heading">Compare and submit</h2>
+                  <SuitabilitySummary option={selected} />
+                  <VenueDetails venue={selected.venue} />
                   <Comparison event={event} option={selected} />
 
                   {needsJustification ? (
@@ -244,6 +247,29 @@ export function VenueBookingRequestPage() {
   )
 }
 
+function VenueDetails({ venue }: { venue: VenueOptionDto['venue'] }) {
+  const hours = venue.operatingHours ?? []
+  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+  return (
+    <section className="venue-request__venue-details" aria-labelledby="venue-details-heading">
+      <h3 id="venue-details-heading">Selected venue details</h3>
+      <p className="venue-request__venue-address">{venue.venueAddress}</p>
+      <dl>
+        <div><dt>Capacity</dt><dd>{venue.venueCapacity?.toLocaleString() ?? 'Not recorded'} people</dd></div>
+        <div><dt>Supported layouts</dt><dd>{venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ') || 'None recorded'}</dd></div>
+        <div><dt>Facilities</dt><dd>{venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None recorded'}</dd></div>
+        <div><dt>Accessibility</dt><dd>{venue.venueAccessibilities.map(accessibilityLabel).join(', ') || 'None recorded'}</dd></div>
+        <div><dt>Operating information</dt><dd>{venue.operatingInformation || 'Not recorded'}</dd></div>
+        {hours.length > 0 ? (
+          <div><dt>Structured weekly hours</dt><dd>{hours.map((hour) =>
+            `${dayNames[hour.dayOfWeek - 1] ?? `Day ${hour.dayOfWeek}`} ${hour.openTime}–${hour.closeTime}`).join(' · ')}</dd></div>
+        ) : null}
+        {venue.additionalInformation ? <div><dt>Additional information</dt><dd>{venue.additionalInformation}</dd></div> : null}
+      </dl>
+    </section>
+  )
+}
+
 function VenueOptionCard({ option, attendance, selected, onSelect }: {
   option: VenueOptionDto
   attendance: number
@@ -253,7 +279,7 @@ function VenueOptionCard({ option, attendance, selected, onSelect }: {
   const { venue } = option
   const capacity = venue.venueCapacity ?? 0
   const fill = Math.min(100, Math.round((attendance / Math.max(1, capacity)) * 100))
-  const disabled = option.verdict === 'blocked'
+  const disabled = false
   return (
     <button type="button" className="venue-option" data-verdict={option.verdict} aria-pressed={selected}
       disabled={disabled} onClick={onSelect}>
@@ -278,7 +304,44 @@ function VenueOptionCard({ option, attendance, selected, onSelect }: {
           Booked: {c.eventName}, {timeRange(c.startDatetime, c.endDatetime)}
         </span>
       ))}
+      {(option.unavailablePeriods ?? []).map((period) => (
+        <span key={period.description + period.affectedFrom} className="venue-option__conflict">
+          Unavailable: {period.description}
+        </span>
+      ))}
     </button>
+  )
+}
+
+function SuitabilitySummary({ option }: { option: VenueOptionDto }) {
+  const missingFacilities = option.missingFacilities ?? []
+  const capacityOk = option.capacityOk
+  const availabilityOk = option.conflicts.length === 0
+  const facilitiesOk = missingFacilities.length === 0
+  const unavailable = option.unavailablePeriods ?? []
+  const canProceed = capacityOk && availabilityOk && facilitiesOk && unavailable.length === 0
+    && option.verdict === 'suitable'
+  const headline = canProceed
+    ? `${option.venue.venueAddress} meets this event's venue requirements`
+    : `${option.venue.venueAddress} cannot be booked yet`
+  const details = [
+    capacityOk ? 'meets capacity' : 'does not meet capacity',
+    facilitiesOk ? 'meets facility needs' : `lacks ${missingFacilities.length} required ${missingFacilities.length === 1 ? 'facility' : 'facilities'}`,
+    availabilityOk && unavailable.length === 0 ? 'is available for the requested period'
+      : unavailable.length > 0 ? 'is unavailable due to an operational issue' : 'has an overlapping approved booking',
+  ]
+  return (
+    <div className="venue-request__summary" data-ready={canProceed}>
+      <div className="venue-request__summary-icon" aria-hidden="true">{canProceed ? '✓' : '!'}</div>
+      <div>
+        <strong>{headline}</strong>
+        <p>It {details.join(', ')}.</p>
+        {!canProceed && option.verdict === 'needs_justification'
+          ? <p className="field-hint">Accessibility is incomplete; add a justification for Venue Staff before submitting.</p>
+          : null}
+      </div>
+      <span className="venue-request__summary-status">{canProceed ? 'Ready to request' : 'Review required'}</span>
+    </div>
   )
 }
 
@@ -295,6 +358,24 @@ function Comparison({ event, option }: { event: EventDto; option: VenueOptionDto
           <th scope="row">Capacity</th>
           <td>{event.expectedAttendance.toLocaleString()} people</td>
           <td>{(venue.venueCapacity ?? 0).toLocaleString()} {option.capacityOk ? '✓' : '✗'}</td>
+        </tr>
+        <tr data-ok={(option.unavailablePeriods ?? []).length === 0 && option.conflicts.length === 0}>
+          <th scope="row">Availability</th>
+          <td>{timeRange(event.startDatetime, event.endDatetime)}</td>
+          <td>{(option.unavailablePeriods ?? []).length
+            ? `Unavailable: ${(option.unavailablePeriods ?? []).map((p) => p.description).join(', ')} ✗`
+            : option.conflicts.length
+              ? 'Overlaps an approved booking ✗'
+              : 'Available ✓'}</td>
+        </tr>
+        <tr data-ok={(option.missingFacilities ?? []).length === 0}>
+          <th scope="row">Required facilities</th>
+          <td>{(event.requiredFacilities ?? []).length
+            ? (event.requiredFacilities ?? []).map((f) => venueFacilityLabels[f]).join(', ')
+            : 'None specified'}</td>
+          <td>{(option.missingFacilities ?? []).length
+            ? `Missing: ${(option.missingFacilities ?? []).map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ')} ✗`
+            : 'All provided ✓'}</td>
         </tr>
         {needs.length === 0 ? (
           <tr data-ok="true"><th scope="row">Accessibility</th><td>None stated</td>
