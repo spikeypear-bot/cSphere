@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Notice } from '../../components/ui/Notice'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatusTimeline } from '../../components/ui/StatusTimeline'
 import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
@@ -103,7 +105,7 @@ export function RequestReviewPage() {
 
   if (loadError) {
     return (
-      <div className="request-review">
+      <div className="page page--compact">
         <Link to="/coordinator/review-queue">Back to review queue</Link>
         <p role="alert">{loadError}</p>
       </div>
@@ -175,23 +177,23 @@ export function RequestReviewPage() {
   const messageValid = messageLength > 0 && messageLength <= MAX_MESSAGE && unanswered.length === 0
 
   return (
-    <div className="request-review">
+    <div className="page page--compact">
       <Link to="/coordinator/review-queue">Back to review queue</Link>
 
-      <header className="request-review__header">
-        <div>
-          <h1>{request.eventName || 'Untitled request'}</h1>
+      <PageHeader
+        title={request.eventName || 'Untitled request'}
+        description={
           <RequestByline organisation={request.organisation} createdAt={request.createdAt}
             createdByName={request.createdByName}
             updatedAt={request.updatedAt} timeline={timeline} />
-        </div>
-        <StatusBadge status={request.status} />
-      </header>
+        }
+        actions={<StatusBadge status={request.status} />}
+      />
       <StatusTimeline status={request.status} />
 
-      {notice ? <p className="request-review__notice" role="status">{notice}</p> : null}
+      {notice ? <Notice>{notice}</Notice> : null}
 
-      <div className="request-review__layout">
+      <div className="split-layout">
         <div className="request-review__main">
           {isOpen ? (
             <Card className={`request-review__readiness request-review__readiness--${ready ? 'ready' : 'blocked'}`}>
@@ -368,7 +370,7 @@ export function RequestReviewPage() {
                 </div>
               ) : null}
 
-              {actionError ? <p role="alert" className="request-review__error">{actionError}</p> : null}
+              {actionError ? <p role="alert" className="error-text request-review__error">{actionError}</p> : null}
             </Card>
           ) : null}
 
@@ -380,7 +382,7 @@ export function RequestReviewPage() {
           ) : null}
         </div>
 
-        <aside className="request-review__history" aria-labelledby="history-heading">
+        <aside className="request-review__history split-layout__sticky" aria-labelledby="history-heading">
           <h2 id="history-heading">History</h2>
           <ActivityTimeline entries={timeline} />
         </aside>

@@ -5,7 +5,7 @@ import { technicalSupportFeatures } from './technicalSupportFeatures'
 
 export function TechnicalSupportHomePage() {
   return (
-    <div className="role-console-home">
+    <div className="page">
       <div className="skeleton-console__header">
         <h1>Technical Support Staff console</h1>
         <p className="field-hint">Check equipment availability, reserve items for events, and update operational status.</p>

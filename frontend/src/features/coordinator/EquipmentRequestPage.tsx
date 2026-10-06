@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { Notice } from '../../components/ui/Notice'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import type { EventDto } from '../../types/event'
 import './EquipmentRequestPage.css'
@@ -112,19 +114,19 @@ export function EquipmentRequestPage() {
   if (!event) return <p role="alert">Event not found.</p>
 
   return (
-    <section className="equipment-request">
-      <header className="equipment-request__header">
-        <div>
-          <h1>Request equipment</h1>
-          <p>For {event.eventName}</p>
-        </div>
-        <Link className="button button--secondary" to={`/coordinator/events/${event.eventId}`}>
-          Back to event
-        </Link>
-      </header>
+    <section className="page page--compact">
+      <PageHeader
+        title="Request equipment"
+        description={`For ${event.eventName}`}
+        actions={
+          <Link className="button button--secondary" to={`/coordinator/events/${event.eventId}`}>
+            Back to event
+          </Link>
+        }
+      />
 
       {error ? <p role="alert">{error}</p> : null}
-      {success ? <p className="equipment-request__success" role="status">{success}</p> : null}
+      {success ? <Notice>{success}</Notice> : null}
 
       {requests.filter((request) => request.status === 'rejected').map((request) => (
         <Card key={request.requestId} className="equipment-request__previous">

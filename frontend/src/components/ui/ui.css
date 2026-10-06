@@ -9,6 +9,11 @@
   font-weight: 600;
   font-size: 0.9rem;
   cursor: pointer;
+  text-align: center;
+  text-decoration: none;
+  /* Labels wrap between words, never mid-word, so a button keeps its shape
+   * when it shares a row with long text. */
+  overflow-wrap: normal;
   transition: background-color 120ms ease, border-color 120ms ease, opacity 120ms ease;
 }
 
@@ -66,12 +71,12 @@
   color: var(--ink-soft);
 }
 
-.field .field-hint {
+.field-hint {
   font-size: 0.78rem;
   color: var(--ink-faint);
 }
 
-.field .field-error {
+.field-error {
   font-size: 0.8rem;
   color: var(--danger);
   font-weight: 600;
@@ -120,6 +125,7 @@
   padding: 0.4rem 0.85rem;
   font-size: 0.82rem;
   cursor: pointer;
+  overflow-wrap: normal;
   transition: all 120ms ease;
 }
 
@@ -140,6 +146,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  white-space: nowrap;
 }
 
 .status-badge--draft {
@@ -178,6 +185,8 @@
 
 .step-indicator li {
   flex: 1;
+  min-width: 0;
+  overflow-wrap: normal;
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
@@ -200,6 +209,7 @@
 
 .status-timeline {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.4rem;
   list-style: none;
   margin: 0;
@@ -207,13 +217,16 @@
 }
 
 .status-timeline li {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
   padding-block-start: 0.4rem;
   border-top: 3px solid var(--hairline);
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--ink-faint);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .status-timeline li[data-state='current'] {
@@ -262,4 +275,33 @@
   height: 0.4rem;
   border-radius: 999px;
   background: currentColor;
+}
+
+/* Form controls fill their field and never push it wider than the screen. */
+.field {
+  min-width: 0;
+}
+
+.field input:not([type='checkbox']):not([type='radio']),
+.field textarea,
+.field select {
+  width: 100%;
+  min-width: 0;
+}
+
+/* On a phone only the current step keeps its label; the others collapse to
+ * their progress bar. The labels stay in the page for screen readers. */
+@media (max-width: 640px) {
+  .step-indicator {
+    gap: 0.3rem;
+  }
+
+  .step-indicator li:not([data-state='current']) {
+    font-size: 0;
+  }
+
+  .step-indicator li[data-state='current'] {
+    flex: 0 1 auto;
+    white-space: nowrap;
+  }
 }

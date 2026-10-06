@@ -12,7 +12,7 @@ export function RoleConsoleHomePage({
   features: SkeletonFeature[]
 }) {
   return (
-    <div className="role-console-home">
+    <div className="page">
       <div className="skeleton-console__header">
         <h1>{roleTitle} console</h1>
         <p className="field-hint">
