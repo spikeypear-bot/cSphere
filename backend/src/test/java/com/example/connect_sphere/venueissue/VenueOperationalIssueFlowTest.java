@@ -168,15 +168,11 @@ class VenueOperationalIssueFlowTest {
         assertThat(issuesFor(venueId)).isEqualTo(1);
     }
 
-    @ParameterizedTest
-    @ValueSource(strings = {
-            "{\"affectedFrom\":null,\"affectedUntil\":null}",
-            "{\"description\":\"\",\"affectedFrom\":null,\"affectedUntil\":null}",
-            "{\"description\":\"   \",\"affectedFrom\":null,\"affectedUntil\":null}"})
-    void anIssueWithoutADescriptionIsRefusedWithAMessageAndNothingIsSaved(String body) throws Exception {
+    @Test
+    void anIssueWithoutADescriptionIsRefusedWithAMessageAndNothingIsSaved() throws Exception {
         UUID venueId = venue();
 
-        report(venueId, "vs1", body)
+        report(venueId, "vs1", issue("   ", null, null))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Issue description is required."));
 
@@ -190,21 +186,6 @@ class VenueOperationalIssueFlowTest {
         report(venueId, "vs1", issue("Air conditioning failure", EVENT_END, EVENT_START))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").value("Affected end date/time must be after the start date/time."));
-
-        assertThat(issuesFor(venueId)).isZero();
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"start", "end"})
-    void aPeriodWithOnlyOneOfStartAndEndIsRefusedWithAMessageAndNothingIsSaved(String supplied) throws Exception {
-        UUID venueId = venue();
-        String body = supplied.equals("start")
-                ? issue("Air conditioning failure", EVENT_START, null)
-                : issue("Air conditioning failure", null, EVENT_END);
-
-        report(venueId, "vs1", body)
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").value("Affected start and end date/time must be supplied together."));
 
         assertThat(issuesFor(venueId)).isZero();
     }

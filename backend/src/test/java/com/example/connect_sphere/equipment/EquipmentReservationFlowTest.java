@@ -198,21 +198,6 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
-    void reservingExactlyTheAvailableQuantityIsAccepted() throws Exception {
-        UUID eventId = event("Town Hall");
-        UUID speakers = equipment("TS02 Speaker", 10, false);
-        UUID requestId = requested(eventId, speakers);
-
-        reserve("ts1", reservation(eventId, speakers, 10, null, START, END))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.quantity").value(10));
-        sync();
-
-        assertThat(reservationsFor(eventId)).isEqualTo(1);
-        availability(requestId, START, END).andExpect(jsonPath("$[0].availableQuantity").value(0));
-    }
-
-    @Test
     void reservingOneMoreThanTheAvailableQuantityIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);

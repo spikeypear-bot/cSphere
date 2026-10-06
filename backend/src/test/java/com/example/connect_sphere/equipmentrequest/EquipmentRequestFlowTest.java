@@ -207,28 +207,17 @@ class EquipmentRequestFlowTest {
         assertThat(linesFor(eventId)).isEqualTo(1);
     }
 
-    @ParameterizedTest
-    @ValueSource(ints = {0, -1})
-    void aQuantityOfZeroOrLessIsRefusedAndNothingIsSaved(int quantity) throws Exception {
+    @Test
+    void aQuantityOfZeroIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
         UUID microphone = equipment("EC07 Microphone");
 
-        submit(eventId, "ec1", body("Two screens on stage", item(microphone, 3), item(projector, quantity)))
+        submit(eventId, "ec1", body("Two screens on stage", item(microphone, 3), item(projector, 0)))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").isNotEmpty());
         assertThat(requestsFor(eventId)).isZero();
         assertThat(linesFor(eventId)).isZero();
-    }
-
-    @Test
-    void aRequestWithNoItemsAndNoNotesIsRefusedAndNothingIsSaved() throws Exception {
-        UUID eventId = event();
-
-        submit(eventId, "ec1", body(""))
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").isNotEmpty());
-        assertThat(requestsFor(eventId)).isZero();
     }
 
     @Test

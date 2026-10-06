@@ -63,5 +63,13 @@ jobs:
           cache: maven
       - name: Unit tests
         run: ./mvnw -B -ntp clean test -DexcludedGroups=integration
+      - name: Unit test summary
+        if: ${{ !cancelled() }}
+        run: |
+          python3 ../.github/scripts/test-summary.py "Backend unit tests" target/surefire-reports
+          rm -rf target/surefire-reports
       - name: Integration tests
         run: ./mvnw -B -ntp verify -Dgroups=integration
+      - name: Integration test summary
+        if: ${{ !cancelled() }}
+        run: python3 ../.github/scripts/test-summary.py "Backend integration tests" target/surefire-reports

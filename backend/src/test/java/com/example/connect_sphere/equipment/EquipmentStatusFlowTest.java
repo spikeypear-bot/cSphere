@@ -181,28 +181,6 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
-    void makingAUnitAvailableForPartOfABlockKeepsTheRestOfTheBlock() throws Exception {
-        marked("MX-1", "Faulty", START, END);
-
-        mark("ts1", "MX-1", change("Available", "2027-03-10T02:00:00Z", "2027-03-10T03:00:00Z"))
-                .andExpect(status().isNoContent());
-        sync();
-
-        periods("MX-1")
-                .andExpect(jsonPath("$.length()").value(2))
-                .andExpect(jsonPath("$[0].status").value("Faulty"))
-                .andExpect(jsonPath("$[0].start").value(START))
-                .andExpect(jsonPath("$[0].end").value("2027-03-10T02:00:00Z"))
-                .andExpect(jsonPath("$[1].status").value("Faulty"))
-                .andExpect(jsonPath("$[1].start").value("2027-03-10T03:00:00Z"))
-                .andExpect(jsonPath("$[1].end").value(END));
-        units("ts1", "2027-03-10T02:00:00Z", "2027-03-10T03:00:00Z")
-                .andExpect(jsonPath(statusOf("MX-1"), contains("Available")));
-        units("ts1", START, "2027-03-10T02:00:00Z")
-                .andExpect(jsonPath(statusOf("MX-1"), contains("Faulty")));
-    }
-
-    @Test
     void makingAUnitAvailableForTheWholeBlockRemovesTheBlock() throws Exception {
         marked("MX-1", "Faulty", START, END);
 

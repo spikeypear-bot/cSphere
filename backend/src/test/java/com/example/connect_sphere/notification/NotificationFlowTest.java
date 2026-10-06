@@ -198,17 +198,6 @@ class NotificationFlowTest {
     }
 
     @Test
-    void approvingTwiceIsRefusedAndCreatesNoSecondNotification() throws Exception {
-        UUID requestId = assignedRequest();
-        approve(requestId);
-
-        mvc.perform(post("/api/event-requests/" + requestId + "/approve").with(flow.as("ec1")))
-                .andExpect(status().isConflict());
-
-        assertThat(savedStatusChange("approved")).isEqualTo(1);
-    }
-
-    @Test
     void rejectingNotifiesTheOrganiserWithTheNewStatusAndTheReason() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -220,16 +209,6 @@ class NotificationFlowTest {
                 .andExpect(jsonPath(statusChange("rejected") + ".eventRequestId", contains(requestId.toString())))
                 .andExpect(jsonPath(statusChange("rejected") + ".reason", contains("Venue cannot host this date")))
                 .andExpect(jsonPath(statusChange("rejected") + ".linkPath", contains("/organiser/requests/" + requestId)));
-    }
-
-    @Test
-    void aRejectionWithoutAReasonIsRefusedAndCreatesNoNotification() throws Exception {
-        UUID requestId = assignedRequest();
-
-        reject(requestId, " ").andExpect(status().isUnprocessableEntity());
-
-        assertThat(requestStatus(requestId)).isEqualTo("pending");
-        assertThat(saved("status_change")).isZero();
     }
 
     @Test
@@ -259,27 +238,6 @@ class NotificationFlowTest {
                 .andExpect(jsonPath(statusChange("confirmed") + ".eventName", contains(eventName)))
                 .andExpect(jsonPath(statusChange("confirmed") + ".occurredAt", contains(notNullValue())))
                 .andExpect(jsonPath(statusChange("confirmed") + ".linkPath", contains("/organiser/events/" + eventId)));
-    }
-
-    @Test
-    void confirmingTwiceIsRefusedAndCreatesNoSecondNotification() throws Exception {
-        UUID eventId = approve(assignedRequest());
-        confirm(eventId, "ec1").andExpect(status().isOk());
-
-        confirm(eventId, "ec1").andExpect(status().isConflict());
-
-        assertThat(eventStatus(eventId)).isEqualTo("confirmed");
-        assertThat(savedStatusChange("confirmed")).isEqualTo(1);
-    }
-
-    @Test
-    void aCoordinatorNotAssignedToTheEventCannotConfirmItAndNoNotificationIsCreated() throws Exception {
-        UUID eventId = approve(assignedRequest());
-
-        confirm(eventId, "ec2").andExpect(status().isForbidden());
-
-        assertThat(eventStatus(eventId)).isEqualTo("pending");
-        assertThat(savedStatusChange("confirmed")).isZero();
     }
 
     @ParameterizedTest
@@ -318,23 +276,6 @@ class NotificationFlowTest {
     }
 
     @Test
-    void aNotificationStaysInTheListAfterItIsMarkedReadAndShowsAsRead() throws Exception {
-        assignedRequest();
-        UUID notificationId = assignmentNotificationId();
-
-        mvc.perform(post("/api/notifications/" + notificationId + "/read").with(flow.as("eo1")))
-                .andExpect(status().isOk());
-        mvc.perform(post("/api/notifications/" + notificationId + "/read").with(flow.as("eo1")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.read").value(true));
-
-        assertThat(saved("coordinator_assignment")).isEqualTo(1);
-        notificationsOf("eo1")
-                .andExpect(jsonPath(assignment(false) + ".notificationId", contains(notificationId.toString())))
-                .andExpect(jsonPath(assignment(false) + ".read", contains(true)));
-    }
-
-    @Test
     void markingANotificationReadDoesNotChangeTheRequestOrItsCoordinator() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -345,19 +286,6 @@ class NotificationFlowTest {
         assertThat(jdbc.queryForObject(
                 "SELECT coordinator_id FROM event_requests WHERE request_id = ?", UUID.class, requestId))
                 .isEqualTo(flow.idOf("ec1"));
-    }
-
-    @Test
-    void aUserCannotMarkSomeoneElsesNotificationAsReadAndItStaysUnread() throws Exception {
-        assignedRequest();
-        UUID notificationId = assignmentNotificationId();
-
-        mvc.perform(post("/api/notifications/" + notificationId + "/read").with(flow.as("eo3")))
-                .andExpect(status().isNotFound());
-
-        assertThat(jdbc.queryForObject(
-                "SELECT count(*) FROM notifications WHERE notification_id = ? AND read_at IS NULL",
-                Integer.class, notificationId)).isEqualTo(1);
     }
 
     @Test

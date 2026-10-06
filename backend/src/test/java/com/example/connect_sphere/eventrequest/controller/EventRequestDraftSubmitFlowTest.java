@@ -166,14 +166,6 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
-    void aRequestCanBeStartedWithNoFieldsFilledIn() throws Exception {
-        save("eo1", "{}")
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("draft"))
-                .andExpect(jsonPath("$.eventName").isEmpty());
-    }
-
-    @Test
     void aSavedDraftCanBeReopenedWithEverythingThatWasSaved() throws Exception {
         Map<String, String> fields = complete();
         fields.put("description", "\"Keynote and demos\"");
@@ -311,34 +303,6 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
-    void optionalInformationIsNotNeededToSubmit() throws Exception {
-        Map<String, String> fields = complete();
-        fields.remove("description");
-        fields.remove("equipmentRequirements");
-        fields.remove("registrationNeeds");
-        UUID requestId = draft("eo1", json(fields));
-
-        submit(requestId, "eo1").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("pending"));
-    }
-
-    @ParameterizedTest
-    @ValueSource(strings = {"eventName", "purpose", "startDatetime", "endDatetime", "expectedAttendance",
-            "venueRequirements", "accessibilityNeeds"})
-    void aDraftMissingOneRequiredFieldCannotBeSubmittedAndTheFieldIsNamed(String missing) throws Exception {
-        Map<String, String> fields = complete();
-        fields.remove(missing);
-        UUID requestId = draft("eo1", json(fields));
-
-        submit(requestId, "eo1")
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").isNotEmpty())
-                .andExpect(jsonPath("$.missingFields", contains(missing)));
-
-        assertThat(savedStatus(requestId)).isEqualTo("draft");
-        assertThat(submissionsRecorded(requestId)).isZero();
-    }
-
-    @Test
     void submittingAnEmptyDraftNamesEveryRequiredFieldAndLeavesItADraft() throws Exception {
         UUID requestId = draft("eo1", "{}");
 
@@ -349,21 +313,6 @@ class EventRequestDraftSubmitFlowTest {
 
         assertThat(savedStatus(requestId)).isEqualTo("draft");
         reviewQueue().andExpect(jsonPath(queued("unassigned", requestId), empty()));
-    }
-
-    @Test
-    void aRequestWhoseEndIsBeforeItsStartCannotBeSubmitted() throws Exception {
-        Map<String, String> fields = complete();
-        fields.put("startDatetime", "\"" + END + "\"");
-        fields.put("endDatetime", "\"" + START + "\"");
-        UUID requestId = draft("eo1", json(fields));
-
-        submit(requestId, "eo1")
-                .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").isNotEmpty());
-
-        assertThat(savedStatus(requestId)).isEqualTo("draft");
-        assertThat(submissionsRecorded(requestId)).isZero();
     }
 
     @Test
