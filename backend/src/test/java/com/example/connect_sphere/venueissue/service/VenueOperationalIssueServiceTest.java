@@ -35,7 +35,7 @@ class VenueOperationalIssueServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueOperationalIssueService(issues, venues, bookings);
-        when(issues.save(any(VenueOperationalIssue.class)))
+        when(issues.saveAndFlush(any(VenueOperationalIssue.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -53,7 +53,7 @@ class VenueOperationalIssueServiceTest {
         assertThat(saved.affectedFrom()).isEqualTo(from);
         assertThat(saved.affectedUntil()).isEqualTo(until);
         assertThat(saved.createdBy()).isEqualTo(userId);
-        verify(issues).save(any(VenueOperationalIssue.class));
+        verify(issues).saveAndFlush(any(VenueOperationalIssue.class));
         org.mockito.Mockito.verifyNoInteractions(bookings);
     }
 
