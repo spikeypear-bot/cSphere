@@ -6,6 +6,7 @@ import java.util.List;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -20,6 +21,7 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 import jakarta.persistence.EntityManager;
 
 /** Real PostgreSQL round trip; the test transaction rolls back the venue. */
+@Tag("integration")
 @SpringBootTest
 @Transactional
 class VenuePersistenceTest {

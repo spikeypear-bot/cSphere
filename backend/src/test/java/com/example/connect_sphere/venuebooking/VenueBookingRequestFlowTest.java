@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -36,6 +37,7 @@ import jakarta.persistence.EntityManager;
  * test says otherwise; other bookings are placed around that window to probe
  * the overlap boundaries. Every test rolls back.
  */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

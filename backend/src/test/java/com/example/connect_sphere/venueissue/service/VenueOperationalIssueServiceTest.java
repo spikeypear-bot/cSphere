@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -21,6 +22,7 @@ import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
 import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRepository;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
+@Tag("unit")
 class VenueOperationalIssueServiceTest {
 
     @Mock private VenueOperationalIssueRepository issues;
@@ -35,7 +37,7 @@ class VenueOperationalIssueServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueOperationalIssueService(issues, venues, bookings);
-        when(issues.save(any(VenueOperationalIssue.class)))
+        when(issues.saveAndFlush(any(VenueOperationalIssue.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }
 
@@ -53,7 +55,7 @@ class VenueOperationalIssueServiceTest {
         assertThat(saved.affectedFrom()).isEqualTo(from);
         assertThat(saved.affectedUntil()).isEqualTo(until);
         assertThat(saved.createdBy()).isEqualTo(userId);
-        verify(issues).save(any(VenueOperationalIssue.class));
+        verify(issues).saveAndFlush(any(VenueOperationalIssue.class));
         org.mockito.Mockito.verifyNoInteractions(bookings);
     }
 

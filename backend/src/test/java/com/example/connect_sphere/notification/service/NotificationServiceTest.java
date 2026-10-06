@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
@@ -22,6 +23,7 @@ import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
 
+@Tag("unit")
 class NotificationServiceTest {
 
     @Mock

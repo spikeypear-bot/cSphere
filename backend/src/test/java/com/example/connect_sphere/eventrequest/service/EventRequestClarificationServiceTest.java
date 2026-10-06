@@ -16,6 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
@@ -49,6 +50,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * <p>The database-level guarantees (append-only timeline, audience filtering,
  * the real filter chain) are in EventRequestReviewFlowTest.
  */
+@Tag("unit")
 class EventRequestClarificationServiceTest {
 
     @Mock private EventRequestRepository repository;
