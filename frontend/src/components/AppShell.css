@@ -8,12 +8,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.75rem;
   padding: 1rem 1.5rem;
   border-bottom: 1px solid var(--hairline);
   background: var(--panel);
 }
 
 .app-shell__brand {
+  flex-shrink: 0;
   font-weight: 700;
   font-size: 1.05rem;
   letter-spacing: -0.01em;
@@ -25,8 +27,18 @@
   display: flex;
   align-items: center;
   gap: 0.9rem;
+  min-width: 0;
   font-size: 0.85rem;
   color: var(--ink-soft);
+}
+
+/* Username comes first, so it is what survives when a narrow screen
+ * truncates the role and organisation. */
+.app-shell__identity {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .app-shell__switch {
@@ -37,6 +49,8 @@
   font-size: 0.8rem;
   color: var(--ink-soft);
   cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .app-shell__switch:hover {
@@ -52,9 +66,27 @@
   padding: 2rem 1.25rem 4rem;
 }
 
+/* On a phone the bell and Log out stay beside the brand, and the signed-in
+ * identity drops to its own line so it is never truncated. */
 @media (max-width: 640px) {
   .app-shell__header {
-    padding: 0.85rem 1rem;
+    flex-wrap: wrap;
+    gap: 0.35rem 0.6rem;
+    padding: 0.75rem 1rem;
+  }
+  .app-shell__brand {
+    margin-inline-end: auto;
+  }
+  .app-shell__session {
+    display: contents;
+  }
+  .app-shell__identity {
+    order: 1;
+    flex-basis: 100%;
+    overflow: visible;
+    white-space: normal;
+    font-size: 0.8rem;
+    color: var(--ink-soft);
   }
   .app-shell__content {
     padding: 1.25rem 1rem 3rem;

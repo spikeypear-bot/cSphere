@@ -1,24 +1,7 @@
-.request-review { display: flex; flex-direction: column; gap: 1rem; }
-.request-review__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
-.request-review__header h1 { margin: 0; }
-.request-review__notice {
-  margin: 0; padding: 0.75rem 1rem; border-radius: var(--radius-md);
-  background: var(--success-soft); color: var(--success); font-weight: 600;
-}
-
-.request-review__layout {
-  display: grid;
-  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
-  gap: 1.25rem;
-  align-items: start;
-}
-@media (max-width: 900px) {
-  .request-review__layout { grid-template-columns: minmax(0, 1fr); }
-}
 
 .request-review__main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
 .request-review__main .card { padding: 1.25rem; }
-.request-review__history { position: sticky; top: 1rem; min-width: 0; }
+.request-review__history { min-width: 0; }
 .request-review__history h2 { font-size: 1.05rem; margin-top: 0; }
 
 .request-review__readiness { border-inline-start: 4px solid var(--success); }
@@ -46,7 +29,7 @@
 .request-review__row dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .request-review__row[data-flagged='true'] { background: color-mix(in srgb, var(--role-coordinator) 12%, var(--panel)); }
 .request-review__missing { color: var(--danger); font-style: italic; }
-@media (max-width: 600px) {
+@media (max-width: 640px) {
   .request-review__row { grid-template-columns: minmax(0, 1fr) auto; }
   .request-review__row dd { grid-column: 1 / -1; }
 }
@@ -64,13 +47,11 @@
 .request-review__choices { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 .request-review__panel { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; align-items: flex-start; }
 .request-review__panel label { font-weight: 600; }
-.request-review__panel textarea { width: 100%; box-sizing: border-box; font: inherit; }
-.request-review__error { color: var(--danger); margin: 0.75rem 0 0; }
+.request-review__error { margin-top: 0.75rem; }
 
 .request-review__questions { list-style: none; margin: 0; padding: 0; display: grid; gap: 1rem; width: 100%; }
 .request-review__question { display: flex; flex-direction: column; gap: 0.45rem; align-items: flex-start; }
 .request-review__question label { font-weight: 400; }
-.request-review__question textarea { width: 100%; box-sizing: border-box; font: inherit; }
 .request-review__pill {
   display: inline-flex; align-items: center; gap: 0.35rem;
   padding: 0.3rem 0.45rem 0.3rem 0.85rem; border-radius: 999px;

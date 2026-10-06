@@ -27,7 +27,7 @@
   right: -0.3rem;
   background: var(--danger);
   color: var(--accent-ink);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 700;
   min-width: 1.1rem;
   height: 1.1rem;
@@ -129,4 +129,17 @@
 .notification-bell__item-time {
   font-size: 0.72rem;
   color: var(--ink-faint);
+}
+
+/* The bell is not at the screen edge on a phone, so a panel anchored to it
+ * would run off the left side. Pin it to the viewport instead. */
+@media (max-width: 640px) {
+  .notification-bell__panel {
+    position: fixed;
+    top: 5.5rem;
+    left: 0.75rem;
+    right: 0.75rem;
+    width: auto;
+    max-height: min(24rem, calc(100svh - 6.5rem));
+  }
 }

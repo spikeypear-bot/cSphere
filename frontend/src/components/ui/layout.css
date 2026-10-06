@@ -1,0 +1,153 @@
+/* Shared page layout. Two breakpoints are used across the app:
+ *   640px — phones: single column, tighter padding
+ *   900px — tablets: side-by-side panels stack
+ * Prefer wrapping flex rows and auto-fit grids; add a media query only when
+ * those are not enough. */
+
+.page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+
+.page--compact {
+  gap: 1rem;
+}
+
+.page-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+}
+
+.page-header__text {
+  flex: 1 1 16rem;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.page-header__description {
+  color: var(--ink-soft);
+}
+
+.page-header__actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.split-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.split-layout--aside-first {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 2.2fr);
+}
+
+.split-layout > * {
+  min-width: 0;
+}
+
+.split-layout__sticky {
+  position: sticky;
+  top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .split-layout,
+  .split-layout--aside-first {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .split-layout__sticky {
+    position: static;
+  }
+}
+
+.notice {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md);
+  font-weight: 600;
+}
+
+.notice--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.notice--info {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.notice--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.error-text {
+  margin: 0;
+  color: var(--danger);
+}
+
+.section-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
+}
+
+.plain-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.page-section--divided {
+  margin-block-start: 1rem;
+  padding-block-start: 1.5rem;
+  border-top: 1px solid var(--hairline);
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.page-section--divided h2 {
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+/* --percent is set inline by the caller. */
+.completion-ring {
+  display: inline-block;
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 999px;
+  background: conic-gradient(var(--accent) calc(var(--percent) * 1%), var(--hairline) 0);
+  flex-shrink: 0;
+}
+
+.completion-ring--large {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

@@ -1,5 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { Card } from '../../components/ui/Card'
 import type { VenueDto } from '../../types/venue'
@@ -15,14 +16,16 @@ export function VenueDetailsPage() {
   const venue = useVenueRead<VenueDto>(`/venues/${venueId}`)
   return <div className="feature-skeleton venue-details-page">
     <Link to="/venue-staff/catalogue">Back to venue catalogue</Link>
-    <div className="venue-details-page__header">
-      <h1>Venue details</h1>
-      <Button className="venue-refresh-button" variant="ghost" onClick={venue.retry}
-        disabled={venue.loading} aria-label="Refresh venue" title="Refresh venue">
-        <RefreshIcon />
-        <span>Refresh</span>
-      </Button>
-    </div>
+    <PageHeader
+      title="Venue details"
+      actions={
+        <Button className="venue-refresh-button" variant="ghost" onClick={venue.retry}
+          disabled={venue.loading} aria-label="Refresh venue" title="Refresh venue">
+          <RefreshIcon />
+          <span>Refresh</span>
+        </Button>
+      }
+    />
     {venue.error ? <div><p role="alert">{venue.error}</p><Button onClick={venue.retry}>Retry venue</Button></div>
       : !venue.data ? <p role="status">Loading venue…</p> : <VenueDetailsPanel venue={venue.data} />}
     {venue.data && <AssociatedBookings key={`bookings-${venue.data.venueId}`} venueId={venue.data.venueId} />}

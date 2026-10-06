@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
+import { Notice } from '../../components/ui/Notice'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatusTimeline } from '../../components/ui/StatusTimeline'
 import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
@@ -52,25 +54,13 @@ export function OrganiserHomePage() {
   }, [])
 
   return (
-    <div className="organiser-home">
-      <div className="organiser-home__header">
-        <div>
-          <h1>Your event requests</h1>
-          <p className="field-hint">{organisation}</p>
-        </div>
-        <NewRequestButton />
-      </div>
+    <div className="page">
+      <PageHeader title="Your event requests" description={organisation} actions={<NewRequestButton />} />
 
-      {justSubmitted ? (
-        <p className="organiser-home__confirmation" role="status">
-          Your event request has been submitted successfully.
-        </p>
-      ) : null}
+      {justSubmitted ? <Notice>Your event request has been submitted successfully.</Notice> : null}
 
       {justResubmitted ? (
-        <p className="organiser-home__confirmation" role="status">
-          Your updated request has been sent back to your Event Coordinator.
-        </p>
+        <Notice>Your updated request has been sent back to your Event Coordinator.</Notice>
       ) : null}
 
       {error ? <p role="alert">{error}</p> : null}
@@ -83,7 +73,7 @@ export function OrganiserHomePage() {
         </Card>
       ) : null}
 
-      <ul className="organiser-home__list">
+      <ul className="plain-list">
         {requests?.map((request) => (
           <li key={request.requestId}>
             <Card className="organiser-home__row"
@@ -92,7 +82,7 @@ export function OrganiserHomePage() {
                 <div className="organiser-home__row-heading">
                   {request.status === 'draft' ? (
                     <span
-                      className="organiser-home__completion-ring"
+                      className="completion-ring"
                       style={{ ['--percent' as string]: getCompletionPercent(request) }}
                       title={`${getCompletionPercent(request)}% of required fields complete`}
                       aria-hidden="true"
@@ -129,7 +119,7 @@ export function OrganiserHomePage() {
         ))}
       </ul>
 
-      <div className="organiser-home__more">
+      <div className="page-section--divided">
         <h2>More Event Organiser stories</h2>
         <p className="field-hint">Not built yet — pick one up next sprint.</p>
         <SkeletonFeatureGrid basePath="/organiser" features={organiserExtraFeatures} />

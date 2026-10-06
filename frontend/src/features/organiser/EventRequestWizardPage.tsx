@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Notice } from '../../components/ui/Notice'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { TextField, NumberField, DateTimeField, CheckboxField } from '../../components/ui/fields'
 import { ChipGroup } from '../../components/ui/ChipGroup'
 import { StepIndicator, type Step } from '../../components/ui/StepIndicator'
@@ -120,20 +122,22 @@ export function EventRequestWizardPage() {
   }
 
   return (
-    <div className="wizard">
-      <div className="wizard__header">
-        <h1>New event request</h1>
-        <div className="wizard__header-status">
-          <CompletionTracker fields={fields} />
-          <AutosaveIndicator state={autosaveState} />
-        </div>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="New event request"
+        actions={
+          <>
+            <CompletionTracker fields={fields} />
+            <AutosaveIndicator state={autosaveState} />
+          </>
+        }
+      />
 
       {restoredFromLocalBackup ? (
-        <p className="wizard__restored-notice" role="status">
+        <Notice tone="info">
           Couldn't reach ConnectSphere when this loaded — showing what you last typed on this
           device. It will sync automatically once you're back online.
-        </p>
+        </Notice>
       ) : null}
 
       <StepIndicator steps={STEPS} currentIndex={stepIndex} />
@@ -372,7 +376,7 @@ function CompletionTracker({ fields }: { fields: DraftFields }) {
   const percent = getCompletionPercent(fields)
   return (
     <span className="completion-tracker" role="status">
-      <span className="completion-tracker__ring" style={{ ['--percent' as string]: percent }} aria-hidden="true" />
+      <span className="completion-ring completion-ring--large" style={{ ['--percent' as string]: percent }} aria-hidden="true" />
       {percent}% ready to submit
     </span>
   )

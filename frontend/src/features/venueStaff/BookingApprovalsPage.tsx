@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { formatEventDateTime } from './formatEventDateTime'
@@ -22,13 +23,15 @@ export function BookingApprovalsPage() {
   const refresh = () => { setRefreshRequested(true); retry() }
 
   return <div className="feature-skeleton booking-approvals-page">
-    <div className="feature-skeleton__header">
-      <h1>Pending booking requests</h1>
-      <Button variant="ghost" onClick={refresh} disabled={loading} aria-label="Refresh pending booking requests">
-        <RefreshIcon />{loading && refreshRequested ? 'Refreshing…' : 'Refresh'}
-      </Button>
-    </div>
-    <p className="feature-skeleton__summary">Review the requested venue and event requirements before opening the full booking details.</p>
+    <PageHeader
+      title="Pending booking requests"
+      description="Review the requested venue and event requirements before opening the full booking details."
+      actions={
+        <Button variant="ghost" onClick={refresh} disabled={loading} aria-label="Refresh pending booking requests">
+          <RefreshIcon />{loading && refreshRequested ? 'Refreshing…' : 'Refresh'}
+        </Button>
+      }
+    />
     {loading ? <p role="status">{refreshRequested ? 'Refreshing pending booking requests…' : 'Loading pending booking requests…'}</p>
       : error ? <Card className="feature-skeleton__body">
         <p role="alert">Could not load pending booking requests. {error}</p>

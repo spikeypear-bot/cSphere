@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import type { EventDto } from '../../types/event'
 import { ACCESSIBILITY_LABELS, type AccessibilityFeature } from '../../types/eventRequest'
@@ -92,7 +93,7 @@ export function VenueBookingRequestPage() {
 
   if (loadError) {
     return (
-      <div className="venue-request">
+      <div className="page page--compact venue-request">
         <Link to={eventId ? `/coordinator/events/${eventId}` : '/coordinator'}>Back to event</Link>
         <p role="alert">{loadError}</p>
       </div>
@@ -133,15 +134,13 @@ export function VenueBookingRequestPage() {
       : null
 
   return (
-    <div className="venue-request">
+    <div className="page page--compact venue-request">
       <Link to={`/coordinator/events/${event.eventId}`}>Back to event</Link>
-      <header>
-        <h1>Request a venue</h1>
-        <p className="field-hint">for <strong>{event.eventName}</strong></p>
-      </header>
+      <PageHeader title="Request a venue"
+        description={<p className="field-hint">for <strong>{event.eventName}</strong></p>} />
 
-      <div className="venue-request__layout">
-        <Card className="venue-request__needs" aria-labelledby="needs-heading">
+      <div className="split-layout split-layout--aside-first">
+        <Card className="venue-request__needs split-layout__sticky" aria-labelledby="needs-heading">
           <h2 id="needs-heading">What the event needs</h2>
           <dl>
             <div><dt>When</dt><dd>{timeRange(event.startDatetime, event.endDatetime)}</dd></div>
@@ -219,7 +218,7 @@ export function VenueBookingRequestPage() {
 
                   <p className="field-hint">This sends a <strong>pending</strong> request to Venue Staff. The venue is not
                     reserved until they approve it.</p>
-                  {submitError ? <p role="alert" className="venue-request__error">{submitError}</p> : null}
+                  {submitError ? <p role="alert" className="error-text">{submitError}</p> : null}
                   <Button disabled={!canSubmit || submitting} onClick={() => void submit()}>
                     {submitting ? 'Submitting…' : `Request ${selected.venue.venueAddress}`}
                   </Button>
