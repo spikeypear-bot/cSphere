@@ -111,3 +111,7 @@ pending-list test file contributes 14 of those frontend cases. See the
 Full “venues I manage” acceptance remains deferred: no staff-to-venue ownership
 relationship exists. Queue role access is enforced; shared detail endpoint access
 is unchanged. This implementation is not a claim that ownership acceptance is met.
+
+## VS01 implementation update — 6 October 2026
+
+Venue unavailability is integrated with Venue Details, buffered availability checks, staff conflict confirmation, transactional in-app coordinator alerts, replacement requests and the venue schedule agenda. Original bookings are preserved until an approved replacement marks them changed. See [implementation and verification details](venue-unavailability-api.md).

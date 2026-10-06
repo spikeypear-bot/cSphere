@@ -7,6 +7,7 @@ export type NotificationTypeName =
   | 'clarification_responded'
   | 'venue_booking_requested'
   | 'venue_booking_cancelled'
+  | 'venue_unavailable'
 
 export interface NotificationDto {
   notificationId: string

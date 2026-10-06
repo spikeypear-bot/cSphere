@@ -60,6 +60,29 @@ function renderPage() {
 }
 
 describe('VenueBookingRequestPage (EC03)', () => {
+  it('allows a replacement for an affected confirmed event and sends the original booking id', async () => {
+    seedSession('coordinator')
+    let submitted: unknown
+    stubApi({ ...routes([{ bookingId: 'original', status: 'approved', venueAddress: 'Closed Hall', requiresAlternative: true }], body => {
+      submitted = body; return jsonResponse(201, {})
+    }), [`GET /api/events/${EVENT}`]: () => jsonResponse(200, { ...event, status: 'confirmed' }) })
+    renderPage()
+    expect(await screen.findByText(/Alternative arrangements required for Closed Hall/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /1 Harbour Road/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
+    expect(await screen.findByText('Event page')).toBeInTheDocument()
+    expect(submitted).toMatchObject({ venueId: 'v1', replacesBookingId: 'original' })
+  })
+  it('blocks another replacement while one is already pending', async () => {
+    seedSession('coordinator')
+    stubApi(routes([
+      { bookingId: 'replacement', status: 'pending', venueAddress: 'New Hall', replacesBookingId: 'original' },
+      { bookingId: 'original', status: 'approved', venueAddress: 'Closed Hall', requiresAlternative: true },
+    ]))
+    renderPage()
+    expect(await screen.findByText(/already has a pending venue review booking request/)).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Venues ranked for this event' })).not.toBeInTheDocument()
+  })
   beforeEach(() => seedSession('coordinator'))
   afterEach(() => {
     cleanup()

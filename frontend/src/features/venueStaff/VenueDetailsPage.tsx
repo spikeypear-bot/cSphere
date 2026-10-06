@@ -1,4 +1,6 @@
 import { Link, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { VenueUnavailabilityPanel, VenueOccupancySettings } from './VenueUnavailabilityPanel'
 import { Button } from '../../components/ui/Button'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { Card } from '../../components/ui/Card'
@@ -12,6 +14,7 @@ import './BookingDetailsPage.css'
 
 export function VenueDetailsPage() {
   const { venueId } = useParams()
+  const [bookingRevision, setBookingRevision] = useState(0)
   const venue = useVenueRead<VenueDto>(`/venues/${venueId}`)
   return <div className="feature-skeleton venue-details-page">
     <Link to="/venue-staff/catalogue">Back to venue catalogue</Link>
@@ -25,7 +28,10 @@ export function VenueDetailsPage() {
     </div>
     {venue.error ? <div><p role="alert">{venue.error}</p><Button onClick={venue.retry}>Retry venue</Button></div>
       : !venue.data ? <p role="status">Loading venue…</p> : <VenueDetailsPanel venue={venue.data} />}
-    {venue.data && <AssociatedBookings key={`bookings-${venue.data.venueId}`} venueId={venue.data.venueId} />}
+    {venue.data && <VenueOccupancySettings key={venue.data.venueId} venueId={venue.data.venueId} />}
+    {venue.data && <AssociatedBookings key={`bookings-${venue.data.venueId}-${bookingRevision}`} venueId={venue.data.venueId} />}
+    {venue.data && <VenueUnavailabilityPanel key={`unavailability-${venue.data.venueId}`} venueId={venue.data.venueId}
+      onRecorded={() => setBookingRevision(n => n + 1)} />}
     {venue.data && <VenueOperationalIssuesPanel key={`issues-${venue.data.venueId}`}
       venueId={venue.data.venueId} venueAddress={venue.data.venueAddress} />}
   </div>
@@ -43,6 +49,7 @@ function AssociatedBookings({ venueId }: { venueId: string }) {
             <h3>{booking.event.eventName}</h3>
             <p>{formatEventDateTime(booking.event.startDatetime)} (Singapore time)</p>
             <p>Status: {booking.status ?? 'pending'}</p>
+            {booking.requiresAlternative && <p className="field-error">Alternative arrangements required</p>}
             <Link to={`/venue-staff/bookings/${booking.bookingId}`}>View booking details</Link>
           </Card>
         </li>)}</ul>}

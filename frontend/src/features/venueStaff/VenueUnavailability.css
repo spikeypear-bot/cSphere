@@ -1,0 +1,30 @@
+.venue-unavailability { margin-block: 1.5rem; }
+.venue-unavailability fieldset { border: 0; padding: 0; display: grid; gap: .6rem; max-width: 42rem; }
+.venue-unavailability input, .venue-unavailability textarea { font: inherit; padding: .6rem; width: 100%; box-sizing: border-box; }
+.unavailability-warning { border-left: 4px solid #b7791f; padding: 1rem; margin-block: 1rem; background: #b7791f14; }
+.venue-schedule-list { list-style: none; padding: 0; display: grid; gap: .8rem; }
+.venue-schedule-list > li { border-left: 4px solid #b7791f; padding: .8rem 1rem; background: #b7791f14; }
+.venue-schedule-list > li[data-kind="booking"] { border-color: #3879b8; background: #3879b814; }
+.venue-schedule-list > li[data-kind="pending"] { border-color: #777; background: #77777714; }
+
+/* Match the Venue Details card spacing and the shared field components. */
+section.venue-unavailability { margin-block: 0; min-width: 0; }
+.venue-unavailability__card { padding: clamp(1.25rem, 4vw, 2rem); border-radius: var(--radius-lg); }
+.venue-unavailability__intro { margin: 0 0 1.25rem; color: var(--ink-soft); font-size: .9rem; }
+.venue-unavailability .venue-unavailability__fields { margin: 0; max-width: none; min-width: 0; gap: 1.25rem; }
+.venue-unavailability__dates { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.venue-unavailability__fields .field { min-width: 0; }
+.venue-unavailability__fields textarea { resize: vertical; }
+.venue-unavailability__fields .field-error:empty { display: none; }
+.venue-unavailability__actions { display: flex; flex-wrap: wrap; gap: .75rem; }
+.venue-unavailability__warning { border: 1px solid var(--hairline-strong); border-left: 4px solid var(--accent); border-radius: var(--radius-sm); padding: 1.25rem; margin-top: 1.25rem; background: var(--accent-soft); overflow-wrap: anywhere; }
+.venue-unavailability__warning h3 { margin: 0 0 .5rem; font-size: 1rem; }
+.venue-unavailability__warning p { margin: .5rem 0; }
+.venue-unavailability__warning ul { padding-left: 1.25rem; }
+.venue-unavailability__warning li + li { margin-top: 1rem; }
+.unavailability-periods { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: 1rem; }
+.venue-unavailability__period h3 { margin: 0; font-size: 1rem; }
+.venue-unavailability__period p { margin: .5rem 0 0; color: var(--ink-soft); white-space: pre-wrap; }
+@media (max-width: 700px) {
+  .venue-unavailability__dates { grid-template-columns: minmax(0, 1fr); }
+}

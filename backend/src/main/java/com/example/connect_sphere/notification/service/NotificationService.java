@@ -215,6 +215,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
+            case venue_unavailable -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();

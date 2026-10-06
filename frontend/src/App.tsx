@@ -24,6 +24,7 @@ import { VenueDetailsPage } from './features/venueStaff/VenueDetailsPage'
 import { BookingDetailsPage } from './features/venueStaff/BookingDetailsPage'
 import { BookingApprovalsPage } from './features/venueStaff/BookingApprovalsPage'
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
+import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
 import { technicalSupportFeatures } from './features/technicalSupport/technicalSupportFeatures'
@@ -110,8 +111,9 @@ function VenueStaffRoutes() {
       <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
       <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
       <Route path="booking-approvals" element={<BookingApprovalsPage />} />
+      <Route path="availability-calendar" element={<VenueSchedulePage />} />
       <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
-      {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue') && feature.path !== 'booking-approvals'))}
+      {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue') && feature.path !== 'booking-approvals' && feature.path !== 'availability-calendar'))}
     </Routes>
   )
 }
