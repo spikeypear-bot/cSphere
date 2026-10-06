@@ -18,12 +18,14 @@ import {
 } from '../../types/eventRequest'
 import { dateRangeError } from './eventRequestValidation'
 import './ClarificationResponsePage.css'
+import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 
 const MAX_RESPONSE = 2000
 const ACCESSIBILITY_OPTIONS = Object.keys(ACCESSIBILITY_LABELS) as AccessibilityFeature[]
 const FIELD_ORDER = [
   'eventName', 'purpose', 'description', 'startDatetime', 'endDatetime', 'expectedAttendance',
   'venueRequirements', 'accessibilityNeeds', 'equipmentRequirements', 'registrationNeeds',
+  'requiredFacilities',
 ] as const
 
 type Fields = Required<SaveEventRequestRequest>
@@ -39,6 +41,7 @@ function fieldsFrom(request: EventRequestDto): Fields {
     venueRequirements: request.venueRequirements,
     equipmentRequirements: request.equipmentRequirements,
     accessibilityNeeds: request.accessibilityNeeds,
+    requiredFacilities: request.requiredFacilities ?? [],
     registrationNeeds: request.registrationNeeds,
   }
 }
@@ -84,13 +87,13 @@ export function ClarificationResponsePage() {
   }, [requestId])
 
   if (loadError) {
-    return <div className="clarify"><Link to="/organiser">Back to your requests</Link><p role="alert">{loadError}</p></div>
+    return <div className="page page--compact clarify"><Link to="/organiser">Back to your requests</Link><p role="alert">{loadError}</p></div>
   }
   if (!request || !fields) return <p>Loading…</p>
 
   if (request.status !== 'clarification_required') {
     return (
-      <div className="clarify">
+      <div className="page page--compact clarify">
         <Link to="/organiser">Back to your requests</Link>
         <p role="status">This request is not waiting for clarification any more.</p>
       </div>
@@ -169,6 +172,16 @@ export function ClarificationResponsePage() {
       case 'registrationNeeds':
         return <CheckboxField id={id} label="Attendees need to register" checked={Boolean(fields!.registrationNeeds)}
           onChange={(v) => setFields({ registrationNeeds: v })} />
+      case 'requiredFacilities':
+        return <fieldset><legend>{label}</legend>
+          {venueFacilities.map((facility: Facility) => <label key={facility}>
+            <input type="checkbox" checked={(fields!.requiredFacilities ?? []).includes(facility)}
+              onChange={(e) => setFields({ requiredFacilities: e.target.checked
+                ? [...(fields!.requiredFacilities ?? []), facility]
+                : (fields!.requiredFacilities ?? []).filter((value) => value !== facility) })} />
+            {venueFacilityLabels[facility]}
+          </label>)}
+        </fieldset>
       default:
         return <TextField id={id} label={label} value={fields![field] ?? ''} error={errorFor(field)}
           multiline={field !== 'eventName'} onChange={(v) => setFields({ [field]: v })} />
@@ -176,7 +189,7 @@ export function ClarificationResponsePage() {
   }
 
   return (
-    <div className="clarify">
+    <div className="page page--compact clarify">
       <Link to="/organiser">Back to your requests</Link>
       <div>
         <h1>{request.eventName || 'Your event request'}</h1>
@@ -184,7 +197,7 @@ export function ClarificationResponsePage() {
           createdByName={request.createdByName} />
       </div>
 
-      <div className="clarify__layout">
+      <div className="split-layout">
         <div className="clarify__main">
           {question ? (
             <Card className="clarify__question">
@@ -222,7 +235,7 @@ export function ClarificationResponsePage() {
             <textarea id="clarify-response" rows={4} value={response} onChange={(e) => setResponse(e.target.value)}
               placeholder="e.g. Confirmed 120 attendees and moved the end time to 5pm." />
             <span className={responseLength > MAX_RESPONSE ? 'field-error' : 'field-hint'}>{responseLength}/{MAX_RESPONSE}</span>
-            {error ? <p role="alert" className="clarify__error">{error}</p> : null}
+            {error ? <p role="alert" className="error-text">{error}</p> : null}
             <Button disabled={busy !== null || responseLength === 0 || responseLength > MAX_RESPONSE || Boolean(rangeError)}
               onClick={() => void handleResubmit()}>
               {busy === 'resubmit' ? 'Resubmitting…' : 'Save and resubmit'}
@@ -230,7 +243,7 @@ export function ClarificationResponsePage() {
           </Card>
         </div>
 
-        <aside className="clarify__history" aria-labelledby="clarify-history-heading">
+        <aside className="clarify__history split-layout__sticky" aria-labelledby="clarify-history-heading">
           <h2 id="clarify-history-heading">Conversation &amp; history</h2>
           <ActivityTimeline entries={timeline} />
         </aside>

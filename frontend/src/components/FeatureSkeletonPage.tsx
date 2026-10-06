@@ -1,4 +1,5 @@
 import { Card } from './ui/Card'
+import { PageHeader } from './ui/PageHeader'
 import type { SkeletonFeature, SkeletonLayout } from '../types/skeletonFeature'
 import './skeleton.css'
 
@@ -14,15 +15,12 @@ import './skeleton.css'
 export function FeatureSkeletonPage({ feature }: { feature: SkeletonFeature }) {
   return (
     <div className="feature-skeleton">
-      <div className="feature-skeleton__header">
-        <div>
-          <p className="field-hint">{feature.featureArea}</p>
-          <h1>{feature.pageTitle}</h1>
-        </div>
-        <span className="feature-skeleton__badge">Skeleton — not built yet</span>
-      </div>
-
-      <p className="feature-skeleton__summary">{feature.summary}</p>
+      <PageHeader
+        eyebrow={feature.featureArea}
+        title={feature.pageTitle}
+        description={feature.summary}
+        actions={<span className="feature-skeleton__badge">Skeleton — not built yet</span>}
+      />
 
       {feature.storyIds.length > 0 ? (
         <div className="feature-skeleton__stories" aria-label="Backlog stories this page belongs to">

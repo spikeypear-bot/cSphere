@@ -8,12 +8,9 @@ import com.example.connect_sphere.venue.entity.Venue;
 /**
  * How well one venue fits one event, from the data both actually record.
  *
- * <p>Capacity and accessibility are checked because both are structured on
- * the event and the venue. Facilities are not: an event records its venue
- * needs only as free text, so there is nothing to compare automatically.
- * That gap is EC05's to close (a structured "required facilities" field);
- * until then the coordinator reads the requirements next to the venue's
- * facilities on the booking page.
+ * <p>Capacity, accessibility, and facilities are checked from structured
+ * event and venue fields so the coordinator receives an explainable result
+ * before submitting a request.
  *
  * <p>Week 4 'Venue Suitability Checking': a venue "should not normally be
  * treated as suitable when the expected attendance exceeds its capacity or a
@@ -26,16 +23,20 @@ import com.example.connect_sphere.venue.entity.Venue;
 public record VenueSuitability(
         int expectedAttendance,
         int capacity,
-        List<String> missingAccessibility) {
+        List<String> missingAccessibility,
+        List<String> missingFacilities) {
 
     public static VenueSuitability of(Event event, Venue venue) {
         List<String> required = event.getAccessibilityNeeds() == null ? List.of()
                 : event.getAccessibilityNeeds().stream().filter(need -> !"none".equals(need)).toList();
         List<String> offered = venue.getVenueAccessibilities() == null ? List.of() : venue.getVenueAccessibilities();
+        List<String> requiredFacilities = event.getRequiredFacilities() == null ? List.of() : event.getRequiredFacilities();
+        List<String> offeredFacilities = venue.getVenueFacilities() == null ? List.of() : venue.getVenueFacilities();
         return new VenueSuitability(
                 event.getExpectedAttendance() == null ? 0 : event.getExpectedAttendance(),
                 venue.getVenueCapacity() == null ? 0 : venue.getVenueCapacity(),
-                required.stream().filter(need -> !offered.contains(need)).toList());
+                required.stream().filter(need -> !offered.contains(need)).toList(),
+                requiredFacilities.stream().filter(facility -> !offeredFacilities.contains(facility)).toList());
     }
 
     public boolean capacityOk() {
@@ -44,5 +45,9 @@ public record VenueSuitability(
 
     public boolean needsJustification() {
         return !missingAccessibility.isEmpty();
+    }
+
+    public boolean facilitiesOk() {
+        return missingFacilities.isEmpty();
     }
 }

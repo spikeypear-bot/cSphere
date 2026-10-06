@@ -2,6 +2,8 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Notice } from '../../components/ui/Notice'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
@@ -79,13 +81,15 @@ export function EventDetailsPage() {
   const canConfirm = role === 'coordinator' && event.status === 'pending'
 
   return (
-    <div className="event-details">
-      <div className="event-details__header">
-        <h1>{event.eventName}</h1>
-        <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
-          {STATUS_LABEL[event.status] ?? event.status}
-        </span>
-      </div>
+    <div className="page">
+      <PageHeader
+        title={event.eventName}
+        actions={
+          <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
+            {STATUS_LABEL[event.status] ?? event.status}
+          </span>
+        }
+      />
 
       <Card className="event-details__card">
         <dl className="event-details__grid">
@@ -127,14 +131,10 @@ export function EventDetailsPage() {
       </Card>
 
       {flash?.justApproved ? (
-        <p className="event-details__flash" role="status">
-          Request approved. The event is now in Planning and the organiser has been notified.
-        </p>
+        <Notice>Request approved. The event is now in Planning and the organiser has been notified.</Notice>
       ) : null}
       {flash?.bookingRequested ? (
-        <p className="event-details__flash" role="status">
-          Booking request for {flash.bookingRequested} sent to Venue Staff for review.
-        </p>
+        <Notice>Booking request for {flash.bookingRequested} sent to Venue Staff for review.</Notice>
       ) : null}
 
       {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={event.status === 'pending'} /> : null}

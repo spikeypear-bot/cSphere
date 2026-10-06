@@ -42,12 +42,12 @@ public class EquipmentStatusController {
 
     // Add a block.
     @PostMapping("/{equipmentId}/units/{serialNumber}/periods")
-    @ResponseStatus(HttpStatus.CREATED)
-    public StatusPeriodResponse addPeriod(
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void addPeriod(
             @PathVariable("equipmentId") UUID equipmentId,
             @PathVariable("serialNumber") String serialNumber,
             @RequestBody AddStatusPeriodRequest request) {
-        return service.addPeriod(
+        service.addPeriod(
                 equipmentId, serialNumber, request.status(), request.start(), request.end());
     }
 

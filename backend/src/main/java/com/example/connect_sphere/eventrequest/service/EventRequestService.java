@@ -53,7 +53,7 @@ public class EventRequestService {
     static final Set<String> FLAGGABLE_FIELDS = Set.of(
             "eventName", "purpose", "description", "startDatetime", "endDatetime",
             "expectedAttendance", "venueRequirements", "equipmentRequirements",
-            "accessibilityNeeds", "registrationNeeds");
+            "accessibilityNeeds", "requiredFacilities", "registrationNeeds");
 
     private final EventRequestRepository repository;
     private final EventRequestMapper mapper;
@@ -392,6 +392,7 @@ public class EventRequestService {
         event.setVenueRequirements(entity.getVenueRequirements());
         event.setEquipmentRequirements(entity.getEquipmentRequirements());
         event.setAccessibilityNeeds(entity.getAccessibilityNeeds().stream().map(Enum::name).toList());
+        event.setRequiredFacilities(entity.getRequiredFacilities() == null ? List.of() : entity.getRequiredFacilities());
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
         event.setOrganisation(entity.getOrganisation());
         event.setCoordinatorId(actingCoordinatorId);
@@ -586,6 +587,8 @@ public class EventRequestService {
         entity.setEquipmentRequirements(request.equipmentRequirements());
         entity.setAccessibilityNeeds(
                 request.accessibilityNeeds() == null ? List.of() : request.accessibilityNeeds());
+        entity.setRequiredFacilities(request.requiredFacilities() == null
+                ? List.of() : request.requiredFacilities().stream().map(Enum::name).toList());
         entity.setRegistrationNeeds(request.registrationNeeds());
     }
 

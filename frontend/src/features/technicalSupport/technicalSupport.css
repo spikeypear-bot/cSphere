@@ -1,0 +1,93 @@
+.tech-card {
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tech-card h2 {
+  font-size: 1.05rem;
+}
+
+.tech-card h3 {
+  font-size: 0.95rem;
+}
+
+.tech-card ul {
+  margin: 0;
+  padding-inline-start: 1.1rem;
+}
+
+.tech-card .tech-choice-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.tech-choice {
+  width: 100%;
+  text-align: start;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+  cursor: pointer;
+}
+
+.tech-choice:hover {
+  border-color: var(--hairline-strong);
+}
+
+.tech-choice[aria-pressed='true'] {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tech-period {
+  margin: 0;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+}
+
+.tech-period legend {
+  padding-inline: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.tech-period,
+.tech-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem 1rem;
+}
+
+.tech-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tech-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.tech-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
+}
+
+@media (max-width: 640px) {
+  .tech-card {
+    padding: 1rem;
+  }
+}

@@ -86,6 +86,7 @@ public class SecurityConfig{
                         "/api/venues/*/occupancy-settings", "/api/venues/*/schedule").hasRole("VS")
 		    .requestMatchers("/api/venues/*/operational-issues/**").hasRole("VS")
 		    .requestMatchers("/api/coordinator/operational-issues").hasRole("EC")
+		    .requestMatchers(HttpMethod.GET, "/api/venues/search").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/venues", "/api/venues/**").authenticated()
 		    // Catalogue authoring: VS07/VS18, widened to Coordinators by
 		    // D20 open question 1. The only place this rule lives — the

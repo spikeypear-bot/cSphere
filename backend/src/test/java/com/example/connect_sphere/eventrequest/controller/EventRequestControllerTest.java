@@ -15,6 +15,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -36,6 +37,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
  * correctly, independent of real business logic (which EventRequestServiceTest
  * already covers). The service is mocked.
  */
+@Tag("unit")
 @WebMvcTest(EventRequestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 class EventRequestControllerTest {

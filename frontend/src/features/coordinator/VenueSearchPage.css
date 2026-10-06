@@ -1,0 +1,93 @@
+.venue-search > .card {
+  padding: 1.25rem;
+}
+
+.venue-search__form {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.venue-search__dates {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+.venue-search__dates label,
+.venue-search__capacity {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-weight: 600;
+}
+
+.venue-search__dates input,
+.venue-search__capacity input {
+  width: 100%;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline-strong);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.venue-search__facilities {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+}
+
+.venue-search__facilities label {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.venue-search__form [role='alert'] {
+  margin: 0;
+  color: var(--danger);
+}
+
+.venue-search__results h2 {
+  margin: 0 0 0.75rem;
+  font-size: 1.1rem;
+}
+
+.venue-search__results ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 0.75rem;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.venue-search__results .card {
+  height: 100%;
+  box-sizing: border-box;
+  padding: 1rem;
+}
+
+.venue-search__results h3 {
+  margin: 0 0 0.5rem;
+  overflow-wrap: anywhere;
+}
+
+.venue-search__results p {
+  margin: 0.35rem 0;
+}
+
+@media (max-width: 640px) {
+  .venue-search__dates {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

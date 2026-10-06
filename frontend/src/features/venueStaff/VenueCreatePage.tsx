@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { TextField, NumberField } from '../../components/ui/fields'
 import { ChipGroup } from '../../components/ui/ChipGroup'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
@@ -17,7 +18,8 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   const [error, setError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
   const [form, setForm] = useState<CreateVenueDto>(initialVenue ?? { venueAddress: '', venueCapacity: 50,
-    supportedLayouts: [], venueAccessibilities: [], venueFacilities: [], operatingInformation: '', additionalInformation: '' })
+    supportedLayouts: [], venueAccessibilities: [], venueFacilities: [], operatingInformation: '', additionalInformation: '',
+    operatingHours: [] })
   function change<K extends keyof CreateVenueDto>(key: K, value: CreateVenueDto[K]) {
     setForm(previous => ({ ...previous, [key]: value }))
     let message = ''
@@ -47,7 +49,7 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     try {
       if (initialVenue) {
         const changes: Partial<CreateVenueDto> = {}
-        const fields = ['venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation'] as const
+        const fields = ['venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation', 'operatingHours'] as const
         for (const field of fields) {
           if (JSON.stringify(form[field]) !== JSON.stringify(initialVenue[field])) {
             Object.assign(changes, { [field]: form[field] })
@@ -65,8 +67,8 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   }
   return <div className="feature-skeleton venue-form">
     <Link to="/venue-staff/catalogue">← Venue catalogue</Link>
-    <div className="feature-skeleton__header"><h1>{initialVenue ? 'Edit Venue' : 'Add Venue'}</h1></div>
-    <p className="feature-skeleton__summary">Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional.</p>
+    <PageHeader title={initialVenue ? 'Edit Venue' : 'Add Venue'}
+      description="Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional." />
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
       {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. School A - Classroom 1, Level 2, 123 Example Road" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Create one venue per independently bookable room or space. Include its room identity and location; this is its displayed identifier. Maximum 500 characters." />}
       <NumberField id="venueCapacity" label="Overall capacity" value={form.venueCapacity} min={1} onChange={v => change('venueCapacity', v)} error={errors.venueCapacity} hint="1–50,000 people. One capacity applies to every selected layout." />
@@ -83,6 +85,25 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
       <ChipGroup label="Facilities (optional)" options={venueFacilities} labels={venueFacilityLabels}
         selected={form.venueFacilities} onChange={values => change('venueFacilities', values)} />
       <TextField id="operatingInformation" label="Operating information" placeholder="e.g. Monday–Friday, 09:00–18:00. Closed on public holidays." multiline value={form.operatingInformation} onChange={v => change('operatingInformation', v)} error={errors.operatingInformation} hint="Include operating days, hours and any closures." />
+      <fieldset className="venue-hours">
+        <legend>Structured operating hours</legend>
+        <p className="field-hint">Bookings are only allowed when the complete event period fits one configured daily interval.</p>
+        {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map((day, index) => {
+          const current = (form.operatingHours ?? []).find(hour => hour.dayOfWeek === index + 1)
+          return <div className="venue-hours__row" key={day}>
+            <label><input type="checkbox" checked={Boolean(current)} onChange={e => change('operatingHours',
+              e.target.checked ? [...(form.operatingHours ?? []), { dayOfWeek: index + 1, openTime: '09:00', closeTime: '18:00' }]
+                : (form.operatingHours ?? []).filter(hour => hour.dayOfWeek !== index + 1))} />{day}</label>
+            {current ? <>
+              <input aria-label={`${day} opens`} type="time" value={current.openTime} onChange={e => change('operatingHours',
+                (form.operatingHours ?? []).map(hour => hour.dayOfWeek === index + 1 ? { ...hour, openTime: e.target.value } : hour))} />
+              <input aria-label={`${day} closes`} type="time" value={current.closeTime} onChange={e => change('operatingHours',
+                (form.operatingHours ?? []).map(hour => hour.dayOfWeek === index + 1 ? { ...hour, closeTime: e.target.value } : hour))} />
+            </> : <span className="field-hint">Closed</span>}
+          </div>
+        })}
+        {errors.operatingHours && <span className="field-error" role="alert">{errors.operatingHours}</span>}
+      </fieldset>
       <TextField id="additionalInformation" label="Additional information (optional)" placeholder="e.g. Use the entrance on Level 2." multiline value={form.additionalInformation ?? ''} onChange={v => change('additionalInformation', v)} />
       {error && <div className="field"><p className="field-error" role="alert">{error}</p></div>}
       <div className="feature-skeleton__actions"><Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save venue'}</Button>

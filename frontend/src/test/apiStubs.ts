@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-type Role = 'organiser' | 'coordinator' | 'venue-staff'
+type Role = 'organiser' | 'coordinator' | 'venue-staff' | 'technical-support'
 
 /** A signed-in session, shaped like what LoginPage stores. */
 export function seedSession(role: Role, userId = `${role}-1`) {
@@ -8,7 +8,9 @@ export function seedSession(role: Role, userId = `${role}-1`) {
     accessToken: 'access-1',
     refreshToken: 'refresh-1',
     userId,
-    username: role === 'organiser' ? 'eo1' : role === 'coordinator' ? 'ec1' : 'vs1',
+    username: role === 'organiser' ? 'eo1'
+      : role === 'coordinator' ? 'ec1'
+        : role === 'technical-support' ? 'tech1' : 'vs1',
     role,
     organisation: role === 'organiser' ? 'Acme Pte Ltd' : 'ConnectSphere',
   }))
@@ -22,6 +24,7 @@ export interface Call {
   method: string
   url: string
   body: unknown
+  headers?: HeadersInit
 }
 
 /**
@@ -35,7 +38,7 @@ export function stubApi(routes: Record<string, (body: unknown) => Response>) {
     const method = init?.method ?? 'GET'
     const url = String(input)
     const body = init?.body ? JSON.parse(String(init.body)) : undefined
-    calls.push({ method, url, body })
+    calls.push({ method, url, body, headers: init?.headers })
     const handler = routes[`${method} ${url}`]
     if (!handler) throw new Error(`Unexpected fetch: ${method} ${url}`)
     return handler(body)

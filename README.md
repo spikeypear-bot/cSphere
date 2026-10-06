@@ -64,6 +64,23 @@ the `db` service: `docker compose up -d db`, then from `backend/`:
 its line endings were re-saved as CRLF by your editor/checkout — run
 `sed -i 's/\r$//' backend/mvnw` and it'll work again; `.gitattributes` at the
 repo root should prevent this going forward.)
+
+### Test Tags
+
+Every backend test class has a JUnit `@Tag`:
+
+- `unit` — no database; dependencies are mocked.
+- `integration` — `@SpringBootTest` against the real database.
+- Story ID (e.g. `EC07`, `TS02`) — on the integration tests written for that story.
+
+```
+docker compose run --rm backend-test test -Dgroups=unit
+docker compose run --rm backend-test test -Dgroups=integration
+docker compose run --rm backend-test test -Dgroups=EC07
+```
+
+Tag new test classes the same way. CI runs unit and integration tests as separate steps.
+
 ### Test Coverage
 
 To run jacoco , 

@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Notice } from '../../components/ui/Notice'
 import { useSession } from '../../lib/sessionContext'
 import './LoginPage.css'
 
@@ -46,16 +47,18 @@ export function LoginPage() {
   return (
     <div className="login">
       <Card className="login__card">
-        <h1>Sign in to ConnectSphere</h1>
-        <p className="login__intro">
-          Use your ConnectSphere account. What you can see and do is set by your
-          account's role.
-        </p>
+        <div>
+          <h1>Sign in to ConnectSphere</h1>
+          <p className="login__intro">
+            Use your ConnectSphere account. What you can see and do is set by your
+            account's role.
+          </p>
+        </div>
 
         {deniedPath ? (
-          <p className="login__notice" role="status">
+          <Notice tone="info">
             Please sign in to open <code>{deniedPath}</code>.
-          </p>
+          </Notice>
         ) : null}
 
         <form onSubmit={handleSubmit} noValidate>
@@ -82,7 +85,7 @@ export function LoginPage() {
           </div>
 
           {error ? (
-            <p className="login__error" role="alert">
+            <p className="error-text" role="alert">
               {error}
             </p>
           ) : null}

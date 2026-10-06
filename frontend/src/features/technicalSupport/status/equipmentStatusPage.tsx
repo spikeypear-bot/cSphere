@@ -1,7 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Button } from '../../../components/ui/Button'
+import { Card } from '../../../components/ui/Card'
+import { Notice } from '../../../components/ui/Notice'
+import { PageHeader } from '../../../components/ui/PageHeader'
+import '../technicalSupport.css'
 import {
-  BLOCK_STATUSES,
-  type BlockStatus,
+  EQUIPMENT_STATUSES,
+  type EquipmentStatus,
   type EquipmentUnit,
   type StatusPeriod,
   type TimePeriod,
@@ -30,8 +35,8 @@ export function EquipmentStatusPage() {
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
   const [blocks, setBlocks] = useState<StatusPeriod[]>([])
 
-  // ---- The "mark as faulty/unavailable" form (a draft until saved) ----
-  const [draftStatus, setDraftStatus] = useState<BlockStatus>('Unavailable')
+  // ---- The status change form (a draft until saved) ----
+  const [draftStatus, setDraftStatus] = useState<EquipmentStatus>('Unavailable')
   const [draftStart, setDraftStart] = useState('')
   const [draftEnd, setDraftEnd] = useState('')
   const [indefinite, setIndefinite] = useState(false)
@@ -111,15 +116,13 @@ export function EquipmentStatusPage() {
         draftStart,
         indefinite ? null : draftEnd,
       )
-      setMessage(
-        `${selectedUnit.equipmentName} ${selectedUnit.serialNumber} marked ${draftStatus} ` +
-          (indefinite ? 'until you change it back.' : 'for the chosen dates.'),
-      )
+      setMessage(`${selectedUnit.equipmentName} ${selectedUnit.serialNumber} marked ${draftStatus} ` +
+        (indefinite ? 'until changed again.' : 'for the chosen dates.'))
       resetForm()
       setReloadCount((n) => n + 1)
     } catch (e) {
       if (e instanceof ApiError && e.status === 409) {
-        setError('This unit already has a status for part of those dates. Remove that period first.')
+        setError(e.message || 'This unit cannot be changed for part of those dates.')
       } else {
         setError('Could not save the change. The previous status has been kept.')
       }
@@ -147,55 +150,66 @@ export function EquipmentStatusPage() {
   }
 
   return (
-    <section>
-      <h1>Equipment Status</h1>
+    <section className="page">
+      <PageHeader title="Equipment Status" />
 
-      <fieldset>
-        <legend>Date and time period to view</legend>
-        <label htmlFor="period-start">Start</label>
-        <input
-          id="period-start"
-          type="datetime-local"
-          value={period.start}
-          onChange={(e) => setPeriod({ ...period, start: e.target.value })}
-        />
-        <label htmlFor="period-end">End</label>
-        <input
-          id="period-end"
-          type="datetime-local"
-          value={period.end}
-          onChange={(e) => setPeriod({ ...period, end: e.target.value })}
-        />
-      </fieldset>
-      {!periodIsValid && <p role="alert">Please choose an end time after the start time.</p>}
-      {loading && <p>Loading equipment…</p>}
+      <Card className="tech-card">
+        <fieldset className="tech-period">
+          <legend>Date and time period to view</legend>
+          <div className="field">
+            <label htmlFor="period-start">Start</label>
+            <input
+              id="period-start"
+              type="datetime-local"
+              value={period.start}
+              onChange={(e) => setPeriod({ ...period, start: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label htmlFor="period-end">End</label>
+            <input
+              id="period-end"
+              type="datetime-local"
+              value={period.end}
+              onChange={(e) => setPeriod({ ...period, end: e.target.value })}
+            />
+          </div>
+        </fieldset>
+        {!periodIsValid && (
+          <p role="alert" className="error-text">Please choose an end time after the start time.</p>
+        )}
+        {loading && <p>Loading equipment…</p>}
 
-      <h2>Availability</h2>
-      <ul>
-        {counts.map((c) => (
-          <li key={c.typeName}>
-            {c.typeName}: {c.availableCount} of {c.totalCount} available
-          </li>
-        ))}
-      </ul>
+        <h2>Availability</h2>
+        <ul>
+          {counts.map((c) => (
+            <li key={c.typeName}>
+              {c.typeName}: {c.availableCount} of {c.totalCount} available
+            </li>
+          ))}
+        </ul>
+      </Card>
 
-      <h2>Equipment</h2>
-      <ul>
-        {units.map((unit) => (
-          <li key={unitKey(unit)}>
-            <button
-              type="button"
-              onClick={() => handleSelect(unit)}
-              aria-pressed={unitKey(unit) === selectedKey}
-            >
-              {unit.equipmentName} {unit.serialNumber} — {unit.status}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <Card className="tech-card">
+        <h2>Equipment</h2>
+        <ul className="tech-choice-list">
+          {units.map((unit) => (
+            <li key={unitKey(unit)}>
+              <button
+                type="button"
+                className="tech-choice"
+                onClick={() => handleSelect(unit)}
+                aria-pressed={unitKey(unit) === selectedKey}
+              >
+                {unit.equipmentName} {unit.serialNumber} — {unit.status}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       {selectedUnit && (
-        <div>
+        <Card className="tech-card">
           <h2>
             {selectedUnit.equipmentName} {selectedUnit.serialNumber}
           </h2>
@@ -207,41 +221,62 @@ export function EquipmentStatusPage() {
           {blocks.length === 0 ? (
             <p>None. This unit is available at all times.</p>
           ) : (
-            <ul>
+            <ul className="tech-choice-list">
               {blocks.map((block) => (
-                <li key={block.id}>
-                  <strong>{block.status}</strong>: {describePeriod(block)}{' '}
-                  <button type="button" onClick={() => handleRemove(block)} disabled={saving}>
+                <li key={block.id} className="tech-block">
+                  <span>
+                    <strong>{block.status}</strong>: {describePeriod(block)}
+                  </span>
+                  <Button type="button" variant="secondary" onClick={() => handleRemove(block)} disabled={saving}>
                     Remove (mark available)
-                  </button>
+                  </Button>
                 </li>
               ))}
             </ul>
           )}
 
-          <h3>Mark as faulty or unavailable</h3>
-          <label htmlFor="block-status">Status</label>
-          <select
-            id="block-status"
-            value={draftStatus}
-            onChange={(e) => setDraftStatus(e.target.value as BlockStatus)}
-            disabled={saving}
-          >
-            {BLOCK_STATUSES.map((s) => (
-              <option key={s} value={s}>{s}</option>
-            ))}
-          </select>
+          <h3>Change operational status</h3>
+          <div className="tech-form">
+            <div className="field">
+              <label htmlFor="block-status">Status</label>
+              <select
+                id="block-status"
+                value={draftStatus}
+                onChange={(e) => setDraftStatus(e.target.value as EquipmentStatus)}
+                disabled={saving}
+              >
+                {EQUIPMENT_STATUSES.map((s) => (
+                  <option key={s} value={s}>{s}</option>
+                ))}
+              </select>
+            </div>
 
-          <label htmlFor="block-start">From</label>
-          <input
-            id="block-start"
-            type="datetime-local"
-            value={draftStart}
-            onChange={(e) => setDraftStart(e.target.value)}
-            disabled={saving}
-          />
+            <div className="field">
+              <label htmlFor="block-start">From</label>
+              <input
+                id="block-start"
+                type="datetime-local"
+                value={draftStart}
+                onChange={(e) => setDraftStart(e.target.value)}
+                disabled={saving}
+              />
+            </div>
 
-          <label>
+            {!indefinite && (
+              <div className="field">
+                <label htmlFor="block-end">Until</label>
+                <input
+                  id="block-end"
+                  type="datetime-local"
+                  value={draftEnd}
+                  onChange={(e) => setDraftEnd(e.target.value)}
+                  disabled={saving}
+                />
+              </div>
+            )}
+          </div>
+
+          <label className="tech-check">
             <input
               type="checkbox"
               checked={indefinite}
@@ -251,36 +286,25 @@ export function EquipmentStatusPage() {
             No end date (until I change it back)
           </label>
 
-          {!indefinite && (
-            <>
-              <label htmlFor="block-end">Until</label>
-              <input
-                id="block-end"
-                type="datetime-local"
-                value={draftEnd}
-                onChange={(e) => setDraftEnd(e.target.value)}
-                disabled={saving}
-              />
-            </>
-          )}
-
           {!formIsValid && (
-            <p role="alert">
+            <p role="alert" className="error-text">
               Choose a start time, and an end time after it (or tick "No end date").
             </p>
           )}
 
-          <button type="button" onClick={handleSave} disabled={!formIsValid || saving}>
-            {saving ? 'Saving…' : 'Save'}
-          </button>
-          <button type="button" onClick={handleCancel} disabled={saving}>
-            Cancel
-          </button>
-        </div>
+          <div className="tech-actions">
+            <Button type="button" onClick={handleSave} disabled={!formIsValid || saving}>
+              {saving ? 'Saving…' : 'Save'}
+            </Button>
+            <Button type="button" variant="secondary" onClick={handleCancel} disabled={saving}>
+              Cancel
+            </Button>
+          </div>
+        </Card>
       )}
 
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert">{error}</p>}
+      {message && <Notice>{message}</Notice>}
+      {error && <Notice tone="danger">{error}</Notice>}
     </section>
   )
 }

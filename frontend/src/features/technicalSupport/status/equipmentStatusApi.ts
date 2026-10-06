@@ -1,6 +1,6 @@
 import { apiClient, ApiClientError } from '../../../lib/apiClient'
 import type {
-  BlockStatus,
+  EquipmentStatus,
   EquipmentUnit,
   StatusPeriod,
   TimePeriod,
@@ -9,8 +9,8 @@ import type {
 // Lets the page react to specific failures, like 409 (conflict).
 export class ApiError extends Error {
   status: number
-  constructor(status: number) {
-    super(`Request failed with status ${status}`)
+  constructor(status: number, message: string) {
+    super(message)
     this.status = status
   }
 }
@@ -25,7 +25,7 @@ async function call<T>(run: () => Promise<T>): Promise<T> {
   try {
     return await run()
   } catch (caught) {
-    if (caught instanceof ApiClientError) throw new ApiError(caught.status)
+    if (caught instanceof ApiClientError) throw new ApiError(caught.status, caught.message)
     throw caught
   }
 }
@@ -57,12 +57,12 @@ export function fetchStatusPeriods(
 export function addStatusPeriod(
   equipmentId: string,
   serialNumber: string,
-  status: BlockStatus,
+  status: EquipmentStatus,
   start: string,
   end: string | null, // null = no end date
-): Promise<StatusPeriod> {
+): Promise<void> {
   return call(() =>
-    apiClient.post<StatusPeriod>(`${unitPath(equipmentId, serialNumber)}/periods`, {
+    apiClient.post<void>(`${unitPath(equipmentId, serialNumber)}/periods`, {
       status,
       start: toIso(start),
       end: end === null ? null : toIso(end),

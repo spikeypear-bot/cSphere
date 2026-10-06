@@ -52,7 +52,7 @@ public class VenueOperationalIssueService {
                 request.affectedFrom(),
                 request.affectedUntil(),
                 userId);
-        return VenueOperationalIssueDto.from(issues.save(issue));
+        return VenueOperationalIssueDto.from(issues.saveAndFlush(issue));
     }
 
     @Transactional(readOnly = true)

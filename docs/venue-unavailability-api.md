@@ -75,7 +75,7 @@ Both staff and coordinator booking DTOs expose `requiresAlternative` and `replac
 
 ## Persistence and consistency
 
-Flyway V17 adds:
+Flyway V19 adds:
 
 - `venues.setup_minutes` / `turnaround_minutes`, default 0 and bounded by database checks.
 - `venue_unavailability`, with venue FK, timestamps, reason, creator FK and creation timestamp.
@@ -110,4 +110,10 @@ Manual walkthrough:
 7. Approve the replacement as Venue Staff. Verify the original becomes changed, the replacement approved, and original notes/event information remain available.
 8. Repeat with replacement rejection/withdrawal and verify the original remains flagged and a retry is possible.
 
-For a container deployment, rebuild the backend image so it includes V17 and the new classes: `docker compose up -d --build backend`. Do not edit applied migrations or remove database volumes.
+For a container deployment, rebuild the backend image so it includes V19 and the new classes: `docker compose up -d --build backend`. Do not edit applied migrations or remove database volumes.
+
+## Migration numbering after merging main (7 October 2026)
+
+Venue unavailability moved from V17 to V19 without changing its SQL contents, preserving main's V17 required-facilities and V18 operating-hours migrations. Fresh databases apply V17 through V19 normally. Databases already on main need only apply V19.
+
+For the local database that had already applied `V17__venue_unavailability.sql`, the existing successful history entry was renamed to version 19 / `V19__venue_unavailability.sql`, retaining its checksum and all application data. V17 and V18 then require a one-time `SPRING_FLYWAY_OUT_OF_ORDER=true` migration run. Do not use Flyway clean or delete database volumes. Other databases with the old branch migration need the same verified history reconciliation before upgrading; do not rename main's V17 entry.

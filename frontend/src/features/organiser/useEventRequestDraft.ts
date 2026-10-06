@@ -7,6 +7,7 @@ import type {
   EventRequestDto,
   SaveEventRequestRequest,
 } from '../../types/eventRequest'
+import type { Facility } from '../../types/venue'
 import type { AutosaveState } from '../../components/ui/AutosaveIndicator'
 
 /** Local form shape — every free-text/optional field is nullable (mirrors
@@ -23,6 +24,7 @@ export interface DraftFields {
   venueRequirements: string | null
   equipmentRequirements: string | null
   accessibilityNeeds: AccessibilityFeature[]
+  requiredFacilities?: Facility[]
   registrationNeeds: boolean | null
 }
 
@@ -36,6 +38,7 @@ const BLANK_DRAFT: DraftFields = {
   venueRequirements: null,
   equipmentRequirements: null,
   accessibilityNeeds: [],
+  requiredFacilities: [],
   registrationNeeds: null,
 }
 
@@ -98,6 +101,7 @@ function toDraftFields(dto: EventRequestDto): DraftFields {
     venueRequirements: dto.venueRequirements,
     equipmentRequirements: dto.equipmentRequirements,
     accessibilityNeeds: dto.accessibilityNeeds,
+    requiredFacilities: dto.requiredFacilities ?? [],
     registrationNeeds: dto.registrationNeeds,
   }
 }

@@ -1,13 +1,19 @@
 package com.example.connect_sphere.venuebooking.service;
 
 import java.time.OffsetDateTime;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.transaction.support.TransactionSynchronization;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
 
@@ -26,6 +32,8 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
+import com.example.connect_sphere.venue.repository.VenueOperatingHourRepository;
+import com.example.connect_sphere.venue.entity.VenueOperatingHour;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venuebooking.dto.EventVenueBookingDto;
 import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
@@ -33,6 +41,8 @@ import com.example.connect_sphere.venuebooking.dto.VenueOptionDto;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
+import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
+import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRepository;
 
 /**
  * EC03: an Event Coordinator requests a venue for an event they coordinate.
@@ -51,6 +61,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Service
 public class VenueBookingRequestService {
     private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
+    private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Singapore");
 
     static final int MAX_TEXT_LENGTH = 2000;
     private static final List<VenueBookingStatus> ACTIVE =
@@ -64,7 +75,10 @@ public class VenueBookingRequestService {
     private final VenueMapper venueMapper;
     private final ActivityService activityService;
     private final NotificationService notificationService;
+    private final VenueOperationalIssueRepository operationalIssues;
+    private final VenueOperatingHourRepository operatingHours;
 
+    @Autowired
     public VenueBookingRequestService(
             EventRepository events,
             VenueRepository venues,
@@ -73,7 +87,10 @@ public class VenueBookingRequestService {
             UserRepository users,
             VenueMapper venueMapper,
             ActivityService activityService,
-            NotificationService notificationService, com.example.connect_sphere.venueavailability.AvailabilityService availability) {
+            NotificationService notificationService,
+            VenueOperationalIssueRepository operationalIssues,
+            VenueOperatingHourRepository operatingHours,
+            com.example.connect_sphere.venueavailability.AvailabilityService availability) {
         this.availability = availability;
         this.events = events;
         this.venues = venues;
@@ -83,6 +100,8 @@ public class VenueBookingRequestService {
         this.venueMapper = venueMapper;
         this.activityService = activityService;
         this.notificationService = notificationService;
+        this.operationalIssues = operationalIssues;
+        this.operatingHours = operatingHours;
     }
 
     /**
@@ -95,8 +114,13 @@ public class VenueBookingRequestService {
     public List<VenueOptionDto> venueOptions(UUID coordinatorId, UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
+        Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue = unavailableByVenue(event);
+        Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue = hoursByVenue(event);
         return venues.findAll().stream()
-                .map(venue -> option(event, venue, conflicts(event, venue)))
+                .map(venue -> option(event, venue,
+                        conflicts(event, venue),
+                        unavailableByVenue.getOrDefault(venue.getVenueId(), List.of()),
+                        hoursByVenue.getOrDefault(venue.getVenueId(), List.of())))
                 .sorted(Comparator.comparingInt((VenueOptionDto o) -> verdictRank(o.verdict()))
                         .thenComparingInt(o -> Math.abs(o.spareCapacity())))
                 .toList();
@@ -146,6 +170,22 @@ public class VenueBookingRequestService {
         if (availability.unavailable(venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime()))
             throw new InvalidVenueBookingException("This venue is unavailable during the event, setup or turnaround period. Choose another venue.");
         List<VenueOptionDto.ConflictDto> conflicts = conflicts(event, venue);
+        if (!suitability.facilitiesOk()) {
+            throw new InvalidVenueBookingException("This venue does not offer the required facilities: "
+                    + String.join(", ", suitability.missingFacilities()) + ".");
+        }
+        List<VenueOptionDto.UnavailablePeriodDto> unavailable =
+                unavailableByVenue(event).getOrDefault(venue.getVenueId(), List.of());
+        List<VenueOptionDto.UnavailablePeriodDto> hoursUnavailable =
+                hoursByVenue(event).getOrDefault(venue.getVenueId(), List.of());
+        if (!hoursUnavailable.isEmpty()) {
+            throw new InvalidVenueBookingException("This venue is outside its operating hours: "
+                    + hoursUnavailable.get(0).description() + ".");
+        }
+        if (!unavailable.isEmpty()) {
+            throw new InvalidVenueBookingException("This venue is unavailable during the event period: "
+                    + unavailable.get(0).description() + ".");
+        }
         if (!conflicts.isEmpty()) {
             throw new InvalidVenueBookingException("This venue already has an approved booking that overlaps the "
                     + "event's time (" + conflicts.get(0).eventName() + "). Choose another venue.");
@@ -221,11 +261,13 @@ public class VenueBookingRequestService {
         return toDto(saved);
     }
 
-    private VenueOptionDto option(Event event, Venue venue, List<VenueOptionDto.ConflictDto> conflicts) {
+    private VenueOptionDto option(Event event, Venue venue, List<VenueOptionDto.ConflictDto> conflicts,
+            List<VenueOptionDto.UnavailablePeriodDto> unavailable,
+            List<VenueOptionDto.UnavailablePeriodDto> hoursUnavailable) {
         VenueSuitability suitability = VenueSuitability.of(event, venue);
         List<String> reasons = new ArrayList<>();
-        boolean unavailable = availability.unavailable(venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime());
-        if (unavailable) reasons.add("Recorded venue unavailability overlaps the event, setup or turnaround period.");
+        boolean recordedUnavailable = availability.unavailable(venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime());
+        if (recordedUnavailable) reasons.add("Recorded venue unavailability overlaps the event, setup or turnaround period.");
         if (!suitability.capacityOk()) {
             reasons.add("Capacity " + suitability.capacity() + " is below the expected attendance of "
                     + suitability.expectedAttendance() + ".");
@@ -233,20 +275,76 @@ public class VenueBookingRequestService {
         for (VenueOptionDto.ConflictDto conflict : conflicts) {
             reasons.add("Already approved for " + conflict.eventName() + " at an overlapping time.");
         }
+        for (VenueOptionDto.UnavailablePeriodDto period : unavailable) {
+            reasons.add("Venue unavailable: " + period.description() + ".");
+        }
+        reasons.addAll(hoursUnavailable.stream().map(p -> "Operating hours: " + p.description() + ".").toList());
         if (suitability.needsJustification()) {
             reasons.add("Missing accessibility: " + String.join(", ", suitability.missingAccessibility()) + ".");
         }
-        String verdict = unavailable || !suitability.capacityOk() || !conflicts.isEmpty() ? "blocked"
+        if (!suitability.facilitiesOk()) {
+            reasons.add("Missing facilities: " + String.join(", ", suitability.missingFacilities()) + ".");
+        }
+        String verdict = recordedUnavailable || !suitability.capacityOk() || !suitability.facilitiesOk()
+                || !conflicts.isEmpty() || !unavailable.isEmpty() || !hoursUnavailable.isEmpty() ? "blocked"
                 : suitability.needsJustification() ? "needs_justification"
                 : "suitable";
         return new VenueOptionDto(venueMapper.toDto(venue), verdict, suitability.capacityOk(),
                 suitability.capacity() - suitability.expectedAttendance(), suitability.missingAccessibility(),
+                suitability.missingFacilities(),
+                java.util.stream.Stream.concat(unavailable.stream(), hoursUnavailable.stream()).toList(),
                 conflicts, reasons);
     }
 
     private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue) {
         return availability.conflicts(venue.getVenueId(), event.getEventId(), event.getStartDatetime(), event.getEndDatetime())
                 .stream().map(c -> new VenueOptionDto.ConflictDto(c.eventName(), c.startDateTime(), c.endDateTime())).toList();
+    }
+
+    private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(Event event) {
+        if (operationalIssues == null) return Map.of();
+        if (event.getStartDatetime() == null || event.getEndDatetime() == null) {
+            return Map.of();
+        }
+        return operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(
+                        venues.findAll().stream().map(Venue::getVenueId).toList())
+                .stream()
+                .filter(issue -> overlaps(issue, event))
+                .collect(Collectors.groupingBy(
+                        VenueOperationalIssue::getVenueId,
+                        Collectors.mapping(issue -> new VenueOptionDto.UnavailablePeriodDto(
+                                issue.getDescription(), issue.getAffectedFrom(), issue.getAffectedUntil()),
+                                Collectors.toList())));
+    }
+
+    private static boolean overlaps(VenueOperationalIssue issue, Event event) {
+        return issue.getAffectedFrom() != null && issue.getAffectedUntil() != null
+                && issue.getAffectedFrom().isBefore(event.getEndDatetime())
+                && issue.getAffectedUntil().isAfter(event.getStartDatetime());
+    }
+
+    private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue(Event event) {
+        if (operatingHours == null) return Map.of();
+        if (event.getStartDatetime() == null || event.getEndDatetime() == null) return Map.of();
+        List<UUID> ids = venues.findAll().stream().map(Venue::getVenueId).toList();
+        Map<UUID, List<VenueOperatingHour>> grouped = operatingHours.findByVenueIdIn(ids).stream()
+                .collect(Collectors.groupingBy(VenueOperatingHour::getVenueId));
+        return ids.stream().filter(id -> grouped.getOrDefault(id, List.of()).stream().noneMatch(hour -> covers(hour, event)))
+                .collect(Collectors.toMap(id -> id, id -> List.of(new VenueOptionDto.UnavailablePeriodDto(
+                        grouped.containsKey(id) ? "No operating hours cover the requested event period"
+                                : "No operating hours have been configured",
+                        null, null))));
+    }
+
+    private static boolean covers(VenueOperatingHour hour, Event event) {
+        var start = event.getStartDatetime().atZoneSameInstant(BUSINESS_ZONE);
+        var end = event.getEndDatetime().atZoneSameInstant(BUSINESS_ZONE);
+        LocalDate startDate = start.toLocalDate();
+        LocalDate endDate = end.toLocalDate();
+        if (!startDate.equals(endDate) || hour.getDayOfWeek() != startDate.getDayOfWeek().getValue()) return false;
+        LocalTime startTime = start.toLocalTime();
+        LocalTime endTime = end.toLocalTime();
+        return !startTime.isBefore(hour.getOpenTime()) && !endTime.isAfter(hour.getCloseTime());
     }
 
     private static int verdictRank(String verdict) {

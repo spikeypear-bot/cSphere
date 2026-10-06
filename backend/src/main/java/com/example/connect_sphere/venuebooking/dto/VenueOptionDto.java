@@ -18,8 +18,13 @@ public record VenueOptionDto(
         boolean capacityOk,
         int spareCapacity,
         List<String> missingAccessibility,
+        List<String> missingFacilities,
+        List<UnavailablePeriodDto> unavailablePeriods,
         List<ConflictDto> conflicts,
         List<String> reasons) {
+
+    public record UnavailablePeriodDto(String description, OffsetDateTime affectedFrom, OffsetDateTime affectedUntil) {
+    }
 
     /** An approved booking that overlaps the event's time. */
     public record ConflictDto(String eventName, OffsetDateTime startDatetime, OffsetDateTime endDatetime) {

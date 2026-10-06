@@ -1,9 +1,12 @@
 package com.example.connect_sphere.equipment;
 
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,18 +20,21 @@ public class EquipmentReservationService {
     private final EquipmentStatusPeriodRepository statusPeriodRepository;
     private final EquipmentLogRepository logRepository;
     private final EquipmentRequestLineRepository requestLineRepository;
+    private final EquipmentRequestRepository requestRepository;
 
     public EquipmentReservationService(
             EquipmentRepository equipmentRepository,
             SerialisedEquipmentRepository unitRepository,
             EquipmentStatusPeriodRepository statusPeriodRepository,
             EquipmentLogRepository logRepository,
-            EquipmentRequestLineRepository requestLineRepository) {
+            EquipmentRequestLineRepository requestLineRepository,
+            EquipmentRequestRepository requestRepository) {
         this.equipmentRepository = equipmentRepository;
         this.unitRepository = unitRepository;
         this.statusPeriodRepository = statusPeriodRepository;
         this.logRepository = logRepository;
         this.requestLineRepository = requestLineRepository;
+        this.requestRepository = requestRepository;
     }
 
     // AC 3 + 4: what's available, and how much, for a period.
@@ -70,13 +76,18 @@ public class EquipmentReservationService {
     // AC 5-9: reserve equipment for an event.
     @Transactional
     public EquipmentReservationResponse reserve(ReserveEquipmentRequest req) {
+        if (req == null || req.eventId() == null || req.equipmentId() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "eventId and equipmentId are required");
+        }
         requireValidPeriod(req.start(), req.end());
         if (req.quantity() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity must be at least 1");
         }
 
-        Equipment equipment = equipmentRepository.findById(req.equipmentId())
+        Equipment equipment = equipmentRepository.findForUpdate(req.equipmentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
+        requireRequestedForEvent(req.eventId(), req.equipmentId());
 
         if (req.serialNumber() != null) {
             reserveSpecificUnit(equipment, req);
@@ -125,6 +136,18 @@ public class EquipmentReservationService {
         if (req.quantity() > available) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Only " + available + " of " + equipment.getName() + " available for that period");
+        }
+    }
+
+    private void requireRequestedForEvent(UUID eventId, UUID equipmentId) {
+        boolean requested = requestRepository.findByEventId(eventId).stream()
+                .filter(request -> request.getStatus() == EquipmentRequestStatus.processing)
+                .map(EquipmentRequest::getId)
+                .anyMatch(requestId -> requestLineRepository.findByIdRequestId(requestId).stream()
+                        .anyMatch(line -> line.getId().getEquipmentId().equals(equipmentId)));
+        if (!requested) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This equipment is not part of an active request for the selected event.");
         }
     }
 

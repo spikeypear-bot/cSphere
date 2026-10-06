@@ -8,12 +8,14 @@ import java.util.UUID;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
 
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 
+@Tag("unit")
 class VenueMapperTest {
     private final VenueMapper mapper = Mappers.getMapper(VenueMapper.class);
 

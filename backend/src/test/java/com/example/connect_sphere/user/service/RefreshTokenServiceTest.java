@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.HexFormat;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -29,6 +30,7 @@ import jakarta.persistence.EntityManager;
  * undo them. Family revocation in particular has no visible symptom when it
  * stops working — sessions simply survive a stolen token.
  */
+@Tag("integration")
 @SpringBootTest
 @Transactional
 class RefreshTokenServiceTest {

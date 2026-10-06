@@ -20,3 +20,38 @@
   overflow-wrap: anywhere;
   resize: vertical;
 }
+.venue-hours {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  padding: 1rem;
+}
+
+.venue-hours legend {
+  padding: 0 0.35rem;
+  font-weight: 700;
+}
+
+.venue-hours__row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) repeat(2, minmax(8rem, 10rem));
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.venue-hours__row label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .venue-hours__row {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .venue-hours__row label {
+    grid-column: 1 / -1;
+  }
+}

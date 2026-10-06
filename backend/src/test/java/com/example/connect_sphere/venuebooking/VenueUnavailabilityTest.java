@@ -49,7 +49,10 @@ class VenueUnavailabilityTest {
     }
     UUID venue() {
         UUID id = venues.createVenue(new CreateVenueDto("VS01 " + UUID.randomUUID(), 200,
-                List.of(VenueLayout.classroom), "Daily", null, List.of(), List.of())).venueId();
+                List.of(VenueLayout.classroom), "Daily", null, List.of(), List.of(),
+                java.util.stream.IntStream.rangeClosed(1,7).mapToObj(day ->
+                        new com.example.connect_sphere.venue.dto.VenueOperatingHourDto(day,
+                                java.time.LocalTime.MIDNIGHT, java.time.LocalTime.of(23,59))).toList())).venueId();
         venueIds.add(id); return id;
     }
     UUID booking(UUID venue, String status) {
