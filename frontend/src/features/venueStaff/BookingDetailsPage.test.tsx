@@ -37,6 +37,65 @@ it.each([undefined, null])('defaults an absent booking status (%s) to pending an
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
+it('rejects with an alternative venue and arrangement and displays both suggestions', async () => {
+  const alternativeVenue = { ...booking.venue, venueId: 'v2', venueAddress: 'Garden Hall' }
+  const rejected = { ...booking, status: 'rejected' as const, rejectReason: 'Unavailable on that date',
+    alternativeVenueId: alternativeVenue.venueId, alternativeVenueAddress: alternativeVenue.venueAddress,
+    alternativeArrangement: 'Move to the afternoon' }
+  const fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/venues')) return response([booking.venue, alternativeVenue])
+    if (url.endsWith('/venue-bookings/b1/reject') && init?.method === 'PATCH') return response(rejected)
+    return response(booking)
+  })
+  vi.stubGlobal('fetch', fetch)
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+
+  await user.click(await screen.findByRole('button', { name: 'Reject Booking' }))
+  await user.selectOptions(await screen.findByLabelText('Alternative venue (optional)'), 'v2')
+  await user.type(screen.getByLabelText('Rejection reason'), 'Unavailable on that date')
+  await user.type(screen.getByLabelText('Alternative arrangement (optional)'), 'Move to the afternoon')
+  await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
+
+  await screen.findByLabelText('Status: rejected')
+  const requirements = screen.getByRole('region', { name: 'Event Requirements' })
+  expect(requirements).toHaveTextContent('Unavailable on that date')
+  expect(requirements).toHaveTextContent('Suggested alternative venue: Garden Hall')
+  expect(requirements).toHaveTextContent('Move to the afternoon')
+  const patch = fetch.mock.calls.find(call => call[1]?.method === 'PATCH')
+  expect(JSON.parse(String(patch?.[1].body))).toEqual({
+    reason: 'Unavailable on that date',
+    alternativeVenueId: 'v2',
+    alternativeArrangement: 'Move to the afternoon',
+  })
+})
+
+it('allows rejection without an alternative when the venue list cannot be loaded', async () => {
+  const rejected = { ...booking, status: 'rejected' as const, rejectReason: 'Unavailable' }
+  const fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
+    if (url.endsWith('/venues')) return response({ message: 'Venue catalogue unavailable' }, 503)
+    if (url.endsWith('/venue-bookings/b1/reject') && init?.method === 'PATCH') return response(rejected)
+    return response(booking)
+  })
+  vi.stubGlobal('fetch', fetch)
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+
+  await user.click(await screen.findByRole('button', { name: 'Reject Booking' }))
+  expect(await screen.findByText('Venue catalogue unavailable')).toBeInTheDocument()
+  await user.type(screen.getByLabelText('Rejection reason'), 'Unavailable')
+  await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
+
+  await screen.findByLabelText('Status: rejected')
+  expect(screen.getByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Unavailable')
+  const patch = fetch.mock.calls.find(call => call[1]?.method === 'PATCH')
+  expect(JSON.parse(String(patch?.[1].body))).toEqual({
+    reason: 'Unavailable',
+    alternativeVenueId: null,
+    alternativeArrangement: null,
+  })
+})
+
 it('navigates catalogue to venue to booking, displays requirements and refetches on reopening', async () => {
   let attendance = 120
   const fetch = vi.fn().mockImplementation(async (url: string) => {
@@ -330,7 +389,9 @@ it('requires a reason, cancels without writing, and displays the saved rejection
   const fetch = vi.fn().mockImplementation(async (url: string, options: RequestInit) => {
     if (options.method === 'PATCH') {
       expect(url).toMatch(/\/reject$/)
-      expect(JSON.parse(options.body as string)).toEqual({ reason: 'Maintenance' })
+      expect(JSON.parse(options.body as string)).toEqual({
+        reason: 'Maintenance', alternativeVenueId: null, alternativeArrangement: null,
+      })
       current = { ...booking, status: 'rejected', rejectReason: 'Maintenance' }
       return response(current)
     }

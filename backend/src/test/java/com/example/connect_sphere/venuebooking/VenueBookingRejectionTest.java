@@ -1,6 +1,7 @@
 package com.example.connect_sphere.venuebooking;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
@@ -86,7 +87,9 @@ class VenueBookingRejectionTest {
         mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
                 .contentType("application/json").content("{\"reason\":\"  Maintenance  \"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("rejected"))
-                .andExpect(jsonPath("$.rejectReason").value("Maintenance"));
+                .andExpect(jsonPath("$.rejectReason").value("Maintenance"))
+                .andExpect(jsonPath("$.alternativeVenueId").value(nullValue()))
+                .andExpect(jsonPath("$.alternativeArrangement").value(nullValue()));
         assertThat(bookings.get(id).event()).isEqualTo(before.event());
         assertThat(jdbc.queryForObject("SELECT (to_jsonb(b) - 'status' - 'reject_reason')::text FROM venue_bookings b WHERE booking_id=?", String.class, id)).isEqualTo(unchanged);
         assertThat(bookings.listPending()).noneMatch(b -> b.bookingId().equals(id));
@@ -94,8 +97,76 @@ class VenueBookingRejectionTest {
                 .contentType("application/json").content("{\"reason\":\"Replacement\"}"))
                 .andExpect(status().isConflict());
         assertThat(bookings.get(id).rejectReason()).isEqualTo("Maintenance");
+        assertThat(bookings.get(id).alternativeVenueId()).isNull();
+        assertThat(bookings.get(id).alternativeArrangement()).isNull();
         mvc.perform(patch("/api/venue-bookings/" + id + "/approve").with(user("vs").roles("VS")))
                 .andExpect(status().isConflict());
+    }
+
+    @Test void rejectionSavesBothOptionalSuggestionsWithoutCreatingAnotherBooking() throws Exception {
+        UUID requestedVenue = venue();
+        UUID alternativeVenue = venue();
+        UUID id = booking(requestedVenue, "pending");
+        var original = bookings.get(id);
+        String body = "{\"reason\":\"Unavailable on that date\","
+                + "\"alternativeVenueId\":\"" + alternativeVenue + "\","
+                + "\"alternativeArrangement\":\"  Move the event to the afternoon.  \"}";
+
+        mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
+                .contentType("application/json").content(body))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("rejected"))
+                .andExpect(jsonPath("$.alternativeVenueId").value(alternativeVenue.toString()))
+                .andExpect(jsonPath("$.alternativeVenueAddress").isNotEmpty())
+                .andExpect(jsonPath("$.alternativeArrangement").value("Move the event to the afternoon."));
+
+        var rejected = bookings.get(id);
+        assertThat(rejected.alternativeVenueId()).isEqualTo(alternativeVenue);
+        assertThat(rejected.alternativeVenueAddress()).isNotBlank();
+        assertThat(rejected.alternativeArrangement()).isEqualTo("Move the event to the afternoon.");
+        assertThat(rejected.event()).isEqualTo(original.event());
+        assertThat(jdbc.queryForObject(
+                "SELECT count(*) FROM venue_bookings WHERE event_id = (SELECT event_id FROM venue_bookings WHERE booking_id = ?)",
+                Integer.class, id)).isEqualTo(1);
+    }
+
+    @Test void rejectionCanSaveAnArrangementWithoutAnAlternativeVenue() throws Exception {
+        UUID id = booking(venue(), "pending");
+        mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
+                .contentType("application/json")
+                .content("{\"reason\":\"Unavailable\",\"alternativeArrangement\":\"Use an outdoor setup\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.alternativeVenueId").value(nullValue()))
+                .andExpect(jsonPath("$.alternativeArrangement").value("Use an outdoor setup"));
+        assertThat(bookings.get(id).alternativeVenueId()).isNull();
+        assertThat(bookings.get(id).alternativeArrangement()).isEqualTo("Use an outdoor setup");
+    }
+
+    @Test void invalidAlternativeVenueLeavesPendingBookingUntouched() throws Exception {
+        UUID requestedVenue = venue();
+        UUID id = booking(requestedVenue, "pending");
+        String before = snapshot(id);
+
+        mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
+                .contentType("application/json")
+                .content("{\"reason\":\"Unavailable\",\"alternativeVenueId\":\"" + requestedVenue + "\"}"))
+                .andExpect(status().isUnprocessableEntity());
+
+        assertThat(statusOf(id)).isEqualTo("pending");
+        assertThat(snapshot(id)).isEqualTo(before);
+    }
+
+    @Test void overlongAlternativeArrangementLeavesPendingBookingUntouched() throws Exception {
+        UUID id = booking(venue(), "pending");
+        String before = snapshot(id);
+        String body = "{\"reason\":\"Unavailable\",\"alternativeArrangement\":\"" + "a".repeat(2001) + "\"}";
+
+        mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
+                .contentType("application/json").content(body))
+                .andExpect(status().isUnprocessableEntity());
+
+        assertThat(statusOf(id)).isEqualTo("pending");
+        assertThat(snapshot(id)).isEqualTo(before);
     }
     @ParameterizedTest @ValueSource(strings={"{}", "{\"reason\":null}", "{\"reason\":\"\"}", "{\"reason\":\"   \"}"})
     void invalidReasonLeavesBookingUntouched(String body) throws Exception {
@@ -123,13 +194,16 @@ class VenueBookingRejectionTest {
                 .contentType("application/json").content("{\"reason\":\"Unavailable\"}"))
                 .andExpect(status().isForbidden());
     }
-    @Test void failedWriteRollsBackBothFields() throws Exception {
+    @Test void failedWriteRollsBackRejectionAndSuggestionFields() throws Exception {
         UUID id = booking(venue(), "pending");
+        UUID alternativeVenue = venue();
         String before = snapshot(id);
         jdbc.execute("CREATE FUNCTION vs04_fail_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Test failure'; END $$");
         jdbc.execute("CREATE TRIGGER vs04_fail_update BEFORE UPDATE ON venue_bookings FOR EACH ROW WHEN (OLD.booking_id = '" + id + "'::uuid) EXECUTE FUNCTION vs04_fail_update()");
         mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
-                .contentType("application/json").content("{\"reason\":\"Unavailable\"}"))
+                .contentType("application/json").content("{\"reason\":\"Unavailable\","
+                        + "\"alternativeVenueId\":\"" + alternativeVenue + "\","
+                        + "\"alternativeArrangement\":\"Move outdoors\"}"))
                 .andExpect(status().isServiceUnavailable());
         assertThat(statusOf(id)).isEqualTo("pending");
         assertThat(snapshot(id)).isEqualTo(before);
@@ -139,8 +213,8 @@ class VenueBookingRejectionTest {
         UUID id = booking(venue(), "pending");
         CountDownLatch start = new CountDownLatch(1);
         try (var pool = Executors.newFixedThreadPool(2)) {
-            var first = pool.submit(() -> { start.await(); try { bookings.reject(id, "First"); return "ok"; } catch (VenueBookingStateException ex) { return "conflict"; } });
-            var second = pool.submit(() -> { start.await(); try { if (approve) bookings.approve(id); else bookings.reject(id, "Second"); return "ok"; } catch (VenueBookingStateException ex) { return "conflict"; } });
+            var first = pool.submit(() -> { start.await(); try { bookings.reject(id, "First", null, null); return "ok"; } catch (VenueBookingStateException ex) { return "conflict"; } });
+            var second = pool.submit(() -> { start.await(); try { if (approve) bookings.approve(id); else bookings.reject(id, "Second", null, null); return "ok"; } catch (VenueBookingStateException ex) { return "conflict"; } });
             start.countDown();
             assertThat(List.of(first.get(15, TimeUnit.SECONDS), second.get(15, TimeUnit.SECONDS))).containsExactlyInAnyOrder("ok", "conflict");
             var result = bookings.get(id);

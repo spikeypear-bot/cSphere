@@ -37,11 +37,18 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
     int approvePending(@Param("id") UUID id, @Param("pending") VenueBookingStatus pending,
             @Param("approved") VenueBookingStatus approved);
 
-    /** Both rejection fields change together, only for a still-pending record. */
+    /** Rejection reason and suggestions change together, only for a still-pending record. */
     @Modifying(flushAutomatically = true, clearAutomatically = true)
-    @Query("UPDATE VenueBookingRecord b SET b.status = :rejected, b.rejectReason = :reason WHERE b.bookingId = :id AND b.status = :pending")
+    @Query("""
+            UPDATE VenueBookingRecord b
+            SET b.status = :rejected, b.rejectReason = :reason,
+                b.alternativeVenueId = :alternativeVenueId, b.alternativeArrangement = :alternativeArrangement
+            WHERE b.bookingId = :id AND b.status = :pending
+            """)
     int rejectPending(@Param("id") UUID id, @Param("pending") VenueBookingStatus pending,
-            @Param("rejected") VenueBookingStatus rejected, @Param("reason") String reason);
+            @Param("rejected") VenueBookingStatus rejected, @Param("reason") String reason,
+            @Param("alternativeVenueId") UUID alternativeVenueId,
+            @Param("alternativeArrangement") String alternativeArrangement);
 
     /** EC03: every booking request made for one event, newest first. */
     @Query("SELECT b FROM VenueBookingRecord b WHERE b.eventId = :eventId ORDER BY b.submittedAt DESC NULLS LAST")

@@ -19,5 +19,8 @@ export interface VenueBookingDto {
   bookingNotes?: string | null
   suitabilityNote?: string | null
   rejectReason?: string | null
+  alternativeVenueId?: string | null
+  alternativeVenueAddress?: string | null
+  alternativeArrangement?: string | null
   submittedAt?: string | null
 }

@@ -16,5 +16,8 @@ public record EventVenueBookingDto(
         String suitabilityNote,
         String rejectReason,
         OffsetDateTime submittedAt,
-        String submittedBy) {
+        String submittedBy,
+        UUID alternativeVenueId,
+        String alternativeVenueAddress,
+        String alternativeArrangement) {
 }

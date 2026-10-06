@@ -5,10 +5,12 @@ import type { VenueBookingDto } from '../../types/venueBooking'
 
 import { formatEventDateTime } from './formatEventDateTime'
 
-export function EventRequirementsPanel({ event, status, rejectReason }: {
+export function EventRequirementsPanel({ event, status, rejectReason, alternativeVenueAddress, alternativeArrangement }: {
   event: VenueBookingDto['event']
   status: VenueBookingDto['status']
   rejectReason?: string | null
+  alternativeVenueAddress?: string | null
+  alternativeArrangement?: string | null
 }) {
   const accessibility = event.accessibilityNeeds.map(value => value === 'none' ? 'No accessibility requirements'
     : venueAccessibilityLabels[value as AccessibilityFeature] ?? value).join(', ')
@@ -17,10 +19,12 @@ export function EventRequirementsPanel({ event, status, rejectReason }: {
       <h2 id="event-requirements-heading">Event Requirements</h2>
       <span className="venue-card-preview__tag booking-status-tag" aria-label={'Status: ' + status} aria-live="polite">{status}</span>
     </div>
-    {status === 'rejected' && rejectReason?.trim() && <Card className="booking-rejection-banner" role="status" aria-label="Rejection reason">
-      <strong>Rejection Reason</strong>
-      <p>{rejectReason}</p>
-    </Card>}
+    {status === 'rejected' && (rejectReason?.trim() || alternativeVenueAddress?.trim() || alternativeArrangement?.trim()) &&
+      <Card className="booking-rejection-banner" role="status" aria-label="Rejection reason">
+        {rejectReason?.trim() && <><strong>Rejection Reason</strong><p>{rejectReason}</p></>}
+        {alternativeVenueAddress?.trim() && <p><strong>Suggested alternative venue:</strong> {alternativeVenueAddress}</p>}
+        {alternativeArrangement?.trim() && <p><strong>Alternative arrangement:</strong> {alternativeArrangement}</p>}
+      </Card>}
     <h3>{event.eventName}</h3>
     <dl className="venue-card-preview__information">
       <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(event.startDatetime)}</dd></div>

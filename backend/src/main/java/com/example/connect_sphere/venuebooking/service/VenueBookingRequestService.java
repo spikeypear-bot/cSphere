@@ -265,11 +265,15 @@ public class VenueBookingRequestService {
 
     private EventVenueBookingDto toDto(VenueBookingRecord b) {
         Venue venue = venues.findById(b.getVenueId()).orElse(null);
+        Venue alternativeVenue = b.getAlternativeVenueId() == null ? null
+                : venues.findById(b.getAlternativeVenueId()).orElse(null);
         String submittedBy = b.getSubmittedBy() == null ? null
                 : users.findById(b.getSubmittedBy()).map(User::getUsername).orElse(null);
         return new EventVenueBookingDto(b.getBookingId(), b.getStatus(), b.getVenueId(),
                 venue == null ? null : venue.getVenueAddress(), venue == null ? null : venue.getVenueCapacity(),
-                b.getBookingNotes(), b.getSuitabilityNote(), b.getRejectReason(), b.getSubmittedAt(), submittedBy);
+                b.getBookingNotes(), b.getSuitabilityNote(), b.getRejectReason(), b.getSubmittedAt(), submittedBy,
+                b.getAlternativeVenueId(), alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
+                b.getAlternativeArrangement());
     }
 
     /** Same reason as EventRequestService.afterThisTransactionCommits: the

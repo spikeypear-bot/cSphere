@@ -33,6 +33,8 @@ import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
+import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
+import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
 /**
@@ -97,6 +99,30 @@ class VenueBookingRequestServiceTest {
         assertThat(entry.getValue().eventId()).isEqualTo(event.getEventId());
         assertThat(entry.getValue().type()).isEqualTo(ActivityType.venue_booking_requested);
         assertThat(entry.getValue().message()).isEqualTo("Requested 1 Harbour Road. Stage needed");
+    }
+
+    @Test
+    void coordinatorBookingHistoryIncludesRejectedAlternativeSuggestions() {
+        Event event = event(150, List.of("none"));
+        Venue requestedVenue = venue(150, List.of());
+        Venue alternativeVenue = venue(200, List.of());
+        alternativeVenue.setVenueAddress("2 Garden Road");
+        VenueBookingRecord rejected = new VenueBookingRecord();
+        rejected.setBookingId(UUID.randomUUID());
+        rejected.setVenueId(requestedVenue.getVenueId());
+        rejected.setEventId(event.getEventId());
+        rejected.setStatus(VenueBookingStatus.rejected);
+        rejected.setRejectReason("Unavailable on that date");
+        rejected.setAlternativeVenueId(alternativeVenue.getVenueId());
+        rejected.setAlternativeArrangement("Move to the afternoon");
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(rejected));
+
+        var result = service.bookingsForEvent(COORDINATOR, event.getEventId()).get(0);
+
+        assertThat(result.rejectReason()).isEqualTo("Unavailable on that date");
+        assertThat(result.alternativeVenueId()).isEqualTo(alternativeVenue.getVenueId());
+        assertThat(result.alternativeVenueAddress()).isEqualTo("2 Garden Road");
+        assertThat(result.alternativeArrangement()).isEqualTo("Move to the afternoon");
     }
 
     // ---- VenueSuitability boundaries -----------------------------------
