@@ -24,6 +24,7 @@ public record EventRequestDto(
         String venueRequirements,
         String equipmentRequirements,
         List<AccessibilityFeature> accessibilityNeeds,
+        List<String> requiredFacilities,
         Boolean registrationNeeds,
         EventRequestStatus status,
         OffsetDateTime createdAt,
@@ -32,4 +33,16 @@ public record EventRequestDto(
         UUID coordinatorId,
         String rejectionReason,
         String createdByName) {
+
+    public EventRequestDto(UUID requestId, Character requestType, UUID eventId, String eventName,
+            String purpose, String description, OffsetDateTime startDatetime, OffsetDateTime endDatetime,
+            Integer expectedAttendance, String venueRequirements, String equipmentRequirements,
+            List<AccessibilityFeature> accessibilityNeeds, Boolean registrationNeeds,
+            EventRequestStatus status, OffsetDateTime createdAt, OffsetDateTime updatedAt,
+            String organisation, UUID coordinatorId, String rejectionReason, String createdByName) {
+        this(requestId, requestType, eventId, eventName, purpose, description, startDatetime, endDatetime,
+                expectedAttendance, venueRequirements, equipmentRequirements, accessibilityNeeds,
+                List.of(), registrationNeeds, status, createdAt, updatedAt, organisation, coordinatorId,
+                rejectionReason, createdByName);
+    }
 }

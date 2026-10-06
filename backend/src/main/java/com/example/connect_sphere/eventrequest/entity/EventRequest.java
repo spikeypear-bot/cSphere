@@ -6,6 +6,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.annotations.ColumnTransformer;
 import org.hibernate.type.SqlTypes;
 
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
@@ -78,6 +79,11 @@ public class EventRequest {
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "accessibility_needs")
     private List<AccessibilityFeature> accessibilityNeeds = new ArrayList<>();
+
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @ColumnTransformer(write = "cast(? as facilities[])")
+    @Column(name = "required_facilities", columnDefinition = "facilities[]")
+    private List<String> requiredFacilities = new ArrayList<>();
 
     @Column(name = "registration_needs")
     private Boolean registrationNeeds;

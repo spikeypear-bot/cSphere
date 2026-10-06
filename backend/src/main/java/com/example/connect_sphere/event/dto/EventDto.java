@@ -21,6 +21,7 @@ public record EventDto(
         Integer expectedAttendance,
         UUID venueId,
         List<String> accessibilityNeeds,
+        List<String> requiredFacilities,
         Boolean registrationNeeds,
         String organisation,
         String venueRequirements,
@@ -28,4 +29,14 @@ public record EventDto(
         String status,
         String coordinatorName,
         String coordinatorEmail) {
+
+    public EventDto(UUID eventId, String eventName, String purpose, String description,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
+            UUID venueId, List<String> accessibilityNeeds, Boolean registrationNeeds,
+            String organisation, String venueRequirements, String equipmentRequirements,
+            String status, String coordinatorName, String coordinatorEmail) {
+        this(eventId, eventName, purpose, description, startDatetime, endDatetime, expectedAttendance,
+                venueId, accessibilityNeeds, List.of(), registrationNeeds, organisation, venueRequirements,
+                equipmentRequirements, status, coordinatorName, coordinatorEmail);
+    }
 }

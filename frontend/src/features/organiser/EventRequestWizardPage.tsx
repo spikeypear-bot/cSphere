@@ -9,6 +9,7 @@ import { ChipGroup } from '../../components/ui/ChipGroup'
 import { StepIndicator, type Step } from '../../components/ui/StepIndicator'
 import { AutosaveIndicator } from '../../components/ui/AutosaveIndicator'
 import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type AccessibilityFeature } from '../../types/eventRequest'
+import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 import { useEventRequestDraft, type DraftFields } from './useEventRequestDraft'
 import { getMissingRequiredFields, getCompletionPercent } from './eventRequestCompletion'
 import { dateRangeError } from './eventRequestValidation'
@@ -152,6 +153,19 @@ export function EventRequestWizardPage() {
               placeholder="Q1 Partner Town Hall"
               error={fieldError('eventName')}
             />
+            <fieldset className="wizard__choice-group">
+              <legend>Required facilities</legend>
+              <p className="field-hint">Only select facilities the event must have. Venues missing one will be blocked from booking.</p>
+              {venueFacilities.map((facility: Facility) => (
+                <label key={facility}>
+                  <input type="checkbox" checked={(fields.requiredFacilities ?? []).includes(facility)}
+                    onChange={(e) => setFields({ requiredFacilities: e.target.checked
+                      ? [...(fields.requiredFacilities ?? []), facility]
+                      : (fields.requiredFacilities ?? []).filter((value) => value !== facility) })} />
+                  {venueFacilityLabels[facility]}
+                </label>
+              ))}
+            </fieldset>
             <TextField
               id="purpose"
               label="Purpose"
@@ -332,6 +346,13 @@ function ReviewStep({
           onEdit={() => onEditStep(1)}
         />
         <SummaryRow label="Venue requirements" value={fields.venueRequirements} onEdit={() => onEditStep(2)} />
+        <SummaryRow
+          label="Required facilities"
+          value={(fields.requiredFacilities ?? []).length > 0
+            ? (fields.requiredFacilities ?? []).map((facility) => venueFacilityLabels[facility]).join(', ')
+            : 'None specified'}
+          onEdit={() => onEditStep(2)}
+        />
         <SummaryRow
           label="Accessibility needs"
           value={fields.accessibilityNeeds.length > 0 ? fields.accessibilityNeeds.map((need) => ACCESSIBILITY_LABELS[need]).join(', ') : null}

@@ -1,5 +1,6 @@
 // Mirrors backend/src/main/java/com/example/connect_sphere/event/dto/EventDto.java
 import type { AccessibilityFeature } from './eventRequest'
+import type { Facility } from './venue'
 
 export type EventStatus = 'pending' | 'confirmed' | 'cancelled' | 'completed'
 
@@ -13,6 +14,7 @@ export interface EventDto {
   expectedAttendance: number
   venueId: string | null
   accessibilityNeeds: AccessibilityFeature[]
+  requiredFacilities?: Facility[]
   registrationNeeds: boolean | null
   organisation: string | null
   venueRequirements: string

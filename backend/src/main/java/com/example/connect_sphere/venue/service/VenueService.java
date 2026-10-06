@@ -9,6 +9,7 @@ import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Sort;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
 import com.example.connect_sphere.venue.dto.UpdateVenueDto;
@@ -16,15 +17,25 @@ import com.example.connect_sphere.venue.dto.VenueDto;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
+import com.example.connect_sphere.venue.repository.VenueOperatingHourRepository;
+import com.example.connect_sphere.venue.entity.VenueOperatingHour;
+import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
 
 @Service
 public class VenueService {
     private final VenueRepository repository;
     private final VenueMapper mapper;
+    private final VenueOperatingHourRepository hours;
 
-    public VenueService(VenueRepository repository, VenueMapper mapper) {
+    @Autowired
+    public VenueService(VenueRepository repository, VenueMapper mapper, VenueOperatingHourRepository hours) {
         this.repository = repository;
         this.mapper = mapper;
+        this.hours = hours;
+    }
+
+    public VenueService(VenueRepository repository, VenueMapper mapper) {
+        this(repository, mapper, null);
     }
 
     /** Creates a catalogue record immediately; no booking/approval workflow. */
@@ -42,7 +53,9 @@ public class VenueService {
         venue.setVenueFacilities(labels(input.venueFacilities()));
         venue.setAdditionalInformation(input.additionalInformation() == null
                 ? null : input.additionalInformation().strip());
-        return mapper.toDto(repository.save(venue));
+        Venue saved = repository.save(venue);
+        saveHours(saved.getVenueId(), input.operatingHours());
+        return toDto(saved);
     }
 
     /** Updates catalogue characteristics without accessing bookings. */
@@ -57,7 +70,8 @@ public class VenueService {
                 input.getOperatingInformation() == null ? current.operatingInformation() : input.getOperatingInformation(),
                 current.additionalInformation(),
                 input.getVenueAccessibilities() == null ? current.venueAccessibilities() : input.getVenueAccessibilities(),
-                input.getVenueFacilities() == null ? current.venueFacilities() : input.getVenueFacilities());
+                input.getVenueFacilities() == null ? current.venueFacilities() : input.getVenueFacilities(),
+                input.getOperatingHours() == null ? current.operatingHours() : input.getOperatingHours());
         validate(merged);
         if (input.getVenueCapacity() != null) venue.setVenueCapacity(merged.venueCapacity());
         if (input.getSupportedLayouts() != null) venue.setSupportedLayouts(labels(merged.supportedLayouts()));
@@ -65,7 +79,9 @@ public class VenueService {
         if (input.getVenueFacilities() != null) venue.setVenueFacilities(labels(merged.venueFacilities()));
         if (input.getOperatingInformation() != null) venue.setOperatingInformation(merged.operatingInformation().strip());
         if (input.getAdditionalInformation() != null) venue.setAdditionalInformation(input.getAdditionalInformation().strip());
-        return mapper.toDto(repository.save(venue));
+        Venue saved = repository.save(venue);
+        if (input.getOperatingHours() != null) saveHours(id, input.getOperatingHours());
+        return toDto(saved);
     }
 
     private static void validate(CreateVenueDto input) {
@@ -96,6 +112,7 @@ public class VenueService {
         }
         validateSelections("venueAccessibilities", input.venueAccessibilities(), errors);
         validateSelections("venueFacilities", input.venueFacilities(), errors);
+        validateHours(input.operatingHours(), errors);
         if (input.venueAccessibilities() != null
                 && input.venueAccessibilities().contains(AccessibilityFeature.none)
                 && input.venueAccessibilities().size() > 1) {
@@ -124,12 +141,39 @@ public class VenueService {
     @Transactional(readOnly = true)
     public List<VenueDto> list() {
         return repository.findAll(Sort.by("venueAddress", "venueId")).stream()
-                .map(mapper::toDto).toList();
+                .map(this::toDto).toList();
     }
 
     @Transactional(readOnly = true)
     public VenueDto get(UUID id) {
-        return mapper.toDto(repository.findById(id)
-                .orElseThrow(() -> new VenueNotFoundException(id)));
+        return toDto(repository.findById(id).orElseThrow(() -> new VenueNotFoundException(id)));
+    }
+
+    private VenueDto toDto(Venue venue) {
+        List<VenueOperatingHourDto> values = hours == null ? List.of() : hours.findByVenueIdOrderByDayOfWeekAscOpenTimeAsc(venue.getVenueId())
+                .stream().map(h -> new VenueOperatingHourDto(h.getDayOfWeek(), h.getOpenTime(), h.getCloseTime())).toList();
+        VenueDto base = mapper.toDto(venue);
+        return new VenueDto(base.venueId(), base.venueAddress(), base.venueCapacity(), base.supportedLayouts(),
+                base.operatingInformation(), base.additionalInformation(), base.venueAccessibilities(),
+                base.venueFacilities(), values);
+    }
+
+    private void saveHours(UUID venueId, List<VenueOperatingHourDto> values) {
+        if (hours == null) return;
+        hours.deleteByVenueId(venueId);
+        if (values != null) hours.saveAll(values.stream()
+                .map(h -> new VenueOperatingHour(venueId, h.dayOfWeek(), h.openTime(), h.closeTime())).toList());
+    }
+
+    private static void validateHours(List<VenueOperatingHourDto> values, List<String> errors) {
+        if (values == null) return;
+        if (values.stream().anyMatch(h -> h == null || h.dayOfWeek() < 1 || h.dayOfWeek() > 7
+                || h.openTime() == null || h.closeTime() == null || !h.closeTime().isAfter(h.openTime()))) {
+            errors.add("operatingHours must contain valid day numbers and close times after open times");
+        }
+        if (values.stream().filter(java.util.Objects::nonNull).map(VenueOperatingHourDto::dayOfWeek).distinct().count()
+                != values.stream().filter(java.util.Objects::nonNull).count()) {
+            errors.add("operatingHours must contain at most one interval per day");
+        }
     }
 }

@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -26,6 +27,7 @@ import com.example.connect_sphere.common.enums.Facility;
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
+import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
 
@@ -42,6 +44,14 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc
 @Transactional
 class VenueBookingRequestFlowTest {
+    private static final List<VenueOperatingHourDto> FULL_DAY_HOURS = List.of(
+            new VenueOperatingHourDto(1, LocalTime.of(0, 0), LocalTime.of(23, 59)),
+            new VenueOperatingHourDto(2, LocalTime.of(0, 0), LocalTime.of(23, 59)),
+            new VenueOperatingHourDto(3, LocalTime.of(0, 0), LocalTime.of(23, 59)),
+            new VenueOperatingHourDto(4, LocalTime.of(0, 0), LocalTime.of(23, 59)),
+            new VenueOperatingHourDto(5, LocalTime.of(0, 0), LocalTime.of(23, 59)),
+            new VenueOperatingHourDto(6, LocalTime.of(0, 0), LocalTime.of(23, 59)),
+            new VenueOperatingHourDto(7, LocalTime.of(0, 0), LocalTime.of(23, 59)));
 
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
@@ -62,14 +72,14 @@ class VenueBookingRequestFlowTest {
 
     private UUID venue(int capacity, List<AccessibilityFeature> accessibility) {
         UUID id = venueService.createVenue(new CreateVenueDto("EC03 Hall " + UUID.randomUUID(), capacity,
-                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, accessibility, List.of())).venueId();
+                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, accessibility, List.of(), FULL_DAY_HOURS)).venueId();
         entityManager.flush();
         return id;
     }
 
     private UUID searchableVenue(int capacity, List<Facility> facilities) {
         UUID id = venueService.createVenue(new CreateVenueDto("EC04 Hall " + UUID.randomUUID(), capacity,
-                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, List.of(), facilities)).venueId();
+                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, List.of(), facilities, FULL_DAY_HOURS)).venueId();
         entityManager.flush();
         return id;
     }
