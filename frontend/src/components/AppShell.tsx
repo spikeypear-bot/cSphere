@@ -33,7 +33,7 @@ export function AppShell({ children }: { children: ReactNode }) {
         {role ? (
           <div className="app-shell__session">
             <NotificationBell />
-            <span>
+            <span className="app-shell__identity">
               {username} · {ROLE_LABELS[role]}
               {organisation ? ` · ${organisation}` : ''}
             </span>

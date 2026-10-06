@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
@@ -62,12 +63,11 @@ export function ReviewQueuePage() {
   const total = queue ? queue.needsReview.length + queue.awaitingOrganiser.length + queue.unassigned.length : 0
 
   return (
-    <div className="review-queue">
-      <h1>Event Request Review</h1>
-      <p className="field-hint">
-        Requests assigned to you, oldest first. Open one to review its details and history, then approve it,
-        ask the organiser for clarification, or reject it.
-      </p>
+    <div className="page">
+      <PageHeader
+        title="Event Request Review"
+        description="Requests assigned to you, oldest first. Open one to review its details and history, then approve it, ask the organiser for clarification, or reject it."
+      />
 
       {error ? <p role="alert">{error}</p> : null}
       {queue === null && !error ? <p>Loading…</p> : null}
@@ -132,7 +132,7 @@ function QueueSection({ title, hint, requests, renderAction, errors = {} }: {
         {title} <span className="review-queue__count">{requests.length}</span>
       </h2>
       <p className="field-hint">{hint}</p>
-      <ul className="review-queue__list">
+      <ul className="plain-list">
         {requests.map((request) => (
           <li key={request.requestId}>
             <Card className="review-queue__row">
@@ -150,7 +150,7 @@ function QueueSection({ title, hint, requests, renderAction, errors = {} }: {
                 {renderAction(request)}
               </div>
               {errors[request.requestId] ? (
-                <p role="alert" className="review-queue__error">{errors[request.requestId]}</p>
+                <p role="alert" className="error-text review-queue__error">{errors[request.requestId]}</p>
               ) : null}
             </Card>
           </li>

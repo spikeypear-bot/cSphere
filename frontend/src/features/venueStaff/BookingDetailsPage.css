@@ -5,10 +5,8 @@
 .associated-bookings { list-style: none; padding: 0; display: grid; gap: 1rem; margin-top: 1rem; }
 .associated-bookings p { margin: 0.5rem 0; }
 .venue-details-page { overflow-wrap: anywhere; }
-.venue-details-page__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; }
-.venue-details-page__header h1 { margin: 0; }
 .venue-card-preview__details { margin-top: 1.25rem; }
-@media (max-width: 700px), (max-height: 600px) {
+@media (max-width: 640px), (max-height: 600px) {
   .booking-detail-layout { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -32,16 +30,15 @@
 .booking-coordinator-notes h2 { margin: 0 0 0.5rem; font-size: 1rem; }
 .booking-coordinator-notes p { margin: 0.4rem 0; white-space: pre-wrap; }
 .booking-coordinator-notes__warning { color: var(--role-coordinator); }
-.venue-details-page__section-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.venue-details-page__section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .venue-operational-issues__form { display: grid; gap: 0.75rem; margin-bottom: 1rem; padding: 1.25rem; }
 .venue-operational-issues__form h3 { margin: 0; }
-.venue-operational-issues__form textarea { width: 100%; box-sizing: border-box; }
 .venue-operational-issues__form .field-error { margin: 0; color: var(--danger); font-size: 0.8rem; font-weight: 600; }
 .venue-operational-issues__period { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 0.5rem 1rem; align-items: center; }
 .venue-operational-issues__list { list-style: none; padding: 0; display: grid; gap: 1rem; }
 .venue-operational-issues__list .card { padding: 1rem 1.25rem; }
 .venue-operational-issues__list p { margin: 0.35rem 0; white-space: pre-wrap; }
-@media (max-width: 700px) {
+@media (max-width: 640px) {
   .venue-operational-issues__period { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -52,16 +49,16 @@
 .booking-approval__confirmation dd { margin: 0.25rem 0 0.75rem; }
 .booking-approval__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
 
-.booking-details-page__section-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.booking-details-page__section-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem 1rem; margin-bottom: 1rem; }
 .booking-details-page__section-header h2 { margin: 0; }
 .booking-details-page__section-header .button { flex-shrink: 0; }
 
 .booking-information-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
 .booking-status-tag { text-transform: capitalize; }
 
-.booking-approval__confirmation textarea { display: block; width: 100%; box-sizing: border-box; margin: 0.5rem 0 1rem; resize: vertical; }
+.booking-approval__confirmation textarea { display: block; margin: 0.5rem 0 1rem; resize: vertical; }
 
-.event-requirements-panel__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.event-requirements-panel__header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .event-requirements-panel__header h2 { margin: 0; }
 .event-requirements-panel__header .booking-status-tag { flex-shrink: 0; }
 .event-requirements-panel .booking-rejection-banner {

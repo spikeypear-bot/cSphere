@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { venueFacilities, venueFacilityLabels, type Facility, type VenueDto } from '../../types/venue'
 import './VenueSearchPage.css'
@@ -82,11 +83,9 @@ export function VenueSearchPage() {
   }
 
   return (
-    <section className="venue-search">
-      <header>
-        <h1>Search venues</h1>
-        <p className="field-hint">Find venues that are available for the event and meet its requirements.</p>
-      </header>
+    <section className="page page--compact venue-search">
+      <PageHeader title="Search venues"
+        description="Find venues that are available for the event and meet its requirements." />
 
       <Card>
         <form className="venue-search__form" onSubmit={search} noValidate>

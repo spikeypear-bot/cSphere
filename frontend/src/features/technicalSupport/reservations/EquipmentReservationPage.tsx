@@ -1,4 +1,9 @@
 import { useEffect, useState } from 'react'
+import { Button } from '../../../components/ui/Button'
+import { Card } from '../../../components/ui/Card'
+import { Notice } from '../../../components/ui/Notice'
+import { PageHeader } from '../../../components/ui/PageHeader'
+import '../technicalSupport.css'
 import type {
   EquipmentAvailability,
   EquipmentReservation,
@@ -143,138 +148,163 @@ export function EquipmentReservationPage() {
   }
 
   return (
-    <section>
-      <h1>Equipment Reservations</h1>
+    <section className="page">
+      <PageHeader title="Equipment Reservations" />
 
-      <h2>Events needing equipment</h2>
-      {loadingRequests && <p>Loading events…</p>}
-      <ul>
-      {requests.map((req) => (
-        <li key={req.requestId}>
-          <button
-            type="button"
-            onClick={() => handleSelectRequest(req)}
-            aria-pressed={selectedRequest?.requestId === req.requestId}
-          >
-            {req.eventName} ({formatMoment(req.eventStart)} – {formatMoment(req.eventEnd)}) —{' '}
-            {req.technicalRequirement}
-          </button>
-        </li>
-      ))}
-    </ul>
+      <Card className="tech-card">
+        <h2>Events needing equipment</h2>
+        {loadingRequests && <p>Loading events…</p>}
+        <ul className="tech-choice-list">
+          {requests.map((req) => (
+            <li key={req.requestId}>
+              <button
+                type="button"
+                className="tech-choice"
+                onClick={() => handleSelectRequest(req)}
+                aria-pressed={selectedRequest?.requestId === req.requestId}
+              >
+                {req.eventName} ({formatMoment(req.eventStart)} – {formatMoment(req.eventEnd)}) —{' '}
+                {req.technicalRequirement}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       {selectedRequest && (
         <>
-          <h2>{selectedRequest.eventName}</h2>
-          <p>{selectedRequest.technicalRequirement}</p>
+          <Card className="tech-card">
+            <h2>{selectedRequest.eventName}</h2>
+            <p>{selectedRequest.technicalRequirement}</p>
 
-          <h2>Requirements</h2>
-          <ul>
-            {lines.map((line) => (
-              <li key={line.equipmentId}>
-                {line.equipmentName}: {line.quantity} needed
-              </li>
-            ))}
-          </ul>
-
-          <fieldset>
-            <legend>Period to reserve for</legend>
-            <label htmlFor="period-start">Start</label>
-            <input
-              id="period-start"
-              type="datetime-local"
-              value={period.start}
-              onChange={(e) => setPeriod({ ...period, start: e.target.value })}
-            />
-            <label htmlFor="period-end">End</label>
-            <input
-              id="period-end"
-              type="datetime-local"
-              value={period.end}
-              onChange={(e) => setPeriod({ ...period, end: e.target.value })}
-            />
-          </fieldset>
-          {!periodIsValid && <p role="alert">Please choose an end time after the start time.</p>}
-
-          <h2>Availability for this period</h2>
-          {loadingAvailability && <p>Loading availability…</p>}
-          <ul>
-            {availability.map((a) => (
-              <li key={a.equipmentId}>
-                {a.equipmentName}: {a.availableQuantity} of {a.totalQuantity} available
-                {a.serialised ? ' (serialised)' : ''}
-              </li>
-            ))}
-          </ul>
-
-          <h2>Reserve equipment</h2>
-          <label htmlFor="reserve-equipment">Equipment</label>
-          <select
-            id="reserve-equipment"
-            value={formEquipmentId}
-            onChange={(e) => { setFormEquipmentId(e.target.value); setFormSerial('') }}
-            disabled={saving}
-          >
-            <option value="">-- choose --</option>
-            {availability.map((a) => (
-              <option key={a.equipmentId} value={a.equipmentId}>
-                {a.equipmentName}
-              </option>
-            ))}
-          </select>
-
-          <label htmlFor="reserve-quantity">Quantity</label>
-          <input
-            id="reserve-quantity"
-            type="number"
-            min={1}
-            value={formQuantity}
-            onChange={(e) => setFormQuantity(Number(e.target.value))}
-            disabled={saving || (chosenEquipment?.serialised ?? false)}
-          />
-
-          {chosenEquipment?.serialised && (
-            <>
-              <label htmlFor="reserve-serial">Serial number (optional — leave blank for any unit)</label>
-              <input
-                id="reserve-serial"
-                type="text"
-                value={formSerial}
-                onChange={(e) => setFormSerial(e.target.value)}
-                disabled={saving}
-              />
-            </>
-          )}
-
-          {chosenEquipment && formQuantity > chosenEquipment.availableQuantity && (
-            <p role="alert">
-              Only {chosenEquipment.availableQuantity} available for this period.
-            </p>
-          )}
-
-          <button type="button" onClick={handleReserve} disabled={!formIsValid || saving}>
-            {saving ? 'Reserving…' : 'Reserve'}
-          </button>
-
-          <h2>Reservations for this event</h2>
-          {reservations.length === 0 ? (
-            <p>None yet.</p>
-          ) : (
+            <h2>Requirements</h2>
             <ul>
-              {reservations.map((r) => (
-                <li key={r.logId}>
-                  {r.quantity} × {r.equipmentName}
-                  {r.serialNumber ? ` (serial ${r.serialNumber})` : ''} —{' '}
-                  {describeReservation(r.loanedFrom, r.loanedUntil)}
+              {lines.map((line) => (
+                <li key={line.equipmentId}>
+                  {line.equipmentName}: {line.quantity} needed
                 </li>
               ))}
             </ul>
-          )}
+          </Card>
+
+          <Card className="tech-card">
+            <fieldset className="tech-period">
+              <legend>Period to reserve for</legend>
+              <div className="field">
+                <label htmlFor="period-start">Start</label>
+                <input
+                  id="period-start"
+                  type="datetime-local"
+                  value={period.start}
+                  onChange={(e) => setPeriod({ ...period, start: e.target.value })}
+                />
+              </div>
+              <div className="field">
+                <label htmlFor="period-end">End</label>
+                <input
+                  id="period-end"
+                  type="datetime-local"
+                  value={period.end}
+                  onChange={(e) => setPeriod({ ...period, end: e.target.value })}
+                />
+              </div>
+            </fieldset>
+            {!periodIsValid && (
+              <p role="alert" className="error-text">Please choose an end time after the start time.</p>
+            )}
+
+            <h2>Availability for this period</h2>
+            {loadingAvailability && <p>Loading availability…</p>}
+            <ul>
+              {availability.map((a) => (
+                <li key={a.equipmentId}>
+                  {a.equipmentName}: {a.availableQuantity} of {a.totalQuantity} available
+                  {a.serialised ? ' (serialised)' : ''}
+                </li>
+              ))}
+            </ul>
+          </Card>
+
+          <Card className="tech-card">
+            <h2>Reserve equipment</h2>
+            <div className="tech-form">
+              <div className="field">
+                <label htmlFor="reserve-equipment">Equipment</label>
+                <select
+                  id="reserve-equipment"
+                  value={formEquipmentId}
+                  onChange={(e) => { setFormEquipmentId(e.target.value); setFormSerial('') }}
+                  disabled={saving}
+                >
+                  <option value="">-- choose --</option>
+                  {availability.map((a) => (
+                    <option key={a.equipmentId} value={a.equipmentId}>
+                      {a.equipmentName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="field">
+                <label htmlFor="reserve-quantity">Quantity</label>
+                <input
+                  id="reserve-quantity"
+                  type="number"
+                  min={1}
+                  value={formQuantity}
+                  onChange={(e) => setFormQuantity(Number(e.target.value))}
+                  disabled={saving || (chosenEquipment?.serialised ?? false)}
+                />
+              </div>
+
+              {chosenEquipment?.serialised && (
+                <div className="field">
+                  <label htmlFor="reserve-serial">Serial number (optional — leave blank for any unit)</label>
+                  <input
+                    id="reserve-serial"
+                    type="text"
+                    value={formSerial}
+                    onChange={(e) => setFormSerial(e.target.value)}
+                    disabled={saving}
+                  />
+                </div>
+              )}
+            </div>
+
+            {chosenEquipment && formQuantity > chosenEquipment.availableQuantity && (
+              <p role="alert" className="error-text">
+                Only {chosenEquipment.availableQuantity} available for this period.
+              </p>
+            )}
+
+            <div className="tech-actions">
+              <Button type="button" onClick={handleReserve} disabled={!formIsValid || saving}>
+                {saving ? 'Reserving…' : 'Reserve'}
+              </Button>
+            </div>
+          </Card>
+
+          <Card className="tech-card">
+            <h2>Reservations for this event</h2>
+            {reservations.length === 0 ? (
+              <p>None yet.</p>
+            ) : (
+              <ul>
+                {reservations.map((r) => (
+                  <li key={r.logId}>
+                    {r.quantity} × {r.equipmentName}
+                    {r.serialNumber ? ` (serial ${r.serialNumber})` : ''} —{' '}
+                    {describeReservation(r.loanedFrom, r.loanedUntil)}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
         </>
       )}
 
-      {message && <p role="status">{message}</p>}
-      {error && <p role="alert">{error}</p>}
+      {message && <Notice>{message}</Notice>}
+      {error && <Notice tone="danger">{error}</Notice>}
     </section>
   )
 }

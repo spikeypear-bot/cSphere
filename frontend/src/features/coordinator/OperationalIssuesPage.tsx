@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import type { CoordinatorVenueOperationalIssueDto } from '../../types/venueOperationalIssue'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
@@ -45,29 +46,25 @@ export function OperationalIssuesPage() {
   }, [])
 
   return (
-    <div className="coordinator-home operational-issues-page">
-      <div className="coordinator-home__header">
-        <div>
-          <h1>Venue operational issues</h1>
-          <p className="field-hint">
-            Issues affecting venues with your approved bookings.
-          </p>
-        </div>
-        <Button variant="secondary" onClick={() => void load()}>Refresh issues</Button>
-      </div>
+    <div className="page">
+      <PageHeader
+        title="Venue operational issues"
+        description="Issues affecting venues with your approved bookings."
+        actions={<Button variant="secondary" onClick={() => void load()}>Refresh issues</Button>}
+      />
 
       {error ? <p role="alert">{error}</p> : null}
       {issues === null && !error ? <p role="status">Loading operational issues…</p> : null}
       {issues?.length === 0 ? (
-        <Card className="operational-issues-page__empty">
+        <Card className="operational-issue">
           <p>No operational issues affect your approved venue bookings.</p>
         </Card>
       ) : null}
       {issues && issues.length > 0 ? (
-        <ul className="review-queue__list">
+        <ul className="plain-list">
           {issues.map(issue => (
             <li key={issue.issueId}>
-              <Card className="review-queue__row">
+              <Card className="operational-issue">
                 <h2>{issue.venueAddress}</h2>
                 <p>{issue.description}</p>
                 <p><strong>Affected period:</strong> {periodLabel(issue)}</p>
