@@ -21,7 +21,7 @@ public record VenueOptionDto(
         List<ConflictDto> conflicts,
         List<String> reasons) {
 
-    /** A confirmed booking that overlaps the event's time. */
+    /** An approved booking that overlaps the event's time. */
     public record ConflictDto(String eventName, OffsetDateTime startDatetime, OffsetDateTime endDatetime) {
     }
 }

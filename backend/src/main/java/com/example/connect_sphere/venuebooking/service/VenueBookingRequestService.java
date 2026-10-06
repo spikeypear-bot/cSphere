@@ -41,7 +41,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  *
  * <p>The request is only a request. It is created as {@code pending}, does
  * not reserve the venue, and does not count as a conflict for anyone else;
- * only a {@code confirmed} booking does (Week 4 'Booking Conflict
+ * only a {@code approved} booking does (Week 4 'Booking Conflict
  * Detection'). Deciding between competing pending requests is Venue Staff's
  * job at approval (VS03/VS08), which must re-run the overlap check there.
  *
@@ -55,7 +55,7 @@ public class VenueBookingRequestService {
 
     static final int MAX_TEXT_LENGTH = 2000;
     private static final List<VenueBookingStatus> ACTIVE =
-            List.of(VenueBookingStatus.pending, VenueBookingStatus.confirmed);
+            List.of(VenueBookingStatus.pending, VenueBookingStatus.approved);
 
     private final EventRepository events;
     private final VenueRepository venues;
@@ -138,7 +138,7 @@ public class VenueBookingRequestService {
         List<VenueOptionDto.ConflictDto> conflicts =
                 conflictsByVenue(event).getOrDefault(venue.getVenueId(), List.of());
         if (!conflicts.isEmpty()) {
-            throw new InvalidVenueBookingException("This venue already has a confirmed booking that overlaps the "
+            throw new InvalidVenueBookingException("This venue already has an approved booking that overlaps the "
                     + "event's time (" + conflicts.get(0).eventName() + "). Choose another venue.");
         }
         if (suitability.needsJustification() && justification == null) {
@@ -176,7 +176,7 @@ public class VenueBookingRequestService {
     /**
      * EC03: the coordinator withdraws their own pending request (e.g. they
      * picked the wrong venue), which frees the event to request another.
-     * A confirmed booking cannot be withdrawn here: undoing a commitment Venue
+     * An approved booking cannot be withdrawn here: undoing a commitment Venue
      * Staff have made is a change request (EO03/EC-NEW3), not a cancellation.
      */
     @Transactional
@@ -216,7 +216,7 @@ public class VenueBookingRequestService {
                     + suitability.expectedAttendance() + ".");
         }
         for (VenueOptionDto.ConflictDto conflict : conflicts) {
-            reasons.add("Already confirmed for " + conflict.eventName() + " at an overlapping time.");
+            reasons.add("Already approved for " + conflict.eventName() + " at an overlapping time.");
         }
         if (suitability.needsJustification()) {
             reasons.add("Missing accessibility: " + String.join(", ", suitability.missingAccessibility()) + ".");
@@ -230,7 +230,7 @@ public class VenueBookingRequestService {
     }
 
     private Map<UUID, List<VenueOptionDto.ConflictDto>> conflictsByVenue(Event event) {
-        return bookings.findConfirmedOverlapping(event.getEventId(), event.getStartDatetime(), event.getEndDatetime())
+        return bookings.findApprovedOverlapping(event.getEventId(), event.getStartDatetime(), event.getEndDatetime())
                 .stream()
                 .collect(Collectors.groupingBy(VenueBookingRecordRepository.Conflict::getVenueId,
                         Collectors.mapping(c -> new VenueOptionDto.ConflictDto(

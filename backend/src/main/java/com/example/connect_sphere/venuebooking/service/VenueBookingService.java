@@ -1,5 +1,7 @@
 package com.example.connect_sphere.venuebooking.service;
 
+import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -18,11 +20,66 @@ public class VenueBookingService {
     private final VenueBookingRepository bookings;
     private final VenueRepository venues;
     private final VenueMapper venueMapper;
+    private final VenueBookingRecordRepository records;
+    private final EventRepository events;
 
-    public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper) {
+    public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper,
+            VenueBookingRecordRepository records,
+            EventRepository events) {
         this.bookings = bookings;
         this.venues = venues;
         this.venueMapper = venueMapper;
+        this.records = records;
+        this.events = events;
+    }
+
+    /** VS03: event lock matches submission/cancellation; venue lock serialises competing approvals.
+     * Ownership is not modelled yet; the API restricts this action to Venue Staff. */
+    @Transactional
+    public VenueBookingDto approve(UUID bookingId) {
+        UUID eventId = records.findEventId(bookingId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        var event = events.findForUpdate(eventId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        var booking = records.findById(bookingId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        if (booking.getStatus() != VenueBookingStatus.pending) {
+            throw new VenueBookingStateException("Only pending bookings can be approved. This booking is "
+                    + booking.getStatus().name() + ".");
+        }
+        venues.findForUpdate(booking.getVenueId())
+                .orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
+        if (records.countApprovalConflicts(booking.getVenueId(), bookingId, VenueBookingStatus.approved,
+                event.getStartDatetime(), event.getEndDatetime()) > 0) {
+            throw new VenueBookingStateException("This venue already has an approved booking at the requested time.");
+        }
+        if (records.approvePending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.approved) != 1) {
+            throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
+        }
+        return get(bookingId);
+    }
+
+    /** VS04: use the same event lock as approval, submission and cancellation. */
+    @Transactional
+    public VenueBookingDto reject(UUID bookingId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new InvalidVenueBookingException("A rejection reason is required.");
+        }
+        String trimmedReason = reason.strip();
+        UUID eventId = records.findEventId(bookingId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        events.findForUpdate(eventId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        var booking = records.findById(bookingId)
+                .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        if (booking.getStatus() != VenueBookingStatus.pending) {
+            throw new VenueBookingStateException("Only pending bookings can be rejected. This booking is "
+                    + booking.getStatus().name() + ".");
+        }
+        if (records.rejectPending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.rejected, trimmedReason) != 1) {
+            throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
+        }
+        return get(bookingId);
     }
 
     public List<VenueBookingDto> listPending() {
@@ -48,6 +105,6 @@ public class VenueBookingService {
                         event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
                         event.getExpectedAttendance(), event.getVenueRequirements(),
                         List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()),
-                booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt());
+                booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt(), booking.getRejectReason());
     }
 }

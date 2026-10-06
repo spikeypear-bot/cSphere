@@ -137,7 +137,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
 
   it('shows the server reason when a submission is refused and stays on the page', async () => {
     stubApi(routes([], () => jsonResponse(422, {
-      message: "This venue already has a confirmed booking that overlaps the event's time (Board Meeting). Choose another venue.",
+      message: "This venue already has a approved booking that overlaps the event's time (Board Meeting). Choose another venue.",
     })))
     const user = userEvent.setup()
     renderPage()

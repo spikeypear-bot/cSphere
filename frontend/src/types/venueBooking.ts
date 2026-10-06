@@ -2,7 +2,7 @@ import type { VenueDto } from './venue'
 
 export interface VenueBookingDto {
   bookingId: string
-  status: 'pending' | 'confirmed' | 'changed' | 'rejected' | 'cancelled'
+  status: 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
   venue: VenueDto
   event: {
     eventId: string
@@ -18,5 +18,6 @@ export interface VenueBookingDto {
    * accessibility feature, their justification. Absent on older bookings. */
   bookingNotes?: string | null
   suitabilityNote?: string | null
+  rejectReason?: string | null
   submittedAt?: string | null
 }

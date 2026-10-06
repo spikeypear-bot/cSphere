@@ -1,7 +1,7 @@
 .booking-details-page { max-width: none; }
 .booking-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
 .booking-detail-layout > * { min-width: 0; min-height: 0; overflow-wrap: anywhere; }
-.booking-details-page .event-requirements-panel h3 { margin-top: 1rem; }
+.booking-details-page .event-requirements-panel h3 { margin: 0.75rem 0 0; }
 .associated-bookings { list-style: none; padding: 0; display: grid; gap: 1rem; margin-top: 1rem; }
 .associated-bookings p { margin: 0.5rem 0; }
 .venue-details-page { overflow-wrap: anywhere; }
@@ -44,3 +44,33 @@
 @media (max-width: 700px) {
   .venue-operational-issues__period { grid-template-columns: minmax(0, 1fr); }
 }
+
+.booking-approval { margin-bottom: 1rem; }
+.booking-approval__confirmation { padding: 1rem; border: 1px solid var(--hairline); border-radius: var(--radius-md, 12px); background: var(--panel); overflow-wrap: anywhere; }
+.booking-approval__confirmation h3 { margin-top: 0; }
+.booking-approval__confirmation dt { font-weight: 600; }
+.booking-approval__confirmation dd { margin: 0.25rem 0 0.75rem; }
+.booking-approval__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; }
+
+.booking-details-page__section-header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.booking-details-page__section-header h2 { margin: 0; }
+.booking-details-page__section-header .button { flex-shrink: 0; }
+
+.booking-information-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
+.booking-status-tag { text-transform: capitalize; }
+
+.booking-approval__confirmation textarea { display: block; width: 100%; box-sizing: border-box; margin: 0.5rem 0 1rem; resize: vertical; }
+
+.event-requirements-panel__header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; }
+.event-requirements-panel__header h2 { margin: 0; }
+.event-requirements-panel__header .booking-status-tag { flex-shrink: 0; }
+.event-requirements-panel .booking-rejection-banner {
+  margin-top: 0.75rem;
+  padding: 0.5rem 1.25rem;
+  border: 1px solid var(--danger);
+  border-left-width: 4px;
+  background: color-mix(in srgb, var(--danger) 8%, var(--panel));
+  overflow-wrap: anywhere;
+}
+.booking-rejection-banner strong { color: var(--danger); }
+.booking-rejection-banner p { margin: 0.25rem 0 0; white-space: pre-wrap; }

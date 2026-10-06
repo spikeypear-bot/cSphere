@@ -30,7 +30,7 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); window.localStorage.clear() 
 it('renders pending summaries with status and opens the selected existing booking details', async () => {
   const fetch = vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/venue-staff/booking-requests')) return response([booking,
-      ...(['confirmed', 'changed', 'rejected', 'cancelled'] as const).map(status => ({ ...booking, bookingId: status, status, event: { ...booking.event, eventName: status } })),
+      ...(['approved', 'changed', 'rejected', 'cancelled'] as const).map(status => ({ ...booking, bookingId: status, status, event: { ...booking.event, eventName: status } })),
     ])
     if (url.endsWith('/venue-bookings/b1')) return response(booking)
     if (url.endsWith('/venues/v1/bookings')) return response([booking])
@@ -46,11 +46,11 @@ it('renders pending summaries with status and opens the selected existing bookin
   expect(screen.getByText(/25 Sept? 2026.*02:00 am/i)).toBeInTheDocument()
   const link = screen.getByRole('link', { name: 'View booking details' })
   expect(link).toHaveAttribute('href', '/venue-staff/bookings/b1?from=booking-approvals')
-  for (const status of ['confirmed', 'changed', 'rejected', 'cancelled']) {
+  for (const status of ['approved', 'changed', 'rejected', 'cancelled']) {
     expect(screen.queryByRole('heading', { name: status })).not.toBeInTheDocument()
   }
   await userEvent.click(link)
-  expect(await screen.findByRole('region', { name: 'Event requirements' })).toHaveTextContent('Workshop')
+  expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Workshop')
   expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
 })
 
@@ -111,7 +111,7 @@ it('keeps the queue behind the existing Venue Staff route gate', async () => {
   expect(fetch).not.toHaveBeenCalled()
 })
 
-it.each(['confirmed', 'changed', 'rejected', 'cancelled'] as const)(
+it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
   'reads fresh details when a pending booking becomes %s and refreshes the queue on return', async status => {
     let queueReads = 0
     const fetch = vi.fn().mockImplementation(async (url: string) => {
@@ -122,10 +122,10 @@ it.each(['confirmed', 'changed', 'rejected', 'cancelled'] as const)(
     })
     vi.stubGlobal('fetch', fetch); page()
     await userEvent.click(await screen.findByRole('link', { name: 'View booking details' }))
-    expect(await screen.findByRole('region', { name: 'Event requirements' })).toHaveTextContent('150 people')
+    expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('150 people')
     expect(screen.getByText('Updated seating')).toBeInTheDocument()
-    expect(screen.getByText(`Status: ${status}`)).toBeInTheDocument()
-    expect(screen.getByRole('status')).toHaveTextContent(`This booking request is no longer pending. Its current status is ${status}.`)
+    expect(screen.getByLabelText(`Status: ${status}`)).toBeInTheDocument()
+    expect(screen.queryByText(/This booking request is no longer pending/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
     await userEvent.click(screen.getByRole('link', { name: 'Back to Pending Booking Requests' }))
@@ -161,10 +161,10 @@ it.each([
     .mockResolvedValue(response(booking))
   vi.stubGlobal('fetch', fetch); page('venue-staff', `/venue-staff/bookings/${id}?from=booking-approvals`)
   expect(await screen.findByRole('alert')).toHaveTextContent(message as string)
-  expect(screen.queryByRole('region', { name: 'Event requirements' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Event Requirements' })).not.toBeInTheDocument()
   expect(screen.getByRole('link', { name: 'Back to Pending Booking Requests' })).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
-  expect(await screen.findByRole('region', { name: 'Event requirements' })).toHaveTextContent('Workshop')
+  expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Workshop')
 })
 
 it('ignores a late detail response after returning to the queue', async () => {
@@ -176,10 +176,27 @@ it('ignores a late detail response after returning to the queue', async () => {
   vi.stubGlobal('fetch', fetch); page()
   await userEvent.click(await screen.findByRole('link', { name: 'View booking details' }))
   expect(screen.getByRole('status')).toHaveTextContent('Loading booking details')
-  expect(screen.queryByRole('region', { name: 'Event requirements' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Event Requirements' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('link', { name: 'Back to Pending Booking Requests' }))
   await screen.findByRole('link', { name: 'View booking details' })
   await act(async () => { finish(response({ ...booking, event: { ...booking.event, eventName: 'Late response' } })) })
   expect(screen.getByRole('heading', { name: 'Pending booking requests' })).toBeInTheDocument()
   expect(screen.queryByText('Late response')).not.toBeInTheDocument()
+})
+
+it('approves from the queue and removes the booking when returning', async () => {
+  let approved = false
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') { approved = true; return response({ ...booking, status: 'approved' }) }
+    if (url.endsWith('/venue-staff/booking-requests')) return response(approved ? [] : [booking])
+    return response({ ...booking, status: approved ? 'approved' : 'pending' })
+  }))
+  page()
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('link', { name: 'View booking details' }))
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  await user.click(screen.getByRole('link', { name: 'Back to Pending Booking Requests' }))
+  expect(await screen.findByText('No pending booking requests found.')).toBeInTheDocument()
 })

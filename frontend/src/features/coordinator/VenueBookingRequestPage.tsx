@@ -100,7 +100,7 @@ export function VenueBookingRequestPage() {
   }
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
-  const active = bookings.find((b) => b.status === 'pending' || b.status === 'confirmed')
+  const active = bookings.find((b) => b.status === 'pending' || b.status === 'approved')
   const selected = options.find((o) => o.venue.venueId === selectedId) ?? null
   const needsJustification = selected?.verdict === 'needs_justification'
   const notesTooLong = notes.trim().length > MAX_TEXT

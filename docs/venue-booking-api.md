@@ -55,7 +55,7 @@ navigation and pagination retain their existing behaviour.
 
 Details perform a fresh GET for the selected booking. Queue-origin navigation does
 not retain a previous booking's panels while another request loads or fails. A
-current `confirmed`, `changed`, `rejected` or `cancelled` status displays a clear
+current `approved`, `changed`, `rejected` or `cancelled` status displays a clear
 no-longer-pending notice alongside the saved status and details. The queue performs
 a fresh read when returning through the explicit link or browser Back. There is no
 polling: a status change after details have loaded appears on refresh/reopening.
@@ -272,3 +272,109 @@ unavailable controls cannot navigate. They never submit a form or reload the pag
 Regression tests verify panel identity through loading, failure and retry, keyboard
 focus retention, blocked repeated activation, and one list fetch while paging.
 These DOM tests do not measure browser scroll position or layout geometry.
+
+## VS03 — Approve booking (2026-10-05)
+
+Venue Staff review the existing `/venue-staff/bookings/:bookingId` page and select
+**Approve Booking**, then confirm the event, venue and requested start/end times.
+Cancelling confirmation makes no API request. Approval is available only for a
+successfully loaded pending booking, from either the queue or the catalogue.
+
+`PATCH /api/venue-bookings/{bookingId}/approve` returns the updated booking DTO.
+SecurityConfig requires the VS role. Venue-to-staff ownership is still not
+modelled, so any Venue Staff account can approve any pending booking.
+
+V16 renames the PostgreSQL venue booking enum value `confirmed` to `approved` in
+place, preserving existing rows. Event confirmation uses a separate enum and is
+unchanged. All booking availability, active-request and operational-issue queries
+now use `approved`. Deploy the application and migration together: older backend
+versions expect the former enum label. Rebuild the backend image for Flyway to
+load V16; do not edit previously applied migrations.
+
+Approval takes the existing event lock (shared with request submission and
+cancellation), then a venue lock to serialise approvals of competing events.
+Inside that transaction it checks pending status and overlapping approved
+bookings, using half-open time windows so back-to-back bookings are allowed.
+A conditional update changes only status on the existing row; a fresh DTO is
+read after clearing cached entity views. Failure rolls back the transaction.
+This protects approval through the service; future schedule-changing workflows
+and direct SQL must maintain the same consistency rules.
+
+Responses: 400 malformed UUID, 401 unauthenticated, 403 wrong role, 404 missing
+booking, 409 non-pending/duplicate/overlap, 503 database or transaction failure.
+The UI uses the successful response as its status source, blocks duplicate clicks,
+and displays errors without optimistically marking approval. On an uncertain
+network result, refresh details before retrying. Returning to the pending queue
+fetches it again, excluding the approved booking.
+
+Tests: `VenueBookingApprovalTest` covers status-only updates, role restrictions,
+non-pending and duplicate approvals, missing IDs, overlap boundaries, real database
+failure rollback and simultaneous duplicate/competing approvals. Booking details
+and queue UI tests cover confirmation, cancellation, loading, failures and queue removal.
+Rejection actions remain outside VS03.
+
+### VS03 failure recovery and local smoke verification
+
+The approval action shares the **Venue information** header row: heading left,
+button right. Confirmation appears below that row. Successful approval uses the
+returned booking and removes the action; returning to the queue fetches fresh data.
+
+After any failed PATCH, the page fetches the booking again. This reconciles stale
+status, concurrent cancellation/approval, and a lost response after a committed
+update. A missing booking clears the stale details and action. If both the write
+and verification read fail, approval stays disabled until **Refresh booking details**
+succeeds. The page never infers success from an error or retries the write blindly.
+
+**Approval PATCH returns a generic 404 while GET details works:** check the running
+backend version. Vite forwards `/api` to port 8080; it does not implement the route.
+An old backend image can serve existing details but lack the new PATCH action.
+Run `docker compose up -d --build backend`, wait for backend health, and confirm
+Flyway V16 is applied. A domain 404 with a booking-not-found message instead means
+that the requested booking does not exist. Do not change the endpoint or create a
+replacement booking to work around an outdated container.
+
+Live smoke check (2026-10-05): through `localhost:5173` and the rebuilt Spring Boot
+backend, using two temporary bookings on a separate test venue:
+
+1. Open a pending request and verify the header/action placement.
+2. Open confirmation and cancel; verify its database status is still pending.
+3. Confirm approval; verify approved status and absence of the approval action.
+4. Return to the queue; verify the approved request is absent.
+5. Attempt an overlapping request; verify conflict feedback and pending status.
+6. Verify duplicate approval returns 409 and booking associations/notes are preserved.
+
+The originally reported demo booking is left pending so the developer can exercise
+its approval manually. Temporary smoke records are removed after verification.
+Automated coverage additionally exercises missing bookings, stale approved/cancelled
+states, network recovery, database rollback, role access and simultaneous approvals.
+
+Validation (completed 2026-10-06): 47 booking backend tests passed in an isolated
+container build; all 192 frontend tests passed, with the 38 booking UI tests rerun
+after the final recovery-message adjustment. Frontend production build and
+changed-file lint passed. Repository-wide lint still reports five existing
+`set-state-in-effect` errors in the technical-support equipment reservation/status
+pages. Live browser approval, cancellation, queue removal and conflict checks
+passed on 2026-10-05; temporary smoke records were removed afterward.
+
+The booking details header displays its backend status as a pill below **Venue
+information**, using the same style as the venue layout tags. The heading and
+status form a two-row block aligned beside the approval action. This shared header
+is used by both catalogue navigation and `?from=booking-approvals` navigation.
+
+## VS04 rejection
+
+`PATCH /api/venue-bookings/{bookingId}/reject` requires Venue Staff access and
+JSON `{ "reason": "Venue unavailable due to maintenance." }`. A nonblank reason
+is required and saved after trimming. Returns the updated booking including
+`rejectReason`, also available in coordinator booking history.
+
+The event lock shared with approval/submission/cancellation and a pending-only
+conditional update ensure status and reason commit together. Non-pending decisions
+return 409 without overwriting the reason; missing bookings return 404, invalid
+reasons 422, and database update failures 503.
+
+The existing booking details page provides a textarea and confirmation. Both
+decision actions disappear after rejection, and the saved reason is displayed.
+The pending queue excludes rejected records. After an uncertain response the UI
+reads current booking data before allowing another decision. Booking relationships
+and event details remain unchanged; rejection creates no venue commitment.
