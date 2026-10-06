@@ -32,7 +32,8 @@ export function BookingDetailsPage() {
           <div className="booking-requirements-column" aria-busy={loading}>
             {loading && <span className="booking-loading-notice" role="status">Loading next booking…</span>}
             <section aria-labelledby="event-requirements-heading">
-              <EventRequirementsPanel event={data.event} status={data.status} rejectReason={data.rejectReason} />
+              <EventRequirementsPanel event={data.event} status={data.status} rejectReason={data.rejectReason}
+                alternativeVenueAddress={data.alternativeVenueAddress} alternativeArrangement={data.alternativeArrangement} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
             {!fromApprovals && <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />}

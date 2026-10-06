@@ -235,6 +235,8 @@ export function VenueBookingRequestPage() {
                   <li key={b.bookingId}>
                     <strong>{b.venueAddress ?? 'Unknown venue'}</strong>: {BOOKING_STATUS_LABELS[b.status]}
                     {b.rejectReason ? <> · Reason: {b.rejectReason}</> : null}
+                    {b.alternativeVenueAddress ? <> · Suggested venue: {b.alternativeVenueAddress}</> : null}
+                    {b.alternativeArrangement ? <> · Alternative arrangement: {b.alternativeArrangement}</> : null}
                   </li>
                 ))}
               </ul>

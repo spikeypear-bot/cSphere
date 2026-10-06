@@ -132,9 +132,12 @@ class VenueEvent <<immutable read mapping>> {
 class VenueBooking <<immutable read mapping>> {
   bookingId : UUID
   status : VenueBookingStatus
+  rejectReason : String
   bookingNotes : String
   suitabilityNote : String
   submittedAt : OffsetDateTime
+  alternativeVenueId : UUID
+  alternativeArrangement : String
 }
 
 enum VenueBookingStatus {
@@ -191,6 +194,8 @@ class VenueBookingRecord {
   bookingNotes : String
   suitabilityNote : String
   rejectReason : String
+  alternativeVenueId : UUID
+  alternativeArrangement : String
   submittedBy : UUID
   submittedAt : OffsetDateTime
 }
@@ -210,6 +215,7 @@ VenueSuitability ..> Venue : judges
 VenueSuitability ..> VenueEvent : against
 
 VenueBooking "0..*" --> "1" Venue : venue
+VenueBooking "0..*" --> "0..1" Venue : alternativeVenue
 VenueBooking "0..*" --> "1" VenueEvent : event
 VenueBooking ..> VenueBookingStatus : status
 note bottom of VenueEvent

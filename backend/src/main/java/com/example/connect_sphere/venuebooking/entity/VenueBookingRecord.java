@@ -52,6 +52,12 @@ public class VenueBookingRecord {
     @Column(name = "reject_reason")
     private String rejectReason;
 
+    @Column(name = "alternative_venue_id")
+    private UUID alternativeVenueId;
+
+    @Column(name = "alternative_arrangement")
+    private String alternativeArrangement;
+
     /** V13: why the coordinator requested a venue that lacks a requested
      * accessibility feature (EC03 suitability override). */
     @Column(name = "suitability_note")

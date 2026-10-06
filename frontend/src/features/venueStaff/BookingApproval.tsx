@@ -2,7 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import type { VenueBookingDto } from '../../types/venueBooking'
+import type { VenueDto } from '../../types/venue'
 import { formatEventDateTime } from './formatEventDateTime'
+
+const MAX_ALTERNATIVE_ARRANGEMENT_LENGTH = 2000
 
 export function BookingApproval({ booking, onApproved, onUnavailable }: {
   booking: VenueBookingDto
@@ -13,12 +16,39 @@ export function BookingApproval({ booking, onApproved, onUnavailable }: {
   const [rejecting, setRejecting] = useState(false)
   const [reason, setReason] = useState('')
   const [reasonError, setReasonError] = useState<string>()
+  const [venues, setVenues] = useState<VenueDto[] | null>(null)
+  const [venueOptionsError, setVenueOptionsError] = useState<string>()
+  const [loadingVenues, setLoadingVenues] = useState(false)
+  const [alternativeVenueId, setAlternativeVenueId] = useState('')
+  const [alternativeArrangement, setAlternativeArrangement] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string>()
   const [needsRefresh, setNeedsRefresh] = useState(false)
   const submitting = useRef(false)
   const active = useRef(true)
   useEffect(() => { active.current = true; return () => { active.current = false } }, [])
+
+  async function loadAlternativeVenues() {
+    setLoadingVenues(true)
+    setVenueOptionsError(undefined)
+    try {
+      const available = await apiClient.get<VenueDto[]>('/venues')
+      if (!Array.isArray(available)) {
+        throw new Error('The venue list response was invalid. You can still reject without a venue suggestion.')
+      }
+      if (active.current) setVenues(available)
+    } catch (cause) {
+      if (active.current) {
+        setVenueOptionsError(cause instanceof ApiClientError
+          ? cause.message
+          : cause instanceof Error
+            ? cause.message
+            : 'Could not load alternative venues. You can still reject this request without a venue suggestion.')
+      }
+    } finally {
+      if (active.current) setLoadingVenues(false)
+    }
+  }
 
   async function readCurrentBooking() {
     try {
@@ -56,7 +86,11 @@ export function BookingApproval({ booking, onApproved, onUnavailable }: {
     setBusy(true)
     setError(undefined)
     try {
-      const updated = await apiClient.patch<VenueBookingDto>('/venue-bookings/' + booking.bookingId + '/' + action, action === 'reject' ? { reason: reason.trim() } : undefined)
+      const updated = await apiClient.patch<VenueBookingDto>('/venue-bookings/' + booking.bookingId + '/' + action, action === 'reject' ? {
+        reason: reason.trim(),
+        alternativeVenueId: alternativeVenueId || null,
+        alternativeArrangement: alternativeArrangement.trim() || null,
+      } : undefined)
       if (active.current) {
         setConfirming(false)
         setRejecting(false)
@@ -84,7 +118,14 @@ export function BookingApproval({ booking, onApproved, onUnavailable }: {
       <BookingInformationHeading />
       {booking.status === 'pending' && !confirming && !rejecting && <div className="booking-approval__actions">
         <Button disabled={busy || needsRefresh} onClick={() => setConfirming(true)}>Approve Booking</Button>
-        <Button variant="secondary" disabled={busy || needsRefresh} onClick={() => { setRejecting(true); setReason(''); setReasonError(undefined) }}>Reject Booking</Button>
+        <Button variant="secondary" disabled={busy || needsRefresh} onClick={() => {
+          setRejecting(true)
+          setReason('')
+          setReasonError(undefined)
+          setAlternativeVenueId('')
+          setAlternativeArrangement('')
+          if (venues === null) void loadAlternativeVenues()
+        }}>Reject Booking</Button>
       </div>}
     </div>
     {rejecting && booking.status === 'pending' && <form className="booking-approval__confirmation" aria-labelledby="reject-booking-heading"
@@ -98,9 +139,35 @@ export function BookingApproval({ booking, onApproved, onUnavailable }: {
         onChange={event => { setReason(event.target.value); setReasonError(undefined) }} rows={4} />
       {reasonError && <p id="booking-rejection-error" className="field-error" role="alert">{reasonError}</p>}
       </div>
+      <div className="field">
+        <label htmlFor="booking-alternative-venue">Alternative venue (optional)</label>
+        <select id="booking-alternative-venue" value={alternativeVenueId} disabled={busy || loadingVenues}
+          onChange={event => setAlternativeVenueId(event.target.value)}>
+          <option value="">No alternative venue</option>
+          {(venues ?? []).filter(venue => venue.venueId !== booking.venue.venueId)
+            .map(venue => <option key={venue.venueId} value={venue.venueId}>{venue.venueAddress}</option>)}
+        </select>
+        {loadingVenues && <p role="status">Loading alternative venues…</p>}
+        {venueOptionsError && <div>
+          <p role="status">{venueOptionsError}</p>
+          <Button type="button" variant="secondary" disabled={busy || loadingVenues} onClick={() => void loadAlternativeVenues()}>
+            Retry loading venues
+          </Button>
+        </div>}
+      </div>
+      <div className="field">
+        <label htmlFor="booking-alternative-arrangement">Alternative arrangement (optional)</label>
+        <textarea id="booking-alternative-arrangement" value={alternativeArrangement} disabled={busy}
+          maxLength={MAX_ALTERNATIVE_ARRANGEMENT_LENGTH} rows={3}
+          onChange={event => setAlternativeArrangement(event.target.value)} />
+      </div>
       <div className="booking-approval__actions">
         <Button type="submit" disabled={busy || needsRefresh}>{busy ? 'Rejecting…' : 'Confirm rejection'}</Button>
-        <Button type="button" variant="secondary" disabled={busy} onClick={() => setRejecting(false)}>Cancel</Button>
+        <Button type="button" variant="secondary" disabled={busy} onClick={() => {
+          setRejecting(false)
+          setAlternativeVenueId('')
+          setAlternativeArrangement('')
+        }}>Cancel</Button>
       </div>
     </form>}
     {error && <div>
