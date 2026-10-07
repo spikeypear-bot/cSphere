@@ -1,6 +1,7 @@
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { StatusBadge } from '../../components/ui/StatusBadge'
@@ -16,6 +17,8 @@ export function UnassignedRequestsPage() {
   // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
   const { data: requests, error, loading, retry } = useVenueRead<EventRequestDto[]>('/event-requests/unassigned', true)
   const refreshing = loading && requests !== undefined
+  // Set by the review page after the Lead rejects or sends a request back.
+  const notice = (useLocation().state as { notice?: string } | null)?.notice
 
   return (
     <div className="page">
@@ -30,6 +33,7 @@ export function UnassignedRequestsPage() {
         }
       />
 
+      {notice ? <Notice>{notice}</Notice> : null}
       {error ? <p role="alert">Could not load unassigned requests. {error}</p> : null}
       {loading && requests === undefined ? <p role="status">Loading unassigned requests…</p> : null}
       {requests && requests.length === 0 ? (

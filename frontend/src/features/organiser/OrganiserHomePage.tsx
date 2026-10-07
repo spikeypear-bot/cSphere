@@ -60,7 +60,7 @@ export function OrganiserHomePage() {
       {justSubmitted ? <Notice>Your event request has been submitted successfully.</Notice> : null}
 
       {justResubmitted ? (
-        <Notice>Your updated request has been sent back to your Event Coordinator.</Notice>
+        <Notice>Your updated request has been sent back for review.</Notice>
       ) : null}
 
       {error ? <p role="alert">{error}</p> : null}

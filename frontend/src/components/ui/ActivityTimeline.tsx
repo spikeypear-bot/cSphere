@@ -6,6 +6,7 @@ import './ActivityTimeline.css'
 
 const ROLE_LABELS: Record<string, string> = {
   ec: 'Event Coordinator',
+  ecl: 'Event Coordinator Lead',
   eo: 'Event Organiser',
   vs: 'Venue Staff',
   technician: 'Technical Support',

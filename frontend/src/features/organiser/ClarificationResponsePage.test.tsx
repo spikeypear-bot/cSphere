@@ -67,6 +67,23 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(first).toBe(flaggedField)
   })
 
+  it('says who asked: the coordinator, or the Event Coordinator Lead when the Lead sent it back (ECL-C3)', async () => {
+    stubApi(routes())
+    const first = renderPage()
+    await screen.findByLabelText('Expected attendance')
+    expect(document.querySelector('.clarify__who')).toHaveTextContent('ec1 (your Event Coordinator) asked')
+    first.unmount()
+
+    stubApi(routes({
+      [`GET /api/event-requests/${ID}/timeline`]: () => jsonResponse(200, [
+        timeline[0], { ...timeline[1], actorName: 'ecl1', actorRole: 'ecl', flaggedFields: [] },
+      ]),
+    }))
+    renderPage()
+    await screen.findByLabelText('Expected attendance')
+    expect(document.querySelector('.clarify__who')).toHaveTextContent('ecl1 (the Event Coordinator Lead) asked')
+  })
+
   it('cannot resubmit without a reply to the coordinator', async () => {
     stubApi(routes())
     renderPage()

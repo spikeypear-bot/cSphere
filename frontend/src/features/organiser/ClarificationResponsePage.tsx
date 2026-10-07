@@ -202,7 +202,9 @@ export function ClarificationResponsePage() {
           {question ? (
             <Card className="clarify__question">
               <p className="clarify__who">
-                <strong>{question.actorName}</strong> (your Event Coordinator) asked {formatRelativeTime(question.occurredAt)}:
+                <strong>{question.actorName}</strong>{' '}
+                ({question.actorRole === 'ecl' ? 'the Event Coordinator Lead' : 'your Event Coordinator'}) asked{' '}
+                {formatRelativeTime(question.occurredAt)}:
               </p>
               <blockquote>{question.message}</blockquote>
               {flagged.length > 0 ? (

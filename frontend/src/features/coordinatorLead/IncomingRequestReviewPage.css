@@ -19,6 +19,14 @@
 .lead-review__row dt { font-weight: 600; color: var(--ink-soft); }
 .lead-review__row dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
 .lead-review__empty { color: var(--ink-faint); font-style: italic; }
+
+.lead-review__decision h2 { margin: 0 0 0.25rem; font-size: 1.05rem; }
+.lead-review__decision > .field-hint { margin: 0 0 0.75rem; }
+.lead-review__choices { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.lead-review__panel { display: flex; flex-direction: column; gap: 0.6rem; margin-top: 1rem; align-items: flex-start; }
+.lead-review__panel label { font-weight: 600; }
+.lead-review__panel textarea { width: 100%; }
+.lead-review__error { margin-top: 0.75rem; }
 @media (max-width: 640px) {
   .lead-review__row { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
 }
