@@ -1,5 +1,6 @@
 package com.example.connect_sphere.event.service;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -24,6 +25,9 @@ import com.example.connect_sphere.user.repository.UserRepository;
  */
 @Service
 public class EventService {
+
+    /** EC09: cancelled and completed events need no further planning. */
+    private static final List<EventStatus> ACTIVE_STATUSES = List.of(EventStatus.pending, EventStatus.confirmed);
 
     private final EventRepository repository;
     private final EventRequestRepository eventRequestRepository;
@@ -61,6 +65,14 @@ public class EventService {
         Event event = repository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
         return toDto(event);
+    }
+
+    /** EC09: the caller's own active (pending or confirmed) events, across
+     * all organisations, soonest first. Read-only. */
+    @Transactional(readOnly = true)
+    public List<EventDto> assignedEvents(UUID coordinatorId) {
+        return repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(coordinatorId, ACTIVE_STATUSES)
+                .stream().map(this::toDto).toList();
     }
 
     /** EO09 "Confirmed". */

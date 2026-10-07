@@ -1,5 +1,7 @@
 package com.example.connect_sphere.event.repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -10,6 +12,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.example.connect_sphere.event.entity.Event;
+import com.example.connect_sphere.event.entity.EventStatus;
 
 import jakarta.persistence.LockModeType;
 
@@ -25,4 +28,8 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM Event e WHERE e.eventId = :id")
     Optional<Event> findForUpdate(@Param("id") UUID id);
+
+    /** EC09: one coordinator's events in the given statuses, soonest first. */
+    List<Event> findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(
+            UUID coordinatorId, Collection<EventStatus> statuses);
 }
