@@ -18,6 +18,8 @@ export function LeadRequestCard({ request, submittedAt, coordinatorName, heading
   headingLevel?: 2 | 3
 }) {
   const Heading = headingLevel === 3 ? 'h3' : 'h2'
+  // An assigned request is the coordinator's to review; the Lead only views it.
+  const action = coordinatorName ? 'View request' : 'Review request'
   return (
     <Card className="lead-request-card">
       <div className="lead-request-card__head">
@@ -51,8 +53,9 @@ export function LeadRequestCard({ request, submittedAt, coordinatorName, heading
       </dl>
       <Link className="button button--secondary lead-request-card__review"
         to={`/coordinator-lead/unassigned-requests/${request.requestId}`}
-        aria-label={`Review request: ${request.eventName?.trim() || 'Untitled request'}`}>
-        Review request
+        state={coordinatorName ? { coordinator: { id: request.coordinatorId, name: coordinatorName } } : undefined}
+        aria-label={`${action}: ${request.eventName?.trim() || 'Untitled request'}`}>
+        {action}
       </Link>
     </Card>
   )

@@ -178,14 +178,14 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests)', () => {
     expect(calls.filter((call) => call.url === '/api/event-requests/assigned')).toHaveLength(2)
   })
 
-  it('only ever reads: a card offers its review link and nothing that changes the request', async () => {
+  it('only ever reads: a card offers its view link and nothing that changes the request', async () => {
     const calls = stubApi({ [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [assigned('r1', 'Offsite')])]) })
     renderPage()
 
     const card = await cardFor('Offsite')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
     expect(within(card).getAllByRole('link')).toHaveLength(1)
-    expect(within(card).getByRole('link', { name: 'Review request: Offsite' }))
+    expect(within(card).getByRole('link', { name: 'View request: Offsite' }))
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r1')
     // Anchored: the Refresh button's own label contains "assignments".
     expect(screen.queryByRole('button', { name: /^(re)?assign/i })).not.toBeInTheDocument()
@@ -206,12 +206,48 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('link', { name: 'Review request: Offsite' }))
+    await user.click(await screen.findByRole('link', { name: 'View request: Offsite' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Offsite' })).toBeInTheDocument()
-    expect(screen.getByText(/has been assigned to an Event Coordinator/)).toBeInTheDocument()
+    expect(screen.getByText(/has been assigned to ec1, who/)).toBeInTheDocument()
     expect(screen.queryByText(/returns to the unassigned list/)).not.toBeInTheDocument()
     expect(screen.queryAllByRole('button', { name: /clarification|reject|approve|assign/i })).toHaveLength(0)
     expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+  })
+
+  it('the review page opened from a card leads back to the coordinator assignments', async () => {
+    const listed = assigned('r1', 'Offsite')
+    stubApi({
+      [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
+      'GET /api/event-requests/unassigned/r1': () => jsonResponse(200, {
+        request: listed.request, missingFields: [], scheduleValid: true, timeline: [],
+      }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('link', { name: 'View request: Offsite' }))
+    await screen.findByRole('heading', { level: 1, name: 'Offsite' })
+    expect(screen.queryByRole('link', { name: 'Back to unassigned requests' })).not.toBeInTheDocument()
+    await user.click(screen.getByRole('link', { name: 'Back to coordinator assignments' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Coordinator assignments' })).toBeInTheDocument()
+  })
+
+  it('does not name the coordinator on the card once the request is held by someone else', async () => {
+    const listed = assigned('r1', 'Offsite')
+    stubApi({
+      [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
+      'GET /api/event-requests/unassigned/r1': () => jsonResponse(200, {
+        request: { ...listed.request, coordinatorId: 'ec-2' }, missingFields: [], scheduleValid: true, timeline: [],
+      }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('link', { name: 'View request: Offsite' }))
+
+    expect(await screen.findByText(/has been assigned to an Event Coordinator, who/)).toBeInTheDocument()
+    expect(screen.queryByText(/assigned to ec1/)).not.toBeInTheDocument()
   })
 })
