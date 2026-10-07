@@ -1,0 +1,11 @@
+-- ECL-C1 (Week 7 customer change 5): ConnectSphere introduced a new internal
+-- role, the Event Coordinator Lead, who oversees incoming event requests and
+-- assigns them to individual Event Coordinators. Newly submitted requests are
+-- no longer picked up directly by a coordinator; they wait in an unassigned
+-- queue that only the Lead can view.
+--
+-- ALTER TYPE ... ADD VALUE cannot run in the same transaction that then uses
+-- the new value (Postgres restriction, same as V5's `none` and V12's
+-- `pending`) — this migration only adds the value. The first row that uses
+-- it is written at runtime by DevUserSeeder, never by a migration.
+ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'ecl';

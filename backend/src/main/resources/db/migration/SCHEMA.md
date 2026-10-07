@@ -64,7 +64,7 @@ painful. Settle these before there is production data.
 
 | Type | Values | Used by |
 |---|---|---|
-| `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician` | `users.role` |
+| `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician`, `ecl` (added V21 — Week 7 customer change, ECL-C1) | `users.role` |
 | `event_status` | `confirmed`, `cancelled`, `completed` | `events.status` |
 | `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
@@ -82,6 +82,7 @@ painful. Settle these before there is production data.
 | `vs` | Venue stuff | In charge of the venues |
 | `attendee` | Attendee | End user who attends events |
 | `technician` | Technician | Technician — presumably handles equipment issue/return |
+| `ecl` | Event Coordinator Lead | Oversees incoming event requests and assigns them to Event Coordinators |
 
 ### Single-character code columns
 
