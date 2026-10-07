@@ -2,6 +2,7 @@ package com.example.connect_sphere.eventrequest.service;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -19,6 +20,7 @@ import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.ReviewQueueDto;
@@ -434,6 +436,16 @@ public class EventRequestService {
         return repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(
                         List.of(EventRequestStatus.pending, EventRequestStatus.clarification_required))
                 .stream().map(mapper::toDto).toList();
+    }
+
+    /** ELC-C6: every Event Coordinator, by username, for the Lead to pick
+     * one from. Read-only. */
+    @Transactional(readOnly = true)
+    public List<CoordinatorDto> coordinators() {
+        return userRepository.findByRole(UserRole.ec).stream()
+                .sorted(Comparator.comparing(User::getUsername))
+                .map(user -> new CoordinatorDto(user.getUserId(), user.getUsername()))
+                .toList();
     }
 
     /** ECL-C3: one request for the Lead's review page, with the timeline a

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.eventrequest.dto.AssignCoordinatorRequest;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.RejectEventRequestRequest;
@@ -189,10 +190,26 @@ public class EventRequestController {
         return service.unassignedRequests();
     }
 
+    /** ELC-C6: every Event Coordinator, for the Lead to pick one from. */
+    @GetMapping("/unassigned/coordinators")
+    public List<CoordinatorDto> coordinators() {
+        return service.coordinators();
+    }
+
     /** ECL-C3: one request for the Lead's review page. */
     @GetMapping("/unassigned/{id}")
     public EventRequestReviewDto leadReview(@PathVariable("id") UUID id) {
         return service.getForLeadReview(id);
+    }
+
+    /** ELC-C6: assign the request to one Event Coordinator. The Lead doing
+     * it is the token's subject, never part of the request. */
+    @PostMapping("/unassigned/{id}/assign")
+    public EventRequestDto assignUnassigned(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody AssignCoordinatorRequest request) {
+        return service.assignCoordinator(userIdOf(jwt), id, request.coordinatorUserId());
     }
 
     /** ECL-C3: filter out a request before anyone is assigned. */

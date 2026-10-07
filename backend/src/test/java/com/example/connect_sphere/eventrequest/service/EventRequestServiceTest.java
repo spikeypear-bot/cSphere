@@ -28,6 +28,7 @@ import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
@@ -390,6 +391,17 @@ class EventRequestServiceTest {
         assertThat(result.coordinatorId()).isEqualTo(COORDINATOR_ID);
         verify(notificationService, never()).createCoordinatorAssignmentNotification(
                 any(), any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void theLeadsCoordinatorListIsEveryEventCoordinatorByUsername() {
+        when(userRepository.findByRole(UserRole.ec)).thenReturn(List.of(
+                coordinatorUser(OTHER_COORDINATOR_ID, "ec2", "ec2@connectsphere.test"),
+                coordinatorUser(COORDINATOR_ID, "ec1", "ec1@connectsphere.test")));
+
+        assertThat(service.coordinators()).containsExactly(
+                new CoordinatorDto(COORDINATOR_ID, "ec1"), new CoordinatorDto(OTHER_COORDINATOR_ID, "ec2"));
+        verifyNoInteractions(repository, notificationService, activityService);
     }
 
     // ---- EO09: approve / reject --------------------------------------------

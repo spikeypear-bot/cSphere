@@ -1,13 +1,17 @@
 package com.example.connect_sphere.eventrequest.controller;
 
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
@@ -31,12 +35,14 @@ import com.example.connect_sphere.common.web.RestAccessDeniedHandler;
 import com.example.connect_sphere.common.web.RestAuthenticationEntryPoint;
 import com.example.connect_sphere.config.JwtConfig;
 import com.example.connect_sphere.config.SecurityConfig;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
 /**
- * ECL-C3: only the Event Coordinator Lead may open a request's review or act
- * on it there, and the Lead's token opens none of the coordinator's actions.
- * Controller slice with the real SecurityConfig imported; no database needed.
+ * ECL-C3 and ELC-C6: only the Event Coordinator Lead may open a request's
+ * review, act on it there or assign it, and the Lead's token opens none of
+ * the coordinator's actions. Controller slice with the real SecurityConfig
+ * imported; no database needed.
  */
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
@@ -45,6 +51,7 @@ class LeadRequestReviewAccessTest {
 
     private static final UUID REQUEST = UUID.randomUUID();
     private static final UUID LEAD = UUID.randomUUID();
+    private static final UUID COORDINATOR = UUID.randomUUID();
     private static final String REVIEW = "/api/event-requests/unassigned/" + REQUEST;
 
     @Autowired
@@ -68,12 +75,14 @@ class LeadRequestReviewAccessTest {
         return request.contentType(MediaType.APPLICATION_JSON).content(body);
     }
 
-    /** The Lead's three calls, by name so a failure says which one. */
+    /** The Lead's calls, by name so a failure says which one. */
     private static MockHttpServletRequestBuilder leadCall(String name) {
         return switch (name) {
             case "review" -> get(REVIEW);
             case "reject" -> json(post(REVIEW + "/reject"), "{\"reason\":\"Not a corporate event\"}");
             case "clarify" -> json(post(REVIEW + "/clarifications"), "{\"message\":\"Who is it for?\"}");
+            case "coordinators" -> get("/api/event-requests/unassigned/coordinators");
+            case "assign" -> json(post(REVIEW + "/assign"), "{\"coordinatorUserId\":\"" + COORDINATOR + "\"}");
             default -> throw new IllegalArgumentException(name);
         };
     }
@@ -102,9 +111,32 @@ class LeadRequestReviewAccessTest {
         verify(service).requestClarificationUnassigned(LEAD, REQUEST, "Who is it for?");
     }
 
+    @Test
+    void aLeadCanListTheEventCoordinatorsToAssignTo() throws Exception {
+        when(service.coordinators()).thenReturn(List.of(new CoordinatorDto(COORDINATOR, "ec1")));
+
+        mockMvc.perform(leadCall("coordinators").with(tokenFor("ecl")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].userId").value(COORDINATOR.toString()))
+                .andExpect(jsonPath("$[0].username").value("ec1"));
+
+        // Not swallowed by GET /unassigned/{id}.
+        verify(service, never()).getForLeadReview(any());
+    }
+
+    @Test
+    void aLeadsAssignmentIsRecordedAgainstTheSignedInLead() throws Exception {
+        mockMvc.perform(leadCall("assign").with(tokenFor("ecl")))
+                .andExpect(status().isOk());
+
+        verify(service).assignCoordinator(LEAD, REQUEST, COORDINATOR);
+    }
+
     static Stream<Arguments> everyOtherRoleAndCall() {
         return Stream.of("ec", "eo", "vs", "technician", "attendee")
-                .flatMap(role -> Stream.of("review", "reject", "clarify").map(call -> Arguments.of(role, call)));
+                .flatMap(role -> Stream.of("review", "reject", "clarify", "coordinators", "assign")
+                        .map(call -> Arguments.of(role, call)));
     }
 
     @ParameterizedTest
@@ -119,7 +151,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "review", "reject", "clarify" })
+    @ValueSource(strings = { "review", "reject", "clarify", "coordinators", "assign" })
     void aCallWithNoTokenIsRejectedAndNoRequestDataIsReadOrChanged(String call) throws Exception {
         mockMvc.perform(leadCall(call))
                 .andExpect(status().isUnauthorized());

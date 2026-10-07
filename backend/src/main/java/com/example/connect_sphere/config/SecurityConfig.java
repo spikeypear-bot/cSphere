@@ -111,6 +111,7 @@ public class SecurityConfig{
 			    "/api/event-requests/*/approve",
 			    "/api/event-requests/*/reject",
 			    "/api/event-requests/*/clarifications").hasRole("EC")
+		    // ELC-C6's assign action and coordinator list share the rule below.
 		    // ECL-C1 queue and ECL-C3 review, reject and clarification: Lead
 		    // only. Must sit above the blanket EO rule below.
 		    .requestMatchers("/api/event-requests/unassigned/**").hasRole("ECL")
