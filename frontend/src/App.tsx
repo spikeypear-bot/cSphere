@@ -18,6 +18,7 @@ import { OperationalIssuesPage } from './features/coordinator/OperationalIssuesP
 import { EquipmentRequestPage } from './features/coordinator/EquipmentRequestPage'
 import { CoordinatorLeadHomePage } from './features/coordinatorLead/CoordinatorLeadHomePage'
 import { coordinatorLeadFeatures } from './features/coordinatorLead/coordinatorLeadFeatures'
+import { IncomingRequestReviewPage } from './features/coordinatorLead/IncomingRequestReviewPage'
 import { UnassignedRequestsPage } from './features/coordinatorLead/UnassignedRequestsPage'
 import { ClarificationResponsePage } from './features/organiser/ClarificationResponsePage'
 import { EventDetailsPage } from './features/events/EventDetailsPage'
@@ -112,6 +113,7 @@ function CoordinatorLeadRoutes() {
     <Routes>
       <Route index element={<CoordinatorLeadHomePage />} />
       <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
+      <Route path="unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
       {skeletonRoutes(coordinatorLeadFeatures)}
     </Routes>
   )

@@ -10,7 +10,8 @@ import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { useVenueRead } from '../venueStaff/useVenueRead'
 import './UnassignedRequestsPage.css'
 
-/** ECL-C1: unassigned event requests as overview cards. View-only for now. */
+/** ECL-C1: unassigned event requests as overview cards, each opening its
+ * review page (ECL-C3). */
 export function UnassignedRequestsPage() {
   // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
   const { data: requests, error, loading, retry } = useVenueRead<EventRequestDto[]>('/event-requests/unassigned', true)
@@ -82,6 +83,11 @@ function UnassignedRequestCard({ request }: { request: EventRequestDto }) {
           <dd>{formatRelativeTime(request.updatedAt)}</dd>
         </div>
       </dl>
+      <Link className="button button--secondary unassigned-requests__review"
+        to={`/coordinator-lead/unassigned-requests/${request.requestId}`}
+        aria-label={`Review request: ${request.eventName?.trim() || 'Untitled request'}`}>
+        Review request
+      </Link>
     </Card>
   )
 }

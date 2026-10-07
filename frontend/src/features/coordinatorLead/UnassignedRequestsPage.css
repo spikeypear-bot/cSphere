@@ -59,3 +59,9 @@
 .unassigned-requests__facts dd {
   margin: 0;
 }
+
+/* Pinned to the bottom so the links line up across cards of unequal height. */
+.unassigned-requests__review {
+  margin-top: auto;
+  align-self: flex-start;
+}
