@@ -145,13 +145,19 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     stubApi({
       [QUEUE]: () => jsonResponse(200, [
         request('r1', 'Offsite'),
-        request('r2', 'Annual Gala', { status: 'clarification_required' }),
+        // Sent back for clarification two days ago, long after it was submitted.
+        request('r2', 'Annual Gala', {
+          status: 'clarification_required', updatedAt: new Date(Date.now() - 2 * DAY_MS).toISOString(),
+        }),
       ]),
     })
     renderPage()
 
     const waiting = await cardFor('Annual Gala')
     expect(within(waiting).getByText('Clarification required', { selector: '.status-badge' })).toBeInTheDocument()
+    // That time is when the request last changed, so it must not read as its submission time.
+    expect(within(waiting).getByText('Last updated', { selector: 'dt' }).nextElementSibling).toHaveTextContent('2 days ago')
+    expect(within(waiting).queryByText('Submitted', { selector: 'dt' })).not.toBeInTheDocument()
     expect(within(waiting).getByRole('link', { name: 'Review request: Annual Gala' }))
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
     expect(within(await cardFor('Offsite')).getByText('Submitted', { selector: '.status-badge' })).toBeInTheDocument()
