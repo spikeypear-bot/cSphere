@@ -111,6 +111,14 @@ public class SecurityConfig{
 			    "/api/event-requests/*/approve",
 			    "/api/event-requests/*/reject",
 			    "/api/event-requests/*/clarifications").hasRole("EC")
+		    // ECL-C1 (Week 7 customer change 5): the unassigned queue belongs
+		    // to the Event Coordinator Lead alone. It must sit above the
+		    // blanket hasRole("EO") rule below, which would otherwise hand an
+		    // Organiser every organisation's submitted requests. A Lead's
+		    // authority is ROLE_ECL, an exact string match, so a Coordinator's
+		    // ROLE_EC does not satisfy this and the Lead's does not satisfy the
+		    // EC rules above.
+		    .requestMatchers(HttpMethod.GET, "/api/event-requests/unassigned").hasRole("ECL")
 		    // Organisers only, deliberately narrower than D20's first draft.
 		    // Coordinators are internal (organisation "ConnectSphere") and no
 		    // Organiser belongs to it, so scoping them by their own claim would
