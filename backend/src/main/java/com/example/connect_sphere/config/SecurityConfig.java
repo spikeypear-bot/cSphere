@@ -145,6 +145,8 @@ public class SecurityConfig{
 		    // Organiser read the venue shortlist.
 		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings",
 			    "/api/events/*/venue-bookings/**").hasRole("EC")
+		    // EC09: Coordinator only. Must sit above the GET /api/events/** rule below.
+		    .requestMatchers(HttpMethod.GET, "/api/events/assigned").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC")
 		    // EO09/EO19: any signed-in role may read/mark-read their own
 		    // notifications — scoping is always by the caller's own `sub`

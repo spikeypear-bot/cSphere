@@ -1,7 +1,9 @@
 package com.example.connect_sphere.event.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
@@ -139,6 +141,26 @@ class AssignedEventsQueryTest {
 
         assertThat(listedOf("ec1", eventId)).isEmpty();
         assertThat(listedOf("ec2", eventId)).containsExactly(eventId);
+    }
+
+    /** The endpoint through the real filter chain: the list follows the token's subject. */
+    @Test
+    void overHttpEachCoordinatorGetsOnlyTheirOwnEventsAndOtherRolesAreRefused() throws Exception {
+        UUID mine = eventOn(10, "eo1", "ec1");
+        UUID theirs = eventOn(11, "eo1", "ec2");
+
+        mvc.perform(get("/api/events/assigned").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.eventId == '" + mine + "')].eventName").value("Event on 10 March"))
+                .andExpect(jsonPath("$[?(@.eventId == '" + theirs + "')]").isEmpty());
+        mvc.perform(get("/api/events/assigned").with(flow.as("ec2")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.eventId == '" + theirs + "')].eventName").value("Event on 11 March"))
+                .andExpect(jsonPath("$[?(@.eventId == '" + mine + "')]").isEmpty());
+        for (String other : List.of("ecl1", "eo1", "vs1")) {
+            mvc.perform(get("/api/events/assigned").with(flow.as(other)))
+                    .andExpect(status().isForbidden());
+        }
     }
 
     @Test
