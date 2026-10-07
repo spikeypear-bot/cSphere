@@ -36,6 +36,7 @@ import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
 import com.example.connect_sphere.eventrequest.mapper.EventRequestMapper;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
 import com.example.connect_sphere.notification.service.NotificationService;
+import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
@@ -59,6 +60,7 @@ class EventRequestLeadReviewServiceTest {
     private static final UUID LEAD = UUID.randomUUID();
     private static final UUID COORDINATOR = UUID.randomUUID();
     private static final UUID ORGANISER = UUID.randomUUID();
+    private static final UUID SECOND_ORGANISER = UUID.randomUUID();
     private static final OffsetDateTime STARTS = OffsetDateTime.parse("2027-03-01T09:00:00+08:00");
     private static final OffsetDateTime ENDS = OffsetDateTime.parse("2027-03-01T11:00:00+08:00");
 
@@ -74,6 +76,8 @@ class EventRequestLeadReviewServiceTest {
         service = new EventRequestService(
                 repository, mapper, eventRepository, userRepository, notificationService, activityService);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(userRepository.findByRoleAndOrganisation(UserRole.eo, ORG))
+                .thenReturn(List.of(organiser(ORGANISER), organiser(SECOND_ORGANISER)));
     }
 
     // ---- Viewing the request ------------------------------------------
@@ -238,6 +242,103 @@ class EventRequestLeadReviewServiceTest {
         assertNothingChanged(draft, EventRequestStatus.draft, null);
     }
 
+    // ---- Asking for clarification ----------------------------------
+
+    @Test
+    void askingForClarificationMakesTheRequestClarificationRequiredAndAssignsNoOne() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        EventRequestDto result = service.requestClarificationUnassigned(
+                LEAD, request.getRequestId(), "  Who is the event for?  ");
+
+        assertThat(result.status()).isEqualTo(EventRequestStatus.clarification_required);
+        assertThat(result.coordinatorId()).isNull();
+    }
+
+    @Test
+    void askingForClarificationNotifiesEveryOrganiserOfTheOrganisationWithTheMessage() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        service.requestClarificationUnassigned(LEAD, request.getRequestId(), "Who is the event for?");
+
+        verify(notificationService).createClarificationRequestedNotifications(
+                List.of(ORGANISER, SECOND_ORGANISER), request.getRequestId(), "Q1 Town Hall",
+                "Who is the event for?");
+    }
+
+    @Test
+    void askingForClarificationIsRecordedOnTheTimelineWithTheLeadAsTheActor() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        service.requestClarificationUnassigned(LEAD, request.getRequestId(), "Who is the event for?");
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(ActivityType.clarification_requested);
+        assertThat(entry.getValue().actorUserId()).isEqualTo(LEAD);
+        assertThat(entry.getValue().message()).isEqualTo("Who is the event for?");
+        assertThat(entry.getValue().fromStatus()).isEqualTo("pending");
+        assertThat(entry.getValue().toStatus()).isEqualTo("clarification_required");
+    }
+
+    @Test
+    void askingForClarificationDoesNotChangeAnyDetailTheOrganiserSubmitted() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        service.requestClarificationUnassigned(LEAD, request.getRequestId(), "Who is the event for?");
+
+        assertThat(request.getEventName()).isEqualTo("Q1 Town Hall");
+        assertThat(request.getStartDatetime()).isEqualTo(STARTS);
+        assertThat(request.getEndDatetime()).isEqualTo(ENDS);
+        assertThat(request.getExpectedAttendance()).isEqualTo(150);
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void askingForClarificationWithoutAMessageIsBlockedAndNothingChanges(String message) {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        assertThatThrownBy(() -> service.requestClarificationUnassigned(LEAD, request.getRequestId(), message))
+                .isInstanceOf(InvalidMessageException.class);
+        assertNothingChanged(request, EventRequestStatus.pending, null);
+    }
+
+    @Test
+    void aRequestAssignedSinceThePageLoadedCannotBeSentBackByTheLead() {
+        EventRequest request = stored(EventRequestStatus.pending, COORDINATOR);
+
+        assertThatThrownBy(
+                () -> service.requestClarificationUnassigned(LEAD, request.getRequestId(), "Who is the event for?"))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("already been assigned");
+        assertNothingChanged(request, EventRequestStatus.pending, COORDINATOR);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class,
+            names = {"clarification_required", "approved", "rejected", "cancelled"})
+    void aRequestThatIsNoLongerSubmittedCannotBeSentBackByTheLead(EventRequestStatus status) {
+        EventRequest request = stored(status, null);
+
+        assertThatThrownBy(
+                () -> service.requestClarificationUnassigned(LEAD, request.getRequestId(), "Who is the event for?"))
+                .isInstanceOf(EventRequestStateException.class);
+        assertNothingChanged(request, status, null);
+    }
+
+    @Test
+    void whenTheOrganiserResubmitsTheRequestIsSubmittedAgainWithNoCoordinator() {
+        EventRequest request = stored(EventRequestStatus.clarification_required, null);
+
+        EventRequestDto result = service.resubmit(ORG, ORGANISER, request.getRequestId(), "It is for our staff.");
+
+        // Submitted with no coordinator is exactly what the unassigned list shows.
+        assertThat(result.status()).isEqualTo(EventRequestStatus.pending);
+        assertThat(result.coordinatorId()).isNull();
+        verify(notificationService, never()).createClarificationRespondedNotification(any(), any(), any(), any());
+    }
+
     // ---- Fixtures -----------------------------------------------------
 
     /** A refused action leaves the request as it was, with no timeline
@@ -277,5 +378,13 @@ class EventRequestLeadReviewServiceTest {
         when(repository.findById(entity.getRequestId())).thenReturn(Optional.of(entity));
         when(repository.findForUpdate(entity.getRequestId())).thenReturn(Optional.of(entity));
         return entity;
+    }
+
+    private static User organiser(UUID id) {
+        User user = new User();
+        user.setUserId(id);
+        user.setRole(UserRole.eo);
+        user.setOrganisation(ORG);
+        return user;
     }
 }

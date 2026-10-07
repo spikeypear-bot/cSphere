@@ -294,11 +294,19 @@ public class EventRequestService {
                     : "Clarification can only be requested on a submitted request (current status: "
                             + label(entity.getStatus()) + ").");
         }
+        return applyClarification(entity, coordinatorId, text, flags, questions);
+    }
+
+    /** Sends an already-checked submitted request back to its organiser:
+     * status, timeline entry, then the organisers' notification once the
+     * transaction commits. */
+    private EventRequestDto applyClarification(EventRequest entity, UUID actorId, String text,
+            List<String> flags, Map<String, String> questions) {
         entity.setStatus(EventRequestStatus.clarification_required);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
-                ActivityType.clarification_requested, coordinatorId, text, flags,
+                ActivityType.clarification_requested, actorId, text, flags,
                 EventRequestStatus.pending.name(), EventRequestStatus.clarification_required.name(),
                 questions, fieldValues(saved)));
 
@@ -499,6 +507,14 @@ public class EventRequestService {
             throw new MissingRejectionReasonException();
         }
         return applyRejection(findAwaitingAssignment(requestId), leadId, reason);
+    }
+
+    /** ECL-C3: the Lead asks the organiser a question before assigning
+     * anyone. Resubmitting returns the request to the unassigned queue. */
+    @Transactional
+    public EventRequestDto requestClarificationUnassigned(UUID leadId, UUID requestId, String message) {
+        String text = requireMessage(message, "Please describe what needs clarifying.");
+        return applyClarification(findAwaitingAssignment(requestId), leadId, text, List.of(), null);
     }
 
     /** A request the Lead may still act on: submitted, with nobody assigned.
