@@ -55,7 +55,9 @@ function closedReason(request: EventRequestDto): string | null {
         ? 'This request has been assigned to an Event Coordinator, who now reviews it.'
         : null
     case 'clarification_required':
-      return 'Waiting for the organiser to answer a clarification. It returns to the unassigned list when they resubmit.'
+      return request.coordinatorId
+        ? 'This request has been assigned to an Event Coordinator, who is waiting for the organiser to answer a clarification.'
+        : 'Waiting for the organiser to answer a clarification. It returns to the unassigned list when they resubmit.'
     case 'approved':
       return 'This request has been approved and is now an event in planning.'
     case 'rejected':

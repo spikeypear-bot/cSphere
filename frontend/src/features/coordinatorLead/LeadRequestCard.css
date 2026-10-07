@@ -1,0 +1,62 @@
+/* Cards sit side by side where there is room and stack on a phone. */
+.lead-request-cards {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+
+.lead-request-cards > li {
+  display: flex;
+}
+
+.lead-request-card {
+  flex: 1;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.lead-request-card__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+}
+
+.lead-request-card__head :is(h2, h3) {
+  margin: 0;
+  font-size: 1.1rem;
+  overflow-wrap: anywhere;
+}
+
+.lead-request-card__organisation {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.lead-request-card__facts {
+  margin: 0.25rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lead-request-card__facts dt {
+  font-size: 0.78rem;
+  color: var(--ink-faint);
+}
+
+.lead-request-card__facts dd {
+  margin: 0;
+}
+
+/* Pinned to the bottom so the links line up across cards of unequal height. */
+.lead-request-card__review {
+  margin-top: auto;
+  align-self: flex-start;
+}

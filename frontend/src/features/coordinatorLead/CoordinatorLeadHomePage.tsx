@@ -11,9 +11,14 @@ export function CoordinatorLeadHomePage() {
         title="Event Coordinator Lead console"
         description="Oversee incoming event requests and decide which Event Coordinator takes each one."
         actions={
-          <Link to="/coordinator-lead/unassigned-requests" className="button button--primary">
-            Unassigned requests
-          </Link>
+          <>
+            <Link to="/coordinator-lead/unassigned-requests" className="button button--primary">
+              Unassigned requests
+            </Link>
+            <Link to="/coordinator-lead/assignments" className="button button--secondary">
+              Coordinator assignments
+            </Link>
+          </>
         }
       />
 
