@@ -14,16 +14,6 @@ export const coordinatorLeadFeatures: SkeletonFeature[] = [
     suggestedBackendPackage: 'com.example.connect_sphere.eventrequest',
   },
   {
-    path: 'request-review',
-    navLabel: 'Review incoming requests',
-    pageTitle: 'Incoming Request Review',
-    storyIds: ['ECL-C3'],
-    featureArea: 'Event Review and Approval',
-    summary: 'Open an incoming event request to review its details before deciding who should coordinate it.',
-    layout: 'detail-actions',
-    suggestedBackendPackage: 'com.example.connect_sphere.eventrequest',
-  },
-  {
     path: 'active-events',
     navLabel: 'Active events',
     pageTitle: 'Active Events',

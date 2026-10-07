@@ -52,15 +52,26 @@ public final class FlowSupport {
         return json.readTree(body);
     }
 
-    /** A complete request drafted and submitted by {@code organiser}, then
-     * picked up by {@code coordinator}. Returns the request id. */
-    public UUID submittedAndAssigned(String organiser, String coordinator, String requestBody) throws Exception {
+    /** A complete request saved as a draft by {@code organiser}. */
+    public UUID draft(String organiser, String requestBody) throws Exception {
         String created = mvc.perform(post("/api/event-requests").with(as(organiser))
                         .contentType(MediaType.APPLICATION_JSON).content(requestBody))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
-        UUID id = UUID.fromString(read(created).get("requestId").asString());
+        return UUID.fromString(read(created).get("requestId").asString());
+    }
+
+    /** A complete request drafted and submitted by {@code organiser}, with
+     * no coordinator yet. Returns the request id. */
+    public UUID submitted(String organiser, String requestBody) throws Exception {
+        UUID id = draft(organiser, requestBody);
         mvc.perform(post("/api/event-requests/" + id + "/submit").with(as(organiser)))
                 .andExpect(status().isOk());
+        return id;
+    }
+
+    /** As above, then picked up by {@code coordinator}. */
+    public UUID submittedAndAssigned(String organiser, String coordinator, String requestBody) throws Exception {
+        UUID id = submitted(organiser, requestBody);
         mvc.perform(post("/api/event-requests/" + id + "/assign-coordinator").with(as(coordinator))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"coordinatorUserId\":\"" + idOf(coordinator) + "\"}"))

@@ -130,13 +130,24 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(calls.filter((call) => call.url === '/api/event-requests/unassigned')).toHaveLength(2)
   })
 
-  it('is view-only: a card offers no action, and the page only ever reads', async () => {
+  it("links each card to that request's review page (ECL-C3)", async () => {
+    stubApi({ [QUEUE]: () => jsonResponse(200, [request('r1', 'Offsite'), request('r2', 'Annual Gala')]) })
+    renderPage()
+
+    await cardFor('Offsite')
+    expect(screen.getByRole('link', { name: 'Review request: Offsite' }))
+      .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r1')
+    expect(screen.getByRole('link', { name: 'Review request: Annual Gala' }))
+      .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
+  })
+
+  it('only ever reads: a card offers its review link and nothing that changes the request', async () => {
     const calls = stubApi({ [QUEUE]: () => jsonResponse(200, [request('r1', 'Offsite')]) })
     renderPage()
 
     const card = await cardFor('Offsite')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
-    expect(within(card).queryAllByRole('link')).toHaveLength(0)
+    expect(within(card).getAllByRole('link')).toHaveLength(1)
     // Anchored: the Refresh button's own label contains "unassigned".
     expect(screen.queryByRole('button', { name: /^assign/i })).not.toBeInTheDocument()
     expect(calls.map((call) => call.method)).toEqual(['GET'])

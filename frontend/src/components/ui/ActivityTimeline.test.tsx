@@ -24,6 +24,14 @@ describe('ActivityTimeline', () => {
     expect(items[1]).toHaveTextContent('ec1 (Event Coordinator) asked for clarification')
   })
 
+  it("names the Event Coordinator Lead's role on entries the Lead made (ECL-C3)", () => {
+    render(<ActivityTimeline entries={[{ activityId: 'a3', type: 'rejected', actorName: 'ecl1', actorRole: 'ecl',
+      message: 'Not a corporate event', flaggedFields: [], fromStatus: 'pending', toStatus: 'rejected',
+      occurredAt: '2026-09-21T01:00:00Z' }]} />)
+
+    expect(screen.getByRole('listitem')).toHaveTextContent('ecl1 (Event Coordinator Lead) rejected the request')
+  })
+
   it('shows the message, the flagged fields by name, and the status change', () => {
     render(<ActivityTimeline entries={entries} />)
 

@@ -187,4 +187,29 @@ public class EventRequestController {
     public List<EventRequestDto> unassignedRequests() {
         return service.unassignedRequests();
     }
+
+    /** ECL-C3: one request for the Lead's review page. */
+    @GetMapping("/unassigned/{id}")
+    public EventRequestReviewDto leadReview(@PathVariable("id") UUID id) {
+        return service.getForLeadReview(id);
+    }
+
+    /** ECL-C3: filter out a request before anyone is assigned. */
+    @PostMapping("/unassigned/{id}/reject")
+    public EventRequestDto rejectUnassigned(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody RejectEventRequestRequest request) {
+        return service.rejectUnassigned(userIdOf(jwt), id, request.reason());
+    }
+
+    /** ECL-C3: ask the organiser a question before assigning. Only the
+     * message is used; the Lead does not flag individual fields. */
+    @PostMapping("/unassigned/{id}/clarifications")
+    public EventRequestDto requestClarificationUnassigned(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody RequestClarificationRequest request) {
+        return service.requestClarificationUnassigned(userIdOf(jwt), id, request.message());
+    }
 }

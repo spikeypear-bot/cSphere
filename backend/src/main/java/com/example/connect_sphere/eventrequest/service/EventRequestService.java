@@ -294,11 +294,19 @@ public class EventRequestService {
                     : "Clarification can only be requested on a submitted request (current status: "
                             + label(entity.getStatus()) + ").");
         }
+        return applyClarification(entity, coordinatorId, text, flags, questions);
+    }
+
+    /** Sends an already-checked submitted request back to its organiser:
+     * status, timeline entry, then the organisers' notification once the
+     * transaction commits. */
+    private EventRequestDto applyClarification(EventRequest entity, UUID actorId, String text,
+            List<String> flags, Map<String, String> questions) {
         entity.setStatus(EventRequestStatus.clarification_required);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
-                ActivityType.clarification_requested, coordinatorId, text, flags,
+                ActivityType.clarification_requested, actorId, text, flags,
                 EventRequestStatus.pending.name(), EventRequestStatus.clarification_required.name(),
                 questions, fieldValues(saved)));
 
@@ -445,14 +453,19 @@ public class EventRequestService {
         if (reason == null || reason.isBlank()) {
             throw new MissingRejectionReasonException();
         }
-        EventRequest entity = findDecidableAssignedTo(actingCoordinatorId, requestId);
+        return applyRejection(findDecidableAssignedTo(actingCoordinatorId, requestId), actingCoordinatorId, reason);
+    }
+
+    /** Rejects an already-checked request: status, reason, timeline entry,
+     * then the organiser's notification once the transaction commits. */
+    private EventRequestDto applyRejection(EventRequest entity, UUID actorId, String reason) {
         EventRequestStatus previous = entity.getStatus();
         entity.setStatus(EventRequestStatus.rejected);
         entity.setRejectionReason(reason);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
-                ActivityType.rejected, actingCoordinatorId, reason, null,
+                ActivityType.rejected, actorId, reason, null,
                 previous.name(), EventRequestStatus.rejected.name()));
 
         if (saved.getCreatedBy() != null) {
@@ -471,6 +484,55 @@ public class EventRequestService {
     public List<EventRequestDto> unassignedRequests() {
         return repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending)
                 .stream().map(mapper::toDto).toList();
+    }
+
+    /** ECL-C3: one request for the Lead's review page, with the timeline a
+     * coordinator would see. A draft reads as not found. Read-only. */
+    @Transactional(readOnly = true)
+    public EventRequestReviewDto getForLeadReview(UUID requestId) {
+        EventRequest entity = repository.findById(requestId)
+                .filter(request -> request.getStatus() != EventRequestStatus.draft)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        return new EventRequestReviewDto(
+                mapper.toDto(entity),
+                missingRequiredFields(entity),
+                scheduleValid(entity),
+                activityService.timeline(requestId, UserRole.ec));
+    }
+
+    /** ECL-C3: the Lead filters out a request before anyone is assigned. */
+    @Transactional
+    public EventRequestDto rejectUnassigned(UUID leadId, UUID requestId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new MissingRejectionReasonException();
+        }
+        return applyRejection(findAwaitingAssignment(requestId), leadId, reason);
+    }
+
+    /** ECL-C3: the Lead asks the organiser a question before assigning
+     * anyone. Resubmitting returns the request to the unassigned queue. */
+    @Transactional
+    public EventRequestDto requestClarificationUnassigned(UUID leadId, UUID requestId, String message) {
+        String text = requireMessage(message, "Please describe what needs clarifying.");
+        return applyClarification(findAwaitingAssignment(requestId), leadId, text, List.of(), null);
+    }
+
+    /** A request the Lead may still act on: submitted, with nobody assigned.
+     * Once it is assigned it is the coordinator's to decide. */
+    private EventRequest findAwaitingAssignment(UUID requestId) {
+        EventRequest entity = repository.findForUpdate(requestId)
+                .filter(request -> request.getStatus() != EventRequestStatus.draft)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        if (entity.getStatus() != EventRequestStatus.pending) {
+            throw new EventRequestStateException(
+                    "This request is no longer waiting for assignment (current status: "
+                            + label(entity.getStatus()) + ").");
+        }
+        if (entity.getCoordinatorId() != null) {
+            throw new EventRequestStateException(
+                    "This request has already been assigned to an Event Coordinator, who now reviews it.");
+        }
+        return entity;
     }
 
     /**
