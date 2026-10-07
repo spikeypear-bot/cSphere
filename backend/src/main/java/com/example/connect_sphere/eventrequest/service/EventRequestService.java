@@ -463,6 +463,28 @@ public class EventRequestService {
         return mapper.toDto(saved);
     }
 
+    // ---- Event Coordinator Lead side (Week 7 customer change 5) ----------
+
+    /**
+     * ECL-C1: the unassigned queue. Every submitted request that has no Event
+     * Coordinator yet, across all organisations (the Lead is internal staff,
+     * so nothing here is scoped by organisation), longest-waiting first.
+     *
+     * <p>"Unassigned" is {@code pending} with no coordinator: a draft has not
+     * been submitted, and an approved, rejected or cancelled request is no
+     * longer waiting for anyone. Assigning a coordinator is what takes a
+     * request out of this list — there is no separate queue table to keep in
+     * step.
+     *
+     * <p>Read-only by design: opening the queue changes no status or
+     * assignment, records no timeline entry and sends no notification.
+     */
+    @Transactional(readOnly = true)
+    public List<EventRequestDto> unassignedRequests() {
+        return repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending)
+                .stream().map(mapper::toDto).toList();
+    }
+
     /**
      * A request the caller may approve or reject: assigned to them, and
      * Submitted or Clarification Required. Rejecting while waiting on the
