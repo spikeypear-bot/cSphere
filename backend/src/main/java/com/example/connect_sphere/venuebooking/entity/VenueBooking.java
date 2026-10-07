@@ -18,6 +18,8 @@ public class VenueBooking {
     @Id
     @Column(name = "booking_id")
     private UUID bookingId;
+    @Column(name = "replaces_booking_id")
+    private UUID replacesBookingId;
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "venue_booking_status")

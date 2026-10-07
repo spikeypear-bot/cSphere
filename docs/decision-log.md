@@ -275,3 +275,7 @@ controller tests, scoped ESLint, and production build passed. Regression coverag
 includes correction, retained selections, equal instants with differing offsets,
 past dates, HTTP 422, unchanged rejected drafts, and failed-save submission
 protection. Native date-picker appearance was not browser-tested.
+
+## VS01 — agreed replacement workflow (6 October 2026)
+
+The user approved implementing the supplied VS01 overview end to end, including setup/turnaround and coordinator replacement handling. This supersedes earlier deferral notes for setup/turnaround within this feature. Recording unavailability preserves original booking status and flags the booking separately. A single pending replacement is allowed. Only approval of that replacement marks the original `changed`; rejection/withdrawal leaves the original flagged. Pending and approved bookings are considered affected; changed/rejected/cancelled bookings are historical and do not reserve space. See [VS01 documentation](venue-unavailability-api.md).

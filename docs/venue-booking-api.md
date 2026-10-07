@@ -386,3 +386,7 @@ displayed to Venue Staff and the Event Coordinator. The pending queue excludes
 rejected records. After an uncertain response the UI reads current booking data
 before allowing another decision. Rejection does not create a second booking or
 modify the original event requirements.
+
+## VS01 integration (6 October 2026)
+
+Venue options, requests and approval now use buffered occupancy and recorded unavailability. Booking DTOs include `requiresAlternative` and `replacesBookingId`. A coordinator may request one replacement for an affected active booking; the original becomes `changed` only when the replacement is approved. See [Venue unavailability API and workflow](venue-unavailability-api.md) for the current rules, endpoints and verification steps. Earlier descriptions above that limit all requests to Planning or describe raw event-time overlap are superseded by these VS01 rules.

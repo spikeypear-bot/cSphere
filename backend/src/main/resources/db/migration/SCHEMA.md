@@ -449,3 +449,9 @@ The schema uses Postgres types that plain JPA annotations do not map by default:
 - **Composite keys** (`serialised_equipments`, `equipment_request_equipments`) need
   `@IdClass` or `@EmbeddedId` — same pattern as the existing `MockReferenceId`.
 - Tables with no entity are ignored by `ddl-auto=validate`, so entities can land one at a time.
+
+## V20 update — venue unavailability
+
+V20 adds `venue_unavailability` (UUID primary key, required venue/creator foreign keys, required start/end `timestamptz`, trimmed nonblank reason up to 2000 characters, creation timestamp and strict end-after-start check). `venue_unavailability_bookings` links unavailable periods to affected bookings with a composite primary key. These links preserve history and do not replace operational issues.
+
+`venues` now has `setup_minutes` and `turnaround_minutes`, non-null integers defaulting to zero, constrained to 0–10080. `venue_bookings.replaces_booking_id` is a nullable self-reference. A partial unique index permits at most one pending replacement per original. `notifications.type` includes `venue_unavailable`, requiring a booking reference. See [VS01 API and consistency rules](../../../../../../docs/venue-unavailability-api.md).

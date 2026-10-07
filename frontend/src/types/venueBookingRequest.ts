@@ -20,6 +20,8 @@ export type VenueBookingStatus = 'pending' | 'approved' | 'changed' | 'rejected'
 
 export interface EventVenueBookingDto {
   bookingId: string
+  requiresAlternative?: boolean
+  replacesBookingId?: string | null
   status: VenueBookingStatus
   venueId: string
   venueAddress: string | null

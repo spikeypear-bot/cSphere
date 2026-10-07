@@ -55,6 +55,7 @@ class VenueBookingRequestServiceTest {
     @Mock private VenueMapper venueMapper;
     @Mock private ActivityService activityService;
     @Mock private NotificationService notificationService;
+    @Mock private com.example.connect_sphere.venueavailability.AvailabilityService availability;
     @Mock private VenueOperationalIssueRepository operationalIssues;
 
     private VenueBookingRequestService service;
@@ -67,7 +68,7 @@ class VenueBookingRequestServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
-                activityService, notificationService, operationalIssues);
+                activityService, notificationService, operationalIssues, null, availability);
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());
         when(operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any())).thenReturn(List.of());
@@ -210,6 +211,7 @@ class VenueBookingRequestServiceTest {
         venue.setVenueCapacity(capacity);
         venue.setVenueAccessibilities(accessibility);
         when(venues.findById(eq(venue.getVenueId()))).thenReturn(Optional.of(venue));
+        when(venues.findForUpdate(eq(venue.getVenueId()))).thenReturn(Optional.of(venue));
         return venue;
     }
 

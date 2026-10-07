@@ -116,3 +116,6 @@ xdg-open frontend/coverage/index.html
 ### DB
 1) All db tables to exist and created via migration files, do not auto create in the springboot, keep auto-ddl to validate.
 
+## Venue unavailability (VS01)
+
+Venue Staff can record unavailable periods from Venue Details, review affected bookings, and notify coordinators without cancelling events. Availability includes setup/turnaround buffers. Coordinators can request a replacement; approval preserves the original as a changed booking. See [VS01 API, workflow, and manual testing](docs/venue-unavailability-api.md).

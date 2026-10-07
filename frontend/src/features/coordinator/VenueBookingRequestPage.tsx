@@ -102,6 +102,8 @@ export function VenueBookingRequestPage() {
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
   const active = bookings.find((b) => b.status === 'pending' || b.status === 'approved')
+  const activeBookings = bookings.filter(b => b.status === 'pending' || b.status === 'approved')
+  const replacing = activeBookings.length === 1 && activeBookings[0].requiresAlternative ? activeBookings[0] : null
   const selected = options.find((o) => o.venue.venueId === selectedId) ?? null
   const needsJustification = selected?.verdict === 'needs_justification'
   const notesTooLong = notes.trim().length > MAX_TEXT
@@ -118,6 +120,7 @@ export function VenueBookingRequestPage() {
         venueId: selected.venue.venueId,
         bookingNotes: notes.trim() || null,
         suitabilityNote: needsJustification ? justification.trim() : null,
+        ...(replacing ? { replacesBookingId: replacing.bookingId } : {}),
       })
       navigate(`/coordinator/events/${eventId}`, { state: { bookingRequested: selected.venue.venueAddress } })
     } catch (err) {
@@ -127,9 +130,9 @@ export function VenueBookingRequestPage() {
     }
   }
 
-  const blockedReason = event.status !== 'pending'
+  const blockedReason = event.status !== 'pending' && !(event.status === 'confirmed' && replacing)
     ? 'Venue booking requests can only be made while the event is in Planning.'
-    : active
+    : active && !replacing
       ? `This event already has a ${BOOKING_STATUS_LABELS[active.status].toLowerCase()} booking request for ${active.venueAddress}.`
       : null
 
@@ -138,6 +141,8 @@ export function VenueBookingRequestPage() {
       <Link to={`/coordinator/events/${event.eventId}`}>Back to event</Link>
       <PageHeader title="Request a venue"
         description={<p className="field-hint">for <strong>{event.eventName}</strong></p>} />
+      {replacing && <p role="status" className="unavailability-warning">Alternative arrangements required for {replacing.venueAddress}.
+        The original booking remains intact until a replacement is approved.</p>}
 
       <div className="split-layout split-layout--aside-first">
         <Card className="venue-request__needs split-layout__sticky" aria-labelledby="needs-heading">
@@ -234,6 +239,8 @@ export function VenueBookingRequestPage() {
                 {bookings.map((b) => (
                   <li key={b.bookingId}>
                     <strong>{b.venueAddress ?? 'Unknown venue'}</strong>: {BOOKING_STATUS_LABELS[b.status]}
+                    {b.requiresAlternative && <p>Alternative arrangements required</p>}
+                    {b.replacesBookingId && <p>Replacement request</p>}
                     {b.rejectReason ? <> · Reason: {b.rejectReason}</> : null}
                     {b.alternativeVenueAddress ? <> · Suggested venue: {b.alternativeVenueAddress}</> : null}
                     {b.alternativeArrangement ? <> · Alternative arrangement: {b.alternativeArrangement}</> : null}

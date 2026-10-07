@@ -19,6 +19,8 @@ export function BookingDetailsPage() {
       {fromApprovals ? 'Back to Pending Booking Requests' : data ? 'Back to venue details' : 'Back to venue catalogue'}
     </Link>
     <h1>Booking details</h1>
+    {data?.requiresAlternative && <p role="status" className="unavailability-warning">Alternative arrangements required. This booking is affected by venue unavailability; the event has not been cancelled.</p>}
+    {data?.replacesBookingId && <p>This is a replacement request. <Link to={`/venue-staff/bookings/${data.replacesBookingId}`}>View original booking</Link></p>}
     {error && <div><p role="alert">{error}{data && " Showing the previously loaded booking; the requested booking could not be loaded."}</p><Button onClick={retry}>Try again</Button></div>}
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>

@@ -219,6 +219,10 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
   return (
     <Card className="event-details__venue">
       <h2>Venue</h2>
+      {bookings.some(b => b.requiresAlternative) && <div role="status" className="unavailability-warning">
+        <p>Alternative venue arrangements required. An existing booking is affected by venue unavailability.</p>
+        <Link to={`/coordinator/events/${eventId}/venue-booking`}>Review bookings and arrange another venue</Link>
+      </div>}
       {active ? (
         <>
           <p>

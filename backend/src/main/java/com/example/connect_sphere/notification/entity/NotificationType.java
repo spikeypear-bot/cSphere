@@ -11,5 +11,6 @@ public enum NotificationType {
     /** EC03: sent to Venue Staff when a booking request needs review. */
     venue_booking_requested,
     /** EC03: the coordinator cancelled a pending booking request (V14). */
-    venue_booking_cancelled
+    venue_booking_cancelled,
+    venue_unavailable
 }

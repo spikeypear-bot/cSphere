@@ -18,6 +18,7 @@ function timeAgo(iso: string): string {
 }
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'venue_unavailable') return `Alternative venue arrangements required for "${n.eventName}"`
   if (n.type === 'clarification_requested') return `Clarification needed on "${n.eventName}"`
   if (n.type === 'clarification_responded') return `"${n.eventName}" was updated and resubmitted`
   if (n.type === 'venue_booking_requested') return `New venue booking request for "${n.eventName}"`

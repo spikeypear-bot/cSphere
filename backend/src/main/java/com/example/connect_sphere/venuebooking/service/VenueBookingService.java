@@ -17,6 +17,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRepository
 @Service
 @Transactional(readOnly = true)
 public class VenueBookingService {
+    private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
     private static final int MAX_TEXT_LENGTH = 2000;
 
     private final VenueBookingRepository bookings;
@@ -27,7 +28,8 @@ public class VenueBookingService {
 
     public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper,
             VenueBookingRecordRepository records,
-            EventRepository events) {
+            EventRepository events, com.example.connect_sphere.venueavailability.AvailabilityService availability) {
+        this.availability = availability;
         this.bookings = bookings;
         this.venues = venues;
         this.venueMapper = venueMapper;
@@ -49,11 +51,29 @@ public class VenueBookingService {
             throw new VenueBookingStateException("Only pending bookings can be approved. This booking is "
                     + booking.getStatus().name() + ".");
         }
-        venues.findForUpdate(booking.getVenueId())
-                .orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
-        if (records.countApprovalConflicts(booking.getVenueId(), bookingId, VenueBookingStatus.approved,
-                event.getStartDatetime(), event.getEndDatetime()) > 0) {
+        // Lock both venues in stable order when releasing an original commitment.
+        var venueIds = new java.util.TreeSet<UUID>();
+        venueIds.add(booking.getVenueId());
+        if (booking.getReplacesBookingId() != null) {
+            var original = records.findById(booking.getReplacesBookingId())
+                    .orElseThrow(() -> new VenueBookingStateException("Original booking no longer exists."));
+            venueIds.add(original.getVenueId());
+        }
+        for (UUID venueId : venueIds) venues.findForUpdate(venueId).orElseThrow(() -> new VenueNotFoundException(venueId));
+        if (availability.unavailable(booking.getVenueId(), event.getStartDatetime(), event.getEndDatetime())) {
+            throw new VenueBookingStateException("The venue is unavailable during the event, setup or turnaround period.");
+        }
+        if (!availability.conflicts(booking.getVenueId(), eventId, event.getStartDatetime(), event.getEndDatetime()).isEmpty()) {
             throw new VenueBookingStateException("This venue already has an approved booking at the requested time.");
+        }
+        if (booking.getReplacesBookingId() != null) {
+            var original = records.findById(booking.getReplacesBookingId()).orElseThrow(() -> new VenueBookingStateException("Original booking no longer exists."));
+            if (!original.getEventId().equals(eventId) || !availability.affected(original.getBookingId()))
+                throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
+            original.setStatus(VenueBookingStatus.changed);
+            records.saveAndFlush(original);
+            event.setVenueId(booking.getVenueId());
+            events.saveAndFlush(event);
         }
         if (records.approvePending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.approved) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
@@ -75,10 +95,13 @@ public class VenueBookingService {
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         var booking = records.findById(bookingId)
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        venues.findForUpdate(booking.getVenueId()).orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
         if (booking.getStatus() != VenueBookingStatus.pending) {
             throw new VenueBookingStateException("Only pending bookings can be rejected. This booking is "
                     + booking.getStatus().name() + ".");
         }
+        if (records.existsByReplacesBookingIdAndStatus(bookingId, VenueBookingStatus.pending))
+            throw new VenueBookingStateException("Resolve the pending replacement request before rejecting the original booking.");
         if (alternativeVenueId != null) {
             if (alternativeVenueId.equals(booking.getVenueId())) {
                 throw new InvalidVenueBookingException("The alternative venue must differ from the requested venue.");
@@ -118,6 +141,7 @@ public class VenueBookingService {
                         event.getExpectedAttendance(), event.getVenueRequirements(),
                         List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()),
                 booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt(), booking.getRejectReason(),
+                availability.affected(booking.getBookingId()), booking.getReplacesBookingId(),
                 booking.getAlternativeVenueId(),
                 alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
                 booking.getAlternativeArrangement());

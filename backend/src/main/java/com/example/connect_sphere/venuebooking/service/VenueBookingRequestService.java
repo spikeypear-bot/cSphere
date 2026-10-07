@@ -7,8 +7,8 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Map;
 import java.util.UUID;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -60,6 +60,7 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
  */
 @Service
 public class VenueBookingRequestService {
+    private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
     private static final ZoneId BUSINESS_ZONE = ZoneId.of("Asia/Singapore");
 
     static final int MAX_TEXT_LENGTH = 2000;
@@ -88,7 +89,9 @@ public class VenueBookingRequestService {
             ActivityService activityService,
             NotificationService notificationService,
             VenueOperationalIssueRepository operationalIssues,
-            VenueOperatingHourRepository operatingHours) {
+            VenueOperatingHourRepository operatingHours,
+            com.example.connect_sphere.venueavailability.AvailabilityService availability) {
+        this.availability = availability;
         this.events = events;
         this.venues = venues;
         this.bookings = bookings;
@@ -101,22 +104,6 @@ public class VenueBookingRequestService {
         this.operatingHours = operatingHours;
     }
 
-    public VenueBookingRequestService(EventRepository events, VenueRepository venues,
-            VenueBookingRecordRepository bookings, EventRequestRepository eventRequests,
-            UserRepository users, VenueMapper venueMapper, ActivityService activityService,
-            NotificationService notificationService) {
-        this(events, venues, bookings, eventRequests, users, venueMapper, activityService,
-                notificationService, null, null);
-    }
-
-    public VenueBookingRequestService(EventRepository events, VenueRepository venues,
-            VenueBookingRecordRepository bookings, EventRequestRepository eventRequests,
-            UserRepository users, VenueMapper venueMapper, ActivityService activityService,
-            NotificationService notificationService, VenueOperationalIssueRepository operationalIssues) {
-        this(events, venues, bookings, eventRequests, users, venueMapper, activityService,
-                notificationService, operationalIssues, null);
-    }
-
     /**
      * Every catalogue venue judged against this event, best first: bookable
      * venues before ones needing a justification before blocked ones, and
@@ -127,12 +114,11 @@ public class VenueBookingRequestService {
     public List<VenueOptionDto> venueOptions(UUID coordinatorId, UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
-        Map<UUID, List<VenueOptionDto.ConflictDto>> conflictsByVenue = conflictsByVenue(event);
         Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue = unavailableByVenue(event);
         Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue = hoursByVenue(event);
         return venues.findAll().stream()
                 .map(venue -> option(event, venue,
-                        conflictsByVenue.getOrDefault(venue.getVenueId(), List.of()),
+                        conflicts(event, venue),
                         unavailableByVenue.getOrDefault(venue.getVenueId(), List.of()),
                         hoursByVenue.getOrDefault(venue.getVenueId(), List.of())))
                 .sorted(Comparator.comparingInt((VenueOptionDto o) -> verdictRank(o.verdict()))
@@ -151,18 +137,27 @@ public class VenueBookingRequestService {
     public EventVenueBookingDto submit(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest request) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
-        if (event.getStatus() != EventStatus.pending) {
+        boolean replacement = request != null && request.replacesBookingId() != null;
+        if (event.getStatus() != EventStatus.pending && !(replacement && event.getStatus() == EventStatus.confirmed)) {
             throw new VenueBookingStateException("Venue booking requests can only be made while an event is in "
                     + "Planning (this event is " + event.getStatus().name() + ").");
         }
-        bookings.findFirstByEventIdAndStatusIn(eventId, ACTIVE).ifPresent(existing -> {
-            throw new VenueBookingStateException("This event already has a " + existing.getStatus().name()
-                    + " venue booking request. A new one can be made if that request is rejected or cancelled.");
-        });
+        List<VenueBookingRecord> active = bookings.findForEvent(eventId).stream().filter(b -> ACTIVE.contains(b.getStatus())).toList();
+        if (replacement) {
+            var original = bookings.findById(request.replacesBookingId())
+                    .filter(b -> eventId.equals(b.getEventId()) && ACTIVE.contains(b.getStatus()))
+                    .orElseThrow(() -> new VenueBookingStateException("Select an affected active booking to replace."));
+            if (!availability.affected(original.getBookingId()))
+                throw new VenueBookingStateException("This booking does not require alternative arrangements.");
+            if (active.stream().anyMatch(b -> !b.getBookingId().equals(original.getBookingId())))
+                throw new VenueBookingStateException("This event already has a replacement request. Resolve it first.");
+        } else if (!active.isEmpty()) {
+            throw new VenueBookingStateException("This event already has an active venue booking request.");
+        }
         if (request == null || request.venueId() == null) {
             throw new InvalidVenueBookingException("Select a venue before submitting the booking request.");
         }
-        Venue venue = venues.findById(request.venueId())
+        Venue venue = venues.findForUpdate(request.venueId())
                 .orElseThrow(() -> new VenueNotFoundException(request.venueId()));
         String notes = optionalText(request.bookingNotes(), "Booking notes");
         String justification = optionalText(request.suitabilityNote(), "The justification");
@@ -172,12 +167,13 @@ public class VenueBookingRequestService {
             throw new InvalidVenueBookingException("Expected attendance (" + suitability.expectedAttendance()
                     + ") exceeds this venue's capacity (" + suitability.capacity() + ").");
         }
+        if (availability.unavailable(venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime()))
+            throw new InvalidVenueBookingException("This venue is unavailable during the event, setup or turnaround period. Choose another venue.");
+        List<VenueOptionDto.ConflictDto> conflicts = conflicts(event, venue);
         if (!suitability.facilitiesOk()) {
             throw new InvalidVenueBookingException("This venue does not offer the required facilities: "
                     + String.join(", ", suitability.missingFacilities()) + ".");
         }
-        List<VenueOptionDto.ConflictDto> conflicts =
-                conflictsByVenue(event).getOrDefault(venue.getVenueId(), List.of());
         List<VenueOptionDto.UnavailablePeriodDto> unavailable =
                 unavailableByVenue(event).getOrDefault(venue.getVenueId(), List.of());
         List<VenueOptionDto.UnavailablePeriodDto> hoursUnavailable =
@@ -204,6 +200,7 @@ public class VenueBookingRequestService {
         booking.setBookingId(UUID.randomUUID());
         booking.setVenueId(venue.getVenueId());
         booking.setEventId(eventId);
+        booking.setReplacesBookingId(request.replacesBookingId());
         booking.setStatus(VenueBookingStatus.pending);
         booking.setBookingNotes(notes);
         booking.setSuitabilityNote(suitability.needsJustification() ? justification : null);
@@ -239,10 +236,13 @@ public class VenueBookingRequestService {
         VenueBookingRecord booking = bookings.findById(bookingId)
                 .filter(b -> eventId.equals(b.getEventId()))
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        venues.findForUpdate(booking.getVenueId()).orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
         if (booking.getStatus() != VenueBookingStatus.pending) {
             throw new VenueBookingStateException("Only a pending booking request can be cancelled (this one is "
                     + booking.getStatus().name() + ").");
         }
+        if (bookings.existsByReplacesBookingIdAndStatus(bookingId, VenueBookingStatus.pending))
+            throw new VenueBookingStateException("Resolve the pending replacement request before cancelling the original booking.");
         String why = optionalText(reason, "The reason");
         booking.setStatus(VenueBookingStatus.cancelled);
         VenueBookingRecord saved = bookings.save(booking);
@@ -266,6 +266,8 @@ public class VenueBookingRequestService {
             List<VenueOptionDto.UnavailablePeriodDto> hoursUnavailable) {
         VenueSuitability suitability = VenueSuitability.of(event, venue);
         List<String> reasons = new ArrayList<>();
+        boolean recordedUnavailable = availability.unavailable(venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime());
+        if (recordedUnavailable) reasons.add("Recorded venue unavailability overlaps the event, setup or turnaround period.");
         if (!suitability.capacityOk()) {
             reasons.add("Capacity " + suitability.capacity() + " is below the expected attendance of "
                     + suitability.expectedAttendance() + ".");
@@ -283,7 +285,7 @@ public class VenueBookingRequestService {
         if (!suitability.facilitiesOk()) {
             reasons.add("Missing facilities: " + String.join(", ", suitability.missingFacilities()) + ".");
         }
-        String verdict = !suitability.capacityOk() || !suitability.facilitiesOk()
+        String verdict = recordedUnavailable || !suitability.capacityOk() || !suitability.facilitiesOk()
                 || !conflicts.isEmpty() || !unavailable.isEmpty() || !hoursUnavailable.isEmpty() ? "blocked"
                 : suitability.needsJustification() ? "needs_justification"
                 : "suitable";
@@ -294,12 +296,9 @@ public class VenueBookingRequestService {
                 conflicts, reasons);
     }
 
-    private Map<UUID, List<VenueOptionDto.ConflictDto>> conflictsByVenue(Event event) {
-        return bookings.findApprovedOverlapping(event.getEventId(), event.getStartDatetime(), event.getEndDatetime())
-                .stream()
-                .collect(Collectors.groupingBy(VenueBookingRecordRepository.Conflict::getVenueId,
-                        Collectors.mapping(c -> new VenueOptionDto.ConflictDto(
-                                c.getEventName(), c.getStartDatetime(), c.getEndDatetime()), Collectors.toList())));
+    private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue) {
+        return availability.conflicts(venue.getVenueId(), event.getEventId(), event.getStartDatetime(), event.getEndDatetime())
+                .stream().map(c -> new VenueOptionDto.ConflictDto(c.eventName(), c.startDateTime(), c.endDateTime())).toList();
     }
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(Event event) {
@@ -383,6 +382,7 @@ public class VenueBookingRequestService {
         return new EventVenueBookingDto(b.getBookingId(), b.getStatus(), b.getVenueId(),
                 venue == null ? null : venue.getVenueAddress(), venue == null ? null : venue.getVenueCapacity(),
                 b.getBookingNotes(), b.getSuitabilityNote(), b.getRejectReason(), b.getSubmittedAt(), submittedBy,
+                availability.affected(b.getBookingId()), b.getReplacesBookingId(),
                 b.getAlternativeVenueId(), alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
                 b.getAlternativeArrangement());
     }

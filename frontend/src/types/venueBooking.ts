@@ -2,6 +2,8 @@ import type { VenueDto } from './venue'
 
 export interface VenueBookingDto {
   bookingId: string
+  requiresAlternative?: boolean
+  replacesBookingId?: string | null
   status: 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
   venue: VenueDto
   event: {

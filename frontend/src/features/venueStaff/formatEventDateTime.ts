@@ -4,3 +4,7 @@ export function formatEventDateTime(value: string) {
   }).format(new Date(value))
 }
 
+export function formatEventTimeRange(start: string, end: string) {
+  return `${formatEventDateTime(start)} – ${formatEventDateTime(end)}`
+}
+

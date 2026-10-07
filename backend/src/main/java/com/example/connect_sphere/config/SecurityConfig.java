@@ -82,6 +82,8 @@ public class SecurityConfig{
 		    // venues while planning, Coordinators search them (EC04). This
 		    // must precede the VS rule below, which would otherwise swallow
 		    // every method on the same paths.
+		    .requestMatchers("/api/venues/*/unavailability", "/api/venues/*/unavailability/**",
+                        "/api/venues/*/occupancy-settings", "/api/venues/*/schedule").hasRole("VS")
 		    .requestMatchers("/api/venues/*/operational-issues/**").hasRole("VS")
 		    .requestMatchers("/api/coordinator/operational-issues").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/venues/search").hasRole("EC")
