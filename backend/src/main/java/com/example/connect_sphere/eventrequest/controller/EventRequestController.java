@@ -182,10 +182,7 @@ public class EventRequestController {
 
     // ---- Event Coordinator Lead side ---------------------------------
 
-    /** ECL-C1: the unassigned queue. Reads nothing from the caller: who may
-     * call this is SecurityConfig's {@code hasRole("ECL")} rule, and the list
-     * is the same for every Lead, so there is no identity or organisation to
-     * scope by. */
+    /** ECL-C1: the unassigned queue. Lead only (see SecurityConfig). */
     @GetMapping("/unassigned")
     public List<EventRequestDto> unassignedRequests() {
         return service.unassignedRequests();

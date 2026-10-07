@@ -10,20 +10,9 @@ import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { useVenueRead } from '../venueStaff/useVenueRead'
 import './UnassignedRequestsPage.css'
 
-/**
- * ECL-C1: the unassigned queue (Week 7 customer change 5). Every submitted
- * event request that no Event Coordinator has been assigned to, as overview
- * cards — enough to see what is waiting, not the full request. The server
- * sends them longest-waiting first and already leaves out drafts and anything
- * assigned or decided, so the page renders the list as given.
- *
- * View-only on purpose: assigning a coordinator is ELC-C6 and opening a
- * request for review is ECL-C3, so a card has no action yet.
- */
+/** ECL-C1: unassigned event requests as overview cards. View-only for now. */
 export function UnassignedRequestsPage() {
-  // The same GET-on-mount hook the Venue Staff pages use (generic despite its
-  // name). Keeping the previous data means a refresh, or a refresh that
-  // fails, leaves the cards already on screen in place.
+  // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
   const { data: requests, error, loading, retry } = useVenueRead<EventRequestDto[]>('/event-requests/unassigned', true)
   const refreshing = loading && requests !== undefined
 
@@ -88,8 +77,7 @@ function UnassignedRequestCard({ request }: { request: EventRequestDto }) {
           <dd>{request.expectedAttendance != null ? `${request.expectedAttendance.toLocaleString()} people` : 'Not given'}</dd>
         </div>
         <div>
-          {/* A pending request cannot be edited until a coordinator is
-              assigned, so its last update is the moment it was submitted. */}
+          {/* For a pending request, updatedAt is when it was submitted. */}
           <dt>Submitted</dt>
           <dd>{formatRelativeTime(request.updatedAt)}</dd>
         </div>

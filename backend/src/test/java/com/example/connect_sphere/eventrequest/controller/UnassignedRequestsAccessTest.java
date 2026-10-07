@@ -30,22 +30,8 @@ import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
 /**
- * ECL-C1: "only a signed-in Event Coordinator Lead can open the list of
- * unassigned event requests; any other role who tries gets an access-denied
- * message and sees no request data."
- *
- * <p>A controller slice with the <b>real</b> filter chain imported, and the
- * service mocked, so this needs no database. A plain {@code @WebMvcTest} loads
- * Spring Boot's default chain rather than {@link SecurityConfig} (which is why
- * {@code EventRequestControllerTest} switches filters off); importing the
- * configuration here is what makes the role rules under test the ones the
- * running application uses.
- *
- * <p>Authorities come from {@link JwtConfig}'s own converter applied to the
- * token's {@code role} claim, not from a hand-written {@code ROLE_ECL}: the
- * claim is lower-case ({@code ecl}) and the rule is an exact string match on
- * {@code ROLE_ECL}, so a test that built the authority itself would stay
- * green while real tokens were refused.
+ * ECL-C1: only the Event Coordinator Lead may open the unassigned queue.
+ * Controller slice with the real SecurityConfig imported; no database needed.
  */
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
@@ -63,7 +49,7 @@ class UnassignedRequestsAccessTest {
     @MockitoBean
     private EventRequestService service;
 
-    /** A signed-in account as TokenService would mint it, for one role claim. */
+    /** A token with the given role claim, run through the real converter. */
     private JwtRequestPostProcessor tokenFor(String roleClaim) {
         return jwt().jwt(token -> token.subject(UUID.randomUUID().toString())
                         .claim("role", roleClaim)
@@ -89,8 +75,6 @@ class UnassignedRequestsAccessTest {
                 .andExpect(jsonPath("$.message").isNotEmpty())
                 .andExpect(jsonPath("$[0]").doesNotExist());
 
-        // Rejected by the filter chain before the controller: the queue was
-        // never read, so there was nothing to leak.
         verifyNoInteractions(service);
     }
 
@@ -102,11 +86,7 @@ class UnassignedRequestsAccessTest {
         verifyNoInteractions(service);
     }
 
-    /**
-     * The Lead is a separate role, not an Event Coordinator with extra rights:
-     * ROLE_ECL must not satisfy the coordinator's own queue, nor the Event
-     * Organiser endpoints the blanket rule covers.
-     */
+    /** The Lead is a separate role: it does not open EC or EO endpoints. */
     @ParameterizedTest
     @ValueSource(strings = { "/api/event-requests/queue", "/api/event-requests" })
     void aLeadTokenDoesNotOpenCoordinatorOrOrganiserEndpoints(String path) throws Exception {

@@ -91,9 +91,7 @@ public class DevUserSeeder implements CommandLineRunner {
             new SeedUser("ts4", "ts4@connectsphere.test", UserRole.technician, INTERNAL_ORG),
             new SeedUser("ts5", "ts5@connectsphere.test", UserRole.technician, INTERNAL_ORG),
 
-            // Event Coordinator Lead — internal (Week 7 customer change 5, ECL-C1).
-            // One account: the Lead's stories need someone to sign in as, not a
-            // same-role pair to scope against. Needs V21's `ecl` enum value.
+            // Event Coordinator Lead — internal (ECL-C1)
             new SeedUser("ecl1", "ecl1@connectsphere.test", UserRole.ecl, INTERNAL_ORG));
 
     private final UserRepository repository;

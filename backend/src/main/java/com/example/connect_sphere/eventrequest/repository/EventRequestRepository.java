@@ -46,13 +46,7 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
     /** EC02 queue: this coordinator's requests in one status. */
     List<EventRequest> findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(UUID coordinatorId, EventRequestStatus status);
 
-    /** ECL-C1 unassigned queue: requests in one status that no coordinator has
-     * been assigned to, longest-waiting first. Ordered by {@code updatedAt}
-     * rather than {@code createdAt} because the queue is "oldest submitted
-     * first" and there is no submitted-at column: submit() stamps updatedAt,
-     * and nothing can edit a pending request until a coordinator is assigned,
-     * so for these rows updatedAt is the submission time. createdAt is when
-     * the draft was started, which would put a long-lived draft submitted
-     * today ahead of a request that has been waiting all week. */
+    /** ECL-C1: unassigned requests, longest-waiting first. For a pending
+     * request updatedAt is when it was submitted. */
     List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus status);
 }

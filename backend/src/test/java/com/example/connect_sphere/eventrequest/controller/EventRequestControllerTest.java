@@ -138,8 +138,7 @@ class EventRequestControllerTest {
                 .andExpect(jsonPath("$[1].requestId").value(submittedLater.toString()))
                 .andExpect(jsonPath("$[1].organisation").value("Globex Holdings"));
 
-        // "unassigned" is its own route, not swallowed by GET /{id} as an id
-        // (which would be an organisation-scoped single-request read).
+        // Not swallowed by GET /{id}.
         verify(service, never()).get(any(), any());
     }
 

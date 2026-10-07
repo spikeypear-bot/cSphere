@@ -1,13 +1,6 @@
 import type { SkeletonFeature } from '../../types/skeletonFeature'
 
-// The Event Coordinator Lead's not-yet-built stories (Week 7 customer change
-// 5). Story IDs are copied exactly as the live backlog sheet spells them —
-// including `ELC-` on C4–C6, which the sheet has alongside `ECL-` on C1–C3 —
-// so a card can be traced to its row; re-check the sheet before building one.
-// 'unassigned-requests' (ECL-C1) is not in this list: it is a real page
-// (UnassignedRequestsPage, routed directly in App.tsx), reached from the
-// console's own primary button, the same way coordinatorFeatures leaves out
-// 'review-queue'.
+// The Lead's not-yet-built stories. IDs are spelled as in the backlog sheet.
 export const coordinatorLeadFeatures: SkeletonFeature[] = [
   {
     path: 'assignments',

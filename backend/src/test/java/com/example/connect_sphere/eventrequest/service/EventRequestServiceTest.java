@@ -533,8 +533,7 @@ class EventRequestServiceTest {
 
         List<EventRequestDto> queue = service.unassignedRequests();
 
-        // Same requests, same order: the Lead's list is not re-sorted, trimmed
-        // or narrowed to one organisation on the way out.
+        // Same requests, same order, both organisations.
         assertThat(queue).extracting(EventRequestDto::requestId)
                 .containsExactly(waitingLongest.getRequestId(), submittedLater.getRequestId());
         assertThat(queue).extracting(EventRequestDto::organisation).containsExactly(ORG, OTHER_ORG);
@@ -544,9 +543,7 @@ class EventRequestServiceTest {
     void unassignedRequestsAsksOnlyForSubmittedRequestsWithNoCoordinator() {
         service.unassignedRequests();
 
-        // "Unassigned" is pending with no coordinator. Asking for any other
-        // status (a draft, or a decided request), or reusing the coordinator
-        // queue's created-at ordering, would be a second repository call.
+        // Any other status or ordering would be a second repository call.
         verify(repository).findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending);
         verifyNoMoreInteractions(repository);
     }

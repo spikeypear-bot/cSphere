@@ -16,8 +16,7 @@ describe('authTokens — role claim to console (ECL-C1)', () => {
   })
 
   it('keeps the Lead distinct from an Event Coordinator', () => {
-    // `ec` and `ecl` differ by one letter; a Lead must not land in the
-    // coordinator console, nor a coordinator in the Lead's.
+    // `ec` and `ecl` differ by one letter.
     expect(roleFromClaim('ec')).toBe('coordinator')
     expect(roleFromClaim('ecl')).not.toBe(roleFromClaim('ec'))
   })

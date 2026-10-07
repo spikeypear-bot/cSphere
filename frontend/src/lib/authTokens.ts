@@ -40,8 +40,7 @@ export const AUTH_STORAGE_KEY = 'connectsphere.auth'
 const ROLE_BY_CLAIM: Record<string, Role> = {
   eo: 'organiser',
   ec: 'coordinator',
-  // Week 7 customer change 5 (ECL-C1): a separate internal role, not a
-  // coordinator with extra rights, so it gets its own console.
+  // ECL-C1: the Lead is a separate role with its own console.
   ecl: 'coordinator-lead',
   vs: 'venue-staff',
   technician: 'technical-support',

@@ -117,8 +117,7 @@ describe('App routing — role consoles', () => {
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator-lead/unassigned-requests')
 
-    // Their own console: only the Lead may view unassigned requests, and the
-    // page that would fetch them is never mounted.
+    // Redirected, so the page that fetches the queue is never mounted.
     expect(await screen.findByRole('heading', { name: /Event Coordinator console/i })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Unassigned requests' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')

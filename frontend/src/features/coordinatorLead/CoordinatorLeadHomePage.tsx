@@ -3,9 +3,7 @@ import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { coordinatorLeadFeatures } from './coordinatorLeadFeatures'
 
-/** The Event Coordinator Lead's console (Week 7 customer change 5). Laid out
- * like CoordinatorHomePage: real pages are buttons in the header, stories
- * nobody has built yet are skeleton cards underneath. */
+/** The Event Coordinator Lead's console (ECL-C1). */
 export function CoordinatorLeadHomePage() {
   return (
     <div className="page">
