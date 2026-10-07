@@ -6,10 +6,10 @@ export const coordinatorLeadFeatures: SkeletonFeature[] = [
     path: 'assignments',
     navLabel: 'Coordinator assignments',
     pageTitle: 'Coordinator Assignments',
-    storyIds: ['ECL-C2', 'ELC-C6', 'ELC-C5'],
+    storyIds: ['ECL-C2', 'ELC-C5'],
     featureArea: 'Coordinator Assignment',
     summary:
-      'See every assigned event request and the Event Coordinator handling it, assign an unassigned request, and reassign one when availability changes.',
+      'See every assigned event request and the Event Coordinator handling it, and reassign one when availability changes.',
     layout: 'list',
     suggestedBackendPackage: 'com.example.connect_sphere.eventrequest',
   },
