@@ -2,9 +2,11 @@ package com.example.connect_sphere.eventrequest.controller;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.nullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -433,6 +435,22 @@ class LeadRequestReviewFlowTest {
                         .content("{\"coordinatorUserId\":" + quoted("ec1") + "}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.message").isNotEmpty());
+
+        assertUnassignedAndUntouched(id);
+    }
+
+    @Test
+    void anEventCoordinatorCanNoLongerSeeOrPickUpAnUnassignedRequest() throws Exception {
+        UUID id = unassignedRequest();
+
+        mvc.perform(get("/api/event-requests/queue").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unassigned").doesNotExist())
+                .andExpect(content().string(not(containsString(id.toString()))));
+        mvc.perform(post("/api/event-requests/" + id + "/assign-coordinator").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"coordinatorUserId\":" + quoted("ec1") + "}"))
+                .andExpect(status().isForbidden());
 
         assertUnassignedAndUntouched(id);
     }

@@ -77,7 +77,7 @@ class NotificationFlowTest {
     }
 
     private ResultActions assign(UUID requestId, String coordinator) throws Exception {
-        return mvc.perform(post("/api/event-requests/" + requestId + "/assign-coordinator").with(flow.as("ec1"))
+        return mvc.perform(post("/api/event-requests/unassigned/" + requestId + "/assign").with(flow.as("ecl1"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"coordinatorUserId\":\"" + flow.idOf(coordinator) + "\"}"));
     }

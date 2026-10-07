@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
@@ -16,7 +15,7 @@ function request(id: string, name: string, status = 'pending', coordinatorId: st
   }
 }
 
-const EMPTY: ReviewQueue = { needsReview: [], awaitingOrganiser: [], unassigned: [] }
+const EMPTY: ReviewQueue = { needsReview: [], awaitingOrganiser: [] }
 
 function renderQueue() {
   return render(
@@ -47,7 +46,6 @@ describe('ReviewQueuePage (EC02 queue)', () => {
       'GET /api/event-requests/queue': () => jsonResponse(200, {
         needsReview: [request('r1', 'Town Hall')],
         awaitingOrganiser: [request('r2', 'Gala', 'clarification_required')],
-        unassigned: [request('r3', 'Offsite', 'pending', null)],
       }),
     })
     renderQueue()
@@ -59,42 +57,24 @@ describe('ReviewQueuePage (EC02 queue)', () => {
     const waiting = screen.getByRole('region', { name: /Waiting for the organiser/ })
     expect(within(waiting).getByText('Gala')).toBeInTheDocument()
     expect(within(waiting).getByText('Clarification required')).toBeInTheDocument()
-
-    const unassigned = screen.getByRole('region', { name: /Unassigned/ })
-    expect(within(unassigned).getByRole('button', { name: 'Assign to me' })).toBeInTheDocument()
+    expect(within(waiting).getByRole('link', { name: 'View' })).toHaveAttribute('href', '/coordinator/requests/r2')
   })
 
-  it('assigning an unassigned request to myself moves it into my review list', async () => {
-    let assigned = false
+  it('shows no unassigned requests and offers no way to assign one (ELC-C6)', async () => {
     const calls = stubApi({
-      'GET /api/event-requests/queue': () => jsonResponse(200, assigned
-        ? { ...EMPTY, needsReview: [request('r3', 'Offsite')] }
-        : { ...EMPTY, unassigned: [request('r3', 'Offsite', 'pending', null)] }),
-      'POST /api/event-requests/r3/assign-coordinator': () => {
-        assigned = true
-        return jsonResponse(200, request('r3', 'Offsite'))
-      },
+      // Even if a server still sent unassigned requests, they are not the coordinator's to see.
+      'GET /api/event-requests/queue': () => jsonResponse(200, {
+        needsReview: [request('r1', 'Town Hall')],
+        awaitingOrganiser: [],
+        unassigned: [request('r3', 'Offsite', 'pending', null)],
+      }),
     })
-    const user = userEvent.setup()
     renderQueue()
 
-    await user.click(await screen.findByRole('button', { name: 'Assign to me' }))
-
-    expect(await screen.findByRole('region', { name: /Needs your review/ })).toBeInTheDocument()
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ coordinatorUserId: COORDINATOR_ID })
-  })
-
-  it('shows an assignment failure inline without losing the list', async () => {
-    stubApi({
-      'GET /api/event-requests/queue': () => jsonResponse(200, { ...EMPTY, unassigned: [request('r3', 'Offsite', 'pending', null)] }),
-      'POST /api/event-requests/r3/assign-coordinator': () => jsonResponse(422, { message: 'Not an Event Coordinator' }),
-    })
-    const user = userEvent.setup()
-    renderQueue()
-
-    await user.click(await screen.findByRole('button', { name: 'Assign to me' }))
-
-    expect(await screen.findByRole('alert')).toHaveTextContent('Not an Event Coordinator')
-    expect(screen.getByText('Offsite')).toBeInTheDocument()
+    await screen.findByRole('region', { name: /Needs your review/ })
+    expect(screen.queryByText('Offsite')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Unassigned/ })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /assign/i })).not.toBeInTheDocument()
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual(['GET /api/event-requests/queue'])
   })
 })

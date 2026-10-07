@@ -41,9 +41,6 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
     @Query("SELECT r FROM EventRequest r WHERE r.requestId = :id")
     Optional<EventRequest> findForUpdate(@Param("id") UUID id);
 
-    /** EC02 queue: submitted requests nobody has picked up yet. */
-    List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus status);
-
     /** EC02 queue: this coordinator's requests in one status. */
     List<EventRequest> findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(UUID coordinatorId, EventRequestStatus status);
 

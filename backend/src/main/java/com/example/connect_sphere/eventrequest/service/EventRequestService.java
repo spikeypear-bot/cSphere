@@ -230,11 +230,11 @@ public class EventRequestService {
 
     /**
      * EC02 review queue for one coordinator: their submitted requests (oldest
-     * first), their requests waiting on the organiser, and unassigned ones
-     * they could pick up (Coordinator Assignment). Coordinators are internal
-     * staff, so none of this is scoped by organisation. Requests assigned to
-     * other coordinators are left out: EC02 says a coordinator "cannot view
-     * or review an event request that is not assigned to them".
+     * first) and their requests waiting on the organiser. Coordinators are
+     * internal staff, so none of this is scoped by organisation. Unassigned
+     * requests and requests assigned to other coordinators are left out:
+     * EC02 says a coordinator "cannot view or review an event request that
+     * is not assigned to them", and assigning is the Lead's (ELC-C6).
      */
     @Transactional(readOnly = true)
     public ReviewQueueDto reviewQueue(UUID coordinatorId) {
@@ -243,8 +243,6 @@ public class EventRequestService {
                         .stream().map(mapper::toDto).toList(),
                 repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
                         coordinatorId, EventRequestStatus.clarification_required)
-                        .stream().map(mapper::toDto).toList(),
-                repository.findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus.pending)
                         .stream().map(mapper::toDto).toList());
     }
 

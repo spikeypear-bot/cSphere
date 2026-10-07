@@ -46,8 +46,8 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
  *
  * As of the EO09/EO19 slice this also carries the minimal Event Coordinator
  * side needed to give those two stories' notifications something real to
- * fire from: {@code /queue}, {@code /assign-coordinator}, {@code /approve},
- * {@code /reject}. SecurityConfig matches those paths to {@code
+ * fire from: {@code /queue}, {@code /approve}, {@code /reject}; assigning
+ * is the Lead's since ELC-C6. SecurityConfig matches those paths to {@code
  * hasRole("EC")} *before* the blanket {@code hasRole("EO")} rule that covers
  * the rest of this controller — first-match-wins, so ordering there matters
  * (see its own comment). Coordinator-facing calls carry no organisation
@@ -157,14 +157,6 @@ public class EventRequestController {
             @RequestBody RequestClarificationRequest request) {
         return service.requestClarification(
                 userIdOf(jwt), id, request.message(), request.flaggedFields(), request.fieldQuestions());
-    }
-
-    @PostMapping("/{id}/assign-coordinator")
-    public EventRequestDto assignCoordinator(
-            @AuthenticationPrincipal Jwt jwt,
-            @PathVariable("id") UUID id,
-            @RequestBody AssignCoordinatorRequest request) {
-        return service.assignCoordinator(userIdOf(jwt), id, request.coordinatorUserId());
     }
 
     @PostMapping("/{id}/approve")

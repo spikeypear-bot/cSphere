@@ -522,17 +522,24 @@ class EventRequestServiceTest {
     // ---- EC review queue ----------------------------------------------
 
     @Test
-    void reviewQueueSplitsMyRequestsFromUnassignedOnes() {
+    void reviewQueueHoldsOnlyTheCallersOwnRequestsSplitByWhoNeedsToAct() {
+        EventRequest mine = completeDraftEntity(UUID.randomUUID(), ORG);
+        EventRequest waiting = completeDraftEntity(UUID.randomUUID(), ORG);
         when(repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(COORDINATOR_ID, EventRequestStatus.pending))
-                .thenReturn(List.of(completeDraftEntity(UUID.randomUUID(), ORG)));
-        when(repository.findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus.pending))
-                .thenReturn(List.of(completeDraftEntity(UUID.randomUUID(), ORG), completeDraftEntity(UUID.randomUUID(), ORG)));
+                .thenReturn(List.of(mine));
+        when(repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
+                COORDINATOR_ID, EventRequestStatus.clarification_required)).thenReturn(List.of(waiting));
 
         var queue = service.reviewQueue(COORDINATOR_ID);
 
-        assertThat(queue.needsReview()).hasSize(1);
-        assertThat(queue.awaitingOrganiser()).isEmpty();
-        assertThat(queue.unassigned()).hasSize(2);
+        assertThat(queue.needsReview()).extracting(EventRequestDto::requestId).containsExactly(mine.getRequestId());
+        assertThat(queue.awaitingOrganiser()).extracting(EventRequestDto::requestId)
+                .containsExactly(waiting.getRequestId());
+        // ELC-C6: nothing is read but the caller's own requests, so no unassigned ones.
+        verify(repository).findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(COORDINATOR_ID, EventRequestStatus.pending);
+        verify(repository).findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
+                COORDINATOR_ID, EventRequestStatus.clarification_required);
+        verifyNoMoreInteractions(repository);
     }
 
     // ---- ECL-C1 unassigned queue (Event Coordinator Lead) ---------------

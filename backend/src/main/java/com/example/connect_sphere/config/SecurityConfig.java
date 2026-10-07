@@ -107,7 +107,6 @@ public class SecurityConfig{
 		    // EventRequestService; this only decides the role.
 		    .requestMatchers(HttpMethod.GET, "/api/event-requests/*/review").hasRole("EC")
 		    .requestMatchers(HttpMethod.POST,
-			    "/api/event-requests/*/assign-coordinator",
 			    "/api/event-requests/*/approve",
 			    "/api/event-requests/*/reject",
 			    "/api/event-requests/*/clarifications").hasRole("EC")

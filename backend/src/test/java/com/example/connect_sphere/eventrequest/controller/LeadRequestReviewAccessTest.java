@@ -170,6 +170,32 @@ class LeadRequestReviewAccessTest {
         verifyNoInteractions(service);
     }
 
+    /** The self-assignment call an Event Coordinator used to make (ELC-C6). */
+    private static MockHttpServletRequestBuilder removedSelfAssignment() {
+        return json(post("/api/event-requests/" + REQUEST + "/assign-coordinator"),
+                "{\"coordinatorUserId\":\"" + COORDINATOR + "\"}");
+    }
+
+    /** ELC-C6: coordinators no longer assign, to themselves or anyone else. */
+    @ParameterizedTest
+    @ValueSource(strings = { "ec", "ecl", "vs", "technician", "attendee" })
+    void theRemovedSelfAssignmentCallIsDeniedAndAssignsNothing(String role) throws Exception {
+        mockMvc.perform(removedSelfAssignment().with(tokenFor(role)))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").isNotEmpty());
+
+        verifyNoInteractions(service);
+    }
+
+    /** It falls under the organisers' blanket rule now, where no such call exists. */
+    @Test
+    void theRemovedSelfAssignmentCallDoesNotExistForAnOrganiserEither() throws Exception {
+        mockMvc.perform(removedSelfAssignment().with(tokenFor("eo")))
+                .andExpect(status().is4xxClientError());
+
+        verifyNoInteractions(service);
+    }
+
     @Test
     void aLeadTokenDoesNotOpenTheCoordinatorsReviewScreen() throws Exception {
         mockMvc.perform(get("/api/event-requests/" + REQUEST + "/review").with(tokenFor("ecl")))
