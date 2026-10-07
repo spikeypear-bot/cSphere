@@ -8,6 +8,7 @@ import './AppShell.css'
 const ROLE_LABELS: Record<string, string> = {
   organiser: 'Event Organiser',
   coordinator: 'Event Coordinator',
+  'coordinator-lead': 'Event Coordinator Lead',
   'venue-staff': 'Venue Staff',
   'technical-support': 'Technical Support Staff',
   attendee: 'Attendee',
