@@ -31,18 +31,34 @@ public class AvailabilityRepository {
     }
 
     public List<Booking> bookings(UUID venueId) {
+        return bookings(venueId, null, null);
+    }
+
+    /** Calendar history includes completed events; operational availability keeps its existing rules. */
+    public List<Booking> bookings(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
+        boolean calendar = start != null && end != null;
+        String filter = calendar
+                ? " AND e.status <> 'cancelled' AND e.start_datetime - v.setup_minutes * interval '1 minute' < ? AND e.end_datetime + v.turnaround_minutes * interval '1 minute' > ?"
+                : " AND e.status NOT IN ('cancelled','completed')";
         return jdbc.query("""
                 SELECT b.booking_id, b.status::text, e.event_id, e.coordinator_id, e.event_name,
                        e.start_datetime, e.end_datetime,
                        e.start_datetime - v.setup_minutes * interval '1 minute' AS effective_start,
                        e.end_datetime + v.turnaround_minutes * interval '1 minute' AS effective_end
                 FROM venue_bookings b JOIN events e ON e.event_id=b.event_id JOIN venues v ON v.venue_id=b.venue_id
-                WHERE b.venue_id=? AND b.status IN ('pending','approved') AND e.status NOT IN ('cancelled','completed')
-                ORDER BY e.start_datetime, b.booking_id
-                """, (r, n) -> new Booking(r.getObject("booking_id", UUID.class), r.getObject("event_id", UUID.class),
+                WHERE b.venue_id=? AND b.status IN ('pending','approved')
+                """ + filter + " ORDER BY e.start_datetime, b.booking_id", (r, n) -> new Booking(r.getObject("booking_id", UUID.class), r.getObject("event_id", UUID.class),
                         r.getObject("coordinator_id", UUID.class), r.getString("event_name"), r.getString("status"),
                         r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
-                        r.getObject("effective_start", OffsetDateTime.class), r.getObject("effective_end", OffsetDateTime.class)), venueId);
+                        r.getObject("effective_start", OffsetDateTime.class), r.getObject("effective_end", OffsetDateTime.class)),
+                calendar ? new Object[]{venueId, end, start} : new Object[]{venueId});
+    }
+
+    public List<Period> periods(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
+        return jdbc.query("SELECT * FROM venue_unavailability WHERE venue_id=? AND start_datetime < ? AND end_datetime > ? ORDER BY start_datetime, unavailability_id",
+                (r, n) -> new Period(r.getObject("unavailability_id", UUID.class), venueId,
+                        r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
+                        r.getString("reason"), r.getObject("created_at", OffsetDateTime.class)), venueId, end, start);
     }
 
     public void insert(UUID id, UUID venueId, UUID actor, Request r, List<Booking> affected) {
