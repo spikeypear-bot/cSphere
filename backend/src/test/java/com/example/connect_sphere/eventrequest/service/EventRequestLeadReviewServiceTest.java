@@ -18,10 +18,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.EnumSource;
+import org.junit.jupiter.params.provider.NullSource;
+import org.junit.jupiter.params.provider.ValueSource;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.example.connect_sphere.activity.dto.ActivityDto;
+import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.event.repository.EventRepository;
@@ -52,6 +56,7 @@ class EventRequestLeadReviewServiceTest {
     private EventRequestService service;
 
     private static final String ORG = "Acme Pte Ltd";
+    private static final UUID LEAD = UUID.randomUUID();
     private static final UUID COORDINATOR = UUID.randomUUID();
     private static final UUID ORGANISER = UUID.randomUUID();
     private static final OffsetDateTime STARTS = OffsetDateTime.parse("2027-03-01T09:00:00+08:00");
@@ -154,7 +159,97 @@ class EventRequestLeadReviewServiceTest {
         verifyNoInteractions(notificationService, eventRepository, userRepository);
     }
 
+    // ---- Rejecting ----------------------------------------------------
+
+    @Test
+    void rejectingAnUnassignedRequestMakesItRejectedWithTheReasonAndAssignsNoOne() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        EventRequestDto result = service.rejectUnassigned(LEAD, request.getRequestId(), "Not a corporate event");
+
+        assertThat(result.status()).isEqualTo(EventRequestStatus.rejected);
+        assertThat(result.rejectionReason()).isEqualTo("Not a corporate event");
+        assertThat(result.coordinatorId()).isNull();
+    }
+
+    @Test
+    void rejectingNotifiesTheOrganiserWithTheReason() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        service.rejectUnassigned(LEAD, request.getRequestId(), "Not a corporate event");
+
+        verify(notificationService).createStatusChangeNotification(
+                ORGANISER, request.getRequestId(), null, "Q1 Town Hall", "rejected", "Not a corporate event");
+    }
+
+    @Test
+    void rejectingIsRecordedOnTheTimelineWithTheLeadAsTheActor() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        service.rejectUnassigned(LEAD, request.getRequestId(), "Not a corporate event");
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(ActivityType.rejected);
+        assertThat(entry.getValue().actorUserId()).isEqualTo(LEAD);
+        assertThat(entry.getValue().message()).isEqualTo("Not a corporate event");
+        assertThat(entry.getValue().fromStatus()).isEqualTo("pending");
+        assertThat(entry.getValue().toStatus()).isEqualTo("rejected");
+    }
+
+    @ParameterizedTest
+    @NullSource
+    @ValueSource(strings = {"", "   "})
+    void rejectingWithoutAReasonIsBlockedAndNothingChanges(String reason) {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        assertThatThrownBy(() -> service.rejectUnassigned(LEAD, request.getRequestId(), reason))
+                .isInstanceOf(MissingRejectionReasonException.class);
+        assertNothingChanged(request, EventRequestStatus.pending, null);
+    }
+
+    @Test
+    void aRequestAssignedSinceThePageLoadedCannotBeRejectedByTheLead() {
+        EventRequest request = stored(EventRequestStatus.pending, COORDINATOR);
+
+        assertThatThrownBy(() -> service.rejectUnassigned(LEAD, request.getRequestId(), "Not a corporate event"))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("already been assigned");
+        assertNothingChanged(request, EventRequestStatus.pending, COORDINATOR);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class,
+            names = {"clarification_required", "approved", "rejected", "cancelled"})
+    void aRequestThatIsNoLongerSubmittedCannotBeRejectedByTheLead(EventRequestStatus status) {
+        EventRequest request = stored(status, null);
+
+        assertThatThrownBy(() -> service.rejectUnassigned(LEAD, request.getRequestId(), "Not a corporate event"))
+                .isInstanceOf(EventRequestStateException.class);
+        assertNothingChanged(request, status, null);
+    }
+
+    @Test
+    void aDraftCannotBeRejectedAndIsReportedAsNotFound() {
+        EventRequest draft = stored(EventRequestStatus.draft, null);
+
+        assertThatThrownBy(() -> service.rejectUnassigned(LEAD, draft.getRequestId(), "Not a corporate event"))
+                .isInstanceOf(EventRequestNotFoundException.class);
+        assertNothingChanged(draft, EventRequestStatus.draft, null);
+    }
+
     // ---- Fixtures -----------------------------------------------------
+
+    /** A refused action leaves the request as it was, with no timeline
+     * entry and nobody notified. */
+    private void assertNothingChanged(EventRequest request, EventRequestStatus status, UUID coordinatorId) {
+        assertThat(request.getStatus()).isEqualTo(status);
+        assertThat(request.getCoordinatorId()).isEqualTo(coordinatorId);
+        assertThat(request.getRejectionReason()).isNull();
+        verify(repository, never()).save(any());
+        verify(activityService, never()).record(any());
+        verifyNoInteractions(notificationService);
+    }
 
     /** A complete request of ORG in {@code status}, assigned to
      * {@code coordinatorId} (null for nobody). */

@@ -445,14 +445,19 @@ public class EventRequestService {
         if (reason == null || reason.isBlank()) {
             throw new MissingRejectionReasonException();
         }
-        EventRequest entity = findDecidableAssignedTo(actingCoordinatorId, requestId);
+        return applyRejection(findDecidableAssignedTo(actingCoordinatorId, requestId), actingCoordinatorId, reason);
+    }
+
+    /** Rejects an already-checked request: status, reason, timeline entry,
+     * then the organiser's notification once the transaction commits. */
+    private EventRequestDto applyRejection(EventRequest entity, UUID actorId, String reason) {
         EventRequestStatus previous = entity.getStatus();
         entity.setStatus(EventRequestStatus.rejected);
         entity.setRejectionReason(reason);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
-                ActivityType.rejected, actingCoordinatorId, reason, null,
+                ActivityType.rejected, actorId, reason, null,
                 previous.name(), EventRequestStatus.rejected.name()));
 
         if (saved.getCreatedBy() != null) {
@@ -485,6 +490,33 @@ public class EventRequestService {
                 missingRequiredFields(entity),
                 scheduleValid(entity),
                 activityService.timeline(requestId, UserRole.ec));
+    }
+
+    /** ECL-C3: the Lead filters out a request before anyone is assigned. */
+    @Transactional
+    public EventRequestDto rejectUnassigned(UUID leadId, UUID requestId, String reason) {
+        if (reason == null || reason.isBlank()) {
+            throw new MissingRejectionReasonException();
+        }
+        return applyRejection(findAwaitingAssignment(requestId), leadId, reason);
+    }
+
+    /** A request the Lead may still act on: submitted, with nobody assigned.
+     * Once it is assigned it is the coordinator's to decide. */
+    private EventRequest findAwaitingAssignment(UUID requestId) {
+        EventRequest entity = repository.findForUpdate(requestId)
+                .filter(request -> request.getStatus() != EventRequestStatus.draft)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        if (entity.getStatus() != EventRequestStatus.pending) {
+            throw new EventRequestStateException(
+                    "This request is no longer waiting for assignment (current status: "
+                            + label(entity.getStatus()) + ").");
+        }
+        if (entity.getCoordinatorId() != null) {
+            throw new EventRequestStateException(
+                    "This request has already been assigned to an Event Coordinator, who now reviews it.");
+        }
+        return entity;
     }
 
     /**
