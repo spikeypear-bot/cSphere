@@ -111,8 +111,9 @@ public class SecurityConfig{
 			    "/api/event-requests/*/approve",
 			    "/api/event-requests/*/reject",
 			    "/api/event-requests/*/clarifications").hasRole("EC")
-		    // ECL-C1: Lead only. Must sit above the blanket EO rule below.
-		    .requestMatchers(HttpMethod.GET, "/api/event-requests/unassigned").hasRole("ECL")
+		    // ECL-C1 queue and ECL-C3 review, reject and clarification: Lead
+		    // only. Must sit above the blanket EO rule below.
+		    .requestMatchers("/api/event-requests/unassigned/**").hasRole("ECL")
 		    // Organisers only, deliberately narrower than D20's first draft.
 		    // Coordinators are internal (organisation "ConnectSphere") and no
 		    // Organiser belongs to it, so scoping them by their own claim would
