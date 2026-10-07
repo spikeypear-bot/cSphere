@@ -11,6 +11,7 @@ import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatu
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
 import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
 import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
+import { AssignedEventsPage } from './features/coordinator/AssignedEventsPage'
 import { RequestReviewPage } from './features/coordinator/RequestReviewPage'
 import { VenueBookingRequestPage } from './features/coordinator/VenueBookingRequestPage'
 import { VenueSearchPage } from './features/coordinator/VenueSearchPage'
@@ -92,6 +93,7 @@ function CoordinatorRoutes() {
     <Routes>
       <Route index element={<CoordinatorHomePage />} />
       <Route path="review-queue" element={<ReviewQueuePage />} />
+      <Route path="my-events" element={<AssignedEventsPage />} />
       <Route path="requests/:requestId" element={<RequestReviewPage />} />
       <Route path="events/:eventId" element={<EventDetailsPage />} />
       <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />

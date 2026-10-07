@@ -1,9 +1,10 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AUTH_STORAGE_KEY, type Role } from './lib/authTokens'
+import { jsonResponse } from './test/apiStubs'
 
 /** Seeds a signed-in session the way a successful login would. The app reads
  * role from stored token data, so tests no longer click a role selector. */
@@ -25,6 +26,7 @@ function renderApp(initialPath = '/') {
 describe('App routing — role consoles', () => {
   afterEach(() => {
     cleanup()
+    vi.unstubAllGlobals()
     window.localStorage.clear()
   })
 
@@ -48,6 +50,33 @@ describe('App routing — role consoles', () => {
     // Every *remaining* skeleton card still names its backlog story ID so a
     // teammate can trace it.
     expect(screen.getByText('EC04')).toBeInTheDocument()
+  })
+
+  // ---- EC09: "My events" belongs to the Event Coordinator console ----
+
+  it('puts "My events" one click away on the Event Coordinator console and opens the page there', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
+    const user = userEvent.setup()
+    signInAs('coordinator', 'ec1', 'ConnectSphere')
+    renderApp('/coordinator')
+
+    const link = await screen.findByRole('link', { name: 'My events' })
+    expect(link).toHaveAttribute('href', '/coordinator/my-events')
+    await user.click(link)
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'My events' })).toBeInTheDocument()
+    expect(await screen.findByText(/No events are assigned to you right now\./)).toBeInTheDocument()
+  })
+
+  it('redirects an Event Coordinator Lead away from "My events" and says why', async () => {
+    signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
+    renderApp('/coordinator/my-events')
+
+    // Redirected, so the page that fetches the list is never mounted.
+    expect(await screen.findByRole('heading', { name: /Event Coordinator Lead console/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'My events' })).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
+    expect(screen.getByRole('alert')).toHaveTextContent('/coordinator/my-events')
   })
 
   it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
