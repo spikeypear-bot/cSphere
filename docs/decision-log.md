@@ -170,6 +170,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `POST /api/event-requests/{id}/resubmit`, `GET /api/event-requests/{id}/timeline` | `hasRole('EO')` (blanket rule) **plus organisation scoping** | EO26 (D21). |
   | `GET /api/events/{id}/timeline` | `hasAnyRole('EO','EC')` (existing events rule) **plus organisation or assignment check** | D21: the event's whole journey, filtered by role. |
   | `GET /api/events/{id}/venue-options`, `GET\|POST /api/events/{id}/venue-bookings` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus assignment check** | EC03 (D21). |
+  | `GET /api/events/assigned` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus scoping to the token's `sub`** | EC09 (Week 7 customer change 5). The caller's own `pending` and `confirmed` events, across all organisations, soonest start first. The coordinator is always the token's subject — there is no parameter to ask for another coordinator's list. The Lead's all-coordinators view is a separate story (ELC-C4). |
   | `/swagger-ui/**`, `/v3/api-docs/**` | dev profile only, or accept 401 | springdoc is on the classpath; under `anyRequest().authenticated()` the docs page 401s, and a browser navigation cannot attach a Bearer token. |
 
 - **Open for the team to settle:**

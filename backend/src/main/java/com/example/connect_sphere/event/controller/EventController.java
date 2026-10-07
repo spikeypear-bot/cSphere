@@ -46,6 +46,12 @@ public class EventController {
         return jwt.getClaimAsString("organisation");
     }
 
+    /** EC09: the caller's own active events. Coordinator only (see SecurityConfig). */
+    @GetMapping("/assigned")
+    public List<EventDto> assignedEvents(@AuthenticationPrincipal Jwt jwt) {
+        return service.assignedEvents(userIdOf(jwt));
+    }
+
     @GetMapping("/{id}")
     public EventDto get(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
         // Coordinators aren't scoped to an organisation (same reasoning as

@@ -7,15 +7,19 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
@@ -149,6 +153,69 @@ class EventServiceTest {
 
         assertThat(dto.coordinatorName()).isEqualTo("ec1");
         assertThat(dto.coordinatorEmail()).isEqualTo("ec1@connectsphere.test");
+    }
+
+    // ---- EC09: events assigned to me --------------------------------------
+
+    @Test
+    void assignedEventsAreReadForTheCallerOnlyAndOnlyWhilePendingOrConfirmed() {
+        when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any())).thenReturn(List.of());
+
+        service.assignedEvents(COORDINATOR_ID);
+
+        ArgumentCaptor<Collection<EventStatus>> statuses = ArgumentCaptor.captor();
+        verify(repository).findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(
+                eq(COORDINATOR_ID), statuses.capture());
+        assertThat(statuses.getValue()).containsExactlyInAnyOrder(EventStatus.pending, EventStatus.confirmed);
+    }
+
+    @Test
+    void assignedEventsKeepTheirSoonestFirstOrderAndCarryWhatTheListShows() {
+        Event sooner = pendingEvent(ORG);
+        sooner.setEventName("Product Launch");
+        sooner.setStartDatetime(OffsetDateTime.parse("2027-03-10T09:00:00+08:00"));
+        sooner.setEndDatetime(OffsetDateTime.parse("2027-03-10T12:00:00+08:00"));
+        sooner.setExpectedAttendance(80);
+        sooner.setStatus(EventStatus.confirmed);
+        Event later = pendingEvent("Globex Holdings");
+        when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any()))
+                .thenReturn(List.of(sooner, later));
+
+        List<EventDto> events = service.assignedEvents(COORDINATOR_ID);
+
+        assertThat(events).extracting(EventDto::eventId)
+                .containsExactly(sooner.getEventId(), later.getEventId());
+        EventDto first = events.get(0);
+        assertThat(first.eventName()).isEqualTo("Product Launch");
+        assertThat(first.organisation()).isEqualTo(ORG);
+        assertThat(first.startDatetime()).isEqualTo(OffsetDateTime.parse("2027-03-10T09:00:00+08:00"));
+        assertThat(first.endDatetime()).isEqualTo(OffsetDateTime.parse("2027-03-10T12:00:00+08:00"));
+        assertThat(first.expectedAttendance()).isEqualTo(80);
+        assertThat(first.status()).isEqualTo("confirmed");
+        assertThat(events.get(1).organisation()).isEqualTo("Globex Holdings");
+        assertThat(events.get(1).status()).isEqualTo("pending");
+    }
+
+    @Test
+    void aCoordinatorWithNoActiveEventsGetsAnEmptyList() {
+        when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any())).thenReturn(List.of());
+
+        assertThat(service.assignedEvents(COORDINATOR_ID)).isEmpty();
+    }
+
+    @Test
+    void listingAssignedEventsSavesNothingAndNotifiesNoOne() {
+        Event event = pendingEvent(ORG);
+        event.setCoordinatorId(COORDINATOR_ID);
+        when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any()))
+                .thenReturn(List.of(event));
+
+        service.assignedEvents(COORDINATOR_ID);
+
+        verify(repository, never()).save(any());
+        verifyNoInteractions(notificationService, eventRequestRepository);
+        assertThat(event.getStatus()).isEqualTo(EventStatus.pending);
+        assertThat(event.getCoordinatorId()).isEqualTo(COORDINATOR_ID);
     }
 
     private static Event pendingEvent(String organisation) {

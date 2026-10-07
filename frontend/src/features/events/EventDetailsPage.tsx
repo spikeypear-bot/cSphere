@@ -8,19 +8,9 @@ import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
-import type { EventDto } from '../../types/event'
+import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import './EventDetailsPage.css'
-
-// 'pending' is shown as Planning: Week 4 'Event Status Management' names
-// "planning" as the stage between approval and confirmation, and that is
-// what an approved event is doing (EC02 "Proceed to Planning").
-const STATUS_LABEL: Record<string, string> = {
-  pending: 'Planning',
-  confirmed: 'Confirmed',
-  cancelled: 'Cancelled',
-  completed: 'Completed',
-}
 
 /**
  * EO09's "can view the confirmed event arrangements" — the notification's
@@ -86,7 +76,7 @@ export function EventDetailsPage() {
         title={event.eventName}
         actions={
           <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
-            {STATUS_LABEL[event.status] ?? event.status}
+            {EVENT_STATUS_LABELS[event.status] ?? event.status}
           </span>
         }
       />
