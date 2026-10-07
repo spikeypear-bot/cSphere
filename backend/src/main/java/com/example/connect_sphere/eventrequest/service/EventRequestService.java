@@ -2,11 +2,13 @@ package com.example.connect_sphere.eventrequest.service;
 
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -19,6 +21,7 @@ import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorAssignmentsDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.ReviewQueueDto;
@@ -498,6 +501,33 @@ public class EventRequestService {
                 missingRequiredFields(entity),
                 scheduleValid(entity),
                 activityService.timeline(requestId, UserRole.ec));
+    }
+
+    /**
+     * ECL-C2: every Event Coordinator, in name order, with the requests they
+     * hold that are still under review (Submitted or Clarification Required),
+     * across all organisations, soonest event first. A coordinator who holds
+     * none is listed with an empty list, so the Lead sees who is free.
+     * Read-only.
+     */
+    @Transactional(readOnly = true)
+    public List<CoordinatorAssignmentsDto> assignedRequests() {
+        List<EventRequest> assigned = repository
+                .findByCoordinatorIdIsNotNullAndStatusInOrderByStartDatetimeAscRequestIdAsc(
+                        List.of(EventRequestStatus.pending, EventRequestStatus.clarification_required));
+        Map<UUID, OffsetDateTime> submittedAt = activityService.submittedAt(
+                assigned.stream().map(EventRequest::getRequestId).toList());
+        // Grouping keeps the query's order within each coordinator.
+        Map<UUID, List<CoordinatorAssignmentsDto.AssignedRequest>> byCoordinator = assigned.stream()
+                .collect(Collectors.groupingBy(EventRequest::getCoordinatorId, Collectors.mapping(
+                        request -> new CoordinatorAssignmentsDto.AssignedRequest(mapper.toDto(request),
+                                submittedAt.getOrDefault(request.getRequestId(), request.getCreatedAt())),
+                        Collectors.toList())));
+        return userRepository.findByRole(UserRole.ec).stream()
+                .sorted(Comparator.comparing(User::getUsername))
+                .map(coordinator -> new CoordinatorAssignmentsDto(coordinator.getUserId(), coordinator.getUsername(),
+                        byCoordinator.getOrDefault(coordinator.getUserId(), List.of())))
+                .toList();
     }
 
     /** ECL-C3: the Lead filters out a request before anyone is assigned. */

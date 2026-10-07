@@ -1,9 +1,11 @@
 package com.example.connect_sphere.activity.service;
 
 import java.time.OffsetDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -96,5 +98,15 @@ public class ActivityService {
                         a.getMessage(), List.copyOf(a.getFlaggedFields()), a.getFromStatus(), a.getToStatus(),
                         a.getOccurredAt(), a.getFieldQuestions(), a.getFieldValues()))
                 .toList();
+    }
+
+    /** ECL-C2: when each of these requests was submitted, by request id. A
+     * request is submitted once (a resubmission is its own entry type), and
+     * one submitted before the timeline existed (V13) has no entry. */
+    @Transactional(readOnly = true)
+    public Map<UUID, OffsetDateTime> submittedAt(Collection<UUID> requestIds) {
+        return repository.findByRequestIdInAndActivityType(requestIds, ActivityType.submitted).stream()
+                .collect(Collectors.toMap(RequestActivity::getRequestId, RequestActivity::getOccurredAt,
+                        (first, second) -> first.isBefore(second) ? first : second));
     }
 }
