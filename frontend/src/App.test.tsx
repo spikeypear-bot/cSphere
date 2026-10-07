@@ -99,4 +99,38 @@ describe('App routing — role consoles', () => {
     expect(await screen.findByText(/eo1 · Event Organiser · Acme Pte Ltd/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Log out' })).toBeInTheDocument()
   })
+
+  // ---- ECL-C1: the Event Coordinator Lead is its own role and console ----
+
+  it('lands a signed-in Event Coordinator Lead on their own console, with the unassigned queue one click away', async () => {
+    signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
+    renderApp('/')
+
+    expect(await screen.findByRole('heading', { name: /Event Coordinator Lead console/i })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Unassigned requests' })).toHaveAttribute(
+      'href', '/coordinator-lead/unassigned-requests',
+    )
+    expect(screen.getByText(/ecl1 · Event Coordinator Lead · ConnectSphere/)).toBeInTheDocument()
+  })
+
+  it("redirects an Event Coordinator away from the Lead's unassigned queue and says why", async () => {
+    signInAs('coordinator', 'ec1', 'ConnectSphere')
+    renderApp('/coordinator-lead/unassigned-requests')
+
+    // Their own console: only the Lead may view unassigned requests, and the
+    // page that would fetch them is never mounted.
+    expect(await screen.findByRole('heading', { name: /Event Coordinator console/i })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Unassigned requests' })).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
+    expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/unassigned-requests')
+  })
+
+  it("redirects an Event Coordinator Lead away from the Event Coordinator's console — it is a separate role", async () => {
+    signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
+    renderApp('/coordinator/review-queue')
+
+    expect(await screen.findByRole('heading', { name: /Event Coordinator Lead console/i })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
+    expect(screen.getByRole('alert')).toHaveTextContent('/coordinator/review-queue')
+  })
 })

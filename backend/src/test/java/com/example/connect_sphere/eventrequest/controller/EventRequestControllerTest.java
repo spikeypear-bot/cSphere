@@ -2,6 +2,7 @@ package com.example.connect_sphere.eventrequest.controller;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -110,5 +111,44 @@ class EventRequestControllerTest {
                 .andExpect(status().isOk());
 
         verify(service).list(ACME);
+    }
+
+    // ---- ECL-C1 unassigned queue ---------------------------------------
+
+    private static EventRequestDto submitted(UUID id, String organisation) {
+        return new EventRequestDto(id, 'C', null, "Annual Summit", null, null, null, null, 150, null, null,
+                List.of(), null, EventRequestStatus.pending, OffsetDateTime.now(), OffsetDateTime.now(),
+                organisation, null, null, null);
+    }
+
+    @Test
+    void unassignedQueueReturnsTheServicesListInItsOrder() throws Exception {
+        UUID waitingLongest = UUID.randomUUID();
+        UUID submittedLater = UUID.randomUUID();
+        when(service.unassignedRequests())
+                .thenReturn(List.of(submitted(waitingLongest, ACME), submitted(submittedLater, "Globex Holdings")));
+
+        mockMvc.perform(get("/api/event-requests/unassigned"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].requestId").value(waitingLongest.toString()))
+                .andExpect(jsonPath("$[0].organisation").value(ACME))
+                .andExpect(jsonPath("$[0].status").value("pending"))
+                .andExpect(jsonPath("$[0].expectedAttendance").value(150))
+                .andExpect(jsonPath("$[1].requestId").value(submittedLater.toString()))
+                .andExpect(jsonPath("$[1].organisation").value("Globex Holdings"));
+
+        // "unassigned" is its own route, not swallowed by GET /{id} as an id
+        // (which would be an organisation-scoped single-request read).
+        verify(service, never()).get(any(), any());
+    }
+
+    @Test
+    void unassignedQueueIsAnEmptyArrayWhenNothingIsWaiting() throws Exception {
+        when(service.unassignedRequests()).thenReturn(List.of());
+
+        mockMvc.perform(get("/api/event-requests/unassigned"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 }
