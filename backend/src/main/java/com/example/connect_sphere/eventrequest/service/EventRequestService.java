@@ -473,6 +473,20 @@ public class EventRequestService {
                 .stream().map(mapper::toDto).toList();
     }
 
+    /** ECL-C3: one request for the Lead's review page, with the timeline a
+     * coordinator would see. A draft reads as not found. Read-only. */
+    @Transactional(readOnly = true)
+    public EventRequestReviewDto getForLeadReview(UUID requestId) {
+        EventRequest entity = repository.findById(requestId)
+                .filter(request -> request.getStatus() != EventRequestStatus.draft)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        return new EventRequestReviewDto(
+                mapper.toDto(entity),
+                missingRequiredFields(entity),
+                scheduleValid(entity),
+                activityService.timeline(requestId, UserRole.ec));
+    }
+
     /**
      * A request the caller may approve or reject: assigned to them, and
      * Submitted or Clarification Required. Rejecting while waiting on the
