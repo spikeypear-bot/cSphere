@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom'
 import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { coordinatorLeadFeatures } from './coordinatorLeadFeatures'
@@ -11,6 +12,11 @@ export function CoordinatorLeadHomePage() {
       <PageHeader
         title="Event Coordinator Lead console"
         description="Oversee incoming event requests and decide which Event Coordinator takes each one."
+        actions={
+          <Link to="/coordinator-lead/unassigned-requests" className="button button--primary">
+            Unassigned requests
+          </Link>
+        }
       />
 
       <div className="page-section--divided">
