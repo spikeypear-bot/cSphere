@@ -144,14 +144,17 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
-    void aRequestSentBackLeavesTheQueueUntilTheOrganiserResubmitsItStillUnassigned() throws Exception {
+    void aRequestSentBackStaysInTheQueueMarkedClarificationRequiredUntilItIsResubmittedStillUnassigned()
+            throws Exception {
         UUID id = unassignedRequest();
 
         leadPosts(id, "clarifications", "{\"message\":\"Who is the event for?\"}", 200);
 
         assertThat(statusOf(id)).isEqualTo("clarification_required");
         assertThat(coordinatorOf(id)).isNull();
-        assertThat(unassignedQueue()).doesNotContain(id.toString());
+        // ELC-C6: it stays listed while it waits, so the Lead can still assign it.
+        mvc.perform(get(UNASSIGNED).with(flow.as("ecl1")))
+                .andExpect(jsonPath("$[?(@.requestId == '" + id + "')].status").value("clarification_required"));
         mvc.perform(get("/api/event-requests/" + id + "/timeline").with(flow.as("eo1")))
                 .andExpect(jsonPath("$[1].type").value("clarification_requested"))
                 .andExpect(jsonPath("$[1].message").value("Who is the event for?"))

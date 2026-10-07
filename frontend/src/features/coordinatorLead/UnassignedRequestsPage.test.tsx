@@ -141,6 +141,22 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
   })
 
+  it('marks a request that is waiting for clarification, and still links it to its review page (ELC-C6)', async () => {
+    stubApi({
+      [QUEUE]: () => jsonResponse(200, [
+        request('r1', 'Offsite'),
+        request('r2', 'Annual Gala', { status: 'clarification_required' }),
+      ]),
+    })
+    renderPage()
+
+    const waiting = await cardFor('Annual Gala')
+    expect(within(waiting).getByText('Clarification required', { selector: '.status-badge' })).toBeInTheDocument()
+    expect(within(waiting).getByRole('link', { name: 'Review request: Annual Gala' }))
+      .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
+    expect(within(await cardFor('Offsite')).getByText('Submitted', { selector: '.status-badge' })).toBeInTheDocument()
+  })
+
   it('only ever reads: a card offers its review link and nothing that changes the request', async () => {
     const calls = stubApi({ [QUEUE]: () => jsonResponse(200, [request('r1', 'Offsite')]) })
     renderPage()

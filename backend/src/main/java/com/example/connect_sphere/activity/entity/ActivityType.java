@@ -22,7 +22,7 @@ import com.example.connect_sphere.user.entity.UserRole;
 public enum ActivityType {
     /** EO02: the organiser submitted the request for review. */
     submitted(Set.of(UserRole.eo, UserRole.ec)),
-    /** EO19: an Event Coordinator took the request on. */
+    /** ELC-C6: the Lead assigned an Event Coordinator, named in the message. */
     coordinator_assigned(Set.of(UserRole.eo, UserRole.ec)),
     /** EC01: the coordinator asked for missing/unclear information. */
     clarification_requested(Set.of(UserRole.eo, UserRole.ec)),

@@ -1,5 +1,6 @@
 package com.example.connect_sphere.eventrequest.repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -47,6 +48,7 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
     List<EventRequest> findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(UUID coordinatorId, EventRequestStatus status);
 
     /** ECL-C1: unassigned requests, longest-waiting first. For a pending
-     * request updatedAt is when it was submitted. */
-    List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus status);
+     * request updatedAt is when it was submitted; for one sent back for
+     * clarification, when it last changed. */
+    List<EventRequest> findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(Collection<EventRequestStatus> statuses);
 }

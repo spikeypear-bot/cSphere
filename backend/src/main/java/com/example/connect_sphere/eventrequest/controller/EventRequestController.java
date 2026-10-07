@@ -160,9 +160,10 @@ public class EventRequestController {
 
     @PostMapping("/{id}/assign-coordinator")
     public EventRequestDto assignCoordinator(
+            @AuthenticationPrincipal Jwt jwt,
             @PathVariable("id") UUID id,
             @RequestBody AssignCoordinatorRequest request) {
-        return service.assignCoordinator(id, request.coordinatorUserId());
+        return service.assignCoordinator(userIdOf(jwt), id, request.coordinatorUserId());
     }
 
     @PostMapping("/{id}/approve")

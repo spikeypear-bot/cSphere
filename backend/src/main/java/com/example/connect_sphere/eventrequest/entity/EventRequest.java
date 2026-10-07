@@ -105,8 +105,8 @@ public class EventRequest {
     @Column(name = "created_by")
     private UUID createdBy;
 
-    // EO19: set by EventRequestService.assignCoordinator(); null until an
-    // Event Coordinator picks this request up. See V12 migration.
+    // EO19: set by EventRequestService.assignCoordinator(); null until the
+    // Event Coordinator Lead assigns one (ELC-C6). See V12 migration.
     @Column(name = "coordinator_id")
     private UUID coordinatorId;
 
