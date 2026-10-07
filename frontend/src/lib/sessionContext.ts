@@ -40,6 +40,7 @@ export function useSession(): SessionContextValue {
 export const HOME_BY_ROLE: Record<Role, string> = {
   organiser: '/organiser',
   coordinator: '/coordinator',
+  'coordinator-lead': '/coordinator-lead',
   'venue-staff': '/venue-staff',
   'technical-support': '/technical-support',
   attendee: '/attendee',

@@ -10,6 +10,7 @@ package com.example.connect_sphere.user.entity;
  * These are the five application roles from the customer briefing:
  * {@link #ec} Event Coordinator, {@link #eo} Event Organiser, {@link #vs} Venue
  * Staff, {@link #attendee} Attendee, {@link #technician} Technical Support Staff.
+ * {@link #ecl} Event Coordinator Lead is a separate role added in V21 (ECL-C1).
  * "Developer"/"Scrum Master"/"Product Owner" are backlog-modelling categories,
  * not roles the software authenticates — do not add them here.
  */
@@ -18,5 +19,6 @@ public enum UserRole {
     eo,
     vs,
     attendee,
-    technician
+    technician,
+    ecl
 }

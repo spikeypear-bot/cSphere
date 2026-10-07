@@ -463,6 +463,16 @@ public class EventRequestService {
         return mapper.toDto(saved);
     }
 
+    // ---- Event Coordinator Lead side ------------------------------------
+
+    /** ECL-C1: submitted requests with no coordinator, across all
+     * organisations, longest-waiting first. Read-only. */
+    @Transactional(readOnly = true)
+    public List<EventRequestDto> unassignedRequests() {
+        return repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending)
+                .stream().map(mapper::toDto).toList();
+    }
+
     /**
      * A request the caller may approve or reject: assigned to them, and
      * Submitted or Clarification Required. Rejecting while waiting on the

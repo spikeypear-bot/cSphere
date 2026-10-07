@@ -45,4 +45,8 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
 
     /** EC02 queue: this coordinator's requests in one status. */
     List<EventRequest> findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(UUID coordinatorId, EventRequestStatus status);
+
+    /** ECL-C1: unassigned requests, longest-waiting first. For a pending
+     * request updatedAt is when it was submitted. */
+    List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus status);
 }

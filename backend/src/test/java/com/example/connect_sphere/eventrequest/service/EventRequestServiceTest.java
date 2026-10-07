@@ -9,6 +9,8 @@ import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
@@ -509,6 +511,63 @@ class EventRequestServiceTest {
         assertThat(queue.needsReview()).hasSize(1);
         assertThat(queue.awaitingOrganiser()).isEmpty();
         assertThat(queue.unassigned()).hasSize(2);
+    }
+
+    // ---- ECL-C1 unassigned queue (Event Coordinator Lead) ---------------
+
+    private static final String OTHER_ORG = "Globex Holdings";
+
+    /** A request as it sits in the Lead's queue: submitted, nobody assigned. */
+    private static EventRequest submittedUnassigned(String organisation) {
+        EventRequest entity = completeDraftEntity(UUID.randomUUID(), organisation);
+        entity.setStatus(EventRequestStatus.pending);
+        return entity;
+    }
+
+    @Test
+    void unassignedRequestsListsEveryOrganisationsWaitingRequestsLongestWaitingFirst() {
+        EventRequest waitingLongest = submittedUnassigned(ORG);
+        EventRequest submittedLater = submittedUnassigned(OTHER_ORG);
+        when(repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending))
+                .thenReturn(List.of(waitingLongest, submittedLater));
+
+        List<EventRequestDto> queue = service.unassignedRequests();
+
+        // Same requests, same order, both organisations.
+        assertThat(queue).extracting(EventRequestDto::requestId)
+                .containsExactly(waitingLongest.getRequestId(), submittedLater.getRequestId());
+        assertThat(queue).extracting(EventRequestDto::organisation).containsExactly(ORG, OTHER_ORG);
+    }
+
+    @Test
+    void unassignedRequestsAsksOnlyForSubmittedRequestsWithNoCoordinator() {
+        service.unassignedRequests();
+
+        // Any other status or ordering would be a second repository call.
+        verify(repository).findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending);
+        verifyNoMoreInteractions(repository);
+    }
+
+    @Test
+    void unassignedRequestsIsAnEmptyListWhenNothingIsWaiting() {
+        when(repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending))
+                .thenReturn(List.of());
+
+        assertThat(service.unassignedRequests()).isEmpty();
+    }
+
+    @Test
+    void viewingUnassignedRequestsChangesNothingAndNotifiesNoOne() {
+        EventRequest waiting = submittedUnassigned(ORG);
+        when(repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending))
+                .thenReturn(List.of(waiting));
+
+        service.unassignedRequests();
+
+        assertThat(waiting.getStatus()).isEqualTo(EventRequestStatus.pending);
+        assertThat(waiting.getCoordinatorId()).isNull();
+        verify(repository, never()).save(any());
+        verifyNoInteractions(notificationService, activityService, eventRepository, userRepository);
     }
 
     // ---- EO12/EC03 schedule validation (merged from main) -------------

@@ -2,7 +2,13 @@
 // Kept separate from apiClient/session so there is exactly one place that
 // understands the storage key and the claim-to-route-vocabulary mapping.
 
-export type Role = 'organiser' | 'coordinator' | 'venue-staff' | 'technical-support' | 'attendee'
+export type Role =
+  | 'organiser'
+  | 'coordinator'
+  | 'coordinator-lead'
+  | 'venue-staff'
+  | 'technical-support'
+  | 'attendee'
 
 /** Mirrors the backend's LoginResponse (user/dto/LoginResponse.java). */
 export interface LoginResponse {
@@ -34,6 +40,8 @@ export const AUTH_STORAGE_KEY = 'connectsphere.auth'
 const ROLE_BY_CLAIM: Record<string, Role> = {
   eo: 'organiser',
   ec: 'coordinator',
+  // ECL-C1: the Lead is a separate role with its own console.
+  ecl: 'coordinator-lead',
   vs: 'venue-staff',
   technician: 'technical-support',
   attendee: 'attendee',

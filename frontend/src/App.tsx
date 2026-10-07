@@ -16,6 +16,9 @@ import { VenueBookingRequestPage } from './features/coordinator/VenueBookingRequ
 import { VenueSearchPage } from './features/coordinator/VenueSearchPage'
 import { OperationalIssuesPage } from './features/coordinator/OperationalIssuesPage'
 import { EquipmentRequestPage } from './features/coordinator/EquipmentRequestPage'
+import { CoordinatorLeadHomePage } from './features/coordinatorLead/CoordinatorLeadHomePage'
+import { coordinatorLeadFeatures } from './features/coordinatorLead/coordinatorLeadFeatures'
+import { UnassignedRequestsPage } from './features/coordinatorLead/UnassignedRequestsPage'
 import { ClarificationResponsePage } from './features/organiser/ClarificationResponsePage'
 import { EventDetailsPage } from './features/events/EventDetailsPage'
 import { VenueStaffHomePage } from './features/venueStaff/VenueStaffHomePage'
@@ -100,6 +103,20 @@ function CoordinatorRoutes() {
   )
 }
 
+function CoordinatorLeadRoutes() {
+  const permitted = useRoleGate('coordinator-lead')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
+  return (
+    <Routes>
+      <Route index element={<CoordinatorLeadHomePage />} />
+      <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
+      {skeletonRoutes(coordinatorLeadFeatures)}
+    </Routes>
+  )
+}
+
 function VenueStaffRoutes() {
   const permitted = useRoleGate('venue-staff')
   const { pathname } = useLocation()
@@ -163,6 +180,7 @@ function AppRoutes() {
       <Route path="/" element={<LandingRoute />} />
       <Route path="/organiser/*" element={<OrganiserRoutes />} />
       <Route path="/coordinator/*" element={<CoordinatorRoutes />} />
+      <Route path="/coordinator-lead/*" element={<CoordinatorLeadRoutes />} />
       <Route path="/venue-staff/*" element={<VenueStaffRoutes />} />
       <Route path="/technical-support/*" element={<TechnicalSupportRoutes />} />
       <Route path="/attendee/*" element={<AttendeeRoutes />} />

@@ -16,7 +16,8 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * Creates five accounts per role so every role can be exercised locally.
+ * Creates five accounts per original role, plus one Event Coordinator Lead, so
+ * every role can be exercised locally.
  *
  * Seed data lives in a runner rather than a Flyway migration on purpose: these
  * are environment-specific dev fixtures, not schema, and migrations are immutable
@@ -41,7 +42,7 @@ public class DevUserSeeder implements CommandLineRunner {
     /** Dev-only, and committed to git on purpose — never reuse it anywhere real. */
     private static final String DEV_PASSWORD = "123456";
 
-    /** Internal staff (EC/VS/Technician) all belong to the operating company. */
+    /** Internal staff (EC/VS/Technician/Lead) all belong to the operating company. */
     private static final String INTERNAL_ORG = "ConnectSphere";
 
     /**
@@ -88,7 +89,10 @@ public class DevUserSeeder implements CommandLineRunner {
             new SeedUser("ts2", "ts2@connectsphere.test", UserRole.technician, INTERNAL_ORG),
             new SeedUser("ts3", "ts3@connectsphere.test", UserRole.technician, INTERNAL_ORG),
             new SeedUser("ts4", "ts4@connectsphere.test", UserRole.technician, INTERNAL_ORG),
-            new SeedUser("ts5", "ts5@connectsphere.test", UserRole.technician, INTERNAL_ORG));
+            new SeedUser("ts5", "ts5@connectsphere.test", UserRole.technician, INTERNAL_ORG),
+
+            // Event Coordinator Lead — internal (ECL-C1)
+            new SeedUser("ecl1", "ecl1@connectsphere.test", UserRole.ecl, INTERNAL_ORG));
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;
@@ -100,7 +104,7 @@ public class DevUserSeeder implements CommandLineRunner {
 
     /**
      * One transaction for the whole batch, and one BCrypt hash reused across every
-     * account — hashing is deliberately slow, so encoding once instead of 25 times
+     * account — hashing is deliberately slow, so encoding once instead of per account
      * keeps startup quick. Safe here only because every seeded account shares the
      * same password; never reuse a hash across different passwords.
      */

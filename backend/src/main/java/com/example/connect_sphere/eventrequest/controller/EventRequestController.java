@@ -179,4 +179,12 @@ public class EventRequestController {
             @RequestBody RejectEventRequestRequest request) {
         return service.reject(userIdOf(jwt), id, request.reason());
     }
+
+    // ---- Event Coordinator Lead side ---------------------------------
+
+    /** ECL-C1: the unassigned queue. Lead only (see SecurityConfig). */
+    @GetMapping("/unassigned")
+    public List<EventRequestDto> unassignedRequests() {
+        return service.unassignedRequests();
+    }
 }
