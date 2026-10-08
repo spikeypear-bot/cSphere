@@ -191,6 +191,17 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment)', ()
     expect(reviewActions()).toEqual(['Assign'])
   })
 
+  it('shows an assigned request that waits on the organiser as assigned, not as returning to the unassigned list', async () => {
+    stubApi({
+      [REVIEW]: () => jsonResponse(200, review({ status: 'clarification_required', coordinatorId: 'ec-1' })),
+    })
+    renderPage()
+
+    expect(await screen.findByText(/has been assigned to an Event Coordinator/)).toBeInTheDocument()
+    expect(screen.queryByText(/returns to the unassigned list/)).not.toBeInTheDocument()
+    expect(reviewActions()).toEqual([])
+  })
+
   it('offers assign, clarification and reject on an unassigned request, and never approve', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
     renderPage()

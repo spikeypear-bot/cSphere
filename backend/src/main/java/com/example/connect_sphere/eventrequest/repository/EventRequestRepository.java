@@ -48,4 +48,10 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
      * request updatedAt is when it was submitted; for one sent back for
      * clarification, when it last changed. */
     List<EventRequest> findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(Collection<EventRequestStatus> statuses);
+
+    /** ECL-C2: every assigned request in the given statuses, soonest event
+     * first. The request_id tiebreak keeps the order stable for requests
+     * that start at the same moment. */
+    List<EventRequest> findByCoordinatorIdIsNotNullAndStatusInOrderByStartDatetimeAscRequestIdAsc(
+            Collection<EventRequestStatus> statuses);
 }

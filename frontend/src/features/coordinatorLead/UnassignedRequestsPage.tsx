@@ -4,11 +4,9 @@ import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
-import { StatusBadge } from '../../components/ui/StatusBadge'
-import { formatRelativeTime } from '../../lib/relativeTime'
 import type { EventRequestDto } from '../../types/eventRequest'
-import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { useVenueRead } from '../venueStaff/useVenueRead'
+import { LeadRequestCard } from './LeadRequestCard'
 import './UnassignedRequestsPage.css'
 
 /** ECL-C1: unassigned event requests as overview cards, each opening its
@@ -47,53 +45,19 @@ export function UnassignedRequestsPage() {
           <p className="field-hint" role="status">
             {requests.length === 1 ? '1 request is' : `${requests.length} requests are`} waiting for a coordinator.
           </p>
-          <ul className="unassigned-requests__grid">
+          <ul className="lead-request-cards">
             {requests.map((request) => (
               <li key={request.requestId}>
-                <UnassignedRequestCard request={request} />
+                {/* For a pending request, updatedAt is when it was submitted. One
+                    waiting for clarification (ELC-C6) was sent back, and perhaps
+                    edited by its organiser, since then. */}
+                <LeadRequestCard request={request} submittedAt={request.updatedAt}
+                  timeLabel={request.status === 'clarification_required' ? 'Last updated' : 'Submitted'} />
               </li>
             ))}
           </ul>
         </>
       ) : null}
     </div>
-  )
-}
-
-function UnassignedRequestCard({ request }: { request: EventRequestDto }) {
-  return (
-    <Card className="unassigned-requests__card">
-      <div className="unassigned-requests__card-head">
-        <h2>{request.eventName?.trim() || 'Untitled request'}</h2>
-        <StatusBadge status={request.status} />
-      </div>
-      <p className="unassigned-requests__organisation">{request.organisation}</p>
-      <dl className="unassigned-requests__facts">
-        <div>
-          <dt>When (Singapore time)</dt>
-          <dd>
-            {request.startDatetime && request.endDatetime
-              ? formatEventTimeRange(request.startDatetime, request.endDatetime)
-              : 'No date given'}
-          </dd>
-        </div>
-        <div>
-          <dt>Expected attendance</dt>
-          <dd>{request.expectedAttendance != null ? `${request.expectedAttendance.toLocaleString()} people` : 'Not given'}</dd>
-        </div>
-        <div>
-          {/* For a pending request, updatedAt is when it was submitted. One
-              waiting for clarification (ELC-C6) was sent back, and perhaps
-              edited by its organiser, since then. */}
-          <dt>{request.status === 'clarification_required' ? 'Last updated' : 'Submitted'}</dt>
-          <dd>{formatRelativeTime(request.updatedAt)}</dd>
-        </div>
-      </dl>
-      <Link className="button button--secondary unassigned-requests__review"
-        to={`/coordinator-lead/unassigned-requests/${request.requestId}`}
-        aria-label={`Review request: ${request.eventName?.trim() || 'Untitled request'}`}>
-        Review request
-      </Link>
-    </Card>
   )
 }

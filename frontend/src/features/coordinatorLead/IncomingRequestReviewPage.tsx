@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -16,6 +16,7 @@ import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './IncomingRequestReviewPage.css'
 
 const QUEUE_PATH = '/coordinator-lead/unassigned-requests'
+const ASSIGNMENTS_PATH = '/coordinator-lead/assignments'
 
 type Decision = 'assign' | 'clarify' | 'reject'
 
@@ -53,16 +54,17 @@ const DETAILS: { label: string; value: (request: EventRequestDto) => string | nu
 ]
 
 /** Why the Lead can no longer act on this request, or null while nobody is
- * assigned and it is submitted or waiting for the organiser's clarification. */
-function closedReason(request: EventRequestDto): string | null {
+ * assigned and it is submitted or waiting for the organiser's clarification.
+ * `assignee` names the assigned coordinator. */
+function closedReason(request: EventRequestDto, assignee: string): string | null {
   switch (request.status) {
     case 'pending':
       return request.coordinatorId
-        ? 'This request has been assigned to an Event Coordinator, who now reviews it.'
+        ? `This request has been assigned to ${assignee}, who now reviews it.`
         : null
     case 'clarification_required':
       return request.coordinatorId
-        ? 'This request has been assigned to an Event Coordinator, who is waiting for the organiser to answer a clarification.'
+        ? `This request has been assigned to ${assignee}, who is waiting for the organiser to answer a clarification.`
         : null
     case 'approved':
       return 'This request has been approved and is now an event in planning.'
@@ -86,6 +88,12 @@ function closedReason(request: EventRequestDto): string | null {
 export function IncomingRequestReviewPage() {
   const { requestId } = useParams<{ requestId: string }>()
   const navigate = useNavigate()
+  // Set by a card on the coordinator assignments page (ECL-C2): the Lead goes
+  // back there, and the page can name the coordinator the card showed.
+  const from = (useLocation().state as { coordinator?: { id: string; name: string } } | null)?.coordinator
+  const back = from
+    ? <Link to={ASSIGNMENTS_PATH}>Back to coordinator assignments</Link>
+    : <Link to={QUEUE_PATH}>Back to unassigned requests</Link>
   const [review, setReview] = useState<EventRequestReview | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
   const [decision, setDecision] = useState<Decision | null>(null)
@@ -123,7 +131,7 @@ export function IncomingRequestReviewPage() {
   if (loadError) {
     return (
       <div className="page page--compact">
-        <Link to={QUEUE_PATH}>Back to unassigned requests</Link>
+        {back}
         <p role="alert">{loadError}</p>
       </div>
     )
@@ -131,7 +139,9 @@ export function IncomingRequestReviewPage() {
   if (!review) return <p role="status">Loading request…</p>
 
   const { request, timeline } = review
-  const closed = closedReason(request)
+  // Only while the card's coordinator still holds the request.
+  const closed = closedReason(request,
+    from && from.id === request.coordinatorId ? from.name : 'an Event Coordinator')
   const waiting = request.status === 'clarification_required'
   const name = request.eventName?.trim() || 'Untitled request'
 
@@ -191,7 +201,7 @@ export function IncomingRequestReviewPage() {
 
   return (
     <div className="page page--compact">
-      <Link to={QUEUE_PATH}>Back to unassigned requests</Link>
+      {back}
 
       <PageHeader
         title={name}
