@@ -1,0 +1,23 @@
+.coordinator-assignments__empty {
+  padding: 1.5rem;
+  color: var(--ink-soft);
+}
+
+.coordinator-assignments__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.coordinator-assignments__group h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.coordinator-assignments__count {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+}

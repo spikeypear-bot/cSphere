@@ -153,6 +153,45 @@ describe('App routing — role consoles', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/unassigned-requests')
   })
 
+  // ---- ECL-C2: coordinator assignments belong to the Lead's console ----
+
+  it('puts "Coordinator assignments" one click away on the Lead console and opens the page there', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
+    const user = userEvent.setup()
+    signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
+    renderApp('/coordinator-lead')
+
+    const link = await screen.findByRole('link', { name: 'Coordinator assignments' })
+    expect(link).toHaveAttribute('href', '/coordinator-lead/assignments')
+    await user.click(link)
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Coordinator assignments' })).toBeInTheDocument()
+    expect(await screen.findByText(/No assigned requests right now\./)).toBeInTheDocument()
+  })
+
+  it.each([
+    ['coordinator', 'ec1', /Event Coordinator console/i],
+    ['organiser', 'eo1', /Your event requests/i],
+    ['venue-staff', 'vs1', /Venue Staff console/i],
+    ['technical-support', 'ts1', /Technical Support Staff console/i],
+    ['attendee', 'att1', /Attendee console/i],
+  ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
+    const fetched: string[] = []
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      fetched.push(String(input))
+      return jsonResponse(200, [])
+    }))
+    signInAs(role, username)
+    renderApp('/coordinator-lead/assignments')
+
+    expect(await screen.findByRole('heading', { name: ownConsole })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Coordinator assignments' })).not.toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
+    expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/assignments')
+    // The page that reads the list is never mounted.
+    expect(fetched).not.toContain('/api/event-requests/assigned')
+  })
+
   it("redirects an Event Coordinator Lead away from the Event Coordinator's console — it is a separate role", async () => {
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
     renderApp('/coordinator/review-queue')

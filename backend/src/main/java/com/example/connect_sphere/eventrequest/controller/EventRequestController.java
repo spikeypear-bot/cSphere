@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.eventrequest.dto.AssignCoordinatorRequest;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorAssignmentsDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.RejectEventRequestRequest;
@@ -186,6 +187,12 @@ public class EventRequestController {
     @GetMapping("/unassigned")
     public List<EventRequestDto> unassignedRequests() {
         return service.unassignedRequests();
+    }
+
+    /** ECL-C2: every coordinator with the requests they hold. Lead only. */
+    @GetMapping("/assigned")
+    public List<CoordinatorAssignmentsDto> assignedRequests() {
+        return service.assignedRequests();
     }
 
     /** ECL-C3: one request for the Lead's review page. */

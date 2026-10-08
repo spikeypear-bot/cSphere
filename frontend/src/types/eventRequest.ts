@@ -76,6 +76,14 @@ export interface EventRequestDto {
   createdByName?: string | null
 }
 
+/** ECL-C2: one Event Coordinator and the requests they hold that are still
+ * under review. `submittedAt` is the date the organiser submitted. */
+export interface CoordinatorAssignmentsDto {
+  coordinatorId: string
+  coordinatorName: string
+  requests: { request: EventRequestDto; submittedAt: string }[]
+}
+
 /** Every field optional — a draft may be saved incomplete (EO01). */
 export interface SaveEventRequestRequest {
   eventName?: string | null
