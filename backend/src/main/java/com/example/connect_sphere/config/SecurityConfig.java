@@ -128,9 +128,12 @@ public class SecurityConfig{
 		    // rows* they see is the token's organisation claim, read in
 		    // EventRequestController — the filter chain sees the URL, not the row.
 		    .requestMatchers("/api/event-requests/**").hasRole("EO")
+		    // Organisers need the catalogue to choose equipment for a request;
+		    // Coordinators and technicians use it for availability and requests.
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/catalogue").hasAnyRole("EO", "EC", "TECHNICIAN")
 		    // Technical Support check availability (TS01); Coordinators need
 		    // to see equipment they request (EC07). Reserving and releasing
-		    // is TS02, so writes narrow to the technician below.
+		    // is TS02, so other equipment reads remain limited below.
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
