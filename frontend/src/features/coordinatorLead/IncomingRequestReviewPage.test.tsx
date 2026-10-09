@@ -11,6 +11,8 @@ const REVIEW = 'GET /api/event-requests/unassigned/r1'
 const QUEUE = 'GET /api/event-requests/unassigned'
 const REJECT = 'POST /api/event-requests/unassigned/r1/reject'
 const CLARIFY = 'POST /api/event-requests/unassigned/r1/clarifications'
+const COORDINATORS = 'GET /api/event-requests/unassigned/coordinators'
+const ASSIGN = 'POST /api/event-requests/unassigned/r1/assign'
 const DAY_MS = 24 * 60 * 60 * 1000
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString()
 
@@ -57,7 +59,21 @@ function renderPage() {
 
 /** The review actions the page offers right now, by button name. */
 function reviewActions() {
-  return screen.queryAllByRole('button', { name: /^(Ask for clarification|Reject)$/ }).map((b) => b.textContent)
+  return screen.queryAllByRole('button', { name: /^(Assign|Ask for clarification|Reject)$/ }).map((b) => b.textContent)
+}
+
+/** Every Event Coordinator, as the picker's endpoint lists them. */
+const coordinators = () => jsonResponse(200, [
+  { userId: 'ec-1', username: 'ec1' },
+  { userId: 'ec-2', username: 'ec2' },
+  { userId: 'ec-3', username: 'ec3' },
+])
+
+/** Opens the Assign panel and returns its picker once the coordinators have loaded. */
+async function openPicker(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: 'Assign' }))
+  await screen.findByRole('option', { name: 'ec1' })
+  return screen.getByLabelText('Event Coordinator') as HTMLSelectElement
 }
 
 /** The value shown next to a label in the submitted details. */
@@ -66,7 +82,7 @@ function detail(label: string) {
   return within(list).getByText(label, { selector: 'dt' }).nextElementSibling
 }
 
-describe('IncomingRequestReviewPage (ECL-C3 Lead review)', () => {
+describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment)', () => {
   beforeEach(() => seedSession('coordinator-lead', 'ecl-1'))
   afterEach(() => {
     cleanup()
@@ -146,13 +162,14 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review)', () => {
     expect(screen.queryByRole('heading', { name: 'Submitted details' })).not.toBeInTheDocument()
   })
 
-  it('says so when the request has already been assigned to a coordinator', async () => {
-    stubApi({ [REVIEW]: () => jsonResponse(200, review({ coordinatorId: 'ec-1' })) })
-    renderPage()
+  it.each(['pending', 'clarification_required'])(
+    'says so and offers no review actions when the %s request already has a coordinator', async (status) => {
+      stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
+      renderPage()
 
-    expect(await screen.findByText(/has been assigned to an Event Coordinator/)).toBeInTheDocument()
-    expect(reviewActions()).toEqual([])
-  })
+      expect(await screen.findByText(/has been assigned to an Event Coordinator/)).toBeInTheDocument()
+      expect(reviewActions()).toEqual([])
+    })
 
   it.each([
     ['approved', /has been approved/],
@@ -166,12 +183,12 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review)', () => {
     expect(reviewActions()).toEqual([])
   })
 
-  it('offers no review actions while the request waits on the organiser', async () => {
+  it('offers only Assign while an unassigned request waits on the organiser', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review({ status: 'clarification_required' })) })
     renderPage()
 
     expect(await screen.findByText(/Waiting for the organiser/)).toBeInTheDocument()
-    expect(reviewActions()).toEqual([])
+    expect(reviewActions()).toEqual(['Assign'])
   })
 
   it('shows an assigned request that waits on the organiser as assigned, not as returning to the unassigned list', async () => {
@@ -185,13 +202,99 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review)', () => {
     expect(reviewActions()).toEqual([])
   })
 
-  it('offers reject and clarification on an unassigned request, and never approve', async () => {
+  it('offers assign, clarification and reject on an unassigned request, and never approve', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
     renderPage()
 
     await screen.findByRole('heading', { level: 1, name: 'Tech Summit' })
-    expect(reviewActions()).toEqual(['Ask for clarification', 'Reject'])
+    expect(reviewActions()).toEqual(['Assign', 'Ask for clarification', 'Reject'])
     expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument()
+  })
+
+  it('lists every Event Coordinator to choose from, with none chosen to begin with', async () => {
+    const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()), [COORDINATORS]: coordinators })
+    const user = userEvent.setup()
+    renderPage()
+
+    const picker = await openPicker(user)
+
+    expect(within(picker).getAllByRole('option').map((option) => option.textContent))
+      .toEqual(['Choose an Event Coordinator', 'ec1', 'ec2', 'ec3'])
+    expect(picker).toHaveValue('')
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET /api/event-requests/unassigned/r1', 'GET /api/event-requests/unassigned/coordinators',
+    ])
+  })
+
+  it('assigning sends the chosen coordinator, then returns to the queue with a confirmation naming them', async () => {
+    const calls = stubApi({
+      [REVIEW]: () => jsonResponse(200, review()),
+      [COORDINATORS]: coordinators,
+      [ASSIGN]: () => jsonResponse(200, review({ coordinatorId: 'ec-2' }).request),
+      [QUEUE]: () => jsonResponse(200, []),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.selectOptions(await openPicker(user), 'ec2')
+    await user.click(screen.getByRole('button', { name: 'Assign request' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Unassigned requests' })).toBeInTheDocument()
+    expect(screen.getByText('“Tech Summit” was assigned to ec2. The organiser has been notified.')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Tech Summit' })).not.toBeInTheDocument()
+    expect(calls.filter((call) => call.method === 'POST')).toEqual([
+      expect.objectContaining({ url: '/api/event-requests/unassigned/r1/assign', body: { coordinatorUserId: 'ec-2' } }),
+    ])
+  })
+
+  it('a request waiting on the organiser can be assigned the same way', async () => {
+    const calls = stubApi({
+      [REVIEW]: () => jsonResponse(200, review({ status: 'clarification_required' })),
+      [COORDINATORS]: coordinators,
+      [ASSIGN]: () => jsonResponse(200, review({ status: 'clarification_required', coordinatorId: 'ec-3' }).request),
+      [QUEUE]: () => jsonResponse(200, []),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.selectOptions(await openPicker(user), 'ec3')
+    await user.click(screen.getByRole('button', { name: 'Assign request' }))
+
+    expect(await screen.findByText('“Tech Summit” was assigned to ec3. The organiser has been notified.'))
+      .toBeInTheDocument()
+    expect(calls.filter((call) => call.method === 'POST')).toEqual([
+      expect.objectContaining({ url: '/api/event-requests/unassigned/r1/assign', body: { coordinatorUserId: 'ec-3' } }),
+    ])
+  })
+
+  it('assigning without choosing a coordinator is blocked with a message and sends nothing', async () => {
+    const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()), [COORDINATORS]: coordinators })
+    const user = userEvent.setup()
+    renderPage()
+
+    await openPicker(user)
+    await user.click(screen.getByRole('button', { name: 'Assign request' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose an Event Coordinator before assigning.')
+    // Still on the review page, and nothing but the two reads was ever sent.
+    expect(screen.getByRole('heading', { level: 1, name: 'Tech Summit' })).toBeInTheDocument()
+    expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+  })
+
+  it('says so when the Event Coordinators cannot be loaded, and assigning sends nothing', async () => {
+    const calls = stubApi({
+      [REVIEW]: () => jsonResponse(200, review()),
+      [COORDINATORS]: () => jsonResponse(403, { message: 'You do not have permission to perform this action.' }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Assign' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('You do not have permission to perform this action.')
+    await user.click(screen.getByRole('button', { name: 'Assign request' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose an Event Coordinator before assigning.')
+    expect(calls.filter((call) => call.method === 'POST')).toEqual([])
   })
 
   it('rejecting sends the reason, then returns to the queue with a confirmation and the request gone', async () => {
@@ -286,6 +389,35 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review)', () => {
     expect(screen.getByRole('heading', { level: 1, name: 'Tech Summit' })).toBeInTheDocument()
     expect(calls.map((call) => call.method)).toEqual(['GET', 'POST', 'GET'])
   })
+
+  it.each([
+    ['assigned', 'This request has already been assigned to an Event Coordinator, who now reviews it.',
+      { coordinatorId: 'ec-1' }, /has been assigned to an Event Coordinator/],
+    ['rejected', 'This request is no longer waiting for assignment (current status: Rejected).',
+      { status: 'rejected' }, /has been rejected/],
+  ])('when the request was %s meanwhile, assigning shows the refusal, stays on the page and withdraws the actions',
+    async (_what, refusal, now, closedText) => {
+      let reads = 0
+      const calls = stubApi({
+        [REVIEW]: () => {
+          reads += 1
+          return jsonResponse(200, reads === 1 ? review() : review(now))
+        },
+        [COORDINATORS]: coordinators,
+        [ASSIGN]: () => jsonResponse(409, { message: refusal }),
+      })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.selectOptions(await openPicker(user), 'ec2')
+      await user.click(screen.getByRole('button', { name: 'Assign request' }))
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(refusal)
+      expect(await screen.findByText(closedText, { selector: '.lead-review__closed p' })).toBeInTheDocument()
+      expect(reviewActions()).toEqual([])
+      expect(screen.getByRole('heading', { level: 1, name: 'Tech Summit' })).toBeInTheDocument()
+      expect(calls.map((call) => call.method)).toEqual(['GET', 'GET', 'POST', 'GET'])
+    })
 
   it('opening the page only reads the request', async () => {
     const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()) })

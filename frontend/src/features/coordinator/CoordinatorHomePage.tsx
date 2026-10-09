@@ -11,7 +11,7 @@ export function CoordinatorHomePage() {
     <div className="page">
       <PageHeader
         title="Event Coordinator console"
-        description="Review submitted event requests and manage assignments."
+        description="Review the event requests assigned to you and plan their events."
         actions={
           <>
             <Link to="/coordinator/review-queue" className="button button--primary">

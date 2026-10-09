@@ -29,11 +29,6 @@
   min-width: 12rem;
 }
 
-.review-queue__error {
-  width: 100%;
-  font-size: 0.85rem;
-}
-
 /* On a phone the status and action sit under the summary, left aligned. */
 @media (max-width: 640px) {
   .review-queue__row {

@@ -77,7 +77,7 @@ class NotificationFlowTest {
     }
 
     private ResultActions assign(UUID requestId, String coordinator) throws Exception {
-        return mvc.perform(post("/api/event-requests/" + requestId + "/assign-coordinator").with(flow.as("ec1"))
+        return mvc.perform(post("/api/event-requests/unassigned/" + requestId + "/assign").with(flow.as("ecl1"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"coordinatorUserId\":\"" + flow.idOf(coordinator) + "\"}"));
     }
@@ -139,6 +139,11 @@ class NotificationFlowTest {
                 "SELECT status::text FROM event_requests WHERE request_id = ?", String.class, requestId);
     }
 
+    private UUID coordinatorOf(UUID requestId) {
+        return jdbc.queryForObject(
+                "SELECT coordinator_id FROM event_requests WHERE request_id = ?", UUID.class, requestId);
+    }
+
     private String eventStatus(UUID eventId) {
         return jdbc.queryForObject("SELECT status::text FROM events WHERE event_id = ?", String.class, eventId);
     }
@@ -158,26 +163,19 @@ class NotificationFlowTest {
                 .andExpect(jsonPath(assignment(false) + ".linkPath", contains("/organiser/requests/" + requestId)));
     }
 
-    @Test
-    void reassigningToAnotherCoordinatorNotifiesTheOrganiserAsAReassignment() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"ec1", "ec2"})
+    void assigningARequestThatAlreadyHasACoordinatorIsRefusedAndCreatesNoNotification(String coordinator)
+            throws Exception {
         UUID requestId = assignedRequest();
 
-        assign(requestId, "ec2").andExpect(status().isOk());
-
-        assertThat(saved("coordinator_assignment")).isEqualTo(2);
-        notificationsOf("eo1")
-                .andExpect(jsonPath(assignment(true) + ".coordinatorName", contains("ec2")))
-                .andExpect(jsonPath(assignment(true) + ".coordinatorEmail", contains("ec2@connectsphere.test")))
-                .andExpect(jsonPath(assignment(false) + ".coordinatorName", contains("ec1")));
-    }
-
-    @Test
-    void savingTheSameCoordinatorAgainCreatesNoNotification() throws Exception {
-        UUID requestId = assignedRequest();
-
-        assign(requestId, "ec1").andExpect(status().isOk());
+        assign(requestId, coordinator).andExpect(status().isConflict());
 
         assertThat(saved("coordinator_assignment")).isEqualTo(1);
+        assertThat(coordinatorOf(requestId)).isEqualTo(flow.idOf("ec1"));
+        notificationsOf("eo1")
+                .andExpect(jsonPath(assignment(true), empty()))
+                .andExpect(jsonPath(assignment(false) + ".coordinatorName", contains("ec1")));
     }
 
     @Test
@@ -283,9 +281,7 @@ class NotificationFlowTest {
                 .andExpect(status().isOk());
 
         assertThat(requestStatus(requestId)).isEqualTo("pending");
-        assertThat(jdbc.queryForObject(
-                "SELECT coordinator_id FROM event_requests WHERE request_id = ?", UUID.class, requestId))
-                .isEqualTo(flow.idOf("ec1"));
+        assertThat(coordinatorOf(requestId)).isEqualTo(flow.idOf("ec1"));
     }
 
     @Test

@@ -18,6 +18,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.eventrequest.dto.AssignCoordinatorRequest;
 import com.example.connect_sphere.eventrequest.dto.CoordinatorAssignmentsDto;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.RejectEventRequestRequest;
@@ -46,8 +47,8 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
  *
  * As of the EO09/EO19 slice this also carries the minimal Event Coordinator
  * side needed to give those two stories' notifications something real to
- * fire from: {@code /queue}, {@code /assign-coordinator}, {@code /approve},
- * {@code /reject}. SecurityConfig matches those paths to {@code
+ * fire from: {@code /queue}, {@code /approve}, {@code /reject}; assigning
+ * is the Lead's since ELC-C6. SecurityConfig matches those paths to {@code
  * hasRole("EC")} *before* the blanket {@code hasRole("EO")} rule that covers
  * the rest of this controller — first-match-wins, so ordering there matters
  * (see its own comment). Coordinator-facing calls carry no organisation
@@ -159,13 +160,6 @@ public class EventRequestController {
                 userIdOf(jwt), id, request.message(), request.flaggedFields(), request.fieldQuestions());
     }
 
-    @PostMapping("/{id}/assign-coordinator")
-    public EventRequestDto assignCoordinator(
-            @PathVariable("id") UUID id,
-            @RequestBody AssignCoordinatorRequest request) {
-        return service.assignCoordinator(id, request.coordinatorUserId());
-    }
-
     @PostMapping("/{id}/approve")
     public EventRequestDto approve(
             @AuthenticationPrincipal Jwt jwt,
@@ -189,6 +183,12 @@ public class EventRequestController {
         return service.unassignedRequests();
     }
 
+    /** ELC-C6: every Event Coordinator, for the Lead to pick one from. */
+    @GetMapping("/unassigned/coordinators")
+    public List<CoordinatorDto> coordinators() {
+        return service.coordinators();
+    }
+
     /** ECL-C2: every coordinator with the requests they hold. Lead only. */
     @GetMapping("/assigned")
     public List<CoordinatorAssignmentsDto> assignedRequests() {
@@ -199,6 +199,16 @@ public class EventRequestController {
     @GetMapping("/unassigned/{id}")
     public EventRequestReviewDto leadReview(@PathVariable("id") UUID id) {
         return service.getForLeadReview(id);
+    }
+
+    /** ELC-C6: assign the request to one Event Coordinator. The Lead doing
+     * it is the token's subject, never part of the request. */
+    @PostMapping("/unassigned/{id}/assign")
+    public EventRequestDto assignUnassigned(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody AssignCoordinatorRequest request) {
+        return service.assignCoordinator(userIdOf(jwt), id, request.coordinatorUserId());
     }
 
     /** ECL-C3: filter out a request before anyone is assigned. */

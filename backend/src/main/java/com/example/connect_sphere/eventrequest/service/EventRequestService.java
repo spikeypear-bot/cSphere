@@ -22,6 +22,7 @@ import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.eventrequest.dto.CoordinatorAssignmentsDto;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestReviewDto;
 import com.example.connect_sphere.eventrequest.dto.ReviewQueueDto;
@@ -231,11 +232,11 @@ public class EventRequestService {
 
     /**
      * EC02 review queue for one coordinator: their submitted requests (oldest
-     * first), their requests waiting on the organiser, and unassigned ones
-     * they could pick up (Coordinator Assignment). Coordinators are internal
-     * staff, so none of this is scoped by organisation. Requests assigned to
-     * other coordinators are left out: EC02 says a coordinator "cannot view
-     * or review an event request that is not assigned to them".
+     * first) and their requests waiting on the organiser. Coordinators are
+     * internal staff, so none of this is scoped by organisation. Unassigned
+     * requests and requests assigned to other coordinators are left out:
+     * EC02 says a coordinator "cannot view or review an event request that
+     * is not assigned to them", and assigning is the Lead's (ELC-C6).
      */
     @Transactional(readOnly = true)
     public ReviewQueueDto reviewQueue(UUID coordinatorId) {
@@ -244,8 +245,6 @@ public class EventRequestService {
                         .stream().map(mapper::toDto).toList(),
                 repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
                         coordinatorId, EventRequestStatus.clarification_required)
-                        .stream().map(mapper::toDto).toList(),
-                repository.findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus.pending)
                         .stream().map(mapper::toDto).toList());
     }
 
@@ -318,58 +317,6 @@ public class EventRequestService {
         if (!organisers.isEmpty()) {
             afterThisTransactionCommits(() -> notificationService.createClarificationRequestedNotifications(
                     organisers, saved.getRequestId(), saved.getEventName(), text));
-        }
-        return mapper.toDto(saved);
-    }
-
-    /**
-     * EO19. Assigning the same coordinator again is a deliberate no-op — no
-     * notification, no change — per the story's own "does not receive a
-     * duplicate notification if the same Event Coordinator is saved again
-     * without an actual change of assignment."
-     */
-    @Transactional
-    public EventRequestDto assignCoordinator(UUID requestId, UUID coordinatorUserId) {
-        EventRequest entity = repository.findForUpdate(requestId)
-                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
-        if (coordinatorUserId == null) {
-            throw new InvalidCoordinatorException();
-        }
-
-        // Checked before the coordinator lookup below, not after: a true
-        // no-op (re-saving the coordinator already assigned) should short-
-        // circuit without even querying whether that id is still a valid EC,
-        // matching "does not receive a duplicate notification ... without an
-        // actual change of assignment" as an actual no-op, not just a
-        // suppressed notification.
-        UUID previousCoordinatorId = entity.getCoordinatorId();
-        if (coordinatorUserId.equals(previousCoordinatorId)) {
-            return mapper.toDto(entity);
-        }
-
-        User coordinator = userRepository.findById(coordinatorUserId)
-                .filter(u -> u.getRole() == UserRole.ec)
-                .orElseThrow(() -> new InvalidCoordinatorException(coordinatorUserId));
-
-        entity.setCoordinatorId(coordinatorUserId);
-        entity.setUpdatedAt(OffsetDateTime.now());
-        EventRequest saved = repository.save(entity);
-        // Self-assignment is the only assignment flow the UI offers, so the
-        // coordinator being assigned is also who performed it.
-        activityService.record(new ActivityService.Entry(saved.getRequestId(), saved.getEventId(),
-                ActivityType.coordinator_assigned, coordinatorUserId,
-                previousCoordinatorId != null ? "Reassigned to " + coordinator.getUsername() : null,
-                null, null, null));
-
-        if (saved.getCreatedBy() != null) {
-            // After commit, like approve(): the notification is written in its
-            // own transaction, and must neither reference an uncommitted row
-            // nor announce an assignment that is then rolled back.
-            boolean reassignment = previousCoordinatorId != null;
-            afterThisTransactionCommits(() -> notificationService.createCoordinatorAssignmentNotification(
-                    saved.getCreatedBy(), saved.getRequestId(), saved.getEventId(),
-                    saved.getEventName(), coordinator.getUsername(), coordinator.getEmail(),
-                    reassignment));
         }
         return mapper.toDto(saved);
     }
@@ -481,12 +428,24 @@ public class EventRequestService {
 
     // ---- Event Coordinator Lead side ------------------------------------
 
-    /** ECL-C1: submitted requests with no coordinator, across all
-     * organisations, longest-waiting first. Read-only. */
+    /** ECL-C1: requests with no coordinator, across all organisations,
+     * longest-waiting first. One the Lead sent back for clarification stays
+     * listed while it waits (ELC-C6), so it can still be assigned. Read-only. */
     @Transactional(readOnly = true)
     public List<EventRequestDto> unassignedRequests() {
-        return repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending)
+        return repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(
+                        List.of(EventRequestStatus.pending, EventRequestStatus.clarification_required))
                 .stream().map(mapper::toDto).toList();
+    }
+
+    /** ELC-C6: every Event Coordinator, by username, for the Lead to pick
+     * one from. Read-only. */
+    @Transactional(readOnly = true)
+    public List<CoordinatorDto> coordinators() {
+        return userRepository.findByRole(UserRole.ec).stream()
+                .sorted(Comparator.comparing(User::getUsername))
+                .map(user -> new CoordinatorDto(user.getUserId(), user.getUsername()))
+                .toList();
     }
 
     /** ECL-C3: one request for the Lead's review page, with the timeline a
@@ -501,6 +460,43 @@ public class EventRequestService {
                 missingRequiredFields(entity),
                 scheduleValid(entity),
                 activityService.timeline(requestId, UserRole.ec));
+    }
+
+    /**
+     * ELC-C6: the Lead hands an unassigned request to one Event Coordinator.
+     * Allowed while it is Submitted or waiting for the organiser's
+     * clarification; the status and the organiser's details stay as they
+     * are. A request that already has a coordinator is refused, even when
+     * the same one is sent again. The organiser learns who their coordinator
+     * is (EO19) once the assignment commits.
+     */
+    @Transactional
+    public EventRequestDto assignCoordinator(UUID leadId, UUID requestId, UUID coordinatorUserId) {
+        if (coordinatorUserId == null) {
+            throw new InvalidCoordinatorException();
+        }
+        EventRequest entity = findAwaitingAssignment(requestId, true);
+        User coordinator = userRepository.findById(coordinatorUserId)
+                .filter(u -> u.getRole() == UserRole.ec)
+                .orElseThrow(() -> new InvalidCoordinatorException(coordinatorUserId));
+
+        entity.setCoordinatorId(coordinatorUserId);
+        entity.setUpdatedAt(OffsetDateTime.now());
+        EventRequest saved = repository.save(entity);
+        activityService.record(new ActivityService.Entry(saved.getRequestId(), saved.getEventId(),
+                ActivityType.coordinator_assigned, leadId, "Assigned to " + coordinator.getUsername(),
+                null, null, null));
+
+        if (saved.getCreatedBy() != null) {
+            // After commit, like approve(): the notification is written in its
+            // own transaction, and must neither reference an uncommitted row
+            // nor announce an assignment that is then rolled back.
+            afterThisTransactionCommits(() -> notificationService.createCoordinatorAssignmentNotification(
+                    saved.getCreatedBy(), saved.getRequestId(), saved.getEventId(),
+                    saved.getEventName(), coordinator.getUsername(), coordinator.getEmail(),
+                    false));
+        }
+        return mapper.toDto(saved);
     }
 
     /**
@@ -540,7 +536,7 @@ public class EventRequestService {
     }
 
     /** ECL-C3: the Lead asks the organiser a question before assigning
-     * anyone. Resubmitting returns the request to the unassigned queue. */
+     * anyone. The request stays in the unassigned queue while it waits. */
     @Transactional
     public EventRequestDto requestClarificationUnassigned(UUID leadId, UUID requestId, String message) {
         String text = requireMessage(message, "Please describe what needs clarifying.");
@@ -550,10 +546,18 @@ public class EventRequestService {
     /** A request the Lead may still act on: submitted, with nobody assigned.
      * Once it is assigned it is the coordinator's to decide. */
     private EventRequest findAwaitingAssignment(UUID requestId) {
+        return findAwaitingAssignment(requestId, false);
+    }
+
+    /** {@code orClarifying} also accepts a request that is waiting for the
+     * organiser's clarification: it can still be assigned (ELC-C6), but not
+     * rejected or sent back a second time. */
+    private EventRequest findAwaitingAssignment(UUID requestId, boolean orClarifying) {
         EventRequest entity = repository.findForUpdate(requestId)
                 .filter(request -> request.getStatus() != EventRequestStatus.draft)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
-        if (entity.getStatus() != EventRequestStatus.pending) {
+        if (entity.getStatus() != EventRequestStatus.pending
+                && !(orClarifying && entity.getStatus() == EventRequestStatus.clarification_required)) {
             throw new EventRequestStateException(
                     "This request is no longer waiting for assignment (current status: "
                             + label(entity.getStatus()) + ").");

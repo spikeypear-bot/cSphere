@@ -15,7 +15,7 @@ export function UnassignedRequestsPage() {
   // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
   const { data: requests, error, loading, retry } = useVenueRead<EventRequestDto[]>('/event-requests/unassigned', true)
   const refreshing = loading && requests !== undefined
-  // Set by the review page after the Lead rejects or sends a request back.
+  // Set by the review page after the Lead assigns, rejects or sends a request back.
   const notice = (useLocation().state as { notice?: string } | null)?.notice
 
   return (
@@ -23,7 +23,7 @@ export function UnassignedRequestsPage() {
       <PageHeader
         eyebrow={<Link to="/coordinator-lead">Event Coordinator Lead console</Link>}
         title="Unassigned requests"
-        description="Submitted event requests that no Event Coordinator has been assigned to yet, longest-waiting first."
+        description="Event requests that no Event Coordinator has been assigned to yet, including any waiting for the organiser's clarification, longest-waiting first."
         actions={
           <Button variant="ghost" onClick={retry} disabled={loading} aria-label="Refresh unassigned requests">
             <RefreshIcon />{refreshing ? 'Refreshing…' : 'Refresh'}
@@ -48,8 +48,11 @@ export function UnassignedRequestsPage() {
           <ul className="lead-request-cards">
             {requests.map((request) => (
               <li key={request.requestId}>
-                {/* For a pending request, updatedAt is when it was submitted. */}
-                <LeadRequestCard request={request} submittedAt={request.updatedAt} />
+                {/* For a pending request, updatedAt is when it was submitted. One
+                    waiting for clarification (ELC-C6) was sent back, and perhaps
+                    edited by its organiser, since then. */}
+                <LeadRequestCard request={request} submittedAt={request.updatedAt}
+                  timeLabel={request.status === 'clarification_required' ? 'Last updated' : 'Submitted'} />
               </li>
             ))}
           </ul>

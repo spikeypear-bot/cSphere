@@ -41,15 +41,13 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
     @Query("SELECT r FROM EventRequest r WHERE r.requestId = :id")
     Optional<EventRequest> findForUpdate(@Param("id") UUID id);
 
-    /** EC02 queue: submitted requests nobody has picked up yet. */
-    List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus status);
-
     /** EC02 queue: this coordinator's requests in one status. */
     List<EventRequest> findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(UUID coordinatorId, EventRequestStatus status);
 
     /** ECL-C1: unassigned requests, longest-waiting first. For a pending
-     * request updatedAt is when it was submitted. */
-    List<EventRequest> findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus status);
+     * request updatedAt is when it was submitted; for one sent back for
+     * clarification, when it last changed. */
+    List<EventRequest> findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(Collection<EventRequestStatus> statuses);
 
     /** ECL-C2: every assigned request in the given statuses, soonest event
      * first. The request_id tiebreak keeps the order stable for requests

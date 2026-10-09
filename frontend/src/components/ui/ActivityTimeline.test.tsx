@@ -32,6 +32,18 @@ describe('ActivityTimeline', () => {
     expect(screen.getByRole('listitem')).toHaveTextContent('ecl1 (Event Coordinator Lead) rejected the request')
   })
 
+  it('says the Lead assigned a coordinator and names the coordinator (ELC-C6)', () => {
+    render(<ActivityTimeline entries={[{ activityId: 'a4', type: 'coordinator_assigned', actorName: 'ecl1',
+      actorRole: 'ecl', message: 'Assigned to ec1', flaggedFields: [], fromStatus: null, toStatus: null,
+      occurredAt: '2026-09-21T01:00:00Z' }]} />)
+
+    const entry = screen.getByRole('listitem')
+    expect(entry).toHaveTextContent('ecl1 (Event Coordinator Lead) assigned an Event Coordinator')
+    expect(within(entry).getByText('Assigned to ec1')).toBeInTheDocument()
+    // The Lead is not the one coordinating.
+    expect(entry).not.toHaveTextContent(/ecl1.*is coordinating/)
+  })
+
   it('shows the message, the flagged fields by name, and the status change', () => {
     render(<ActivityTimeline entries={entries} />)
 
