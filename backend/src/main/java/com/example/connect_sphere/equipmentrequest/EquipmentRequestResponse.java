@@ -9,11 +9,13 @@ public record EquipmentRequestResponse(
         String eventName,
         Instant eventStart,
         Instant eventEnd,
-        String technicalRequirement) {
+        String technicalRequirement,
+        String status) {
 
     static EquipmentRequestResponse from(
             EquipmentRequest r, String eventName, Instant eventStart, Instant eventEnd) {
         return new EquipmentRequestResponse(
-                r.getId(), r.getEventId(), eventName, eventStart, eventEnd, r.getTechnicalRequirement());
+                r.getId(), r.getEventId(), eventName, eventStart, eventEnd,
+                r.getTechnicalRequirement(), r.getStatus().name());
     }
 }

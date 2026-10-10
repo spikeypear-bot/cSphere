@@ -8,6 +8,7 @@ public record EquipmentRequestDetailsResponse(
         UUID eventId,
         String status,
         String technicalRequirement,
+        String rejectReason,
         List<EquipmentRequestLineResponse> lines) {
 
     static EquipmentRequestDetailsResponse from(
@@ -17,6 +18,7 @@ public record EquipmentRequestDetailsResponse(
                 request.getEventId(),
                 request.getStatus().name(),
                 request.getTechnicalRequirement(),
+                request.getRejectReason(),
                 lines.stream().map(EquipmentRequestLineResponse::from).toList());
     }
 }

@@ -26,6 +26,7 @@ interface EquipmentRequestDetails {
   eventId: string
   status: 'processing' | 'approved' | 'rejected'
   technicalRequirement: string
+  rejectReason: string | null
   lines: EquipmentRequestLine[]
 }
 
@@ -134,6 +135,7 @@ export function EquipmentRequestPage() {
             Previous request was not approved.
             {request.technicalRequirement ? ` Technical note: ${request.technicalRequirement}` : ''}
           </p>
+          {request.rejectReason ? <p>Reason: {request.rejectReason}</p> : null}
         </Card>
       ))}
 

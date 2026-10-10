@@ -29,6 +29,9 @@ public class EquipmentRequest {
     @Column(name = "technical_requirement", nullable = false)
     private String technicalRequirement;
 
+    @Column(name = "reject_reason")
+    private String rejectReason;
+
     protected EquipmentRequest() {}
 
     public EquipmentRequest(UUID id, UUID eventId, EquipmentRequestStatus status, String technicalRequirement) {
@@ -42,4 +45,10 @@ public class EquipmentRequest {
     public UUID getEventId() { return eventId; }
     public EquipmentRequestStatus getStatus() { return status; }
     public String getTechnicalRequirement() { return technicalRequirement; }
+    public String getRejectReason() { return rejectReason; }
+
+    public void decide(EquipmentRequestStatus status, String rejectReason) {
+        this.status = status;
+        this.rejectReason = rejectReason;
+    }
 }

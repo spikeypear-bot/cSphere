@@ -138,6 +138,7 @@ public class SecurityConfig{
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
 			    "/api/equipment-requests/*/lines").hasRole("TECHNICIAN")
+		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasRole("EC")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
 		    // EO09 "Confirmed": only the assigned Coordinator confirms

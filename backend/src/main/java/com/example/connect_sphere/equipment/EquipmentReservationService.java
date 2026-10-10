@@ -140,7 +140,7 @@ public class EquipmentReservationService {
     }
 
     private void requireRequestedForEvent(UUID eventId, UUID equipmentId) {
-        boolean requested = requestRepository.findByEventId(eventId).stream()
+        boolean requested = requestRepository.findByEventIdForUpdate(eventId).stream()
                 .filter(request -> request.getStatus() == EquipmentRequestStatus.processing)
                 .map(EquipmentRequest::getId)
                 .anyMatch(requestId -> requestLineRepository.findByIdRequestId(requestId).stream()
