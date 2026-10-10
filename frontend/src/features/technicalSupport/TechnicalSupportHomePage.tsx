@@ -1,7 +1,5 @@
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
-import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
-import { technicalSupportFeatures } from './technicalSupportFeatures'
 
 export function TechnicalSupportHomePage() {
   return (
@@ -11,6 +9,14 @@ export function TechnicalSupportHomePage() {
         <p className="field-hint">Check equipment availability, reserve items for events, and update operational status.</p>
       </div>
       <div className="skeleton-console__grid">
+        <Link to="/technical-support/availability" className="skeleton-console-card">
+          <Card className="skeleton-console-card__inner">
+            <span className="feature-skeleton__badge">Available</span>
+            <h2>Equipment request review</h2>
+            <p>Review requested quantities, available stock, and unit status for an event’s scheduled period.</p>
+            <span className="chip">TS01</span>
+          </Card>
+        </Link>
         <Link to="/technical-support/reservations" className="skeleton-console-card">
           <Card className="skeleton-console-card__inner">
             <span className="feature-skeleton__badge">Available</span>
@@ -27,14 +33,6 @@ export function TechnicalSupportHomePage() {
             <span className="chip">TS03</span>
           </Card>
         </Link>
-      </div>
-      <div>
-        <h2>More Technical Support stories</h2>
-        <p className="field-hint">This page is not built yet.</p>
-        <SkeletonFeatureGrid
-          basePath="/technical-support"
-          features={technicalSupportFeatures.filter(feature => feature.path === 'availability')}
-        />
       </div>
     </div>
   )

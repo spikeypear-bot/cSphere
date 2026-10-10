@@ -6,6 +6,16 @@ export interface EquipmentRequestSummary {
   eventStart: string
   eventEnd: string
   technicalRequirement: string
+  status: 'processing' | 'approved' | 'rejected'
+}
+
+export interface EquipmentRequestDecision {
+  requestId: string
+  eventId: string
+  status: 'processing' | 'approved' | 'rejected'
+  technicalRequirement: string
+  rejectReason: string | null
+  lines: RequestLine[]
 }
 
 // AC 2: one line of what an event's equipment request asks for
