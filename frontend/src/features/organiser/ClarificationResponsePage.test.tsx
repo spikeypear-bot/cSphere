@@ -124,6 +124,18 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(calls.some((c) => c.url.endsWith('/resubmit'))).toBe(false)
   })
 
+  it('tells the organiser when saving fails and does not claim it was saved', async () => {
+    stubApi(routes({ [`PUT /api/event-requests/${ID}`]: () => jsonResponse(409, {
+      message: 'This request can no longer be edited.' }) }))
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Save changes' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('This request can no longer be edited.')
+    expect(screen.queryByText(/Your request is still with you/)).not.toBeInTheDocument()
+  })
+
   it('shows which required details are missing when resubmission is refused', async () => {
     stubApi(routes({
       [`POST /api/event-requests/${ID}/resubmit`]: () => jsonResponse(422, {

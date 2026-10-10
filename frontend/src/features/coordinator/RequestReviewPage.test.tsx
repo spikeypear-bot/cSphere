@@ -220,6 +220,29 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByText('Updated').closest('.request-review__row')).toHaveTextContent('120 people')
   })
 
+  it('rejecting needs a reason, sends it trimmed, and confirms the organiser was notified', async () => {
+    let rejected = false
+    const calls = stubApi({
+      [REVIEW_URL]: () => jsonResponse(200, rejected ? review({ status: 'rejected' }) : review()),
+      [`POST /api/event-requests/${ID}/reject`]: () => {
+        rejected = true
+        return jsonResponse(200, review({ status: 'rejected' }).request)
+      },
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Reject' }))
+    const confirm = screen.getByRole('button', { name: 'Confirm rejection' })
+    expect(confirm).toBeDisabled()
+    await user.type(screen.getByLabelText('Reason for rejection (shown to the organiser)'), '  No budget approval  ')
+    await user.click(confirm)
+
+    expect(await screen.findByRole('status')).toHaveTextContent('Request rejected. The organiser has been notified.')
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'No budget approval' })
+    expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument()
+  })
+
   it('tells a coordinator who is not assigned that they cannot review it', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(403, { message: 'Forbidden' }) })
     renderPage()

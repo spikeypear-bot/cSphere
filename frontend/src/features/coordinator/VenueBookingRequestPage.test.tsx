@@ -133,6 +133,23 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByRole('button', { name: 'Request 4 Missing Facility Road' })).toBeDisabled()
   })
 
+  it('search narrows the list by address or details, and says so when nothing matches', async () => {
+    stubApi(routes())
+    const user = userEvent.setup()
+    renderPage()
+
+    const search = await screen.findByPlaceholderText('Search by address or details')
+    await user.type(search, 'garden')
+    const list = screen.getByRole('list', { name: 'Venues ranked for this event' })
+    expect(within(list).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      expect.stringContaining('2 Garden Lane'),
+    ])
+
+    await user.clear(search)
+    await user.type(search, 'nowhere')
+    expect(screen.getByText(/No venues match/)).toBeInTheDocument()
+  })
+
   it('shows capacity against attendance for each venue', async () => {
     stubApi(routes())
     renderPage()
