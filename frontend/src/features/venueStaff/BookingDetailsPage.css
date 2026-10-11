@@ -43,6 +43,14 @@
 }
 
 .booking-approval { margin-bottom: 1rem; }
+.booking-approval__error { overflow-wrap: anywhere; }
+.booking-conflict-card { padding: 1rem 1.25rem; margin-bottom: 1rem; }
+.booking-conflict-card__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.5rem; margin: 0; }
+.booking-conflict-card__name { grid-column: 1 / -1; }
+.booking-conflict-card dt { font-weight: 600; margin-bottom: 0.25rem; }
+.booking-conflict-card dd { margin: 0; overflow-wrap: anywhere; }
+.booking-conflict-card__id { color: var(--ink-soft); font-size: 0.8rem; margin-top: 0.25rem !important; }
+.booking-time-conflict { color: var(--danger); font-weight: 700; }
 .booking-approval__confirmation { padding: 1rem; border: 1px solid var(--hairline); border-radius: var(--radius-md, 12px); background: var(--panel); overflow-wrap: anywhere; }
 .booking-approval__confirmation h3 { margin-top: 0; }
 .booking-approval__confirmation dt { font-weight: 600; }

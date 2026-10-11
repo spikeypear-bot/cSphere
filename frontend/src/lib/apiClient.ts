@@ -15,6 +15,7 @@ import {
   type AuthTokens,
   type LoginResponse,
 } from './authTokens'
+import type { VenueBookingConflict, VenueUnavailabilityConflict } from '../types/venueBooking'
 
 // Base URL is read once from Vite's env (see README "Environment
 // configuration"). Defaults to the relative `/api` path, which `vite.config.ts`
@@ -37,12 +38,16 @@ export const UNAUTHORISED_EVENT = 'connectsphere:unauthorised'
 export class ApiClientError extends Error {
   readonly status: number
   readonly missingFields: string[] | null
+  readonly conflicts: VenueBookingConflict[]
+  readonly unavailablePeriods: VenueUnavailabilityConflict[]
 
-  constructor(message: string, status: number, missingFields: string[] | null = null) {
+  constructor(message: string, status: number, missingFields: string[] | null = null, conflicts: VenueBookingConflict[] = [], unavailablePeriods: VenueUnavailabilityConflict[] = []) {
     super(message)
     this.name = 'ApiClientError'
     this.status = status
     this.missingFields = missingFields
+    this.conflicts = conflicts
+    this.unavailablePeriods = unavailablePeriods
   }
 
   /** The session is gone or unrenewable — the caller must log in again. */
@@ -59,6 +64,24 @@ export class ApiClientError extends Error {
 interface ApiErrorBody {
   message?: string
   missingFields?: string[] | null
+  conflicts?: unknown
+  unavailablePeriods?: unknown
+}
+
+function unavailabilityConflicts(value: unknown): VenueUnavailabilityConflict[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is VenueUnavailabilityConflict => item !== null && typeof item === 'object'
+    && typeof item.unavailabilityId === 'string' && typeof item.reason === 'string'
+    && typeof item.startDatetime === 'string' && Number.isFinite(Date.parse(item.startDatetime))
+    && typeof item.endDatetime === 'string' && Number.isFinite(Date.parse(item.endDatetime)))
+}
+
+function bookingConflicts(value: unknown): VenueBookingConflict[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is VenueBookingConflict => item !== null && typeof item === 'object'
+    && typeof item.bookingId === 'string' && typeof item.eventName === 'string'
+    && typeof item.startDatetime === 'string' && Number.isFinite(Date.parse(item.startDatetime))
+    && typeof item.endDatetime === 'string' && Number.isFinite(Date.parse(item.endDatetime)))
 }
 
 async function parse(response: Response): Promise<unknown> {
@@ -81,6 +104,8 @@ function failed(response: Response, json: unknown): ApiClientError {
     body.message ?? `Request failed (${response.status})`,
     response.status,
     body.missingFields ?? null,
+    bookingConflicts(body.conflicts),
+    unavailabilityConflicts(body.unavailablePeriods),
   )
 }
 

@@ -93,6 +93,29 @@ describe('apiClient', () => {
     })
   })
 
+  it('retains valid booking conflict details and ignores malformed entries', async () => {
+    const conflict = { bookingId: 'b2', eventName: 'Existing event',
+      startDatetime: '2027-04-01T09:00:00+08:00', endDatetime: '2027-04-01T12:00:00+08:00' }
+    mockFetchSequence({ status: 409, jsonBody: { message: 'Overlap', conflicts: [conflict, null,
+      { ...conflict, startDatetime: 'invalid' }, { bookingId: 'b3' }] } })
+    await expect(apiClient.patch('/venue-bookings/b1/approve')).rejects.toMatchObject({
+      status: 409, message: 'Overlap', conflicts: [conflict], missingFields: null,
+    })
+  })
+
+  it.each([undefined, null, {}])('handles absent or invalid conflict lists (%s)', async conflicts => {
+    mockFetchSequence({ status: 409, jsonBody: { message: 'Unavailable', conflicts } })
+    await expect(apiClient.patch('/venue-bookings/b1/approve')).rejects.toMatchObject({
+      message: 'Unavailable', conflicts: [],
+    })
+  })
+
+  it('retains unavailable periods while ignoring malformed entries', async () => {
+    const period = { unavailabilityId: 'u1', reason: 'Maintenance', startDatetime: '2027-10-16T11:30:00+08:00', endDatetime: '2027-10-16T15:00:00+08:00' }
+    mockFetchSequence({ status: 409, jsonBody: { message: 'Unavailable', unavailablePeriods: [period, null, { ...period, endDatetime: 'invalid' }] } })
+    await expect(apiClient.patch('/venue-bookings/b1/approve')).rejects.toMatchObject({ unavailablePeriods: [period], conflicts: [] })
+  })
+
   it('renews an expired access token and replays the original request', async () => {
     signedIn()
     const fetchSpy = mockFetchSequence(

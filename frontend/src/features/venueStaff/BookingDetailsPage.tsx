@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
-import type { VenueBookingDto } from '../../types/venueBooking'
+import type { VenueBookingDto, VenueBookingConflict, VenueUnavailabilityConflict } from '../../types/venueBooking'
+import { bookingConflictHighlights } from './bookingConflictHighlights'
 import { VenueDetailsPanel } from './VenueDetailsPanel'
 import { EventRequirementsPanel } from './EventRequirementsPanel'
 import { useVenueRead } from './useVenueRead'
@@ -10,10 +12,16 @@ import { BookingApproval, BookingInformationHeading } from './BookingApproval'
 /** Shared booking details for Catalogue and the VS02 pending queue. */
 export function BookingDetailsPage() {
   const { bookingId } = useParams()
+  const [conflictState, setConflictState] = useState<{ bookingId?: string; items: VenueBookingConflict[]; periods: VenueUnavailabilityConflict[] }>({ bookingId, items: [], periods: [] })
+  if (conflictState.bookingId !== bookingId) setConflictState({ bookingId, items: [], periods: [] })
+  const conflicts = conflictState.bookingId === bookingId ? conflictState.items : []
+  const unavailablePeriods = conflictState.bookingId === bookingId ? conflictState.periods : []
+  const setConflicts = (items: VenueBookingConflict[], periods: VenueUnavailabilityConflict[]) => setConflictState({ bookingId, items, periods })
   const [searchParams] = useSearchParams()
   const fromApprovals = searchParams.get('from') === 'booking-approvals'
   const { data: booking, error, retry, loading, replaceData, failRead } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, !fromApprovals)
   const data = booking ? { ...booking, status: booking.status ?? 'pending' } : undefined
+  const highlights = data?.status === 'pending' ? [...conflicts, ...unavailablePeriods].map(conflict => bookingConflictHighlights(data.event, conflict)) : []
   return <div className="feature-skeleton booking-details-page">
     <Link to={fromApprovals ? '/venue-staff/booking-approvals' : data ? `/venue-staff/catalogue/${data.venue.venueId}` : '/venue-staff/catalogue'}>
       {fromApprovals ? 'Back to Pending Booking Requests' : data ? 'Back to venue details' : 'Back to venue catalogue'}
@@ -25,7 +33,8 @@ export function BookingDetailsPage() {
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>
         {!loading && !error && data.bookingId === bookingId
-          ? <BookingApproval key={bookingId} booking={data} onApproved={replaceData} onUnavailable={failRead} />
+          ? <BookingApproval key={bookingId} booking={data} onApproved={replaceData} onUnavailable={failRead}
+              conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts} />
           : <div className="booking-details-page__section-header"><BookingInformationHeading /></div>}
         <div className="booking-detail-layout">
           <section aria-labelledby="venue-information-heading">
@@ -35,6 +44,7 @@ export function BookingDetailsPage() {
             {loading && <span className="booking-loading-notice" role="status">Loading next booking…</span>}
             <section aria-labelledby="event-requirements-heading">
               <EventRequirementsPanel event={data.event} status={data.status} rejectReason={data.rejectReason}
+                highlightStart={highlights.some(h => h.requestStart)} highlightEnd={highlights.some(h => h.requestEnd)}
                 alternativeVenueAddress={data.alternativeVenueAddress} alternativeArrangement={data.alternativeArrangement} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
