@@ -1,0 +1,75 @@
+.equipment-review__items {
+  display: grid;
+  gap: 1rem;
+}
+
+.equipment-review__item {
+  display: grid;
+  gap: 0.6rem;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+}
+
+.equipment-review__item h3,
+.equipment-review__item h4 {
+  margin: 0;
+}
+
+.equipment-review__item dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  margin: 0;
+}
+
+.equipment-review__item dl div {
+  min-width: 9rem;
+}
+
+.equipment-review__item dt {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.equipment-review__item dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+}
+
+.equipment-review__units {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0;
+  list-style: none;
+}
+
+.equipment-review__units li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.equipment-review__status {
+  padding: 0.15rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  font-size: 0.85rem;
+}
+
+.equipment-review__status--faulty,
+.equipment-review__status--unavailable,
+.equipment-review__flag {
+  color: var(--danger, #a32626);
+}
+
+.equipment-review__status--faulty,
+.equipment-review__status--unavailable {
+  background: var(--danger-soft, #fdecec);
+}
+
+.equipment-review__flag {
+  margin: 0;
+  font-weight: 600;
+}

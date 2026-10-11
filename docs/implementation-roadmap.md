@@ -67,6 +67,34 @@ Verified: four backend service tests, focused frontend tests, and the frontend
 production build. A live end-to-end check against a running database has not
 been performed in this workspace.
 
+## TS01 — Technical Support equipment request review (implemented)
+
+Technical Support can select an equipment request and review its itemised
+quantities, available stock, and serialised-unit statuses for the event's
+scheduled period. The screen flags quantity shortages and insufficient
+suitable units, then reports whether the request can be fulfilled as-is. It
+uses authenticated read-only APIs and does not reserve equipment or change
+unit status.
+
+Verified: focused frontend integration tests and the frontend production
+build. The page is protected by the Technical Support route and existing
+`TECHNICIAN` API role rules. A live end-to-end check against a running database
+has not been performed in this workspace.
+
+## TS06 — Technical Support equipment request decision (implemented)
+
+Technical Support can review reservations against each requested quantity,
+approve only after every item is reserved for the full event period, or reject
+with a reason. The status and rejection reason are saved on the equipment
+request and returned to the assigned Coordinator; the decision endpoint is
+Technical Support-only. Status decisions do not modify reservations or the
+event's status.
+
+Verified: 12 backend decision/equipment unit tests, backend main/test
+compilation, and focused Technical Support and Coordinator UI tests. The
+database-backed reservation-flow tests could not run because PostgreSQL was
+unavailable in this workspace.
+
 ## Slice 3 — Changes, Cancellation, Registration, Notifications (Sprint 4 per backlog)
 
 Goal: the remaining core-feature surface — event changes/cancellation, attendee registration, and notifications — closing out the 20 core features.

@@ -108,6 +108,7 @@ public class EquipmentRequestService {
                 saved.getEventId(),
                 saved.getStatus().name(),
                 saved.getTechnicalRequirement(),
+                saved.getRejectReason(),
                 requestedItems.stream().map(item -> new EquipmentRequestLineResponse(
                         item.equipmentId(),
                         selectedEquipment.get(item.equipmentId()).getName(),

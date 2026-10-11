@@ -92,9 +92,12 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
 
   it('does not submit previously saved data when saving the current fields fails', async () => {
     let fail = false
-    const fetch = vi.fn(async (_url, init) => fail ? jsonResponse(500, { message: 'Save failed' }) : jsonResponse(200, {
-      ...JSON.parse(init.body), requestId: DRAFT_ID, status: 'draft',
-    }))
+    const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      if (String(input) === '/api/equipment/catalogue') return jsonResponse(200, [])
+      return fail ? jsonResponse(500, { message: 'Save failed' }) : jsonResponse(200, {
+        ...JSON.parse(String(init?.body)), requestId: DRAFT_ID, status: 'draft',
+      })
+    })
     vi.stubGlobal('fetch', fetch)
     const user = userEvent.setup()
     renderWizard()
@@ -108,6 +111,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
   it('lets the organiser move through every step without filling any field in', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url === '/api/equipment/catalogue') return jsonResponse(200, [])
       if (url === '/api/event-requests' && init?.method === 'POST') {
         return jsonResponse(201, {
           requestId: DRAFT_ID,
@@ -157,7 +161,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
     // Step 4: Equipment & registration.
-    expect(await screen.findByLabelText('Equipment requirements')).toBeInTheDocument()
+    expect(await screen.findByRole('group', { name: 'Equipment requirements' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
     // Step 5: Review — reaching it at all, with nothing filled in, is EO01's
@@ -173,6 +177,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
   it('shows exactly the missing fields the backend reports when submitting an incomplete request', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url === '/api/equipment/catalogue') return jsonResponse(200, [])
       if (url === '/api/event-requests' && init?.method === 'POST') {
         return jsonResponse(201, {
           requestId: DRAFT_ID,
@@ -218,6 +223,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
   it('shows an inline error on the accessibility field when the backend reports it missing', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
+      if (url === '/api/equipment/catalogue') return jsonResponse(200, [])
       if (url === '/api/event-requests' && init?.method === 'POST') {
         return jsonResponse(201, {
           requestId: DRAFT_ID,
@@ -294,6 +300,59 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     await user.click(wheelchair)
     expect(wheelchair).toHaveAttribute('aria-pressed', 'true')
     expect(none).toHaveAttribute('aria-pressed', 'false')
+  })
+
+  it('lets organisers select catalogue equipment and saves item quantities in the request', async () => {
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/equipment/catalogue') {
+        return jsonResponse(200, [{
+          equipmentId: 'projector-id',
+          equipmentName: 'Projector',
+          totalQuantity: 6,
+          serialised: true,
+        }])
+      }
+      if (url === '/api/event-requests' && init?.method === 'POST') {
+        return jsonResponse(201, {
+          requestId: DRAFT_ID,
+          status: 'draft',
+          accessibilityNeeds: [],
+          organisation: 'Acme Conferences',
+          createdAt: new Date().toISOString(),
+          ...JSON.parse(String(init.body)),
+        })
+      }
+      if (url === `/api/event-requests/${DRAFT_ID}` && init?.method === 'PUT') {
+        return jsonResponse(200, {
+          requestId: DRAFT_ID,
+          status: 'draft',
+          accessibilityNeeds: [],
+          organisation: 'Acme Conferences',
+          createdAt: new Date().toISOString(),
+          ...JSON.parse(String(init.body)),
+        })
+      }
+      throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`)
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const user = userEvent.setup()
+    renderWizard()
+    for (let step = 0; step < 3; step += 1) {
+      await user.click(await screen.findByRole('button', { name: 'Next' }))
+    }
+
+    await user.click(await screen.findByLabelText('Projector'))
+    await user.clear(screen.getByRole('spinbutton', { name: 'Projector quantity' }))
+    await user.type(screen.getByRole('spinbutton', { name: 'Projector quantity' }), '2')
+    await user.click(screen.getByRole('button', { name: 'Next' }))
+
+    const savedBody = fetchMock.mock.calls
+      .filter(([, init]) => init?.method === 'POST' || init?.method === 'PUT')
+      .map(([, init]) => JSON.parse(String(init?.body)) as { equipmentRequirements?: string | null })
+      .find((body) => body.equipmentRequirements?.includes('2 × Projector'))
+    expect(savedBody?.equipmentRequirements).toContain('2 × Projector')
   })
 })
 
