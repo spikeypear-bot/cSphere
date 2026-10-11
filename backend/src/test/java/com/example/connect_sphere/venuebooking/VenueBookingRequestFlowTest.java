@@ -368,6 +368,66 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    void textLimitsAre2000CharactersForNotesAndJustification() throws Exception {
+        UUID eventId = event(150, "step_free_access");
+        UUID venueId = venue(200, List.of());
+        String ok = "x".repeat(2000);
+        String tooLong = "x".repeat(2001);
+
+        submit(eventId, "ec1", "{\"venueId\":\"" + venueId + "\",\"suitabilityNote\":\"Ramp\",\"bookingNotes\":\""
+                + tooLong + "\"}").andExpect(status().isUnprocessableEntity());
+        submit(eventId, "ec1", "{\"venueId\":\"" + venueId + "\",\"suitabilityNote\":\"" + tooLong + "\"}")
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(bookingsFor(eventId)).isZero();
+
+        submit(eventId, "ec1", "{\"venueId\":\"" + venueId + "\",\"suitabilityNote\":\"" + ok
+                + "\",\"bookingNotes\":\"" + ok + "\"}").andExpect(status().isCreated());
+    }
+
+    @Test
+    void aCancellationReasonOver2000CharactersIsRefusedAndTheRequestStaysPending() throws Exception {
+        UUID eventId = event(150, "none");
+        String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
+
+        mvc.perform(post("/api/events/" + eventId + "/venue-bookings/" + id + "/cancel").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"" + "x".repeat(2001) + "\"}"))
+                .andExpect(status().isUnprocessableEntity());
+        sync();
+        org.assertj.core.api.Assertions.assertThat(jdbc.queryForObject(
+                "SELECT status::text FROM venue_bookings WHERE booking_id = ?::uuid", String.class, id))
+                .isEqualTo("pending");
+    }
+
+    @Test
+    void anAlreadyCancelledRequestCannotBeCancelledAgain() throws Exception {
+        UUID eventId = event(150, "none");
+        String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
+        cancel(eventId, id, "ec1").andExpect(status().isOk());
+
+        cancel(eventId, id, "ec1").andExpect(status().isConflict());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"confirmed", "cancelled", "completed"})
+    void onlyAnEventInPlanningCanTakeARequest(String eventStatus) throws Exception {
+        UUID eventId = event(150, "none");
+        sync();
+        jdbc.update("UPDATE events SET status = cast(? as event_status) WHERE event_id = ?", eventStatus, eventId);
+        sync();
+
+        submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isConflict());
+        assertThat(bookingsFor(eventId)).isZero();
+    }
+
+    @Test
+    void requestingAVenueThatDoesNotExistIsNotFound() throws Exception {
+        UUID eventId = event(150, "none");
+
+        submit(eventId, "ec1", bookingFor(UUID.randomUUID())).andExpect(status().isNotFound());
+        assertThat(bookingsFor(eventId)).isZero();
+    }
+
+    @Test
     void theRequestIsOnTheCoordinatorsTimelineButNotTheOrganisers() throws Exception {
         UUID eventId = event(150, "none");
         submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());

@@ -147,6 +147,15 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    void aSingleFieldQuestionOver2000CharactersIsRefused() throws Exception {
+        UUID id = submittedRequest();
+
+        clarify(id, "ec1", "{\"message\":\"x\",\"flaggedFields\":[\"purpose\"],\"fieldQuestions\":{\"purpose\":\""
+                + "x".repeat(2001) + "\"}}", 422);
+        assertThat(statusOf(id)).isEqualTo("pending");
+    }
+
+    @Test
     void aRefusedResubmissionLeavesTheOrganisersEditsUnsaved() throws Exception {
         UUID id = submittedRequest();
         clarify(id, "ec1", "{\"message\":\"Please confirm.\"}", 200);
