@@ -25,6 +25,23 @@ function page(path = '/venue-staff/catalogue') {
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
+it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'] as const)('exposes the %s booking status for colour styling on details and venue lists', async status => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
+    if (url.endsWith('/bookings')) return response([{ ...booking, status }])
+    if (url.endsWith('/occupancy-settings')) return response({ setupMinutes: 0, turnaroundMinutes: 0 })
+    if (url.endsWith('/unavailability') || url.endsWith('/operational-issues')) return response([])
+    if (url.endsWith('/venues/v1')) return response(booking.venue)
+    return response({ ...booking, status })
+  }))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  expect(await screen.findByLabelText('Status: ' + status)).toHaveAttribute('data-booking-status', status)
+  cleanup()
+  page('/venue-staff/catalogue/v1')
+  const list = await screen.findByRole('region', { name: 'Associated bookings' })
+  const label = await within(list).findByText(status, { selector: 'span' })
+  expect(label).toHaveAttribute('data-booking-status', status)
+})
+
 it.each([undefined, null])('defaults an absent booking status (%s) to pending and follows an approval response', async status => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
     response({ ...booking, status: init.method === 'PATCH' ? 'approved' : status })))
@@ -318,6 +335,146 @@ it.each([404, 409, 503, 0])('keeps the booking pending and shows an error for fa
   expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
   expect(screen.queryByLabelText('Status: approved')).not.toBeInTheDocument()
   expect(await screen.findByRole('button', { name: 'Approve Booking' })).toBeEnabled()
+})
+
+it.each([false, true])('shows conflict details through automatic refresh (refresh fails: %s)', async failRefresh => {
+  let attempted = false
+  const fetch = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') {
+      attempted = true
+      return response({ message: 'This booking overlaps an existing approved booking.', conflicts: [
+        { bookingId: 'b2', eventName: 'Evening workshop', startDatetime: '2026-09-24T15:00:00Z', endDatetime: '2026-09-24T18:00:00Z' },
+        { bookingId: 'b3', eventName: 'Second workshop', startDatetime: '2026-09-24T16:00:00Z', endDatetime: '2026-09-24T17:00:00Z' },
+      ] }, 409)
+    }
+    if (attempted && failRefresh) throw new TypeError('Offline')
+    return response(booking)
+  })
+  vi.stubGlobal('fetch', fetch)
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  const alert = await screen.findByRole('alert')
+  expect(alert).toHaveTextContent(failRefresh ? 'Could not refresh booking details' : 'Latest booking status: pending')
+  expect(alert).toHaveTextContent('Evening workshop')
+  expect(alert).toHaveTextContent('Booking ID: b2')
+  expect(alert).toHaveTextContent('Second workshop')
+  expect(alert).toHaveTextContent('Booking ID: b3')
+  expect(alert).toHaveTextContent('Singapore time, UTC+08:00')
+  expect(alert).toHaveTextContent('24 Sept 2026, 11:00 pm')
+  expect(alert).toHaveTextContent('25 Sept 2026, 02:00 am')
+  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Status: approved')).not.toBeInTheDocument()
+  expect(fetch).toHaveBeenLastCalledWith('/api/venue-bookings/b1', expect.objectContaining({ method: 'GET', cache: 'no-store' }))
+  if (failRefresh) expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+  else {
+    expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
+    expect(screen.queryByText('Evening workshop')).not.toBeInTheDocument()
+  }
+})
+
+it('shows a buffer-only restriction without falsely highlighting the event times', async () => {
+  const message = 'This booking conflicts with the setup or turnaround time required around an existing approved booking.'
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
+    init.method === 'PATCH' ? response({ message, conflicts: [{ bookingId: 'buffer-booking', eventName: 'Earlier event',
+      startDatetime: '2026-09-24T10:00:00Z', endDatetime: '2026-09-24T14:00:00Z' }] }, 409) : response(booking)))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  const alert = await screen.findByRole('alert')
+  expect(alert).toHaveTextContent(message)
+  const card = within(alert).getByRole('group', { name: 'Conflicting booking: Earlier event' })
+  expect(card).toHaveTextContent('Setup Period')
+  expect(card).toHaveTextContent('Turnaround Period')
+  expect(within(card).getAllByText('Not available yet')).toHaveLength(2)
+  expect(card.querySelector('.booking-time-conflict')).toBeNull()
+  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+})
+
+it.each([false, true])('highlights the paired boundaries in the conflict card and current request (reverse: %s)', async reverse => {
+  const current = { ...booking, event: { ...booking.event,
+    startDatetime: reverse ? '2027-10-16T11:30:00+08:00' : '2027-10-16T09:00:00+08:00',
+    endDatetime: reverse ? '2027-10-16T14:00:00+08:00' : '2027-10-16T12:00:00+08:00' } }
+  const conflict = { bookingId: 'b2', eventName: 'Other event',
+    startDatetime: reverse ? '2027-10-16T09:00:00+08:00' : '2027-10-16T11:30:00+08:00',
+    endDatetime: reverse ? '2027-10-16T12:00:00+08:00' : '2027-10-16T14:00:00+08:00' }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
+    init.method === 'PATCH' ? response({ message: 'Booking overlap', conflicts: [conflict] }, 409) : response(current)))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  const card = await screen.findByRole('group', { name: 'Conflicting booking: Other event' })
+  expect(card.querySelectorAll('strong.booking-time-conflict')).toHaveLength(1)
+  expect(card.querySelector('strong.booking-time-conflict')).toHaveTextContent(reverse ? '12:00 pm' : '11:30 am')
+  const currentPanel = screen.getByRole('region', { name: 'Event Requirements' })
+  expect(currentPanel.querySelectorAll('strong.booking-time-conflict')).toHaveLength(1)
+  expect(currentPanel.querySelector('strong.booking-time-conflict')).toHaveTextContent(reverse ? '11:30 am' : '12:00 pm')
+  await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
+  expect(screen.queryByRole('group', { name: 'Conflicting booking: Other event' })).not.toBeInTheDocument()
+  expect(currentPanel.querySelector('.booking-time-conflict')).toBeNull()
+})
+
+it.each([false, true])('shows unavailable periods and highlights both sides (refresh fails: %s)', async failRefresh => {
+  let attempted = false
+  const current = { ...booking, event: { ...booking.event, startDatetime: '2027-10-16T09:00:00+08:00', endDatetime: '2027-10-16T12:00:00+08:00' } }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
+    if (init.method === 'PATCH') {
+      attempted = true
+      return response({ message: 'Recorded unavailability', conflicts: [], unavailablePeriods: [
+        { unavailabilityId: 'u1', reason: 'Maintenance', startDatetime: '2027-10-16T11:30:00+08:00', endDatetime: '2027-10-16T15:00:00+08:00' },
+      ] }, 409)
+    }
+    if (attempted && failRefresh) throw new TypeError('Offline')
+    return response(current)
+  }))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  const card = await screen.findByRole('group', { name: 'Unavailable period: Maintenance' })
+  expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+  expect(screen.getByRole('alert')).toHaveTextContent('Approval is blocked by the following recorded unavailable periods')
+  expect(screen.getByRole('alert')).not.toHaveTextContent('Latest booking status: pending')
+  expect(screen.getByRole('alert')).not.toHaveTextContent('The following recorded unavailable periods conflict')
+  expect(card).toHaveTextContent('Unavailability Reason')
+  expect(card).not.toHaveTextContent('Setup Period')
+  expect(card).not.toHaveTextContent('Booking Name')
+  expect(card.querySelector('strong.booking-time-conflict')).toHaveTextContent('11:30 am')
+  const currentPanel = screen.getByRole('region', { name: 'Event Requirements' })
+  expect(currentPanel.querySelector('strong.booking-time-conflict')).toHaveTextContent('12:00 pm')
+  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  if (failRefresh) expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+  else {
+    await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
+    expect(screen.queryByRole('group', { name: 'Unavailable period: Maintenance' })).not.toBeInTheDocument()
+    expect(currentPanel.querySelector('.booking-time-conflict')).toBeNull()
+    expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Reject Booking' })).toBeEnabled()
+    cleanup()
+    page('/venue-staff/bookings/b1?from=booking-approvals')
+    expect(await screen.findByRole('button', { name: 'Approve Booking' })).toBeEnabled()
+  }
+})
+
+it('shows combined booking and unavailable-period conflicts without highlighting buffer-only periods', async () => {
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => init.method === 'PATCH'
+    ? response({ message: 'Booking and unavailability conflicts', conflicts: [{ bookingId: 'b2', eventName: 'Other booking',
+      startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime }], unavailablePeriods: [
+      { unavailabilityId: 'u1', reason: 'Maintenance', startDatetime: '2026-09-24T14:00:00Z', endDatetime: '2026-09-24T14:45:00Z' },
+      { unavailabilityId: 'u2', reason: 'Cleaning', startDatetime: '2026-09-24T19:00:00Z', endDatetime: '2026-09-24T20:00:00Z' },
+    ] }, 409) : response(booking)))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
+  await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByRole('group', { name: 'Conflicting booking: Other booking' })).toBeInTheDocument()
+  for (const reason of ['Maintenance', 'Cleaning']) {
+    expect(screen.getByRole('group', { name: `Unavailable period: ${reason}` }).querySelector('.booking-time-conflict')).toBeNull()
+  }
 })
 
 it.each(['approved', 'cancelled'] as const)('reconciles a stale approval conflict to the backend %s status', async status => {

@@ -356,10 +356,28 @@ changed-file lint passed. Repository-wide lint still reports five existing
 pages. Live browser approval, cancellation, queue removal and conflict checks
 passed on 2026-10-05; temporary smoke records were removed afterward.
 
-The booking details header displays its backend status as a pill below **Venue
-information**, using the same style as the venue layout tags. The heading and
-status form a two-row block aligned beside the approval action. This shared header
-is used by both catalogue navigation and `?from=booking-approvals` navigation.
+The booking status pill appears beside **Event Requirements** on the shared
+booking details page, for both catalogue and pending-queue navigation.
+
+Booking status colours are consistent across that pill, the venue's associated
+booking list, and coordinator booking history:
+
+| Status | Appearance |
+|---|---|
+| `approved` | Green (`--success`); pill uses `--success-soft` background |
+| `rejected` | Red (`--danger`); pill uses `--danger-soft` background |
+| `pending`, `changed`, `cancelled` | Existing appearance retained |
+
+The shared `data-booking-status` styling applies only to booking labels, leaving
+event/request status styling unchanged. Existing theme tokens support light and
+dark mode, and text labels remain visible so status is not conveyed by colour alone.
+
+Status-colour regression coverage lives in `bookingStatusColours.test.ts`,
+`BookingDetailsPage.test.tsx`, and `VenueBookingRequestPage.test.tsx`. These cover
+the stylesheet's green/red tokens and unchanged default pill colours, plus all
+five status labels on booking details, associated bookings, and coordinator history.
+The stylesheet test resolves light-theme custom properties before checking the
+CSS cascade because JSDOM does not resolve them; it is not a visual browser test.
 
 ## VS04 rejection and VS09 alternatives
 
@@ -386,6 +404,62 @@ displayed to Venue Staff and the Event Coordinator. The pending queue excludes
 rejected records. After an uncertain response the UI reads current booking data
 before allowing another decision. Rejection does not create a second booking or
 modify the original event requirements.
+
+## VS08 approval conflicts
+
+Approval now returns HTTP 409 with `message` and a `conflicts` array for direct
+overlaps and buffer-only conflicts with approved bookings. Each conflict contains only `bookingId`,
+`eventName`, `startDatetime`, and `endDatetime`. Timestamps are offset date/time
+values; clients should display them using the existing Singapore-time formatter.
+
+The query runs after the existing venue lock and before any booking updates. It
+uses the stored event times, the same venue, booking status `approved`, and
+`existingStart < requestedEnd AND existingEnd > requestedStart`. Only the current
+booking ID is excluded; an approved booking still counts when its associated
+event is completed or cancelled. Results are ordered by start time and booking ID.
+A blocked request remains pending and existing approved bookings are unchanged.
+
+Existing unavailability and setup/turnaround checks remain in place, so adjacent
+event times can still be blocked by nonzero buffers. Buffer-only conflicts explain
+that setup or turnaround time caused the block and identify the blocking bookings.
+Recorded unavailable periods are returned in a separate `unavailablePeriods` array
+with `unavailabilityId`, `reason`, `startDatetime`, and `endDatetime`. Approval
+collects all booking conflicts and unavailable periods before returning 409, using
+the same venue lock. Booking conflicts are deduplicated by booking ID. Empty
+arrays are returned when only the other type blocks approval. Period matching
+uses the request's existing setup/turnaround-expanded range and half-open bounds.
+Other booking-state errors retain the message-only format. Database and transaction failures still return 503.
+
+The existing booking approval page displays every returned conflicting event name,
+booking ID, and start/end date and time in Singapore time, using the shared Card
+and Button components. Each card has a full-width Booking Name row, a two-column
+Starts/Ends row, and a two-column Setup Period/Turnaround Period row. Both fields
+in the third row show "Not available yet" pending the separate display story;
+existing backend buffer enforcement still applies.
+
+For partial direct overlaps, the request end and conflicting start (or request
+start and conflicting end) are bold red and labelled "overlap". Containment and
+identical periods highlight both boundaries of both bookings. The request's
+highlights appear in Event Requirements and combine all returned conflicts.
+Adjacent or buffer-only event periods do not receive direct-overlap highlights.
+Unavailable periods use the same card layout and highlighting, with a full-width
+Unavailability Reason row and a Starts/Ends row. They have no setup/turnaround
+placeholder row. Both types contribute to the current request's highlighted
+boundaries and remain visible if the automatic status refresh fails.
+Changing bookings clears conflict state. The API client retains
+typed conflict details and ignores malformed entries so error rendering remains
+usable. After a failed approval, the page still fetches the latest booking with
+`cache: no-store`; conflict details remain visible through that automatic refresh,
+including when it fails. Failed refreshes disable decisions until a successful
+refresh. A manual refresh or new decision clears the previous conflict details.
+No approval success is inferred from a conflict response.
+
+After a confirmed approval attempt is blocked by recorded unavailability, the
+page shows one combined explanation with the Singapore timezone and disables
+Approve Booking for the remainder of that page visit. Automatic and manual
+booking-detail refreshes do not unlock approval; reloading the page resets it.
+Reject Booking remains available after a successful status refresh. The pending
+status remains visible on the booking rather than being repeated in this error.
 
 ## VS01 integration (6 October 2026)
 

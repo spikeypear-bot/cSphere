@@ -51,7 +51,7 @@ function AssociatedBookings({ venueId }: { venueId: string }) {
           <Card className="feature-skeleton__body">
             <h3>{booking.event.eventName}</h3>
             <p>{formatEventDateTime(booking.event.startDatetime)} (Singapore time)</p>
-            <p>Status: {booking.status ?? 'pending'}</p>
+            <p>Status: <span data-booking-status={booking.status ?? 'pending'}>{booking.status ?? 'pending'}</span></p>
             {booking.requiresAlternative && <p className="field-error">Alternative arrangements required</p>}
             <Link to={`/venue-staff/bookings/${booking.bookingId}`}>View booking details</Link>
           </Card>

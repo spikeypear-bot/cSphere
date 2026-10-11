@@ -8,6 +8,8 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 import com.example.connect_sphere.common.web.ApiError;
 import com.example.connect_sphere.venuebooking.dto.RejectVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
+import com.example.connect_sphere.venuebooking.dto.VenueBookingConflictResponse;
+import com.example.connect_sphere.venuebooking.service.VenueBookingConflictException;
 import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 import com.example.connect_sphere.venuebooking.service.VenueBookingNotFoundException;
 
@@ -26,6 +28,11 @@ public class VenueBookingController {
     public VenueBookingDto reject(@PathVariable UUID bookingId,
             @RequestBody RejectVenueBookingRequest request) {
         return service.reject(bookingId, request.reason(), request.alternativeVenueId(), request.alternativeArrangement());
+    }
+
+    @ExceptionHandler(VenueBookingConflictException.class)
+    public ResponseEntity<VenueBookingConflictResponse> conflict(VenueBookingConflictException ex) {
+        return ResponseEntity.status(409).body(new VenueBookingConflictResponse(ex.getMessage(), ex.getConflicts(), ex.getUnavailablePeriods()));
     }
 
     @ExceptionHandler({org.springframework.dao.DataAccessException.class,

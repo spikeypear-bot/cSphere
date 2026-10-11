@@ -149,3 +149,7 @@ code {
   border-radius: 4px;
   padding: 0.1em 0.4em;
 }
+[data-booking-status='approved'] { color: var(--success); }
+[data-booking-status='rejected'] { color: var(--danger); }
+.booking-status-tag[data-booking-status='approved'] { color: var(--success); background: var(--success-soft); }
+.booking-status-tag[data-booking-status='rejected'] { color: var(--danger); background: var(--danger-soft); }

@@ -9,6 +9,18 @@ import { VenueBookingRequestPage } from './VenueBookingRequestPage'
 
 const EVENT = 'ev-1'
 
+it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('marks %s history labels for booking-only colour styling', async status => {
+  seedSession('coordinator')
+  stubApi(routes([{ bookingId: 'colour-booking', status, venueAddress: 'Colour test venue' }]))
+  renderPage()
+  const heading = await screen.findByRole('heading', { name: 'Earlier requests for this event' })
+  const label = heading.closest('.venue-request__history')!.querySelector('[data-booking-status]')
+  expect(label).toHaveAttribute('data-booking-status', status)
+  expect(label).toHaveTextContent(new RegExp(status, 'i'))
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
 const event = {
   eventId: EVENT, eventName: 'Town Hall', purpose: 'Update', description: null,
   startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z', expectedAttendance: 150,

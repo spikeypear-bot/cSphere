@@ -22,13 +22,24 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
     @Query("SELECT b.eventId FROM VenueBookingRecord b WHERE b.bookingId = :id")
     Optional<UUID> findEventId(@Param("id") UUID id);
 
+    interface ApprovalConflict {
+        UUID getBookingId();
+        String getEventName();
+        OffsetDateTime getStartDatetime();
+        OffsetDateTime getEndDatetime();
+    }
+
+    /** Read after acquiring the venue lock; compare the stored event periods as [start, end). */
     @Query("""
-            SELECT count(b) FROM VenueBookingRecord b, Event e
+            SELECT b.bookingId AS bookingId, e.eventName AS eventName,
+                   e.startDatetime AS startDatetime, e.endDatetime AS endDatetime
+            FROM VenueBookingRecord b, Event e
             WHERE e.eventId = b.eventId AND b.venueId = :venueId
               AND b.bookingId <> :bookingId AND b.status = :status
               AND e.startDatetime < :end AND e.endDatetime > :start
+            ORDER BY e.startDatetime, b.bookingId
             """)
-    long countApprovalConflicts(@Param("venueId") UUID venueId, @Param("bookingId") UUID bookingId,
+    List<ApprovalConflict> findApprovalConflicts(@Param("venueId") UUID venueId, @Param("bookingId") UUID bookingId,
             @Param("status") VenueBookingStatus status, @Param("start") OffsetDateTime start,
             @Param("end") OffsetDateTime end);
 
