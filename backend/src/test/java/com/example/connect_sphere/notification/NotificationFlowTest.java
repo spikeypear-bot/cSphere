@@ -5,10 +5,12 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -89,6 +91,22 @@ class NotificationFlowTest {
 
     private ResultActions confirm(UUID eventId, String as) throws Exception {
         return mvc.perform(post("/api/events/" + eventId + "/confirm").with(flow.as(as)));
+    }
+
+    private void completeReadiness(UUID eventId) throws Exception {
+        for (String itemKey : List.of(
+                "venue_booking",
+                "capacity_facilities",
+                "accessibility",
+                "equipment",
+                "registration",
+                "safety_operations")) {
+            mvc.perform(patch("/api/safety/events/" + eventId + "/readiness/items/" + itemKey)
+                    .with(flow.as("so1"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"checked\":true,\"note\":\"Ready\"}"))
+                    .andExpect(status().isOk());
+        }
     }
 
     private ResultActions notificationsOf(String username) throws Exception {
@@ -223,11 +241,12 @@ class NotificationFlowTest {
     @Test
     void confirmingTheEventSetsItToConfirmedAndNotifiesTheOrganiser() throws Exception {
         UUID eventId = approve(assignedRequest());
+        completeReadiness(eventId);
 
-        confirm(eventId, "ec1")
+        confirm(eventId, "so1")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eventId").value(eventId.toString()))
-                .andExpect(jsonPath("$.status").value("confirmed"));
+                .andExpect(jsonPath("$.approvalStatus").value("approved"));
 
         assertThat(eventStatus(eventId)).isEqualTo("confirmed");
         assertThat(savedStatusChange("confirmed")).isEqualTo(1);
