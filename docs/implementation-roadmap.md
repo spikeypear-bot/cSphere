@@ -143,3 +143,18 @@ is unchanged. This implementation is not a claim that ownership acceptance is me
 ## VS01 implementation update — 6 October 2026
 
 Venue unavailability is integrated with Venue Details, buffered availability checks, staff conflict confirmation, transactional in-app coordinator alerts, replacement requests and the venue schedule agenda. Original bookings are preserved until an approved replacement marks them changed. See [implementation and verification details](venue-unavailability-api.md).
+
+## SO-C1–SO-C4 implementation update — 12 October 2026
+
+The user-supplied Safety Officer stories are implemented as an explicit scope
+extension; sync with the canonical live backlog remains outstanding. The Safety
+Officer console lists confirmed events and the separate Planning approval queue,
+with event logistics, a persistent audited standard checklist, and approval/rejection.
+All API reads and writes are role-gated. Only Safety Officer approval can transition
+Planning to Confirmed, and the backend blocks approval while any checklist item is
+outstanding. Event Coordinators can read readiness/approval state for their assigned
+events but cannot edit or approve it.
+
+See [Safety Officer API and workflow](safety-officer-api.md). The database additions
+are in `V22__safety_officer_readiness.sql`; the local development account is
+`so1` / `123456` (dev profile only).

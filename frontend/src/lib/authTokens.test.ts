@@ -30,4 +30,10 @@ describe('authTokens — role claim to console (ECL-C1)', () => {
   it('still treats a role this build does not know as not signed in', () => {
     expect(tokensFromResponse(loginResponse('lead'))).toBeNull()
   })
+
+  it('maps the Safety Officer role to its protected console', () => {
+    expect(roleFromClaim('safety_officer')).toBe('safety-officer')
+    expect(HOME_BY_ROLE['safety-officer']).toBe('/safety-officer')
+    expect(tokensFromResponse(loginResponse('safety_officer'))?.role).toBe('safety-officer')
+  })
 })

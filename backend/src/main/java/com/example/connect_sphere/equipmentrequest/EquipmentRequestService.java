@@ -47,6 +47,18 @@ public class EquipmentRequestService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<EquipmentRequestDetailsResponse> listForSafetyOfficer(UUID eventId) {
+        Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        if (event.getStatus() != EventStatus.pending && event.getStatus() != EventStatus.confirmed) {
+            throw new EventNotFoundException(eventId);
+        }
+        return requests.findByEventId(eventId).stream()
+                .map(request -> EquipmentRequestDetailsResponse.from(
+                        request, lines.findByIdRequestId(request.getId())))
+                .toList();
+    }
+
     @Transactional
     public EquipmentRequestDetailsResponse submit(
             UUID coordinatorId, UUID eventId, SubmitEquipmentRequest input) {

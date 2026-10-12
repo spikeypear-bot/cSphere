@@ -16,8 +16,8 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * Creates five accounts per original role, plus one Event Coordinator Lead, so
- * every role can be exercised locally.
+ * Creates five accounts per original role, plus one Event Coordinator Lead and
+ * one Safety Officer, so every role can be exercised locally.
  *
  * Seed data lives in a runner rather than a Flyway migration on purpose: these
  * are environment-specific dev fixtures, not schema, and migrations are immutable
@@ -42,7 +42,7 @@ public class DevUserSeeder implements CommandLineRunner {
     /** Dev-only, and committed to git on purpose — never reuse it anywhere real. */
     private static final String DEV_PASSWORD = "123456";
 
-    /** Internal staff (EC/VS/Technician/Lead) all belong to the operating company. */
+    /** Internal staff (EC/VS/Technician/Lead/Safety Officer) belong to the operating company. */
     private static final String INTERNAL_ORG = "ConnectSphere";
 
     /**
@@ -92,7 +92,10 @@ public class DevUserSeeder implements CommandLineRunner {
             new SeedUser("ts5", "ts5@connectsphere.test", UserRole.technician, INTERNAL_ORG),
 
             // Event Coordinator Lead — internal (ECL-C1)
-            new SeedUser("ecl1", "ecl1@connectsphere.test", UserRole.ecl, INTERNAL_ORG));
+            new SeedUser("ecl1", "ecl1@connectsphere.test", UserRole.ecl, INTERNAL_ORG),
+
+            // Safety Officer — internal (SO-C1–SO-C4)
+            new SeedUser("so1", "so1@connectsphere.test", UserRole.safety_officer, INTERNAL_ORG));
 
     private final UserRepository repository;
     private final PasswordEncoder passwordEncoder;

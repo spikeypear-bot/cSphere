@@ -10,18 +10,14 @@ import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
-import com.example.connect_sphere.eventrequest.entity.EventRequest;
-import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
-import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
-import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * The Event Coordinator/Organiser-facing half of EO09's "Confirmed"
- * notification and "can view the confirmed event arrangements" AC — see
+ * The Event Coordinator/Organiser-facing event read model — see
  * EventRequestService for how an {@link Event} first comes to exist
- * (approval).
+ * (approval). Confirmation is performed only by ReadinessService after the
+ * Safety Officer checklist is complete.
  */
 @Service
 public class EventService {
@@ -30,19 +26,13 @@ public class EventService {
     private static final List<EventStatus> ACTIVE_STATUSES = List.of(EventStatus.pending, EventStatus.confirmed);
 
     private final EventRepository repository;
-    private final EventRequestRepository eventRequestRepository;
     private final UserRepository userRepository;
-    private final NotificationService notificationService;
 
     public EventService(
             EventRepository repository,
-            EventRequestRepository eventRequestRepository,
-            UserRepository userRepository,
-            NotificationService notificationService) {
+            UserRepository userRepository) {
         this.repository = repository;
-        this.eventRequestRepository = eventRequestRepository;
         this.userRepository = userRepository;
-        this.notificationService = notificationService;
     }
 
     /** EO09 "can view the confirmed event arrangements ... subject to the
@@ -73,32 +63,6 @@ public class EventService {
     public List<EventDto> assignedEvents(UUID coordinatorId) {
         return repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(coordinatorId, ACTIVE_STATUSES)
                 .stream().map(this::toDto).toList();
-    }
-
-    /** EO09 "Confirmed". */
-    @Transactional
-    public EventDto confirm(UUID actingCoordinatorId, UUID eventId) {
-        Event event = repository.findById(eventId)
-                .orElseThrow(() -> new EventNotFoundException(eventId));
-        if (event.getStatus() != EventStatus.pending) {
-            throw new EventNotPendingException(eventId, event.getStatus());
-        }
-        if (!actingCoordinatorId.equals(event.getCoordinatorId())) {
-            throw new NotAssignedCoordinatorException(eventId);
-        }
-        event.setStatus(EventStatus.confirmed);
-        Event saved = repository.save(event);
-
-        // Events carry no direct reference back to who created the request
-        // that became them — only the reverse link (EventRequest.eventId),
-        // set once at approval time. See EventRequestRepository.findByEventId.
-        eventRequestRepository.findByEventId(eventId)
-                .map(EventRequest::getCreatedBy)
-                .filter(java.util.Objects::nonNull)
-                .ifPresent(recipientId -> notificationService.createStatusChangeNotification(
-                        recipientId, null, saved.getEventId(), saved.getEventName(), "confirmed", null));
-
-        return toDto(saved);
     }
 
     private EventDto toDto(Event event) {

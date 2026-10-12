@@ -13,18 +13,21 @@ ConnectSphere wants a single, custom-built Event Planning and Venue Booking Syst
 | Role | Internal/External | Responsibility |
 |---|---|---|
 | Event Organiser | External | Supplies event requirements; communicates with ConnectSphere; owns their own event requests. |
-| Event Coordinator | Internal | Assigned to coordinate an event; reviews requests; main internal point of contact; searches/requests venues and equipment; confirms the event. |
+| Event Coordinator | Internal | Assigned to coordinate an event; reviews requests; main internal point of contact; searches/requests venues and equipment; reads readiness results for assigned events. |
 | Venue Staff | Internal | Maintains venue records; decides venue booking availability/approval. |
 | Technical Support Staff | Internal | Maintains equipment records; decides equipment availability/reservation. |
 | Attendee | External | Registers for and attends events where registration is enabled. |
+| Safety Officer | Internal | Reviews operational readiness, records checklist status and approves planned events before confirmation (SO-C1–SO-C4; added by the user-authorised implementation scope extension). |
 
-Cross-cutting: **Authenticated User** — the login/session/RBAC behaviour every role above needs (backlog role, not a sixth application role). **Not application roles**: Developer / Scrum Master / Product Owner label *Technical*/*Process* backlog stories about the team's own engineering and scrum practice (see `AI_Context.md` § Users). System Administrator is not named anywhere in the source material — do not add one without team/customer confirmation.
+Cross-cutting: **Authenticated User** — the login/session/RBAC behaviour every role above needs (backlog role, not another application role). **Not application roles**: Developer / Scrum Master / Product Owner label *Technical*/*Process* backlog stories about the team's own engineering and scrum practice (see `AI_Context.md` § Users). System Administrator is not named anywhere in the source material — do not add one without team/customer confirmation.
 
 ## 3. Release Scope & Traceability
 
 The 20 core features (VERIFIED, Week 4 Project Instructions) are listed with priority in `AI_Context.md`. The backlog (`User Stories` sheet, 114 rows as of 2026-09-12) maps every candidate story from the wider Week 1 briefing against these 20 features, recording a `Within Scope, Included` / `Out of Scope` / `Added` call with a one-line rationale per row — that column is the MoSCoW-equivalent priority mechanism for this project and should be treated as authoritative over any restatement here.
 
-**Explicit deferrals** (Out of Scope in the current backlog): event programme/multi-session recording; supporting-document attachments; in-app comments/discussion; tentative venue holds; venue setup/turnaround-time as a distinct trackable feature; Event-Coordinator "portfolio" browsing; rejection appeals; user guides; role-based dashboards; most reporting/export; attendance-vs-registration distinction; waiting lists; on-site technical-staff assignment; recurring/similar-event reuse; event categories.
+**Explicit deferrals** (Out of Scope in the current backlog): event programme/multi-session recording; supporting-document attachments; in-app comments/discussion; tentative venue holds; venue setup/turnaround-time as a distinct trackable feature; Event-Coordinator "portfolio" browsing; rejection appeals; user guides; generic role-based dashboards; most reporting/export; attendance-vs-registration distinction; waiting lists; on-site technical-staff assignment; recurring/similar-event reuse; event categories.
+
+**Implementation scope extension (user-authorised; backlog sync outstanding):** the supplied SO-C1–SO-C4 stories are implemented as an explicit exception to the generic role-dashboard/checklist deferral. The canonical live backlog could not be accessed during implementation; this note records the supplied scope without claiming team-wide backlog ratification.
 
 ## 4. End-to-End Workflows (VERIFIED, customer briefing §5, cross-checked against backlog epics)
 
@@ -34,12 +37,19 @@ The 20 core features (VERIFIED, Week 4 Project Instructions) are listed with pri
 4. **Venue selection & availability checking** — the Coordinator searches/filters venues against the event's requirements (EC04) and checks suitability against capacity/accessibility/facilities (EC05); Venue Staff maintain the venue catalogue (VS01/VS06A/VS06B/VS07/VS18) and its availability.
 5. **Venue booking** — the Coordinator submits a booking request (EC03); Venue Staff approve/reject with a reason (VS02/VS03/VS04), with booking-conflict detection preventing double-booking (VS08, DEV06 — see business rules).
 6. **Equipment allocation** — the Coordinator requests equipment (EC07); Technical Support Staff check availability (TS01) and reserve it (TS02), updating operational status as needed (TS03) without that update itself creating/cancelling a reservation.
-7. **Event confirmation** — once required arrangements are complete, the Coordinator confirms the event (EC08); the Organiser can then view confirmed arrangements (EO04).
+7. **Event confirmation** — once required arrangements are complete, the Safety Officer's persisted operational-readiness checklist must be complete before the Safety Officer approves the event (SO-C3/SO-C4). The event then becomes confirmed; a Coordinator cannot bypass this gate. The Organiser can then view confirmed arrangements (EO04).
 8. **Attendee registration** — where enabled, Attendees register during the defined period and subject to capacity (AT01–AT04, AT07), receiving confirmation (AT03).
 9. **Event changes & cancellation** — the Organiser can request a change to date/attendance/venue/equipment requirements (EO03) or request cancellation (EO07); the Coordinator reviews the change's impact on existing arrangements (EC-NEW3).
 *(Interim, team decision 10/9/2026: there is no real login yet. The main page offers a "Login as [Role]" button per role — Event Organiser, Event Coordinator, Venue Staff, Technical Support Staff, Attendee — which routes straight into that role's pages. Account creation and credential-based authentication are deferred to a later slice; build role-specific pages against this selector for now, not against a login form.)*
 
 10. **Status, conflict resolution, audit, notifications** — the event's status is a single, consistently-derived value visible to all relevant users (EC-NEW2); RBAC/data-scoping (AU04) ensures each role sees only what it's entitled to; a notification system informs users of assignment, approval/rejection, booking decisions, changes, and cancellation (EO09, EC-NEW4, VS17, TS11, second AT05); an internal audit log (DEV07, PROPOSED — not yet implemented, no schema support beyond `created_by`) is intended to record who changed what and when.
+
+### Safety Officer flow (SO-C1–SO-C4; implementation extension)
+
+- Safety Officers can list all confirmed events, soonest first, and separately see planned events awaiting safety review. Cancelled and completed events are excluded.
+- Event details include planning data, venue capacity/facilities and booking status, requested equipment and actual reservations, accessibility and registration needs; missing arrangements are shown as not finalised.
+- Each event has six predefined readiness items. Safety Officer checks/notes persist; each item shows its last checker and check time. Event Coordinators may view this checklist and approval status for events assigned to them, but cannot change it.
+- A Safety Officer may approve only after all items are checked. Approval changes Planning to Confirmed atomically; rejection records the current review outcome and note without changing the event lifecycle status. Re-review can later replace that outcome. Coordinator confirmation is not a permitted alternative.
 
 ## 5. Detailed User Stories
 
@@ -94,7 +104,7 @@ The full, current set of 114 stories (with IDs, roles, epics, scope calls, prior
 **As a / I want / so that:** As an authenticated user, I want to view and perform only the actions permitted for my assigned role so that I cannot access functions outside my responsibilities.
 **Acceptance criteria (refined, from Sprint Backlog 1 threaded comment on cell E22 — treat as authoritative over any shorter paraphrase):**
 - Sees only navigation, pages, and actions relevant to their assigned role; cannot open a protected page or perform a protected action outside it; is shown a clear access-denied message when they try.
-- An Event Organiser can view/manage only event requests belonging to their own organisation; an Event Coordinator only events assigned/authorised to them; Venue Staff only venue records/bookings/venue-related event information they manage; Technical Support Staff only equipment/reservations/technical-support information relevant to them; an Attendee only their own registration and confirmed event information they're entitled to see.
+- An Event Organiser can view/manage only event requests belonging to their own organisation; an Event Coordinator only events assigned/authorised to them; Venue Staff only venue records/bookings/venue-related event information they manage; Technical Support Staff only equipment/reservations/technical-support information relevant to them; an Attendee only their own registration and confirmed event information they're entitled to see; a Safety Officer may view active event readiness and update/approve only through Safety Officer-authorised actions.
 - Cannot gain access merely by entering a direct page URL, or by changing role/organisation/ownership/assignment data to widen access.
 - **Server/API validation enforces role and data-scope restrictions, not only the UI.**
 - Unauthorised access attempts or sensitive access changes are recorded in the audit trail if audit logging is implemented.
@@ -150,7 +160,7 @@ See `AI_Context.md` § "Critical Business Rules & Validation Rules" for the cons
 
 ## 7. Data Model / Domain Glossary
 
-Authoritative source: `backend/src/main/resources/db/migration/SCHEMA.md` (VERIFIED). Do not restate table-by-table detail here — read that file. Summary of status enums (VERIFIED): `event_status` {confirmed, cancelled, completed}; `event_request_status` {pending, approved, rejected, cancelled}; `equipment_request_status` {processing, approved, rejected}; `equipment_status` {available, in_use, damaged, maintenance, retired}; `venue_booking_status` {pending, confirmed, changed, rejected, cancelled}. Note the customer briefing's process description (§5) mentions statuses like *draft*, *submitted*, *under review* that do not yet appear as enum values anywhere in the schema — **PROPOSED / OPEN QUESTION**: confirm with the team whether `event_request_status` needs additional values (e.g. `draft`, `under_review`) to match EO01/EO02's acceptance criteria, since the current enum only has 4 values and none of them is literally "draft".
+Authoritative source: `backend/src/main/resources/db/migration/SCHEMA.md` (VERIFIED). Do not restate table-by-table detail here — read that file. Summary of status enums (VERIFIED): `event_status` {pending, confirmed, cancelled, completed}; `event_request_status` {draft, pending, clarification_required, approved, rejected, cancelled}; `equipment_request_status` {processing, approved, rejected}; `equipment_status` {available, in_use, damaged, maintenance, retired}; `venue_booking_status` {pending, approved, changed, rejected, cancelled}. The event `pending` state is Planning; SO-C4 approval transitions it to `confirmed`.
 
 ## 8. Non-Functional Requirements
 

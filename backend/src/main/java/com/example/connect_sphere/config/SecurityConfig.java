@@ -134,24 +134,27 @@ public class SecurityConfig{
 		    // Technical Support check availability (TS01); Coordinators need
 		    // to see equipment they request (EC07). Reserving and releasing
 		    // is TS02, so other equipment reads remain limited below.
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/events/*/reservations")
+			    .hasAnyRole("TECHNICIAN", "EC", "SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
 			    "/api/equipment-requests/*/lines").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
-		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasRole("EC")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
-		    // EO09 "Confirmed": only the assigned Coordinator confirms
-		    // (enforced in EventService.confirm() itself, same pattern as
-		    // approve/reject). Reads are open to both roles that can
-		    // legitimately reach one — EventService itself decides whether an
-		    // Organiser's own organisation actually owns the event.
-		    .requestMatchers(HttpMethod.POST, "/api/events/*/confirm").hasRole("EC")
+		    // SO-C4: checklist-gated confirmation is only performed by a Safety Officer.
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/confirm",
+			    "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
+		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")
+		    .requestMatchers("/api/safety/events/**").hasRole("SAFETY_OFFICER")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/readiness").hasAnyRole("EC", "SAFETY_OFFICER")
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.
-		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings",
-			    "/api/events/*/venue-bookings/**").hasRole("EC")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/venue-bookings").hasAnyRole("EC", "SAFETY_OFFICER")
+		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings/**").hasRole("EC")
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/venue-bookings").hasRole("EC")
 		    // EC09: Coordinator only. Must sit above the GET /api/events/** rule below.
 		    .requestMatchers(HttpMethod.GET, "/api/events/assigned").hasRole("EC")
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC")
