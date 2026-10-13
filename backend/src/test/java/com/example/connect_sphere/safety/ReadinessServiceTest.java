@@ -21,6 +21,8 @@ import org.mockito.MockitoAnnotations;
 
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.event.service.EventLifecycleService;
+import com.example.connect_sphere.event.service.EventLifecycleService.SafetyDecision;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.repository.UserRepository;
@@ -37,6 +39,7 @@ class ReadinessServiceTest {
     @Mock private UserRepository users;
     @Mock private EventRequestRepository eventRequests;
     @Mock private NotificationService notifications;
+    @Mock private EventLifecycleService lifecycle;
 
     private ReadinessService service;
     private Event event;
@@ -44,7 +47,7 @@ class ReadinessServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new ReadinessService(events, itemStates, reviews, users, eventRequests, notifications);
+        service = new ReadinessService(events, itemStates, reviews, users, eventRequests, notifications, lifecycle);
         event = new Event();
         event.setEventId(EVENT_ID);
         event.setEventName("Town Hall");
@@ -87,20 +90,23 @@ class ReadinessServiceTest {
 
     @Test
     void incompleteChecklistBlocksApprovalAndListsOutstandingItems() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         assertThatThrownBy(() -> service.review(
                 SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("approve", "Ready")))
                 .isInstanceOf(IncompleteReadinessException.class)
                 .hasMessageContaining("Venue booking is approved and suitable")
                 .hasMessageContaining("Safety, emergency, and on-site operational arrangements are ready");
 
-        assertThat(event.getStatus()).isEqualTo(com.example.connect_sphere.event.entity.EventStatus.pending);
+        assertThat(event.getStatus()).isEqualTo(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         verify(events, never()).save(any());
         verify(reviews, never()).save(any());
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any());
         verify(notifications, never()).createStatusChangeNotification(any(), any(), any(), any(), any(), any());
     }
 
     @Test
-    void approvalConfirmsTheEventOnlyAfterEveryStandardItemIsChecked() {
+    void approvalRecordsTheSafetyApprovalOnlyAfterEveryStandardItemIsChecked() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         OffsetDateTime checkedAt = OffsetDateTime.now().minusMinutes(1);
         List<ReadinessItemState> checkedItems = List.of(
                 new ReadinessItemState(EVENT_ID, "venue_booking", true, "", SAFETY_OFFICER_ID, checkedAt),
@@ -117,12 +123,51 @@ class ReadinessServiceTest {
         ReadinessDto result = service.review(
                 SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("approve", "Ready to proceed"));
 
-        assertThat(event.getStatus()).isEqualTo(com.example.connect_sphere.event.entity.EventStatus.confirmed);
+        // EC08: approval moves the event to Safety Approved (through the
+        // lifecycle); the coordinator then confirms it.
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.APPROVE, "Ready to proceed");
         assertThat(result.approvalStatus()).isEqualTo("approved");
         assertThat(result.approvalNote()).isEqualTo("Ready to proceed");
         assertThat(result.completedItems()).isEqualTo(result.totalItems());
-        verify(events).save(event);
         verify(reviews).save(any());
+    }
+
+    @Test
+    void aDecisionIsRefusedUntilTheCoordinatorSendsTheEventForReview() {
+        assertThatThrownBy(() -> service.review(
+                SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("approve", "")))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("The Event Coordinator has not sent this event for its safety check yet.");
+        verify(reviews, never()).save(any());
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any());
+    }
+
+    @Test
+    void requestingChangesOrRejectingNeedsANoteAndSendsTheEventBackToTheCoordinator() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", " ")))
+                .isInstanceOf(InvalidReadinessUpdateException.class);
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any());
+
+        ReadinessDto changes = service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("request_changes", "Add a second exit marshal"));
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REQUEST_CHANGES,
+                "Add a second exit marshal");
+        service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", "Crowd flow unsafe"));
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REJECT, "Crowd flow unsafe");
+        assertThat(changes.eventId()).isEqualTo(EVENT_ID);
+    }
+
+    @Test
+    void checklistCanBeWorkedOnWhileAwaitingReviewButNotOnceApproved() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking", new UpdateReadinessItemRequest(true, ""));
+
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.safety_approved);
+        assertThatThrownBy(() -> service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking",
+                new UpdateReadinessItemRequest(false, "")))
+                .isInstanceOf(InvalidReadinessUpdateException.class);
     }
 
     @Test

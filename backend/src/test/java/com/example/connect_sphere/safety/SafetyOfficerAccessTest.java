@@ -1,5 +1,6 @@
 package com.example.connect_sphere.safety;
 
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
@@ -24,6 +25,9 @@ import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequ
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.example.connect_sphere.common.status.JourneyStatus;
+import com.example.connect_sphere.common.status.JourneyStatusResolver;
+import com.example.connect_sphere.common.status.StatusView;
 import com.example.connect_sphere.common.web.RestAccessDeniedHandler;
 import com.example.connect_sphere.common.web.RestAuthenticationEntryPoint;
 import com.example.connect_sphere.config.JwtConfig;
@@ -47,6 +51,7 @@ class SafetyOfficerAccessTest {
     @MockitoBean private EventRepository events;
     @MockitoBean private ReadinessService readiness;
     @MockitoBean private VenueRepository venues;
+    @MockitoBean private JourneyStatusResolver statuses;
 
     private JwtRequestPostProcessor tokenFor(String role) {
         return jwt().jwt(token -> token.subject(UUID.randomUUID().toString()).claim("role", role))
@@ -98,8 +103,35 @@ class SafetyOfficerAccessTest {
     }
 
     @Test
-    void coordinatorConfirmationIsDeniedByTheRealSecurityConfiguration() throws Exception {
-        mockMvc.perform(post("/api/events/" + EVENT_ID + "/confirm").with(tokenFor("ec")))
+    void planningListCarriesTheSameStatusEveryOtherRoleSees() throws Exception {
+        Event event = new Event();
+        event.setEventId(EVENT_ID);
+        event.setEventName("Town Hall");
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-10T09:00:00+08:00"));
+        event.setEndDatetime(OffsetDateTime.parse("2027-03-10T12:00:00+08:00"));
+        event.setStatus(EventStatus.awaiting_safety_review);
+        when(events.findByStatusInOrderByStartDatetimeAsc(anyList())).thenReturn(List.of(event));
+        when(statuses.forEvent(event)).thenReturn(StatusView.of(JourneyStatus.AWAITING_SAFETY_REVIEW, false));
+
+        mockMvc.perform(get("/api/safety/events/planning").with(tokenFor("safety_officer")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("awaiting_safety_review"))
+                .andExpect(jsonPath("$[0].journeyStatus.code").value("AWAITING_SAFETY_REVIEW"))
+                .andExpect(jsonPath("$[0].journeyStatus.label").value("Awaiting Safety Review"));
+    }
+
+    /**
+     * EC08: the Safety Officer decides through /api/safety/.../approval; the
+     * confirm itself is the assigned coordinator's, so a Safety Officer (or a
+     * coordinator going around the Safety Officer) cannot use it to decide.
+     */
+    @Test
+    void safetyOfficerCannotUseTheCoordinatorsConfirmAndCoordinatorCannotApprove() throws Exception {
+        mockMvc.perform(post("/api/events/" + EVENT_ID + "/confirm").with(tokenFor("safety_officer")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/safety/events/" + EVENT_ID + "/approval")
+                        .contentType("application/json").content("{\"decision\":\"approve\"}")
+                        .with(tokenFor("ec")))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(readiness);
     }

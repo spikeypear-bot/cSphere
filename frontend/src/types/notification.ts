@@ -8,6 +8,9 @@ export type NotificationTypeName =
   | 'venue_booking_requested'
   | 'venue_booking_cancelled'
   | 'venue_unavailable'
+  | 'event_confirmed'
+  | 'event_returned_to_planning'
+  | 'event_safety_approved'
 
 export interface NotificationDto {
   notificationId: string

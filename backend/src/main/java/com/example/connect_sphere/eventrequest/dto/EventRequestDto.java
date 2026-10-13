@@ -4,6 +4,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.connect_sphere.common.status.StatusView;
+
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
 
@@ -32,7 +34,23 @@ public record EventRequestDto(
         String organisation,
         UUID coordinatorId,
         String rejectionReason,
-        String createdByName) {
+        String createdByName,
+        /** EC-NEW2: the one status every screen shows. */
+        StatusView journeyStatus) {
+
+    /** Without the journey status (EC-NEW2), for callers built before it; the
+     * mapper always fills it in for real responses. */
+    public EventRequestDto(UUID requestId, Character requestType, UUID eventId, String eventName,
+            String purpose, String description, OffsetDateTime startDatetime, OffsetDateTime endDatetime,
+            Integer expectedAttendance, String venueRequirements, String equipmentRequirements,
+            List<AccessibilityFeature> accessibilityNeeds, List<String> requiredFacilities, Boolean registrationNeeds,
+            EventRequestStatus status, OffsetDateTime createdAt, OffsetDateTime updatedAt,
+            String organisation, UUID coordinatorId, String rejectionReason, String createdByName) {
+        this(requestId, requestType, eventId, eventName, purpose, description, startDatetime, endDatetime,
+                expectedAttendance, venueRequirements, equipmentRequirements, accessibilityNeeds,
+                requiredFacilities, registrationNeeds, status, createdAt, updatedAt, organisation, coordinatorId,
+                rejectionReason, createdByName, null);
+    }
 
     public EventRequestDto(UUID requestId, Character requestType, UUID eventId, String eventName,
             String purpose, String description, OffsetDateTime startDatetime, OffsetDateTime endDatetime,

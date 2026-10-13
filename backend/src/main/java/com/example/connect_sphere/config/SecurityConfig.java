@@ -143,12 +143,24 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
-		    // SO-C4: checklist-gated confirmation is only performed by a Safety Officer.
-		    .requestMatchers(HttpMethod.POST, "/api/events/*/confirm",
-			    "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
+		    // SO-C3/SO-C4: the Safety Officer's checklist and decision.
+		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")
 		    .requestMatchers("/api/safety/events/**").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/readiness").hasAnyRole("EC", "SAFETY_OFFICER")
+		    // EC08: the assigned Coordinator confirms, only after the Safety
+		    // Officer approves (enforced in EventLifecycleService.confirm).
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/confirm").hasRole("EC")
+		    // EC08: the coordinator's lifecycle checklist, send for / withdraw
+		    // from safety review. Which event is the assignment check in
+		    // EventLifecycleService.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/lifecycle").hasRole("EC")
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/safety-review",
+			    "/api/events/*/safety-review/withdraw").hasRole("EC")
+		    // EO04: organiser's arrangements view. Organiser only; which
+		    // events is the organisation check in EventArrangementsService.
+		    // Must sit above the GET /api/events/** rule below.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/arrangements").hasRole("EO")
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.

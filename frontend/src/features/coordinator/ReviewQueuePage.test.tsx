@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
@@ -76,5 +77,35 @@ describe('ReviewQueuePage (EC02 queue)', () => {
     expect(screen.queryByRole('region', { name: /Unassigned/ })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /assign/i })).not.toBeInTheDocument()
     expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual(['GET /api/event-requests/queue'])
+  })
+})
+
+const sv = (code: string, label: string) => ({ code, label, explanation: '', nextActor: null, stage: 'REQUEST', isFinal: false, datePassed: false })
+
+describe('ReviewQueuePage status filter (EC-NEW2)', () => {
+  beforeEach(() => seedSession('coordinator', COORDINATOR_ID))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('filters the queue by the shared status', async () => {
+    stubApi({
+      'GET /api/event-requests/queue': () => jsonResponse(200, {
+        needsReview: [{ ...request('r1', 'Town Hall'), journeyStatus: sv('UNDER_REVIEW', 'Under Review') }],
+        awaitingOrganiser: [{ ...request('r2', 'Gala', 'clarification_required'),
+          journeyStatus: sv('CLARIFICATION_REQUIRED', 'Clarification Required') }],
+      }),
+    })
+    const user = userEvent.setup()
+    renderQueue()
+
+    const filters = await screen.findByRole('group', { name: 'Filter the review queue by status' })
+    await user.click(within(filters).getByRole('button', { name: /Clarification Required/ }))
+    expect(screen.getByText('Gala')).toBeInTheDocument()
+    expect(screen.queryByText('Town Hall')).not.toBeInTheDocument()
+    await user.click(within(filters).getByRole('button', { name: /All/ }))
+    expect(screen.getByText('Town Hall')).toBeInTheDocument()
   })
 })

@@ -102,10 +102,10 @@ describe('NotificationBell — EO09/EO19', () => {
 
     await user.click(await screen.findByLabelText(/Notifications/))
 
-    expect(await screen.findByText('"Alumni Homecoming" is now Approved')).toBeInTheDocument()
+    expect(await screen.findByText('"Alumni Homecoming" is now in Planning')).toBeInTheDocument()
     expect(screen.getByText('Reason: No venue available for these dates')).toBeInTheDocument()
 
-    const unreadItem = screen.getByText('"Alumni Homecoming" is now Approved').closest('button')
+    const unreadItem = screen.getByText('"Alumni Homecoming" is now in Planning').closest('button')
     const readItem = screen.getByText('Reason: No venue available for these dates').closest('button')
     expect(unreadItem).toHaveAttribute('data-read', 'false')
     expect(readItem).toHaveAttribute('data-read', 'true')
@@ -126,7 +126,7 @@ describe('NotificationBell — EO09/EO19', () => {
     renderBell()
 
     await user.click(await screen.findByLabelText(/Notifications/))
-    await user.click(await screen.findByText('"Alumni Homecoming" is now Approved'))
+    await user.click(await screen.findByText('"Alumni Homecoming" is now in Planning'))
 
     expect(await screen.findByText('Event details page')).toBeInTheDocument()
     await waitFor(() =>

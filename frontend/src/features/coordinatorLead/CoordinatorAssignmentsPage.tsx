@@ -1,9 +1,12 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
+import { StatusFilter } from '../../components/ui/JourneyStatus'
 import type { CoordinatorAssignmentsDto } from '../../types/eventRequest'
+import type { StatusView } from '../../types/status'
 import { useVenueRead } from '../venueStaff/useVenueRead'
 import { LeadRequestCard } from './LeadRequestCard'
 import './CoordinatorAssignmentsPage.css'
@@ -18,6 +21,11 @@ export function CoordinatorAssignmentsPage() {
     useVenueRead<CoordinatorAssignmentsDto[]>('/event-requests/assigned', true)
   const refreshing = loading && coordinators !== undefined
   const total = coordinators?.reduce((sum, coordinator) => sum + coordinator.requests.length, 0)
+  // EC-NEW2: filter by the same status everyone sees.
+  const [filter, setFilter] = useState<string | null>(null)
+  const statuses = (coordinators ?? []).flatMap((c) => c.requests.flatMap(({ request }) =>
+    request.journeyStatus ? [request.journeyStatus] : []))
+  const matches = (status?: StatusView | null) => filter === null || status?.code === filter
 
   return (
     <div className="page">
@@ -44,6 +52,7 @@ export function CoordinatorAssignmentsPage() {
           {total === 1 ? '1 request is' : `${total} requests are`} assigned and under review.
         </p>
       ) : null}
+      <StatusFilter statuses={statuses} selected={filter} onChange={setFilter} label="Filter assigned requests by status" />
 
       {/* Coordinators who hold nothing keep their heading, so the Lead sees who is free. */}
       {coordinators?.map((coordinator) => (
@@ -56,7 +65,7 @@ export function CoordinatorAssignmentsPage() {
           </h2>
           {coordinator.requests.length > 0 ? (
             <ul className="lead-request-cards">
-              {coordinator.requests.map(({ request, submittedAt }) => (
+              {coordinator.requests.filter(({ request }) => matches(request.journeyStatus)).map(({ request, submittedAt }) => (
                 <li key={request.requestId}>
                   <LeadRequestCard request={request} submittedAt={submittedAt}
                     coordinatorName={coordinator.coordinatorName} headingLevel={3} />

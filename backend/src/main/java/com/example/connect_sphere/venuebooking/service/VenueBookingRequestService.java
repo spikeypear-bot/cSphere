@@ -148,7 +148,7 @@ public class VenueBookingRequestService {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
         boolean replacement = request != null && request.replacesBookingId() != null;
-        if (event.getStatus() != EventStatus.pending && !(replacement && event.getStatus() == EventStatus.confirmed)) {
+        if (!event.getStatus().isPlanningEditable() && !(replacement && event.getStatus() == EventStatus.confirmed)) {
             throw new VenueBookingStateException("Venue booking requests can only be made while an event is in "
                     + "Planning (this event is " + event.getStatus().name() + ").");
         }

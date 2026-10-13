@@ -5,6 +5,7 @@ import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatusTimeline } from '../../components/ui/StatusTimeline'
+import { JourneyStepper, StatusFilter } from '../../components/ui/JourneyStatus'
 import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
@@ -22,6 +23,8 @@ export function OrganiserHomePage() {
   const { organisation } = useSession()
   const [requests, setRequests] = useState<EventRequestDto[] | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // EC-NEW2: filter by the same status the coordinator sees.
+  const [filter, setFilter] = useState<string | null>(null)
   const location = useLocation()
   const navigate = useNavigate()
   // EO02: show the "submitted successfully" confirmation exactly once, then
@@ -73,8 +76,12 @@ export function OrganiserHomePage() {
         </Card>
       ) : null}
 
+      <StatusFilter
+        statuses={(requests ?? []).flatMap((r) => (r.journeyStatus ? [r.journeyStatus] : []))}
+        selected={filter} onChange={setFilter} label="Filter your requests by status" />
+
       <ul className="plain-list">
-        {requests?.map((request) => (
+        {requests?.filter((r) => filter === null || r.journeyStatus?.code === filter).map((request) => (
           <li key={request.requestId}>
             <Card className="organiser-home__row"
               data-attention={request.status === 'clarification_required' ? 'true' : undefined}>
@@ -95,10 +102,12 @@ export function OrganiserHomePage() {
                     ? `Edited ${formatRelativeTime(request.updatedAt)} — not submitted yet`
                     : `Last updated ${formatRelativeTime(request.updatedAt)}`}
                 </p>
-                <StatusTimeline status={request.status} />
+                {request.journeyStatus && request.status !== 'draft'
+                  ? <JourneyStepper status={request.journeyStatus} />
+                  : <StatusTimeline status={request.status} />}
                 {request.status === 'clarification_required' ? <LatestQuestion requestId={request.requestId} /> : null}
               </div>
-              <StatusBadge status={request.status} />
+              <StatusBadge status={request.status} journey={request.journeyStatus} />
               {request.status === 'draft' ? (
                 <Link className="button button--secondary" to={`/organiser/requests/${request.requestId}`}>
                   Continue editing

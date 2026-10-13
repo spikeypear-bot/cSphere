@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
@@ -28,11 +29,14 @@ public class SafetyOfficerController {
     private final EventRepository events;
     private final ReadinessService readiness;
     private final VenueRepository venues;
+    private final JourneyStatusResolver statuses;
 
-    public SafetyOfficerController(EventRepository events, ReadinessService readiness, VenueRepository venues) {
+    public SafetyOfficerController(EventRepository events, ReadinessService readiness, VenueRepository venues,
+            JourneyStatusResolver statuses) {
         this.events = events;
         this.readiness = readiness;
         this.venues = venues;
+        this.statuses = statuses;
     }
 
     @GetMapping("/events/confirmed")
@@ -40,15 +44,23 @@ public class SafetyOfficerController {
         return list(EventStatus.confirmed);
     }
 
+    /**
+     * Events not yet confirmed: in Planning, awaiting the safety check, sent
+     * back for changes, or approved and waiting for the coordinator to
+     * confirm (EC08). The status on each row says which.
+     */
     @GetMapping("/events/planning")
     public List<SafetyEventListItemDto> planningEvents() {
-        return list(EventStatus.pending);
+        return toItems(events.findByStatusInOrderByStartDatetimeAsc(PRE_CONFIRMATION));
     }
+
+    private static final List<EventStatus> PRE_CONFIRMATION = List.of(EventStatus.pending,
+            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested, EventStatus.safety_approved);
 
     @GetMapping("/events/{eventId}")
     public EventDto getEvent(@PathVariable UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (event.getStatus() != EventStatus.pending && event.getStatus() != EventStatus.confirmed) {
+        if (!ReadinessService.VISIBLE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return toDto(event);
@@ -76,7 +88,10 @@ public class SafetyOfficerController {
     }
 
     private List<SafetyEventListItemDto> list(EventStatus status) {
-        List<Event> rows = events.findByStatusOrderByStartDatetimeAsc(status);
+        return toItems(events.findByStatusOrderByStartDatetimeAsc(status));
+    }
+
+    private List<SafetyEventListItemDto> toItems(List<Event> rows) {
         if (rows.isEmpty()) {
             return List.of();
         }
@@ -85,7 +100,8 @@ public class SafetyOfficerController {
                 .collect(java.util.stream.Collectors.toMap(Venue::getVenueId, Venue::getVenueAddress));
         return rows.stream().map(event -> new SafetyEventListItemDto(
                 event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
-                event.getVenueId() == null ? null : venueById.get(event.getVenueId()), event.getStatus().name()))
+                event.getVenueId() == null ? null : venueById.get(event.getVenueId()), event.getStatus().name(),
+                statuses.forEvent(event)))
                 .toList();
     }
 

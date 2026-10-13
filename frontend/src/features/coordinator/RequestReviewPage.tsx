@@ -6,6 +6,7 @@ import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatusTimeline } from '../../components/ui/StatusTimeline'
+import { JourneyStepper } from '../../components/ui/JourneyStatus'
 import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { RequestByline } from '../../components/ui/RequestByline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
@@ -187,9 +188,9 @@ export function RequestReviewPage() {
             createdByName={request.createdByName}
             updatedAt={request.updatedAt} timeline={timeline} />
         }
-        actions={<StatusBadge status={request.status} />}
+        actions={<StatusBadge status={request.status} journey={request.journeyStatus} />}
       />
-      <StatusTimeline status={request.status} />
+      {request.journeyStatus ? <JourneyStepper status={request.journeyStatus} /> : <StatusTimeline status={request.status} />}
 
       {notice ? <Notice>{notice}</Notice> : null}
 

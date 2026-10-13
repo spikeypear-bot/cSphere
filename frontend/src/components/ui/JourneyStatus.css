@@ -1,0 +1,106 @@
+.journey-status { display: inline-flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; }
+
+.journey-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.journey-badge::before {
+  content: '';
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: currentColor;
+}
+.journey-badge--small { font-size: 0.68rem; padding: 0.15rem 0.5rem; }
+.journey-badge--small::before { display: none; }
+.journey-badge--neutral { background: var(--hairline); color: var(--ink-soft); }
+.journey-badge--progress { background: var(--accent-soft); color: var(--accent-strong); }
+.journey-badge--attention {
+  background: color-mix(in srgb, var(--role-coordinator) 16%, var(--panel));
+  color: var(--role-coordinator);
+}
+.journey-badge--success { background: var(--success-soft); color: var(--success); }
+.journey-badge--danger { background: var(--danger-soft); color: var(--danger); }
+
+.journey-explainer {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.85rem 1rem;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--hairline);
+  border-inline-start-width: 4px;
+  background: var(--panel);
+}
+.journey-explainer[data-tone='progress'] { border-inline-start-color: var(--accent); }
+.journey-explainer[data-tone='attention'] { border-inline-start-color: var(--role-coordinator); }
+.journey-explainer[data-tone='success'] { border-inline-start-color: var(--success); }
+.journey-explainer[data-tone='danger'] { border-inline-start-color: var(--danger); }
+.journey-explainer__text { margin: 0; color: var(--ink); }
+.journey-explainer__next { color: var(--ink-soft); }
+.journey-explainer__warning { margin: 0; color: var(--danger); font-weight: 600; }
+
+.journey-stepper {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  counter-reset: step;
+}
+.journey-stepper li { position: relative; display: grid; justify-items: center; gap: 0.35rem; text-align: center; min-width: 0; }
+.journey-stepper li::before {
+  content: '';
+  position: absolute;
+  top: 0.45rem;
+  inset-inline-start: -50%;
+  width: 100%;
+  height: 2px;
+  background: var(--hairline);
+}
+.journey-stepper li:first-child::before { display: none; }
+.journey-stepper__dot {
+  position: relative;
+  z-index: 1;
+  width: 0.95rem;
+  height: 0.95rem;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 3px solid var(--hairline-strong);
+}
+.journey-stepper__label { font-size: 0.72rem; font-weight: 600; color: var(--ink-faint); overflow-wrap: anywhere; }
+.journey-stepper li[data-state='done'] .journey-stepper__dot { background: var(--success); border-color: var(--success); }
+.journey-stepper li[data-state='done']::before,
+.journey-stepper li[data-state='current']::before,
+.journey-stepper li[data-state='attention']::before { background: var(--success); }
+.journey-stepper li[data-state='done'] .journey-stepper__label { color: var(--success); }
+.journey-stepper li[data-state='current'] .journey-stepper__dot { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+.journey-stepper li[data-state='current'] .journey-stepper__label { color: var(--ink); }
+.journey-stepper li[data-state='attention'] .journey-stepper__dot { border-color: var(--role-coordinator); }
+.journey-stepper li[data-state='attention'] .journey-stepper__label { color: var(--role-coordinator); }
+.journey-stepper li[data-state='ended'] .journey-stepper__dot { background: var(--danger); border-color: var(--danger); }
+.journey-stepper li[data-state='ended'] .journey-stepper__label { color: var(--danger); }
+
+.status-filter { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.status-filter__count {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.3rem;
+  padding: 0 0.3rem;
+  margin-inline-start: 0.25rem;
+  border-radius: 999px;
+  background: var(--hairline);
+  font-size: 0.72rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .journey-stepper li[data-state='current'] .journey-stepper__dot { transition: box-shadow 200ms ease; }
+}

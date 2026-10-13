@@ -42,3 +42,5 @@
     padding: 1rem;
   }
 }
+
+.event-details__journey { display: grid; gap: 1rem; }

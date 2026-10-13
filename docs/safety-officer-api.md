@@ -9,7 +9,7 @@ not the access-control boundary.
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| `GET` | `/api/safety/events/planning` | Safety Officer | Planned events awaiting review, soonest first |
+| `GET` | `/api/safety/events/planning` | Safety Officer | Events not yet confirmed (Planning, Awaiting Safety Review, Safety Changes Requested, Safety Approved), soonest first. Each item carries `journeyStatus` (the shared EC-NEW2 status). The console shows Awaiting Safety Review as "Waiting for your safety review" and the rest as "Still being planned" |
 | `GET` | `/api/safety/events/confirmed` | Safety Officer | All confirmed events, soonest first |
 | `GET` | `/api/safety/events/{eventId}` | Safety Officer | Event details for a Planning or Confirmed event |
 | `GET` | `/api/events/{eventId}/venue-bookings` | Safety Officer or assigned Coordinator | Booking status and venue arrangement |
@@ -46,16 +46,23 @@ can view this state but cannot edit it.
 ## Safety decision
 
 `POST /api/safety/events/{eventId}/approval` accepts
-`{ "decision": "approve" | "reject", "note": "optional note" }`.
+`{ "decision": "approve" | "request_changes" | "reject", "note": "..." }`.
+
+Since EC08 (D22), the Event Coordinator sends the event for its safety check, and
+a decision is accepted only while the event is **Awaiting Safety Review**.
 
 - Approval requires all six items to be checked. A blocked attempt returns HTTP
   422 and names every outstanding item; no event or review status is changed.
-- Successful approval records the reviewer/note/time and changes the event from
-  Planning to Confirmed in one transaction. The originating Organiser is notified.
-- Rejection records the latest review outcome/note but leaves the event in Planning.
-  The Safety Officer can update readiness and submit a later decision.
-- The former Coordinator confirmation path is restricted to Safety Officers and
-  applies the same checklist gate; it cannot bypass readiness.
+- Successful approval records the reviewer/note/time and moves the event to
+  **Safety Approved**. The Event Coordinator is notified and then confirms the
+  event (`POST /api/events/{eventId}/confirm`, assigned Coordinator only), which
+  notifies the Organiser and the staff involved.
+- Requesting changes or rejecting needs a note. It records the review outcome
+  (`changes_requested` / `rejected`) and sends the event back to the Coordinator
+  (**Safety Changes Requested**) with the note as feedback. They make the changes
+  and send it again; the Safety Officer then decides again.
+- The checklist can be edited in Planning and while awaiting review, not after
+  approval.
 
 ## Verification
 

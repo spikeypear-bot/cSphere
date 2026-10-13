@@ -12,5 +12,11 @@ public enum NotificationType {
     venue_booking_requested,
     /** EC03: the coordinator cancelled a pending booking request (V14). */
     venue_booking_cancelled,
-    venue_unavailable
+    venue_unavailable,
+    /** EC08 (V22): Venue Staff / Technical Support told an event is confirmed. */
+    event_confirmed,
+    /** EC08 (V22): the coordinator told an event went back to Planning, and why. */
+    event_returned_to_planning,
+    // EC08: the Safety Officer approved; the coordinator can now confirm.
+    event_safety_approved
 }

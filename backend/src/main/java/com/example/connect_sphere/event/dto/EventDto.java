@@ -4,6 +4,8 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import com.example.connect_sphere.common.status.StatusView;
+
 /** Read shape for an approved/confirmed event — EO09's "can view the
  * confirmed event arrangements" and the notification's own deep link both
  * land here. {@code coordinatorName}/{@code coordinatorEmail} are resolved
@@ -28,7 +30,24 @@ public record EventDto(
         String equipmentRequirements,
         String status,
         String coordinatorName,
-        String coordinatorEmail) {
+        String coordinatorEmail,
+        /** EC-NEW2: the one status every screen shows. */
+        StatusView journeyStatus,
+        /** EC08: the Safety Officer's latest feedback, when changes were requested. */
+        String safetyFeedback,
+        OffsetDateTime safetyApprovedAt,
+        OffsetDateTime confirmedAt) {
+
+    /** Without the EC-NEW2/EC08 additions, for callers built before them. */
+    public EventDto(UUID eventId, String eventName, String purpose, String description,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
+            UUID venueId, List<String> accessibilityNeeds, List<String> requiredFacilities, Boolean registrationNeeds,
+            String organisation, String venueRequirements, String equipmentRequirements,
+            String status, String coordinatorName, String coordinatorEmail) {
+        this(eventId, eventName, purpose, description, startDatetime, endDatetime, expectedAttendance,
+                venueId, accessibilityNeeds, requiredFacilities, registrationNeeds, organisation, venueRequirements,
+                equipmentRequirements, status, coordinatorName, coordinatorEmail, null, null, null, null);
+    }
 
     public EventDto(UUID eventId, String eventName, String purpose, String description,
             OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
