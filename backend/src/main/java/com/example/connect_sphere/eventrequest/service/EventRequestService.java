@@ -475,17 +475,50 @@ public class EventRequestService {
         if (coordinatorUserId == null) {
             throw new InvalidCoordinatorException();
         }
-        EventRequest entity = findAwaitingAssignment(requestId, true);
+        return applyAssignment(findAwaitingAssignment(requestId, true), leadId, coordinatorUserId);
+    }
+
+    /**
+     * ELC-C5: the Lead moves a request that is still under review from its
+     * Event Coordinator to a different one. Only the coordinator changes:
+     * the status and the organiser's details stay as they are. The organiser
+     * learns of the change (EO19) once it commits.
+     */
+    @Transactional
+    public EventRequestDto reassignCoordinator(UUID leadId, UUID requestId, UUID coordinatorUserId) {
+        if (coordinatorUserId == null) {
+            throw new InvalidCoordinatorException();
+        }
+        EventRequest entity = findReassignable(requestId);
+        if (coordinatorUserId.equals(entity.getCoordinatorId())) {
+            throw new InvalidCoordinatorException(
+                    "This request is already assigned to that Event Coordinator. Choose a different one.");
+        }
+        return applyAssignment(entity, leadId, coordinatorUserId);
+    }
+
+    /** Gives the request to one Event Coordinator: the coordinator, the
+     * timeline entry, then the organiser's notice once the transaction
+     * commits. A request that already had a coordinator is a reassignment:
+     * the entry names both and the notice says so. */
+    private EventRequestDto applyAssignment(EventRequest entity, UUID leadId, UUID coordinatorUserId) {
         User coordinator = userRepository.findById(coordinatorUserId)
                 .filter(u -> u.getRole() == UserRole.ec)
                 .orElseThrow(() -> new InvalidCoordinatorException(coordinatorUserId));
+        UUID previousCoordinatorId = entity.getCoordinatorId();
+        boolean reassignment = previousCoordinatorId != null;
+        String note = reassignment
+                ? "Reassigned from " + userRepository.findById(previousCoordinatorId)
+                        .map(User::getUsername).orElse("the previous coordinator")
+                        + " to " + coordinator.getUsername()
+                : "Assigned to " + coordinator.getUsername();
 
         entity.setCoordinatorId(coordinatorUserId);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), saved.getEventId(),
-                ActivityType.coordinator_assigned, leadId, "Assigned to " + coordinator.getUsername(),
-                null, null, null));
+                reassignment ? ActivityType.coordinator_reassigned : ActivityType.coordinator_assigned,
+                leadId, note, null, null, null));
 
         if (saved.getCreatedBy() != null) {
             // After commit, like approve(): the notification is written in its
@@ -494,7 +527,7 @@ public class EventRequestService {
             afterThisTransactionCommits(() -> notificationService.createCoordinatorAssignmentNotification(
                     saved.getCreatedBy(), saved.getRequestId(), saved.getEventId(),
                     saved.getEventName(), coordinator.getUsername(), coordinator.getEmail(),
-                    false));
+                    reassignment));
         }
         return mapper.toDto(saved);
     }
@@ -565,6 +598,25 @@ public class EventRequestService {
         if (entity.getCoordinatorId() != null) {
             throw new EventRequestStateException(
                     "This request has already been assigned to an Event Coordinator, who now reviews it.");
+        }
+        return entity;
+    }
+
+    /** A request the Lead may reassign (ELC-C5): it has a coordinator and
+     * is still under review. Once decided it stays with whoever decided it. */
+    private EventRequest findReassignable(UUID requestId) {
+        EventRequest entity = repository.findForUpdate(requestId)
+                .filter(request -> request.getStatus() != EventRequestStatus.draft)
+                .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        if (entity.getStatus() != EventRequestStatus.pending
+                && entity.getStatus() != EventRequestStatus.clarification_required) {
+            throw new EventRequestStateException(
+                    "This request can no longer be reassigned (current status: "
+                            + label(entity.getStatus()) + ").");
+        }
+        if (entity.getCoordinatorId() == null) {
+            throw new EventRequestStateException(
+                    "This request has no Event Coordinator yet. Assign it from the unassigned requests list.");
         }
         return entity;
     }
