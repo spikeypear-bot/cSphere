@@ -53,7 +53,7 @@ const DETAILS: { label: string; value: (request: EventRequestDto) => string | nu
   },
 ]
 
-/** Why the Lead can no longer act on this request, or null while nobody is
+/** Why the Lead can no longer review this request, or null while nobody is
  * assigned and it is submitted or waiting for the organiser's clarification.
  * `assignee` names the assigned coordinator. */
 function closedReason(request: EventRequestDto, assignee: string): string | null {
@@ -83,7 +83,8 @@ function closedReason(request: EventRequestDto, assignee: string): string | null
  * still unassigned the Lead can assign it to an Event Coordinator (ELC-C6),
  * reject it or ask the organiser a question; approving stays with the
  * coordinator it is assigned to. While it waits for the organiser's answer
- * it can only be assigned.
+ * it can only be assigned. Once it has a coordinator and is still under
+ * review, the Lead can only reassign it to a different one (ELC-C5).
  */
 export function IncomingRequestReviewPage() {
   const { requestId } = useParams<{ requestId: string }>()
@@ -139,10 +140,14 @@ export function IncomingRequestReviewPage() {
   if (!review) return <p role="status">Loading request…</p>
 
   const { request, timeline } = review
-  // Only while the card's coordinator still holds the request.
+  // From the picker once it has loaded; else the card's coordinator, only
+  // while they still hold the request.
   const closed = closedReason(request,
-    from && from.id === request.coordinatorId ? from.name : 'an Event Coordinator')
+    coordinators?.find((c) => c.userId === request.coordinatorId)?.username
+      ?? (from && from.id === request.coordinatorId ? from.name : 'an Event Coordinator'))
   const waiting = request.status === 'clarification_required'
+  // ELC-C5: an assigned request still under review can move to another coordinator.
+  const reassignable = Boolean(request.coordinatorId) && (request.status === 'pending' || waiting)
   const name = request.eventName?.trim() || 'Untitled request'
 
   function choose(next: Decision) {
@@ -160,15 +165,18 @@ export function IncomingRequestReviewPage() {
     }
   }
 
-  /** Sends one action, then returns to the queue with its outcome. A refusal
-   * (e.g. someone was assigned meanwhile) stays here and reloads the request. */
-  async function send(path: string, body: unknown, success: string) {
+  /** Sends one action, then returns to the list the request was on with its
+   * outcome: the unassigned queue, or the assignments for an `assigned`
+   * request. A refusal (e.g. someone was assigned meanwhile) stays here and
+   * reloads the request. */
+  async function send(path: string, body: unknown, success: string, assigned = false) {
     setBusy(true)
     setInputError(null)
     setActionError(null)
     try {
-      await apiClient.post(`/event-requests/unassigned/${request.requestId}/${path}`, body)
-      navigate(QUEUE_PATH, { state: { notice: success } })
+      await apiClient.post(
+        `/event-requests/${assigned ? 'assigned' : 'unassigned'}/${request.requestId}/${path}`, body)
+      navigate(assigned ? ASSIGNMENTS_PATH : QUEUE_PATH, { state: { notice: success } })
     } catch (err) {
       setActionError(err instanceof ApiClientError ? err.message : 'That action failed. Nothing was changed.')
       setDecision(null)
@@ -178,9 +186,17 @@ export function IncomingRequestReviewPage() {
     }
   }
 
+  /** Assigns, or reassigns a request that already has a coordinator. The
+   * coordinator it already has does not count as a choice. */
   function sendAssignment() {
-    const coordinator = coordinators?.find((c) => c.userId === coordinatorId)
-    if (!coordinator) return setInputError('Choose an Event Coordinator before assigning.')
+    const coordinator = coordinators?.find((c) => c.userId === coordinatorId && c.userId !== request.coordinatorId)
+    if (!coordinator) {
+      return setInputError(`Choose an Event Coordinator before ${reassignable ? 'reassigning' : 'assigning'}.`)
+    }
+    if (reassignable) {
+      return void send('reassign', { coordinatorUserId: coordinator.userId },
+        `“${name}” was reassigned to ${coordinator.username}. The organiser has been notified.`, true)
+    }
     void send('assign', { coordinatorUserId: coordinator.userId },
       `“${name}” was assigned to ${coordinator.username}. The organiser has been notified.`)
   }
@@ -237,19 +253,21 @@ export function IncomingRequestReviewPage() {
             </dl>
           </Card>
 
-          {closed ? null : (
+          {closed && !reassignable ? null : (
             <Card className="lead-review__decision">
-              <h2>Decision</h2>
+              <h2>{reassignable ? 'Reassign' : 'Decision'}</h2>
               <p className="field-hint">
-                {waiting
-                  ? 'Waiting for the organiser to answer a clarification. It can still be assigned: the coordinator gets it when the organiser resubmits.'
-                  : 'Assign the request to an Event Coordinator, or ask the organiser a question or reject it first.'}
+                {reassignable
+                  ? 'Move this request to a different Event Coordinator when it should not stay with the current one.'
+                  : waiting
+                    ? 'Waiting for the organiser to answer a clarification. It can still be assigned: the coordinator gets it when the organiser resubmits.'
+                    : 'Assign the request to an Event Coordinator, or ask the organiser a question or reject it first.'}
               </p>
               <div className="lead-review__choices" role="group" aria-label="Choose an outcome">
                 <Button variant={decision === 'assign' ? 'primary' : 'secondary'} onClick={() => choose('assign')}>
-                  Assign
+                  {reassignable ? 'Reassign' : 'Assign'}
                 </Button>
-                {waiting ? null : (
+                {waiting || reassignable ? null : (
                   <>
                     <Button variant={decision === 'clarify' ? 'primary' : 'secondary'} onClick={() => choose('clarify')}>
                       Ask for clarification
@@ -267,15 +285,34 @@ export function IncomingRequestReviewPage() {
                   <select id="lead-coordinator" value={coordinatorId} disabled={coordinators === null}
                     onChange={(e) => setCoordinatorId(e.target.value)}>
                     <option value="">Choose an Event Coordinator</option>
-                    {(coordinators ?? []).map((coordinator) => (
-                      <option key={coordinator.userId} value={coordinator.userId}>{coordinator.username}</option>
-                    ))}
+                    {(coordinators ?? []).map((coordinator) => {
+                      // The coordinator the request already has cannot be picked again.
+                      const current = coordinator.userId === request.coordinatorId
+                      return (
+                        <option key={coordinator.userId} value={coordinator.userId} disabled={current}>
+                          {coordinator.username}{current ? ' (current)' : ''}
+                        </option>
+                      )
+                    })}
                   </select>
-                  <p className="field-hint">The request keeps its status and details. The coordinator reviews it
-                    from their own queue, and the organiser is told who they are.</p>
-                  <Button disabled={busy} onClick={sendAssignment}>
-                    {busy ? 'Assigning…' : 'Assign request'}
-                  </Button>
+                  {reassignable ? (
+                    <>
+                      <p className="field-hint">The request keeps its status and details. It leaves the current
+                        coordinator's queue for the new one's, and the organiser is told who their new coordinator
+                        is.</p>
+                      <Button disabled={busy} onClick={sendAssignment}>
+                        {busy ? 'Reassigning…' : 'Reassign request'}
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <p className="field-hint">The request keeps its status and details. The coordinator reviews it
+                        from their own queue, and the organiser is told who they are.</p>
+                      <Button disabled={busy} onClick={sendAssignment}>
+                        {busy ? 'Assigning…' : 'Assign request'}
+                      </Button>
+                    </>
+                  )}
                 </div>
               ) : null}
 

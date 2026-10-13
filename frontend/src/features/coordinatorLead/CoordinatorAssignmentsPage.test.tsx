@@ -59,7 +59,7 @@ function eventNames(container: HTMLElement = document.body) {
   return within(container).queryAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
 }
 
-describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests)', () => {
+describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignment)', () => {
   beforeEach(() => seedSession('coordinator-lead', 'ecl-1'))
   afterEach(() => {
     cleanup()
@@ -195,7 +195,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests)', () => {
   it.each([
     ['pending'],
     ['clarification_required'],
-  ])('selecting a %s request opens its review page, shown as assigned with no review actions', async (status) => {
+  ])('selecting a %s request opens its review page, shown as assigned and offering only Reassign', async (status) => {
     const listed = assigned('r1', 'Offsite', { status })
     const calls = stubApi({
       [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
@@ -211,8 +211,55 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests)', () => {
     expect(await screen.findByRole('heading', { level: 1, name: 'Offsite' })).toBeInTheDocument()
     expect(screen.getByText(/has been assigned to ec1, who/)).toBeInTheDocument()
     expect(screen.queryByText(/returns to the unassigned list/)).not.toBeInTheDocument()
-    expect(screen.queryAllByRole('button', { name: /clarification|reject|approve|assign/i })).toHaveLength(0)
+    expect(screen.queryAllByRole('button', { name: /clarification|reject|approve|assign/i })
+      .map((button) => button.textContent)).toEqual(['Reassign'])
     expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+  })
+
+  it('after a reassignment, confirms it and shows the request under its new coordinator with both counts updated', async () => {
+    const listed = assigned('r1', 'Offsite')
+    let reassigned = false
+    const calls = stubApi({
+      [ASSIGNED]: () => jsonResponse(200, reassigned
+        ? [coordinator('ec1'), coordinator('ec2', [assigned('r1', 'Offsite', { coordinatorId: 'ec-2' })])]
+        : [coordinator('ec1', [listed]), coordinator('ec2')]),
+      'GET /api/event-requests/unassigned/r1': () => jsonResponse(200, {
+        request: listed.request, missingFields: [], scheduleValid: true, timeline: [],
+      }),
+      'GET /api/event-requests/unassigned/coordinators': () => jsonResponse(200, [
+        { userId: 'ec-1', username: 'ec1' }, { userId: 'ec-2', username: 'ec2' },
+      ]),
+      'POST /api/event-requests/assigned/r1/reassign': () => {
+        reassigned = true
+        return jsonResponse(200, { ...listed.request, coordinatorId: 'ec-2' })
+      },
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    expect(eventNames(await groupOf('ec1 1 request'))).toEqual(['Offsite'])
+    await groupOf('ec2 0 requests')
+    await user.click(screen.getByRole('link', { name: 'View request: Offsite' }))
+    await user.click(await screen.findByRole('button', { name: 'Reassign' }))
+    await user.selectOptions(await screen.findByLabelText('Event Coordinator'), await screen.findByRole('option', { name: 'ec2' }))
+    await user.click(screen.getByRole('button', { name: 'Reassign request' }))
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Coordinator assignments' })).toBeInTheDocument()
+    expect(screen.getByText('“Offsite” was reassigned to ec2. The organiser has been notified.')).toBeInTheDocument()
+    expect(eventNames(await groupOf('ec2 1 request'))).toEqual(['Offsite'])
+    expect(eventNames(await groupOf('ec1 0 requests'))).toEqual([])
+    expect(within(await cardFor('Offsite')).getByText('Event Coordinator').nextElementSibling).toHaveTextContent('ec2')
+    expect(calls.filter((call) => call.method === 'POST')).toEqual([
+      expect.objectContaining({ url: '/api/event-requests/assigned/r1/reassign', body: { coordinatorUserId: 'ec-2' } }),
+    ])
+  })
+
+  it('shows no confirmation when the page is opened on its own', async () => {
+    stubApi({ [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [assigned('r1', 'Offsite')])]) })
+    renderPage()
+
+    await cardFor('Offsite')
+    expect(screen.queryByText(/was reassigned to/)).not.toBeInTheDocument()
   })
 
   it('the review page opened from a card leads back to the coordinator assignments', async () => {

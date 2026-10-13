@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
+import { CoordinatorAssignmentsPage } from './CoordinatorAssignmentsPage'
 import { IncomingRequestReviewPage } from './IncomingRequestReviewPage'
 import { UnassignedRequestsPage } from './UnassignedRequestsPage'
 
@@ -13,6 +14,8 @@ const REJECT = 'POST /api/event-requests/unassigned/r1/reject'
 const CLARIFY = 'POST /api/event-requests/unassigned/r1/clarifications'
 const COORDINATORS = 'GET /api/event-requests/unassigned/coordinators'
 const ASSIGN = 'POST /api/event-requests/unassigned/r1/assign'
+const REASSIGN = 'POST /api/event-requests/assigned/r1/reassign'
+const ASSIGNMENTS = 'GET /api/event-requests/assigned'
 const DAY_MS = 24 * 60 * 60 * 1000
 const daysAgo = (days: number) => new Date(Date.now() - days * DAY_MS).toISOString()
 
@@ -51,6 +54,7 @@ function renderPage() {
         <Routes>
           <Route path="/coordinator-lead/unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
           <Route path="/coordinator-lead/unassigned-requests" element={<UnassignedRequestsPage />} />
+          <Route path="/coordinator-lead/assignments" element={<CoordinatorAssignmentsPage />} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,
@@ -76,13 +80,26 @@ async function openPicker(user: ReturnType<typeof userEvent.setup>) {
   return screen.getByLabelText('Event Coordinator') as HTMLSelectElement
 }
 
+/** Opens the Reassign panel and returns its picker once the coordinators have loaded. */
+async function openReassignPicker(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(await screen.findByRole('button', { name: 'Reassign' }))
+  await screen.findByRole('option', { name: 'ec2' })
+  return screen.getByLabelText('Event Coordinator') as HTMLSelectElement
+}
+
+/** Every action button the page offers right now, in page order. */
+function outcomeChoices() {
+  const group = screen.queryByRole('group', { name: 'Choose an outcome' })
+  return group ? within(group).getAllByRole('button').map((b) => b.textContent) : []
+}
+
 /** The value shown next to a label in the submitted details. */
 function detail(label: string) {
   const list = screen.getByRole('heading', { name: 'Submitted details' }).parentElement as HTMLElement
   return within(list).getByText(label, { selector: 'dt' }).nextElementSibling
 }
 
-describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment)', () => {
+describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-C5 reassignment)', () => {
   beforeEach(() => seedSession('coordinator-lead', 'ecl-1'))
   afterEach(() => {
     cleanup()
@@ -391,8 +408,9 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment)', ()
   })
 
   it.each([
+    // The picker has loaded by now, so the page names whoever got the request.
     ['assigned', 'This request has already been assigned to an Event Coordinator, who now reviews it.',
-      { coordinatorId: 'ec-1' }, /has been assigned to an Event Coordinator/],
+      { coordinatorId: 'ec-1' }, /has been assigned to ec1, who now reviews it/],
     ['rejected', 'This request is no longer waiting for assignment (current status: Rejected).',
       { status: 'rejected' }, /has been rejected/],
   ])('when the request was %s meanwhile, assigning shows the refusal, stays on the page and withdraws the actions',
@@ -418,6 +436,115 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment)', ()
       expect(screen.getByRole('heading', { level: 1, name: 'Tech Summit' })).toBeInTheDocument()
       expect(calls.map((call) => call.method)).toEqual(['GET', 'GET', 'POST', 'GET'])
     })
+
+  // ---- Reassigning (ELC-C5) ----------------------------------------
+
+  it.each(['pending', 'clarification_required'])(
+    'offers Reassign and nothing else when the %s request already has a coordinator', async (status) => {
+      stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
+      renderPage()
+
+      await screen.findByRole('heading', { level: 1, name: 'Tech Summit' })
+      expect(outcomeChoices()).toEqual(['Reassign'])
+      expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument()
+    })
+
+  it.each(['approved', 'rejected', 'cancelled'])(
+    'does not offer Reassign once the assigned request is %s', async (status) => {
+      stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
+      renderPage()
+
+      await screen.findByRole('heading', { level: 1, name: 'Tech Summit' })
+      expect(outcomeChoices()).toEqual([])
+      expect(screen.queryByRole('button', { name: /reassign/i })).not.toBeInTheDocument()
+    })
+
+  it('lists every Event Coordinator to reassign to, showing the current one, who cannot be picked', async () => {
+    const calls = stubApi({
+      [REVIEW]: () => jsonResponse(200, review({ coordinatorId: 'ec-1' })),
+      [COORDINATORS]: coordinators,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    const picker = await openReassignPicker(user)
+
+    expect(within(picker).getAllByRole('option').map((option) => option.textContent))
+      .toEqual(['Choose an Event Coordinator', 'ec1 (current)', 'ec2', 'ec3'])
+    expect(within(picker).getByRole('option', { name: 'ec1 (current)' })).toBeDisabled()
+    expect(within(picker).getByRole('option', { name: 'ec2' })).toBeEnabled()
+    expect(within(picker).getByRole('option', { name: 'ec3' })).toBeEnabled()
+    expect(picker).toHaveValue('')
+    expect(screen.getByText(/has been assigned to ec1, who now reviews it\.$/)).toBeInTheDocument()
+    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual([
+      'GET /api/event-requests/unassigned/r1', 'GET /api/event-requests/unassigned/coordinators',
+    ])
+  })
+
+  it.each(['pending', 'clarification_required'])(
+    'reassigning a %s request sends the chosen coordinator, then returns to the assignments with a confirmation naming them',
+    async (status) => {
+      const calls = stubApi({
+        [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })),
+        [COORDINATORS]: coordinators,
+        [REASSIGN]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-2' }).request),
+        [ASSIGNMENTS]: () => jsonResponse(200, []),
+      })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.selectOptions(await openReassignPicker(user), 'ec2')
+      await user.click(screen.getByRole('button', { name: 'Reassign request' }))
+
+      expect(await screen.findByRole('heading', { level: 1, name: 'Coordinator assignments' })).toBeInTheDocument()
+      expect(screen.getByText('“Tech Summit” was reassigned to ec2. The organiser has been notified.'))
+        .toBeInTheDocument()
+      expect(screen.queryByRole('heading', { level: 1, name: 'Tech Summit' })).not.toBeInTheDocument()
+      expect(calls.filter((call) => call.method === 'POST')).toEqual([
+        expect.objectContaining({ url: '/api/event-requests/assigned/r1/reassign', body: { coordinatorUserId: 'ec-2' } }),
+      ])
+    })
+
+  it('reassigning without choosing a coordinator is blocked with a message and sends nothing', async () => {
+    const calls = stubApi({
+      [REVIEW]: () => jsonResponse(200, review({ coordinatorId: 'ec-1' })),
+      [COORDINATORS]: coordinators,
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await openReassignPicker(user)
+    await user.click(screen.getByRole('button', { name: 'Reassign request' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose an Event Coordinator before reassigning.')
+    // Still on the review page, and nothing but the two reads was ever sent.
+    expect(screen.getByRole('heading', { level: 1, name: 'Tech Summit' })).toBeInTheDocument()
+    expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+  })
+
+  it('when the coordinator approved the request meanwhile, reassigning shows the refusal, stays on the page and withdraws Reassign', async () => {
+    const refusal = 'This request can no longer be reassigned (current status: Approved).'
+    let reads = 0
+    const calls = stubApi({
+      [REVIEW]: () => {
+        reads += 1
+        return jsonResponse(200, review({ coordinatorId: 'ec-1', status: reads === 1 ? 'pending' : 'approved' }))
+      },
+      [COORDINATORS]: coordinators,
+      [REASSIGN]: () => jsonResponse(409, { message: refusal }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.selectOptions(await openReassignPicker(user), 'ec2')
+    await user.click(screen.getByRole('button', { name: 'Reassign request' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(refusal)
+    expect(await screen.findByText(/has been approved/, { selector: '.lead-review__closed p' })).toBeInTheDocument()
+    expect(outcomeChoices()).toEqual([])
+    expect(screen.getByRole('heading', { level: 1, name: 'Tech Summit' })).toBeInTheDocument()
+    expect(calls.map((call) => call.method)).toEqual(['GET', 'GET', 'POST', 'GET'])
+  })
 
   it('opening the page only reads the request', async () => {
     const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()) })

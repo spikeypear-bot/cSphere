@@ -20,7 +20,8 @@ export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted',
   headingLevel?: 2 | 3
 }) {
   const Heading = headingLevel === 3 ? 'h3' : 'h2'
-  // An assigned request is the coordinator's to review; the Lead only views it.
+  // An assigned request is the coordinator's to review; the Lead views it
+  // and can reassign it from there (ELC-C5).
   const action = coordinatorName ? 'View request' : 'Review request'
   return (
     <Card className="lead-request-card">
