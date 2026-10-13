@@ -250,7 +250,7 @@ the reviewer, time, and optional note. Approval updates `events.status` to
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `event_id` | `UUID` | no | PK, FK → `events` | Event under review, cascade-deleted with the event |
-| `review_status` | `VARCHAR(16)` | no | | `approved` or `rejected` |
+| `review_status` | `VARCHAR(32)` | no | | `approved`, `rejected` or `changes_requested` (V23; widened from 16 in V24) |
 | `note` | `VARCHAR(2000)` | no | | Optional review note |
 | `reviewed_by` | `UUID` | no | FK → `users` | Safety Officer who made the latest decision |
 | `reviewed_at` | `TIMESTAMPTZ` | no | | Time of the latest decision |
@@ -502,3 +502,7 @@ V20 adds `venue_unavailability` (UUID primary key, required venue/creator foreig
 ## V23 update — event safety review lifecycle (EC08, EC-NEW2, EO04)
 
 V23 adds three `event_status` values (`awaiting_safety_review`, `safety_changes_requested`, `safety_approved`) and five nullable `events` columns (`safety_approved_at`, `safety_feedback`, `first_confirmed_at`, `confirmed_at`, `confirmed_by` → `users`). Already-confirmed or completed events are backfilled so that `confirmed_at`/`first_confirmed_at` are not null. `notification_type` gains `event_confirmed`, `event_returned_to_planning` and `event_safety_approved`; `chk_notification_shape` requires an `event_id` for all three. `event_safety_reviews.review_status` (V22) also allows `changes_requested`. See decision-log D22.
+
+## V24 update — safety review status length (SO-C5, EC08)
+
+V24 widens `event_safety_reviews.review_status` from `VARCHAR(16)` to `VARCHAR(32)`. V23 allowed `changes_requested` in the CHECK constraint, but that value is 17 characters, so the Safety Officer's "Request changes" decision failed with a 500 until this migration.

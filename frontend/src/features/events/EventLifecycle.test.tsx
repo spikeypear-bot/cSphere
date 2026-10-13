@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -173,6 +173,37 @@ describe('EC08 readiness, send for safety review, withdraw and confirm', () => {
     await user.click(within(panel).getByRole('button', { name: 'Confirm event' }))
     expect(await screen.findByText(/Event confirmed\. The organiser and the staff involved have been notified\./)).toBeInTheDocument()
   })
+
+  it('says what changed when a prerequisite stopped holding before Confirm, and refreshes the checklist', async () => {
+    seedSession('coordinator')
+    let refused = false
+    let lifecycleLoads = 0
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event(status('SAFETY_APPROVED', 'Safety Approved'), 'safety_approved')),
+      [`GET /api/events/${EVENT}/lifecycle`]: () => {
+        lifecycleLoads += 1
+        return jsonResponse(200, refused
+          ? readiness({ journeyStatus: status('SAFETY_APPROVED', 'Safety Approved'), canSendForReview: false, canConfirm: false,
+            blockers: ['1 booking is still waiting for Venue Staff.'] })
+          : readiness({ journeyStatus: status('SAFETY_APPROVED', 'Safety Approved'), canSendForReview: false, canConfirm: true }))
+      },
+      [`POST /api/events/${EVENT}/confirm`]: () => {
+        refused = true
+        return jsonResponse(422, { message: 'This event can no longer be confirmed as it stands.',
+          missingFields: ['1 booking is still waiting for Venue Staff.'] })
+      },
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    const panel = await screen.findByRole('region', { name: 'Ready for confirmation?' })
+    await user.click(await within(panel).findByRole('button', { name: 'Confirm event' }))
+    const alert = await within(panel).findByRole('alert')
+    expect(alert).toHaveTextContent('This event can no longer be confirmed as it stands.')
+    expect(alert).toHaveTextContent('1 booking is still waiting for Venue Staff.')
+    await waitFor(() => expect(within(panel).queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument())
+    expect(lifecycleLoads).toBeGreaterThan(1)
+  })
 })
 
 function arrangements(over: Partial<OrganiserArrangementsDto> = {}): OrganiserArrangementsDto {
@@ -210,6 +241,17 @@ describe('EO04 organiser views confirmed arrangements', () => {
     expect(within(card).getByText(/not listed for this venue/)).toBeInTheDocument()
     expect(within(card).getByRole('link', { name: 'Contact ec1' })).toHaveAttribute('href', expect.stringContaining('mailto:ec1@connectsphere.test'))
     expect(within(card).getByRole('button', { name: 'Print summary' })).toBeInTheDocument()
+  })
+
+  it('shows times in Singapore time and says so', async () => {
+    seedSession('organiser')
+    organiserStub(arrangements())
+    renderEvent('/organiser')
+
+    const card = await screen.findByRole('region', { name: 'Confirmed arrangements' })
+    // 01:00Z is 9:00 am in Singapore, whatever the browser's own timezone.
+    expect(card).toHaveTextContent(/10 Mar 2027, 0?9:00 am – 10 Mar 2027, 12:00 pm \(Singapore time\)/i)
+    expect(screen.getByText('Start (Singapore time)')).toBeInTheDocument()
   })
 
   it('says arrangements are being finalised before confirmation, without showing any', async () => {

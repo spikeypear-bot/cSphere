@@ -11,19 +11,21 @@ const ROLE_LABELS: Record<string, string> = {
   eo: 'Event Organiser',
   vs: 'Venue Staff',
   technician: 'Technical Support',
+  safety_officer: 'Safety Officer',
   attendee: 'Attendee',
 }
 
 // Request entries store request statuses; event entries (EC08 onwards) store
-// journey codes (EC-NEW2), so both are labelled here.
+// journey codes (EC-NEW2), so both are labelled here in the same vocabulary.
+// An approved request is an event in Planning; "Approved" is not a status.
 const STATUS_LABELS: Record<string, string> = {
   ...JOURNEY_LABELS,
-  draft: 'Draft',
-  pending: 'Submitted',
-  clarification_required: 'Clarification required',
-  approved: 'Approved',
-  rejected: 'Rejected',
-  cancelled: 'Cancelled',
+  draft: JOURNEY_LABELS.DRAFT,
+  pending: JOURNEY_LABELS.SUBMITTED,
+  clarification_required: JOURNEY_LABELS.CLARIFICATION_REQUIRED,
+  approved: JOURNEY_LABELS.PLANNING,
+  rejected: JOURNEY_LABELS.REJECTED,
+  cancelled: JOURNEY_LABELS.CANCELLED,
 }
 
 /** What happened, in words, with the actor as the subject. */

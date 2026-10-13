@@ -46,6 +46,14 @@
 .readiness__feedback p, .readiness__blockers ul { margin: 0.3rem 0 0; }
 .readiness__blockers ul { padding-inline-start: 1.1rem; }
 .readiness__done { margin: 0; color: var(--success); font-weight: 600; }
+.readiness__error {
+  padding: 0.8rem 1rem;
+  border-radius: var(--radius-md);
+  border-inline-start: 4px solid var(--danger);
+  background: var(--danger-soft);
+}
+.readiness__error p { margin: 0; font-weight: 600; }
+.readiness__error ul { margin: 0.3rem 0 0; padding-inline-start: 1.1rem; }
 .readiness__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .readiness__actions:empty { display: none; }
 .readiness__withdraw { display: grid; gap: 0.4rem; }

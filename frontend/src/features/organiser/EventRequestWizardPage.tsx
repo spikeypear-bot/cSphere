@@ -9,7 +9,7 @@ import { ChipGroup } from '../../components/ui/ChipGroup'
 import { StepIndicator, type Step } from '../../components/ui/StepIndicator'
 import { AutosaveIndicator } from '../../components/ui/AutosaveIndicator'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type AccessibilityFeature } from '../../types/eventRequest'
+import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type AccessibilityFeature, type EventRequestStatus } from '../../types/eventRequest'
 import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 import { useEventRequestDraft, type DraftFields } from './useEventRequestDraft'
 import { getMissingRequiredFields, getCompletionPercent } from './eventRequestCompletion'
@@ -70,6 +70,16 @@ function equipmentDraftFrom(
     else return { selected: {}, notes: value }
   }
   return { selected, notes: notesSections.join(`\n\n${EQUIPMENT_NOTES_HEADING}\n`) }
+}
+
+/** Why a request that has left draft can't be edited here, naming its
+ * actual status (EC-NEW2): a rejected request was not "submitted". */
+const NOT_EDITABLE: Partial<Record<EventRequestStatus, string>> = {
+  pending: 'This request has already been submitted and can no longer be edited here.',
+  approved: 'This request has been approved and is now being planned, so it can no longer be edited here.',
+  rejected: 'This request was rejected, so it can no longer be edited. Its status and the reason are on your event requests list.',
+  cancelled: 'This request was cancelled, so it can no longer be edited.',
+  clarification_required: 'The coordinator asked for clarification on this request. Use "Respond" on your event requests list to update it.',
 }
 
 export function EventRequestWizardPage() {
@@ -137,7 +147,7 @@ export function EventRequestWizardPage() {
     // a later slice — see docs/implementation-roadmap.md).
     return (
       <Card style={{ padding: '1.5rem' }}>
-        <p>This request has already been submitted and can no longer be edited here.</p>
+        <p>{NOT_EDITABLE[status] ?? NOT_EDITABLE.pending}</p>
         <Button variant="secondary" onClick={() => navigate('/organiser')}>
           Back to my event requests
         </Button>

@@ -386,6 +386,17 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    void confirmingAnEventThatHasTakenPlaceSaysItIsCompletedNotConfirmed() {
+        Event event = readyEvent(EventStatus.confirmed);
+        event.setEndDatetime(OffsetDateTime.parse("2026-12-30T12:00:00Z"));
+
+        assertThatThrownBy(() -> service.confirm(COORDINATOR, event.getEventId()))
+                .isInstanceOf(EventLifecycleException.class)
+                .hasMessage("This event has already taken place (Completed), so it cannot be confirmed again.");
+        verifyNoInteractions(notifications, activity);
+    }
+
+    @Test
     void prerequisitesAreReCheckedAtTheMomentOfConfirming() {
         Event event = readyEvent(EventStatus.safety_approved);
         when(availability.affected(eventBookings.get(0).getBookingId())).thenReturn(true);

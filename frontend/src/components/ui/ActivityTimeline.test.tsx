@@ -52,7 +52,21 @@ describe('ActivityTimeline', () => {
     expect(within(flags).getAllByRole('listitem').map((li) => li.textContent))
       .toEqual(['Expected attendance', 'End date & time'])
     const statuses = [...document.querySelectorAll('.activity-timeline__status')].map((p) => p.textContent)
-    expect(statuses).toEqual(['Draft → Submitted', 'Submitted → Clarification required'])
+    expect(statuses).toEqual(['Draft → Submitted', 'Submitted → Clarification Required'])
+  })
+
+  it('labels an approval as Planning and names the Safety Officer, in the shared status vocabulary (EC-NEW2)', () => {
+    render(<ActivityTimeline entries={[
+      { activityId: 'a5', type: 'approved', actorName: 'ec1', actorRole: 'ec', message: null, flaggedFields: [],
+        fromStatus: 'pending', toStatus: 'approved', occurredAt: '2026-09-22T01:00:00Z' },
+      { activityId: 'a6', type: 'safety_approved', actorName: 'so1', actorRole: 'safety_officer', message: null,
+        flaggedFields: [], fromStatus: 'AWAITING_SAFETY_REVIEW', toStatus: 'SAFETY_APPROVED', occurredAt: '2026-09-23T01:00:00Z' },
+    ]} />)
+
+    const statuses = [...document.querySelectorAll('.activity-timeline__status')].map((p) => p.textContent)
+    expect(statuses).toEqual(['Submitted → Planning', 'Awaiting Safety Review → Safety Approved'])
+    expect(screen.getAllByRole('listitem')[1]).toHaveTextContent('so1 (Safety Officer) approved the Operational Safety Check')
+    expect(document.body).not.toHaveTextContent('Approved →')
   })
 
   it('shows the empty text when there is no history', () => {

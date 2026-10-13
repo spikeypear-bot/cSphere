@@ -16,6 +16,7 @@ import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/ve
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
+import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
 
 /**
@@ -92,12 +93,12 @@ export function EventDetailsPage() {
             <dd>{event.purpose}</dd>
           </div>
           <div>
-            <dt>Start</dt>
-            <dd>{new Date(event.startDatetime).toLocaleString()}</dd>
+            <dt>Start (Singapore time)</dt>
+            <dd>{formatEventDateTime(event.startDatetime)}</dd>
           </div>
           <div>
-            <dt>End</dt>
-            <dd>{new Date(event.endDatetime).toLocaleString()}</dd>
+            <dt>End (Singapore time)</dt>
+            <dd>{formatEventDateTime(event.endDatetime)}</dd>
           </div>
           <div>
             <dt>Expected attendance</dt>

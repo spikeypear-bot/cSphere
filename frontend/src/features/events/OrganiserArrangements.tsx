@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { apiClient } from '../../lib/apiClient'
+import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import type { OrganiserArrangementsDto } from '../../types/event'
 import { ACCESSIBILITY_LABELS, type AccessibilityFeature } from '../../types/eventRequest'
 import { venueFacilityLabels, venueLayoutLabels, type Facility, type VenueLayout } from '../../types/venue'
@@ -12,8 +13,9 @@ const accessibilityLabel = (v: string) => ACCESSIBILITY_LABELS[v as Accessibilit
 const facilityLabel = (v: string) => venueFacilityLabels[v as Facility] ?? v.replaceAll('_', ' ')
 const layoutLabel = (v: string) => venueLayoutLabels[v as VenueLayout] ?? v.replaceAll('_', ' ')
 
+/** Singapore time, whatever the viewer's own timezone (EO04). */
 function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : null
+  return value ? formatEventDateTime(value) : null
 }
 
 /**
@@ -66,7 +68,7 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
         <div>
           <h2 id="arrangements-heading">Confirmed arrangements</h2>
           <p className="field-hint">
-            {formatDate(data.startDatetime)} – {formatDate(data.endDatetime)} · {data.expectedAttendance} expected
+            {formatDate(data.startDatetime)} – {formatDate(data.endDatetime)} (Singapore time) · {data.expectedAttendance} expected
           </p>
         </div>
         <Button variant="secondary" className="arrangements__print" onClick={() => window.print()}>

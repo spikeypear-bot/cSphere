@@ -242,10 +242,15 @@ public class EventLifecycleService {
     public EventReadinessDto confirm(UUID coordinatorId, UUID eventId) {
         Event event = lockedAssigned(coordinatorId, eventId);
         if (event.getStatus() != EventStatus.safety_approved) {
-            String label = statuses.forEvent(event).label();
-            throw new EventLifecycleException(event.getStatus() == EventStatus.confirmed
-                    ? "This event is already confirmed."
-                    : "An event can only be confirmed after the Safety Officer approves it (this one is " + label + ").");
+            // A Confirmed event whose end has passed is stored as confirmed
+            // but is Completed (EC-NEW2), so name the status people see.
+            JourneyStatus journey = statuses.journeyOf(event);
+            throw new EventLifecycleException(switch (journey) {
+                case CONFIRMED -> "This event is already confirmed.";
+                case COMPLETED -> "This event has already taken place (Completed), so it cannot be confirmed again.";
+                default -> "An event can only be confirmed after the Safety Officer approves it (this one is "
+                        + journey.label() + ").";
+            });
         }
         // Re-check at the moment of confirming: something may have changed
         // since the Safety Officer approved.

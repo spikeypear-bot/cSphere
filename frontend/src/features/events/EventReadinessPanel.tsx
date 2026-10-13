@@ -26,6 +26,7 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
   const [reload, setReload] = useState(0)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [errorReasons, setErrorReasons] = useState<string[]>([])
   const [withdrawing, setWithdrawing] = useState(false)
   const [reason, setReason] = useState('')
   const [done, setDone] = useState<string | null>(null)
@@ -51,6 +52,7 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
   async function act(path: string, body: unknown, message: string) {
     setBusy(true)
     setError(null)
+    setErrorReasons([])
     setDone(null)
     try {
       await apiClient.post(`/events/${eventId}/${path}`, body)
@@ -60,7 +62,20 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
       setReload((n) => n + 1)
       onChanged()
     } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'That did not go through. Please try again.')
+      if (err instanceof ApiClientError) {
+        setError(err.message)
+        // What no longer holds (e.g. a booking back to pending), so the
+        // coordinator is told what changed, not just that it failed.
+        setErrorReasons(err.missingFields ?? [])
+        // The server refused because something changed since this page
+        // loaded: show the checklist and status as they are now.
+        if (err.status === 409 || err.status === 422) {
+          setReload((n) => n + 1)
+          onChanged()
+        }
+      } else {
+        setError('That did not go through. Please try again.')
+      }
     } finally {
       setBusy(false)
     }
@@ -115,7 +130,12 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
       ) : null}
 
       {done ? <p className="readiness__done" role="status">{done}</p> : null}
-      {error ? <p role="alert">{error}</p> : null}
+      {error ? (
+        <div className="readiness__error" role="alert">
+          <p>{error}</p>
+          {errorReasons.length > 0 ? <ul>{errorReasons.map((r) => <li key={r}>{r}</li>)}</ul> : null}
+        </div>
+      ) : null}
 
       <div className="readiness__actions">
         {readiness.canSendForReview ? (
