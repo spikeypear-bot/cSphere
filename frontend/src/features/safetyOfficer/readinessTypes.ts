@@ -1,3 +1,5 @@
+import type { StatusView } from '../../types/status'
+
 export interface ReadinessItem {
   itemKey: string
   label: string
@@ -29,4 +31,6 @@ export interface SafetyEventListItem {
   venueAddress: string | null
   // The safety stages are EC08's (V23); see EVENT_STATUS_LABELS.
   status: 'pending' | 'awaiting_safety_review' | 'safety_changes_requested' | 'safety_approved' | 'confirmed'
+  // EC-NEW2: the label every other role sees for this event.
+  journeyStatus?: StatusView
 }

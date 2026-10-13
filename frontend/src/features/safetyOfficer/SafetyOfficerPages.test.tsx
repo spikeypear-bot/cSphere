@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -58,7 +58,35 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(await screen.findByRole('heading', { name: 'Confirmed events' })).toBeInTheDocument()
     expect(screen.getByText('Town Hall')).toBeInTheDocument()
     expect(screen.getByText('1 Harbour Road')).toBeInTheDocument()
-    expect(screen.getByText('No planning events are awaiting safety review.')).toBeInTheDocument()
+    expect(screen.getByText('No events are waiting for your safety review.')).toBeInTheDocument()
+  })
+
+  it('lists only events sent for review as waiting; a withdrawn event (back in Planning) is not in the queue (EC08)', async () => {
+    seedSession('safety-officer')
+    const item = (eventId: string, eventName: string, status: string, code: string, label: string) => ({
+      eventId, eventName, startDatetime: EVENT.startDatetime, endDatetime: EVENT.endDatetime, venueAddress: null, status,
+      journeyStatus: { code, label, explanation: '', nextActor: null, stage: 'EVENT', isFinal: false, datePassed: false },
+    })
+    stubApi({
+      'GET /api/safety/events/planning': () => jsonResponse(200, [
+        item('e1', 'Sent Gala', 'awaiting_safety_review', 'AWAITING_SAFETY_REVIEW', 'Awaiting Safety Review'),
+        item('e2', 'Withdrawn Breakfast', 'pending', 'PLANNING', 'Planning'),
+      ]),
+      'GET /api/safety/events/confirmed': () => jsonResponse(200, []),
+    })
+    render(<MemoryRouter initialEntries={['/safety-officer']}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer" element={<SafetyOfficerHomePage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+
+    const queue = (await screen.findByRole('heading', { name: 'Waiting for your safety review' })).closest('section') as HTMLElement
+    const planning = screen.getByRole('heading', { name: 'Still being planned' }).closest('section') as HTMLElement
+    expect(within(queue).getByText('Sent Gala')).toBeInTheDocument()
+    expect(within(queue).queryByText('Withdrawn Breakfast')).not.toBeInTheDocument()
+    expect(within(planning).getByText('Withdrawn Breakfast')).toBeInTheDocument()
+    // The same label every other role sees, not a console-only one.
+    expect(within(queue).getByText('Awaiting Safety Review')).toBeInTheDocument()
   })
 
   it('persists checklist changes, shows event logistics, and blocks approval while incomplete', async () => {

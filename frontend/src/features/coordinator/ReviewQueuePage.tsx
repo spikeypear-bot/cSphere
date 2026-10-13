@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
+import { StatusFilter } from '../../components/ui/JourneyStatus'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import type { EventRequestDto } from '../../types/eventRequest'
@@ -25,6 +26,8 @@ export interface ReviewQueue {
 export function ReviewQueuePage() {
   const [queue, setQueue] = useState<ReviewQueue | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // EC-NEW2: filter by the same status everyone sees.
+  const [filter, setFilter] = useState<string | null>(null)
 
   useEffect(() => {
     let cancelled = false
@@ -41,6 +44,9 @@ export function ReviewQueuePage() {
   }, [])
 
   const total = queue ? queue.needsReview.length + queue.awaitingOrganiser.length : 0
+  const statuses = queue ? [...queue.needsReview, ...queue.awaitingOrganiser]
+    .flatMap((r) => (r.journeyStatus ? [r.journeyStatus] : [])) : []
+  const matches = (r: EventRequestDto) => filter === null || r.journeyStatus?.code === filter
 
   return (
     <div className="page">
@@ -59,10 +65,11 @@ export function ReviewQueuePage() {
 
       {queue ? (
         <>
+          <StatusFilter statuses={statuses} selected={filter} onChange={setFilter} label="Filter the review queue by status" />
           <QueueSection
             title="Needs your review"
             hint="Submitted and assigned to you."
-            requests={queue.needsReview}
+            requests={queue.needsReview.filter(matches)}
             renderAction={(request) => (
               <Link className="button button--primary" to={`/coordinator/requests/${request.requestId}`}>
                 Review
@@ -72,7 +79,7 @@ export function ReviewQueuePage() {
           <QueueSection
             title="Waiting for the organiser"
             hint="Clarification was asked for; these come back to you when the organiser resubmits."
-            requests={queue.awaitingOrganiser}
+            requests={queue.awaitingOrganiser.filter(matches)}
             renderAction={(request) => (
               <Link className="button button--secondary" to={`/coordinator/requests/${request.requestId}`}>
                 View

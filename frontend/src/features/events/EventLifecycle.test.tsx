@@ -243,6 +243,34 @@ describe('EO04 organiser views confirmed arrangements', () => {
     expect(within(card).getByRole('button', { name: 'Print summary' })).toBeInTheDocument()
   })
 
+  it("lists every accessibility feature the venue provides, not only the organiser's needs", async () => {
+    seedSession('organiser')
+    organiserStub(arrangements({ accessibilityNeeds: ['step_free_access'], venues: [{ ...arrangements().venues[0],
+      accessibilities: ['step_free_access', 'elevators', 'accessible_parking'] }] }))
+    renderEvent('/organiser')
+
+    const card = await screen.findByRole('region', { name: 'Confirmed arrangements' })
+    const facts = within(card).getByText('Accessibility at this venue').closest('div') as HTMLElement
+    expect(facts).toHaveTextContent(/Step-free access, Elevators?, Accessible parking/i)
+  })
+
+  it('says when the arrangements cannot be loaded and loads them on Try again', async () => {
+    seedSession('organiser')
+    let calls = 0
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event(status('CONFIRMED', 'Confirmed'), 'confirmed')),
+      [`GET /api/events/${EVENT}/arrangements`]: () => (++calls === 1
+        ? jsonResponse(500, { message: 'Server error' })
+        : jsonResponse(200, arrangements())),
+    })
+    const user = userEvent.setup()
+    renderEvent('/organiser')
+
+    expect(await screen.findByText(/could not load your event arrangements/i)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('region', { name: 'Confirmed arrangements' })).toBeInTheDocument()
+  })
+
   it('shows times in Singapore time and says so', async () => {
     seedSession('organiser')
     organiserStub(arrangements())

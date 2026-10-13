@@ -175,3 +175,28 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(calls.map((call) => call.method)).toEqual(['GET'])
   })
 })
+
+const sv = (code: string, label: string) => ({ code, label, explanation: '', nextActor: null, stage: 'REQUEST', isFinal: false, datePassed: false })
+
+describe('UnassignedRequestsPage status filter (EC-NEW2)', () => {
+  beforeEach(() => seedSession('coordinator-lead', 'ecl-1'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('filters unassigned requests by the shared status', async () => {
+    stubApi({ [QUEUE]: () => jsonResponse(200, [
+      request('r1', 'Town Hall', { journeyStatus: sv('SUBMITTED', 'Submitted') }),
+      request('r2', 'Gala', { status: 'clarification_required', journeyStatus: sv('CLARIFICATION_REQUIRED', 'Clarification Required') }),
+    ]) })
+    const user = userEvent.setup()
+    renderPage()
+
+    const filters = await screen.findByRole('group', { name: 'Filter unassigned requests by status' })
+    await user.click(within(filters).getByRole('button', { name: /Submitted/ }))
+    expect(screen.getByRole('heading', { level: 2, name: 'Town Hall' })).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { level: 2, name: 'Gala' })).not.toBeInTheDocument()
+  })
+})

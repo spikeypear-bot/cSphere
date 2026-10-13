@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
@@ -28,11 +29,14 @@ public class SafetyOfficerController {
     private final EventRepository events;
     private final ReadinessService readiness;
     private final VenueRepository venues;
+    private final JourneyStatusResolver statuses;
 
-    public SafetyOfficerController(EventRepository events, ReadinessService readiness, VenueRepository venues) {
+    public SafetyOfficerController(EventRepository events, ReadinessService readiness, VenueRepository venues,
+            JourneyStatusResolver statuses) {
         this.events = events;
         this.readiness = readiness;
         this.venues = venues;
+        this.statuses = statuses;
     }
 
     @GetMapping("/events/confirmed")
@@ -96,7 +100,8 @@ public class SafetyOfficerController {
                 .collect(java.util.stream.Collectors.toMap(Venue::getVenueId, Venue::getVenueAddress));
         return rows.stream().map(event -> new SafetyEventListItemDto(
                 event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
-                event.getVenueId() == null ? null : venueById.get(event.getVenueId()), event.getStatus().name()))
+                event.getVenueId() == null ? null : venueById.get(event.getVenueId()), event.getStatus().name(),
+                statuses.forEvent(event)))
                 .toList();
     }
 

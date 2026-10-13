@@ -9,7 +9,7 @@ not the access-control boundary.
 
 | Method | Path | Access | Purpose |
 |---|---|---|---|
-| `GET` | `/api/safety/events/planning` | Safety Officer | Events not yet confirmed (Planning, Awaiting Safety Review, Safety Changes Requested, Safety Approved), soonest first |
+| `GET` | `/api/safety/events/planning` | Safety Officer | Events not yet confirmed (Planning, Awaiting Safety Review, Safety Changes Requested, Safety Approved), soonest first. Each item carries `journeyStatus` (the shared EC-NEW2 status). The console shows Awaiting Safety Review as "Waiting for your safety review" and the rest as "Still being planned" |
 | `GET` | `/api/safety/events/confirmed` | Safety Officer | All confirmed events, soonest first |
 | `GET` | `/api/safety/events/{eventId}` | Safety Officer | Event details for a Planning or Confirmed event |
 | `GET` | `/api/events/{eventId}/venue-bookings` | Safety Officer or assigned Coordinator | Booking status and venue arrangement |

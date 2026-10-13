@@ -26,6 +26,7 @@ function formatDate(value: string | null) {
 export function OrganiserArrangements({ eventId }: { eventId: string }) {
   const [data, setData] = useState<OrganiserArrangementsDto | null>(null)
   const [failed, setFailed] = useState(false)
+  const [attempt, setAttempt] = useState(0)
 
   useEffect(() => {
     let cancelled = false
@@ -41,9 +42,18 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
     return () => {
       cancelled = true
     }
-  }, [eventId])
+  }, [eventId, attempt])
 
-  if (failed || !data) return null
+  if (failed) {
+    return (
+      <Card className="arrangements arrangements--pending" role="region" aria-labelledby="arrangements-heading">
+        <h2 id="arrangements-heading">Event arrangements</h2>
+        <p role="alert">We could not load your event arrangements. Check your connection and try again.</p>
+        <Button variant="secondary" onClick={() => { setFailed(false); setAttempt((n) => n + 1) }}>Try again</Button>
+      </Card>
+    )
+  }
+  if (!data) return null
 
   if (data.view === 'not_confirmed' || data.view === 'cancelled') {
     return (
@@ -103,6 +113,12 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
                   {venue.capacity ? <div><dt>Capacity</dt><dd>{venue.capacity}</dd></div> : null}
                   {venue.layouts.length > 0 ? <div><dt>Room layout</dt><dd>{venue.layouts.map(layoutLabel).join(', ')}</dd></div> : null}
                   {venue.facilities.length > 0 ? <div><dt>Facilities</dt><dd>{venue.facilities.map(facilityLabel).join(', ')}</dd></div> : null}
+                  <div>
+                    <dt>Accessibility at this venue</dt>
+                    <dd>{venue.accessibilities.length > 0
+                      ? venue.accessibilities.map(accessibilityLabel).join(', ')
+                      : 'None listed. Ask your coordinator if you need any.'}</dd>
+                  </div>
                   {venue.operatingInformation ? <div><dt>Good to know</dt><dd>{venue.operatingInformation}</dd></div> : null}
                 </dl>
                 {needs.length > 0 ? (
