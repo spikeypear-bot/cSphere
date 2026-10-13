@@ -211,6 +211,16 @@ public class EventRequestController {
         return service.assignCoordinator(userIdOf(jwt), id, request.coordinatorUserId());
     }
 
+    /** ELC-C5: move an assigned request to a different Event Coordinator.
+     * Lead only (see SecurityConfig). */
+    @PostMapping("/assigned/{id}/reassign")
+    public EventRequestDto reassign(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id,
+            @RequestBody AssignCoordinatorRequest request) {
+        return service.reassignCoordinator(userIdOf(jwt), id, request.coordinatorUserId());
+    }
+
     /** ECL-C3: filter out a request before anyone is assigned. */
     @PostMapping("/unassigned/{id}/reject")
     public EventRequestDto rejectUnassigned(

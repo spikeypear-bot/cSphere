@@ -96,6 +96,12 @@ class NotificationFlowTest {
                 .content("{\"coordinatorUserId\":\"" + flow.idOf(coordinator) + "\"}"));
     }
 
+    private ResultActions reassign(UUID requestId, String coordinator) throws Exception {
+        return mvc.perform(post("/api/event-requests/assigned/" + requestId + "/reassign").with(flow.as("ecl1"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{\"coordinatorUserId\":\"" + flow.idOf(coordinator) + "\"}"));
+    }
+
     private ResultActions reject(UUID requestId, String reason) throws Exception {
         return mvc.perform(post("/api/event-requests/" + requestId + "/reject").with(flow.as("ec1"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"" + reason + "\"}"));
@@ -221,6 +227,59 @@ class NotificationFlowTest {
         notificationsOf("eo1")
                 .andExpect(jsonPath(assignment(true), empty()))
                 .andExpect(jsonPath(assignment(false) + ".coordinatorName", contains("ec1")));
+    }
+
+    @Test
+    void reassigningNotifiesTheOrganiserOfTheirNewCoordinatorAsAReassignment() throws Exception {
+        UUID requestId = assignedRequest();
+
+        reassign(requestId, "ec2").andExpect(status().isOk());
+
+        // The first assignment's notice, and one more for the reassignment.
+        assertThat(saved("coordinator_assignment")).isEqualTo(2);
+        notificationsOf("eo1")
+                .andExpect(jsonPath(assignment(true) + ".eventRequestId", contains(requestId.toString())))
+                .andExpect(jsonPath(assignment(true) + ".coordinatorName", contains("ec2")))
+                .andExpect(jsonPath(assignment(true) + ".coordinatorEmail", contains("ec2@connectsphere.test")))
+                .andExpect(jsonPath(assignment(true) + ".read", contains(false)))
+                .andExpect(jsonPath(assignment(true) + ".linkPath", contains("/organiser/requests/" + requestId)))
+                .andExpect(jsonPath(assignment(false) + ".coordinatorName", contains("ec1")));
+    }
+
+    @Test
+    void reassigningNotifiesNeitherCoordinatorNorTheLead() throws Exception {
+        UUID requestId = assignedRequest();
+
+        reassign(requestId, "ec2").andExpect(status().isOk());
+
+        // Telling the coordinators is a separate story (EC-NEW4).
+        for (String staff : List.of("ec1", "ec2", "ecl1")) {
+            notificationsOf(staff).andExpect(jsonPath(mine(), empty()));
+        }
+    }
+
+    @Test
+    void aReassignmentToTheSameCoordinatorIsRefusedAndCreatesNoNotification() throws Exception {
+        UUID requestId = assignedRequest();
+
+        reassign(requestId, "ec1").andExpect(status().isUnprocessableEntity());
+
+        assertThat(saved("coordinator_assignment")).isEqualTo(1);
+        assertThat(coordinatorOf(requestId)).isEqualTo(flow.idOf("ec1"));
+        notificationsOf("eo1").andExpect(jsonPath(assignment(true), empty()));
+    }
+
+    @Test
+    void aReassignmentAfterTheCoordinatorDecidedIsRefusedAndCreatesNoNotification() throws Exception {
+        UUID requestId = assignedRequest();
+        reject(requestId, "No capacity").andExpect(status().isOk());
+
+        reassign(requestId, "ec2").andExpect(status().isConflict());
+
+        assertThat(saved("coordinator_assignment")).isEqualTo(1);
+        assertThat(coordinatorOf(requestId)).isEqualTo(flow.idOf("ec1"));
+        assertThat(requestStatus(requestId)).isEqualTo("rejected");
+        notificationsOf("eo1").andExpect(jsonPath(assignment(true), empty()));
     }
 
     @Test

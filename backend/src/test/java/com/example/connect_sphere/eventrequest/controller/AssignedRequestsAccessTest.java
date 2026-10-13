@@ -7,6 +7,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -21,6 +22,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.JwtRequestPostProcessor;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -37,9 +39,9 @@ import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
 /**
- * ECL-C2: only the Event Coordinator Lead may open the list of assigned
- * requests. Controller slice with the real SecurityConfig imported; no
- * database needed.
+ * ECL-C2 and ELC-C5: only the Event Coordinator Lead may open the list of
+ * assigned requests or reassign one of them. Controller slice with the real
+ * SecurityConfig imported; no database needed.
  */
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
@@ -47,6 +49,10 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 class AssignedRequestsAccessTest {
 
     private static final String ASSIGNED = "/api/event-requests/assigned";
+    private static final UUID REQUEST = UUID.randomUUID();
+    private static final UUID NEW_COORDINATOR = UUID.randomUUID();
+    private static final String REASSIGN = ASSIGNED + "/" + REQUEST + "/reassign";
+    private static final String REASSIGN_BODY = "{\"coordinatorUserId\":\"" + NEW_COORDINATOR + "\"}";
 
     @Autowired
     private MockMvc mockMvc;
@@ -59,7 +65,11 @@ class AssignedRequestsAccessTest {
 
     /** A token with the given role claim, run through the real converter. */
     private JwtRequestPostProcessor tokenFor(String roleClaim) {
-        return jwt().jwt(token -> token.subject(UUID.randomUUID().toString())
+        return tokenFor(roleClaim, UUID.randomUUID());
+    }
+
+    private JwtRequestPostProcessor tokenFor(String roleClaim, UUID subject) {
+        return jwt().jwt(token -> token.subject(subject.toString())
                         .claim("role", roleClaim)
                         .claim("organisation", "ConnectSphere"))
                 .authorities(token -> jwtAuthenticationConverter.convert(token).getAuthorities());
@@ -116,6 +126,47 @@ class AssignedRequestsAccessTest {
     @Test
     void aCallWithNoTokenIsRejectedAndNoRequestDataIsRead() throws Exception {
         mockMvc.perform(get(ASSIGNED))
+                .andExpect(status().isUnauthorized());
+
+        verifyNoInteractions(service);
+    }
+
+    // ---- Reassigning (ELC-C5) ----------------------------------------
+
+    @Test
+    void anEventCoordinatorLeadReassignsAsThemselvesToTheCoordinatorTheyChose() throws Exception {
+        UUID lead = UUID.randomUUID();
+        EventRequestDto reassigned = new EventRequestDto(REQUEST, 'C', null, "Annual Summit", null, null,
+                null, null, 150, null, null, List.of(), null, EventRequestStatus.pending, null, null,
+                "Globex Holdings", NEW_COORDINATOR, null, "eo3");
+        when(service.reassignCoordinator(lead, REQUEST, NEW_COORDINATOR)).thenReturn(reassigned);
+
+        mockMvc.perform(post(REASSIGN).with(tokenFor("ecl", lead))
+                        .contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requestId").value(REQUEST.toString()))
+                .andExpect(jsonPath("$.coordinatorId").value(NEW_COORDINATOR.toString()))
+                .andExpect(jsonPath("$.status").value("pending"));
+
+        // The Lead is the token's subject, never part of the body.
+        verify(service).reassignCoordinator(lead, REQUEST, NEW_COORDINATOR);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = { "ec", "eo", "vs", "technician", "attendee", "safety_officer" })
+    void everyOtherRoleIsDeniedReassigningAndNothingIsChanged(String otherRole) throws Exception {
+        mockMvc.perform(post(REASSIGN).with(tokenFor(otherRole))
+                        .contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.message").isNotEmpty())
+                .andExpect(jsonPath("$.coordinatorId").doesNotExist());
+
+        verifyNoInteractions(service);
+    }
+
+    @Test
+    void aReassignCallWithNoTokenIsRejectedAndNothingIsChanged() throws Exception {
+        mockMvc.perform(post(REASSIGN).contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
                 .andExpect(status().isUnauthorized());
 
         verifyNoInteractions(service);
