@@ -97,6 +97,7 @@ describe('EquipmentRequestPage (EC07)', () => {
         eventId: EVENT_ID,
         status: 'processing',
         technicalRequirement: 'Microphones',
+        rejectReason: null,
         lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone', quantity: 2 }],
       }]),
     })
@@ -104,5 +105,24 @@ describe('EquipmentRequestPage (EC07)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Request already submitted' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Submit equipment request' })).not.toBeInTheDocument()
+  })
+
+  it('shows Technical Support rejection status and reason', async () => {
+    seedSession('coordinator')
+    stubApi({
+      ...getBaseRoutes(),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [{
+        requestId: 'request-1',
+        eventId: EVENT_ID,
+        status: 'rejected',
+        technicalRequirement: 'Microphones',
+        rejectReason: 'Only one unit can be provided.',
+        lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone', quantity: 2 }],
+      }]),
+    })
+    renderPage()
+
+    expect(await screen.findByText(/Previous request was not approved/)).toBeInTheDocument()
+    expect(screen.getByText('Reason: Only one unit can be provided.')).toBeInTheDocument()
   })
 })

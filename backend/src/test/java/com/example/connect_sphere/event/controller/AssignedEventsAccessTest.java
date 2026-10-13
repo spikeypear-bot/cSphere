@@ -32,6 +32,7 @@ import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
+import com.example.connect_sphere.safety.ReadinessService;
 
 /**
  * EC09: only an Event Coordinator may open "My events", and the list is
@@ -58,6 +59,9 @@ class AssignedEventsAccessTest {
 
     @MockitoBean
     private EventRequestService eventRequestService;
+
+    @MockitoBean
+    private ReadinessService readinessService;
 
     /** A token for {@link #CALLER_ID} with the given role claim, run through the real converter. */
     private JwtRequestPostProcessor tokenFor(String roleClaim) {
@@ -111,7 +115,7 @@ class AssignedEventsAccessTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = { "ecl", "eo", "vs", "technician", "attendee" })
+    @ValueSource(strings = { "ecl", "eo", "vs", "technician", "attendee", "safety_officer" })
     void everyOtherRoleIsDeniedAndNoEventDataIsRead(String otherRole) throws Exception {
         mockMvc.perform(get(ASSIGNED).with(tokenFor(otherRole)))
                 .andExpect(status().isForbidden())

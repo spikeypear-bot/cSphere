@@ -41,6 +41,7 @@ export const HOME_BY_ROLE: Record<Role, string> = {
   organiser: '/organiser',
   coordinator: '/coordinator',
   'coordinator-lead': '/coordinator-lead',
+  'safety-officer': '/safety-officer',
   'venue-staff': '/venue-staff',
   'technical-support': '/technical-support',
   attendee: '/attendee',

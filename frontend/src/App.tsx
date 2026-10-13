@@ -35,10 +35,13 @@ import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
 import { technicalSupportFeatures } from './features/technicalSupport/technicalSupportFeatures'
+import { EquipmentReviewPage } from './features/technicalSupport/review/EquipmentReviewPage'
 import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
+import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
+import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
 
 /** Route-level role gating. The role comes from the access token's `role`
  * claim (D19), so editing localStorage no longer promotes anyone: a tampered
@@ -152,8 +155,9 @@ function TechnicalSupportRoutes() {
     <Routes>
       <Route index element={<TechnicalSupportHomePage />} />
       {skeletonRoutes(
-        technicalSupportFeatures.filter((feature) => feature.path !== 'status' && feature.path !== 'reservations'),
+        technicalSupportFeatures.filter((feature) => feature.path !== 'availability' && feature.path !== 'status' && feature.path !== 'reservations'),
       )}
+      <Route path="availability" element={<EquipmentReviewPage />} />
       <Route path="status" element={<EquipmentStatusPage />} />
       <Route path="reservations" element={<EquipmentReservationPage />} />
     </Routes>
@@ -169,6 +173,19 @@ function AttendeeRoutes() {
     <Routes>
       <Route index element={<AttendeeHomePage />} />
       {skeletonRoutes(attendeeFeatures)}
+    </Routes>
+  )
+}
+
+function SafetyOfficerRoutes() {
+  const permitted = useRoleGate('safety-officer')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
+  return (
+    <Routes>
+      <Route index element={<SafetyOfficerHomePage />} />
+      <Route path="events/:eventId" element={<SafetyEventDetailsPage />} />
     </Routes>
   )
 }
@@ -190,6 +207,7 @@ function AppRoutes() {
       <Route path="/venue-staff/*" element={<VenueStaffRoutes />} />
       <Route path="/technical-support/*" element={<TechnicalSupportRoutes />} />
       <Route path="/attendee/*" element={<AttendeeRoutes />} />
+      <Route path="/safety-officer/*" element={<SafetyOfficerRoutes />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

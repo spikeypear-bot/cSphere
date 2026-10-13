@@ -133,6 +133,16 @@ public class VenueBookingRequestService {
         return bookings.findForEvent(eventId).stream().map(this::toDto).toList();
     }
 
+    /** SO-C2: a Safety Officer may inspect arrangements for any active event. */
+    @Transactional(readOnly = true)
+    public List<EventVenueBookingDto> bookingsForSafetyOfficer(UUID eventId) {
+        Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        if (event.getStatus() != EventStatus.pending && event.getStatus() != EventStatus.confirmed) {
+            throw new EventNotFoundException(eventId);
+        }
+        return bookings.findForEvent(eventId).stream().map(this::toDto).toList();
+    }
+
     @Transactional
     public EventVenueBookingDto submit(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest request) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));

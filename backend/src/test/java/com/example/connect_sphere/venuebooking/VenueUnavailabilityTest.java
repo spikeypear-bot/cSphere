@@ -319,6 +319,62 @@ class VenueUnavailabilityTest {
         booking(v,"pending");
         assertThatThrownBy(() -> availability.updateSettings(v,new Settings(15,0))).isInstanceOf(VenueBookingStateException.class);
     }
+    @Test void approvalReportsBookingsAndAllUnavailablePeriodsTogether() throws Exception {
+        UUID v = venue(), approved = booking(v, "approved"), pending = booking(v, "pending");
+        Period first = record(v, period("10:30", "11:00"));
+        Period second = record(v, period("11:30", "12:30"));
+        mvc.perform(patch("/api/venue-bookings/" + pending + "/approve").with(flow.as("vs1")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.conflicts.length()").value(1))
+                .andExpect(jsonPath("$.conflicts[0].bookingId").value(approved.toString()))
+                .andExpect(jsonPath("$.unavailablePeriods.length()").value(2))
+                .andExpect(jsonPath("$.unavailablePeriods[0].unavailabilityId").value(first.unavailabilityId().toString()))
+                .andExpect(jsonPath("$.unavailablePeriods[1].unavailabilityId").value(second.unavailabilityId().toString()))
+                .andExpect(jsonPath("$.unavailablePeriods[0].reason").value("Maintenance"))
+                .andExpect(jsonPath("$.unavailablePeriods[0].startDatetime").exists())
+                .andExpect(jsonPath("$.unavailablePeriods[0].endDatetime").exists())
+                .andExpect(jsonPath("$.unavailablePeriods[0].createdBy").doesNotExist());
+        assertThat(statusOf(pending)).isEqualTo("pending");
+        assertThat(statusOf(approved)).isEqualTo("approved");
+        assertThat(availability.list(v)).containsExactly(first, second);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.CsvSource({"09:00,10:00,false", "12:00,13:00,false", "11:30,13:00,true", "09:00,10:30,true", "09:00,13:00,true", "10:30,11:00,true"})
+    void approvalUnavailabilityBoundaries(String start, String end, boolean blocked) throws Exception {
+        UUID v = venue(), pending = booking(v, "pending");
+        Period recorded = record(v, period(start, end));
+        var result = mvc.perform(patch("/api/venue-bookings/" + pending + "/approve").with(flow.as("vs1")));
+        if (blocked) {
+            result.andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts.length()").value(0))
+                    .andExpect(jsonPath("$.unavailablePeriods[0].unavailabilityId").value(recorded.unavailabilityId().toString()));
+        } else result.andExpect(status().isOk());
+        assertThat(statusOf(pending)).isEqualTo(blocked ? "pending" : "approved");
+    }
+
+    @Test void approvalIncludesBufferOnlyUnavailablePeriodButIgnoresOtherVenues() throws Exception {
+        UUID v = venue();
+        availability.updateSettings(v, new Settings(30, 45));
+        UUID pending = booking(v, "pending");
+        record(venue(), period("10:00", "12:00"));
+        Period recorded = record(v, period("09:30", "09:45"));
+        mvc.perform(patch("/api/venue-bookings/" + pending + "/approve").with(flow.as("vs1")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts.length()").value(0))
+                .andExpect(jsonPath("$.unavailablePeriods.length()").value(1))
+                .andExpect(jsonPath("$.unavailablePeriods[0].unavailabilityId").value(recorded.unavailabilityId().toString()));
+        assertThat(bookings.approve(booking(venue(), "pending")).status().name()).isEqualTo("approved");
+    }
+
+    @Test void approvalUnavailabilityComparesFullTimestampsAcrossMidnight() throws Exception {
+        UUID v = venue(), pending = booking(v, "pending");
+        jdbc.update("UPDATE events SET start_datetime='2027-04-01T23:00:00+08:00', end_datetime='2027-04-02T02:00:00+08:00' WHERE event_id=?", event(pending));
+        Period recorded = record(v, new Request(OffsetDateTime.parse("2027-04-01T17:00:00Z"),
+                OffsetDateTime.parse("2027-04-01T19:00:00Z"), "Overnight maintenance", null, null));
+        mvc.perform(patch("/api/venue-bookings/" + pending + "/approve").with(flow.as("vs1")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.unavailablePeriods[0].unavailabilityId").value(recorded.unavailabilityId().toString()));
+    }
+
     @Test void simultaneousRecordingAndApprovalCannotSilentlyMissEachOther() throws Exception {
         UUID v=venue(), b=booking(v,"pending"); Request r=period("10:00","11:00"); Preview p=availability.preview(v,r);
         CountDownLatch start=new CountDownLatch(1);

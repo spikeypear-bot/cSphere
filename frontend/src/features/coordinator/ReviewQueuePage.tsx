@@ -1,11 +1,9 @@
-import { useCallback, useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
-import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { useSession } from '../../lib/sessionContext'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import type { EventRequestDto } from '../../types/eventRequest'
 import './ReviewQueuePage.css'
@@ -14,53 +12,35 @@ import './ReviewQueuePage.css'
 export interface ReviewQueue {
   needsReview: EventRequestDto[]
   awaitingOrganiser: EventRequestDto[]
-  unassigned: EventRequestDto[]
 }
 
 /**
  * EC02 review queue, split the way a coordinator works through it: requests
- * waiting on *my* decision, requests waiting on the *organiser* (EC01), and
- * unassigned ones I can pick up (Coordinator Assignment). Requests assigned
- * to other coordinators are not returned by the server at all. Opening a
- * request goes to its full review screen, where decisions are made.
+ * waiting on *my* decision, and requests waiting on the *organiser* (EC01).
+ * Unassigned requests and requests assigned to other coordinators are not
+ * returned by the server at all: the Event Coordinator Lead assigns each
+ * request (ELC-C6). Opening a request goes to its full review screen, where
+ * decisions are made.
  */
 export function ReviewQueuePage() {
-  const { userId } = useSession()
   const [queue, setQueue] = useState<ReviewQueue | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [busyId, setBusyId] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<Record<string, string>>({})
 
-  const load = useCallback(async () => {
-    try {
-      setQueue(await apiClient.get<ReviewQueue>('/event-requests/queue'))
-      setError(null)
-    } catch (err) {
-      setError(err instanceof ApiClientError ? err.message : 'Could not load the review queue.')
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get<ReviewQueue>('/event-requests/queue')
+      .then((result) => {
+        if (!cancelled) setQueue(result)
+      })
+      .catch((err: unknown) => {
+        if (!cancelled) setError(err instanceof ApiClientError ? err.message : 'Could not load the review queue.')
+      })
+    return () => {
+      cancelled = true
     }
   }, [])
 
-  useEffect(() => {
-    void load()
-  }, [load])
-
-  async function assignToSelf(request: EventRequestDto) {
-    setBusyId(request.requestId)
-    setActionError((prev) => ({ ...prev, [request.requestId]: '' }))
-    try {
-      await apiClient.post(`/event-requests/${request.requestId}/assign-coordinator`, { coordinatorUserId: userId })
-      await load()
-    } catch (err) {
-      setActionError((prev) => ({
-        ...prev,
-        [request.requestId]: err instanceof ApiClientError ? err.message : 'Could not assign this request.',
-      }))
-    } finally {
-      setBusyId(null)
-    }
-  }
-
-  const total = queue ? queue.needsReview.length + queue.awaitingOrganiser.length + queue.unassigned.length : 0
+  const total = queue ? queue.needsReview.length + queue.awaitingOrganiser.length : 0
 
   return (
     <div className="page">
@@ -91,7 +71,7 @@ export function ReviewQueuePage() {
           />
           <QueueSection
             title="Waiting for the organiser"
-            hint="You asked for clarification; these come back to you when the organiser resubmits."
+            hint="Clarification was asked for; these come back to you when the organiser resubmits."
             requests={queue.awaitingOrganiser}
             renderAction={(request) => (
               <Link className="button button--secondary" to={`/coordinator/requests/${request.requestId}`}>
@@ -99,30 +79,17 @@ export function ReviewQueuePage() {
               </Link>
             )}
           />
-          <QueueSection
-            title="Unassigned"
-            hint="Pick a request up to become its coordinator."
-            requests={queue.unassigned}
-            renderAction={(request) => (
-              <Button variant="secondary" disabled={busyId === request.requestId}
-                onClick={() => void assignToSelf(request)}>
-                Assign to me
-              </Button>
-            )}
-            errors={actionError}
-          />
         </>
       ) : null}
     </div>
   )
 }
 
-function QueueSection({ title, hint, requests, renderAction, errors = {} }: {
+function QueueSection({ title, hint, requests, renderAction }: {
   title: string
   hint: string
   requests: EventRequestDto[]
   renderAction: (request: EventRequestDto) => ReactNode
-  errors?: Record<string, string>
 }) {
   if (requests.length === 0) return null
   const headingId = `queue-${title.toLowerCase().replace(/\W+/g, '-')}`
@@ -149,9 +116,6 @@ function QueueSection({ title, hint, requests, renderAction, errors = {} }: {
                 <StatusBadge status={request.status} />
                 {renderAction(request)}
               </div>
-              {errors[request.requestId] ? (
-                <p role="alert" className="error-text review-queue__error">{errors[request.requestId]}</p>
-              ) : null}
             </Card>
           </li>
         ))}

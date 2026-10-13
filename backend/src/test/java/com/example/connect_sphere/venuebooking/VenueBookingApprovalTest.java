@@ -16,6 +16,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -163,6 +164,25 @@ class VenueBookingApprovalTest {
         assertThat(bookings.approve(adjacent).status().name()).isEqualTo("approved");
         assertThat(bookings.approve(booking(venue(), "pending")).status().name()).isEqualTo("approved");
     }
+    @Test void bufferOnlyConflictExplainsRestrictionAndKeepsBookingsUnchanged() throws Exception {
+        UUID venue = venue();
+        jdbc.update("UPDATE venues SET setup_minutes=30, turnaround_minutes=45 WHERE venue_id=?", venue);
+        UUID existing = booking(venue, "approved");
+        UUID requested = booking(venue, "pending", "2027-04-01T12:30:00+08:00", "2027-04-01T14:00:00+08:00");
+        String before = snapshot(existing), pendingBefore = snapshot(requested);
+        mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(user("vs").roles("VS")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This booking conflicts with the setup or turnaround time required around an existing approved booking."))
+                .andExpect(jsonPath("$.conflicts[0].bookingId").value(existing.toString()))
+                .andExpect(jsonPath("$.conflicts[0].eventName").value("VS03 Workshop"));
+        assertThat(statusOf(requested)).isEqualTo("pending");
+        assertThat(statusOf(existing)).isEqualTo("approved");
+        assertThat(snapshot(existing)).isEqualTo(before);
+        assertThat(snapshot(requested)).isEqualTo(pendingBefore);
+        UUID adjacent = booking(venue, "pending", "2027-04-01T13:15:00+08:00", "2027-04-01T15:00:00+08:00");
+        assertThat(bookings.approve(adjacent).status().name()).isEqualTo("approved");
+    }
+
     @Test void failedDatabaseWriteRollsBack() throws Exception {
         UUID id = booking(venue(), "pending");
         String before = snapshot(id);
@@ -172,6 +192,70 @@ class VenueBookingApprovalTest {
                 .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.message").exists());
         assertThat(statusOf(id)).isEqualTo("pending");
         assertThat(snapshot(id)).isEqualTo(before);
+    }
+
+    @Test void overlapResponseIdentifiesEveryConflictAndPreservesRecords() throws Exception {
+        UUID venue = venue(), first = booking(venue, "approved"), second = booking(venue, "approved"),
+                requested = booking(venue, "pending");
+        String firstBefore = snapshot(first), secondBefore = snapshot(second), requestedBefore = snapshot(requested);
+        var result = mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(user("vs").roles("VS")))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This booking overlaps an existing approved booking for the selected venue."))
+                .andExpect(jsonPath("$.conflicts.length()").value(2))
+                .andExpect(jsonPath("$.conflicts[*].bookingId", org.hamcrest.Matchers.containsInAnyOrder(first.toString(), second.toString())))
+                .andExpect(jsonPath("$.conflicts[0].eventName").value("VS03 Workshop"))
+                .andExpect(jsonPath("$.conflicts[0].coordinatorId").doesNotExist())
+                .andReturn();
+        var json = new tools.jackson.databind.ObjectMapper().readTree(result.getResponse().getContentAsString());
+        for (var conflict : json.get("conflicts")) {
+            assertThat(conflict.size()).isEqualTo(4);
+            assertThat(java.time.OffsetDateTime.parse(conflict.get("startDatetime").asText()).toInstant())
+                    .isEqualTo(java.time.OffsetDateTime.parse("2027-04-01T09:00:00+08:00").toInstant());
+            assertThat(java.time.OffsetDateTime.parse(conflict.get("endDatetime").asText()).toInstant())
+                    .isEqualTo(java.time.OffsetDateTime.parse("2027-04-01T12:00:00+08:00").toInstant());
+        }
+        assertThat(statusOf(requested)).isEqualTo("pending");
+        assertThat(statusOf(first)).isEqualTo("approved");
+        assertThat(statusOf(second)).isEqualTo("approved");
+        assertThat(snapshot(first)).isEqualTo(firstBefore);
+        assertThat(snapshot(second)).isEqualTo(secondBefore);
+        assertThat(snapshot(requested)).isEqualTo(requestedBefore);
+    }
+
+    @ParameterizedTest
+    @CsvSource({"10:00,13:00,true", "08:00,10:00,true", "08:00,13:00,true",
+            "10:00,11:00,true", "09:00,12:00,true", "12:00,14:00,false", "07:00,09:00,false"})
+    void overlapBoundaries(String start, String end, boolean conflict) throws Exception {
+        UUID venue = venue();
+        UUID existing = booking(venue, "approved");
+        UUID requested = booking(venue, "pending", "2027-04-01T" + start + ":00+08:00", "2027-04-01T" + end + ":00+08:00");
+        var result = mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(user("vs").roles("VS")));
+        if (conflict) result.andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts[0].bookingId").value(existing.toString()));
+        else result.andExpect(status().isOk());
+        assertThat(statusOf(requested)).isEqualTo(conflict ? "pending" : "approved");
+    }
+
+    @ParameterizedTest @ValueSource(strings={"pending", "rejected", "cancelled", "changed"})
+    void nonApprovedBookingsDoNotBlock(String state) {
+        UUID venue = venue();
+        booking(venue, state);
+        assertThat(bookings.approve(booking(venue, "pending")).status().name()).isEqualTo("approved");
+    }
+
+    @ParameterizedTest @ValueSource(strings={"completed", "cancelled"})
+    void approvedBookingBlocksRegardlessOfEventStatus(String eventStatus) throws Exception {
+        UUID venue = venue(), existing = booking(venue, "approved"), requested = booking(venue, "pending");
+        jdbc.update("UPDATE events SET status=?::event_status WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)", eventStatus, existing);
+        mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(user("vs").roles("VS")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts[0].bookingId").value(existing.toString()));
+    }
+
+    @Test void midnightOverlapUsesInstantsAcrossOffsets() throws Exception {
+        UUID venue = venue();
+        UUID existing = booking(venue, "approved", "2027-04-01T23:00:00+08:00", "2027-04-02T02:00:00+08:00");
+        UUID requested = booking(venue, "pending", "2027-04-01T17:00:00Z", "2027-04-01T19:00:00Z");
+        mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(user("vs").roles("VS")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts[0].bookingId").value(existing.toString()));
     }
     void race(UUID first, UUID second) throws Exception {
         CountDownLatch start = new CountDownLatch(1);
@@ -195,5 +279,9 @@ class VenueBookingApprovalTest {
         UUID venue = venue(), a = booking(venue, "pending"), b = booking(venue, "pending");
         race(a, b);
         assertThat(List.of(statusOf(a), statusOf(b))).containsExactlyInAnyOrder("approved", "pending");
+        UUID winner = statusOf(a).equals("approved") ? a : b;
+        UUID loser = winner.equals(a) ? b : a;
+        mvc.perform(patch("/api/venue-bookings/" + loser + "/approve").with(user("vs").roles("VS")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts[0].bookingId").value(winner.toString()));
     }
 }

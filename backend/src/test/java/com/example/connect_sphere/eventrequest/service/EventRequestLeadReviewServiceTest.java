@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
@@ -41,9 +42,10 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * ECL-C3: the Event Coordinator Lead's review of an unassigned request, with
- * every repository mocked. Each test is named after the acceptance criterion
- * it checks, and expected values come from the criteria, not from the code.
+ * ECL-C3 and ELC-C6: the Event Coordinator Lead's review of an unassigned
+ * request and its assignment to an Event Coordinator, with every repository
+ * mocked. Each test is named after the acceptance criterion it checks, and
+ * expected values come from the criteria, not from the code.
  */
 @Tag("unit")
 class EventRequestLeadReviewServiceTest {
@@ -339,6 +341,157 @@ class EventRequestLeadReviewServiceTest {
         verify(notificationService, never()).createClarificationRespondedNotification(any(), any(), any(), any());
     }
 
+    // ---- Assigning (ELC-C6) ------------------------------------------
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
+    void assigningGivesTheRequestItsCoordinatorAndKeepsItsStatus(EventRequestStatus status) {
+        EventRequest request = stored(status, null);
+        coordinator("ec1");
+
+        EventRequestDto result = service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        assertThat(result.coordinatorId()).isEqualTo(COORDINATOR);
+        assertThat(result.status()).isEqualTo(status);
+    }
+
+    @Test
+    void assigningIsRecordedOnTheTimelineWithTheLeadAsTheActorAndTheCoordinatorsName() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+        coordinator("ec1");
+
+        service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(ActivityType.coordinator_assigned);
+        assertThat(entry.getValue().actorUserId()).isEqualTo(LEAD);
+        assertThat(entry.getValue().message()).contains("ec1");
+        // The status did not move, so the entry claims no status change.
+        assertThat(entry.getValue().fromStatus()).isNull();
+        assertThat(entry.getValue().toStatus()).isNull();
+    }
+
+    @Test
+    void assigningDoesNotApproveTheRequestCreateAnEventOrChangeAnyOtherDetail() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+        coordinator("ec1");
+
+        EventRequestDto result = service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        assertThat(result.eventId()).isNull();
+        verifyNoInteractions(eventRepository);
+        assertThat(result.eventName()).isEqualTo("Q1 Town Hall");
+        assertThat(result.organisation()).isEqualTo(ORG);
+        assertThat(result.purpose()).isEqualTo("All-hands update");
+        assertThat(result.description()).isEqualTo("Quarterly results and Q&A");
+        assertThat(result.startDatetime()).isEqualTo(STARTS);
+        assertThat(result.endDatetime()).isEqualTo(ENDS);
+        assertThat(result.expectedAttendance()).isEqualTo(150);
+        assertThat(result.venueRequirements()).isEqualTo("Theatre-style seating for 150");
+        assertThat(result.equipmentRequirements()).isEqualTo("Two wireless microphones");
+        assertThat(result.accessibilityNeeds()).containsExactly(AccessibilityFeature.none);
+        assertThat(result.registrationNeeds()).isTrue();
+        assertThat(result.rejectionReason()).isNull();
+        assertThat(request.getCreatedBy()).isEqualTo(ORGANISER);
+    }
+
+    @Test
+    void assigningTellsTheOrganiserWhoTheirCoordinatorIsAndNotifiesNobodyElse() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+        coordinator("ec1");
+
+        service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        verify(notificationService).createCoordinatorAssignmentNotification(
+                ORGANISER, request.getRequestId(), null, "Q1 Town Hall", "ec1", "ec1@connectsphere.test", false);
+        // Telling the coordinator is a separate story (EC-NEW4).
+        verifyNoMoreInteractions(notificationService);
+    }
+
+    @Test
+    void assigningWithoutChoosingACoordinatorIsBlockedAndNothingChanges() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD, request.getRequestId(), null))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessage("A coordinator must be specified");
+        assertNothingChanged(request, EventRequestStatus.pending, null);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserRole.class, mode = EnumSource.Mode.EXCLUDE, names = "ec")
+    void aUserWhoIsNotAnEventCoordinatorCannotBeAssignedAndNothingChanges(UserRole otherRole) {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+        coordinator("someone").setRole(otherRole);
+
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("is not an Event Coordinator");
+        assertNothingChanged(request, EventRequestStatus.pending, null);
+    }
+
+    @Test
+    void aUserThatDoesNotExistCannotBeAssignedAndNothingChanges() {
+        EventRequest request = stored(EventRequestStatus.pending, null);
+        when(userRepository.findById(COORDINATOR)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("is not an Event Coordinator");
+        assertNothingChanged(request, EventRequestStatus.pending, null);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
+    void aRequestAssignedSinceThePageLoadedCannotBeAssignedAgain(EventRequestStatus status) {
+        UUID alreadyAssigned = UUID.randomUUID();
+        EventRequest request = stored(status, alreadyAssigned);
+        coordinator("ec1");
+
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("already been assigned");
+        assertNothingChanged(request, status, alreadyAssigned);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"approved", "rejected", "cancelled"})
+    void aRequestDecidedSinceThePageLoadedCannotBeAssigned(EventRequestStatus status) {
+        EventRequest request = stored(status, null);
+        coordinator("ec1");
+
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("no longer waiting for assignment");
+        assertNothingChanged(request, status, null);
+    }
+
+    @Test
+    void aDraftCannotBeAssignedAndIsReportedAsNotFound() {
+        EventRequest draft = stored(EventRequestStatus.draft, null);
+        coordinator("ec1");
+
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD, draft.getRequestId(), COORDINATOR))
+                .isInstanceOf(EventRequestNotFoundException.class);
+        assertNothingChanged(draft, EventRequestStatus.draft, null);
+    }
+
+    @Test
+    void whenTheOrganiserResubmitsARequestAssignedWhileItWaitedItGoesToThatCoordinator() {
+        EventRequest request = stored(EventRequestStatus.clarification_required, null);
+        coordinator("ec1");
+        service.assignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        EventRequestDto result = service.resubmit(ORG, ORGANISER, request.getRequestId(), "It is for our staff.");
+
+        // Submitted and still theirs: in their review queue, not the unassigned list.
+        assertThat(result.status()).isEqualTo(EventRequestStatus.pending);
+        assertThat(result.coordinatorId()).isEqualTo(COORDINATOR);
+        verify(notificationService).createClarificationRespondedNotification(
+                COORDINATOR, request.getRequestId(), "Q1 Town Hall", "It is for our staff.");
+    }
+
     // ---- Fixtures -----------------------------------------------------
 
     /** A refused action leaves the request as it was, with no timeline
@@ -378,6 +531,17 @@ class EventRequestLeadReviewServiceTest {
         when(repository.findById(entity.getRequestId())).thenReturn(Optional.of(entity));
         when(repository.findForUpdate(entity.getRequestId())).thenReturn(Optional.of(entity));
         return entity;
+    }
+
+    /** Makes COORDINATOR a real Event Coordinator account the Lead can pick. */
+    private User coordinator(String username) {
+        User user = new User();
+        user.setUserId(COORDINATOR);
+        user.setUsername(username);
+        user.setEmail(username + "@connectsphere.test");
+        user.setRole(UserRole.ec);
+        when(userRepository.findById(COORDINATOR)).thenReturn(Optional.of(user));
+        return user;
     }
 
     private static User organiser(UUID id) {

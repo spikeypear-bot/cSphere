@@ -5,10 +5,12 @@ import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -77,7 +79,7 @@ class NotificationFlowTest {
     }
 
     private ResultActions assign(UUID requestId, String coordinator) throws Exception {
-        return mvc.perform(post("/api/event-requests/" + requestId + "/assign-coordinator").with(flow.as("ec1"))
+        return mvc.perform(post("/api/event-requests/unassigned/" + requestId + "/assign").with(flow.as("ecl1"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"coordinatorUserId\":\"" + flow.idOf(coordinator) + "\"}"));
     }
@@ -89,6 +91,22 @@ class NotificationFlowTest {
 
     private ResultActions confirm(UUID eventId, String as) throws Exception {
         return mvc.perform(post("/api/events/" + eventId + "/confirm").with(flow.as(as)));
+    }
+
+    private void completeReadiness(UUID eventId) throws Exception {
+        for (String itemKey : List.of(
+                "venue_booking",
+                "capacity_facilities",
+                "accessibility",
+                "equipment",
+                "registration",
+                "safety_operations")) {
+            mvc.perform(patch("/api/safety/events/" + eventId + "/readiness/items/" + itemKey)
+                    .with(flow.as("so1"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"checked\":true,\"note\":\"Ready\"}"))
+                    .andExpect(status().isOk());
+        }
     }
 
     private ResultActions notificationsOf(String username) throws Exception {
@@ -139,6 +157,11 @@ class NotificationFlowTest {
                 "SELECT status::text FROM event_requests WHERE request_id = ?", String.class, requestId);
     }
 
+    private UUID coordinatorOf(UUID requestId) {
+        return jdbc.queryForObject(
+                "SELECT coordinator_id FROM event_requests WHERE request_id = ?", UUID.class, requestId);
+    }
+
     private String eventStatus(UUID eventId) {
         return jdbc.queryForObject("SELECT status::text FROM events WHERE event_id = ?", String.class, eventId);
     }
@@ -158,26 +181,19 @@ class NotificationFlowTest {
                 .andExpect(jsonPath(assignment(false) + ".linkPath", contains("/organiser/requests/" + requestId)));
     }
 
-    @Test
-    void reassigningToAnotherCoordinatorNotifiesTheOrganiserAsAReassignment() throws Exception {
+    @ParameterizedTest
+    @ValueSource(strings = {"ec1", "ec2"})
+    void assigningARequestThatAlreadyHasACoordinatorIsRefusedAndCreatesNoNotification(String coordinator)
+            throws Exception {
         UUID requestId = assignedRequest();
 
-        assign(requestId, "ec2").andExpect(status().isOk());
-
-        assertThat(saved("coordinator_assignment")).isEqualTo(2);
-        notificationsOf("eo1")
-                .andExpect(jsonPath(assignment(true) + ".coordinatorName", contains("ec2")))
-                .andExpect(jsonPath(assignment(true) + ".coordinatorEmail", contains("ec2@connectsphere.test")))
-                .andExpect(jsonPath(assignment(false) + ".coordinatorName", contains("ec1")));
-    }
-
-    @Test
-    void savingTheSameCoordinatorAgainCreatesNoNotification() throws Exception {
-        UUID requestId = assignedRequest();
-
-        assign(requestId, "ec1").andExpect(status().isOk());
+        assign(requestId, coordinator).andExpect(status().isConflict());
 
         assertThat(saved("coordinator_assignment")).isEqualTo(1);
+        assertThat(coordinatorOf(requestId)).isEqualTo(flow.idOf("ec1"));
+        notificationsOf("eo1")
+                .andExpect(jsonPath(assignment(true), empty()))
+                .andExpect(jsonPath(assignment(false) + ".coordinatorName", contains("ec1")));
     }
 
     @Test
@@ -225,11 +241,12 @@ class NotificationFlowTest {
     @Test
     void confirmingTheEventSetsItToConfirmedAndNotifiesTheOrganiser() throws Exception {
         UUID eventId = approve(assignedRequest());
+        completeReadiness(eventId);
 
-        confirm(eventId, "ec1")
+        confirm(eventId, "so1")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eventId").value(eventId.toString()))
-                .andExpect(jsonPath("$.status").value("confirmed"));
+                .andExpect(jsonPath("$.approvalStatus").value("approved"));
 
         assertThat(eventStatus(eventId)).isEqualTo("confirmed");
         assertThat(savedStatusChange("confirmed")).isEqualTo(1);
@@ -283,9 +300,7 @@ class NotificationFlowTest {
                 .andExpect(status().isOk());
 
         assertThat(requestStatus(requestId)).isEqualTo("pending");
-        assertThat(jdbc.queryForObject(
-                "SELECT coordinator_id FROM event_requests WHERE request_id = ?", UUID.class, requestId))
-                .isEqualTo(flow.idOf("ec1"));
+        assertThat(coordinatorOf(requestId)).isEqualTo(flow.idOf("ec1"));
     }
 
     @Test

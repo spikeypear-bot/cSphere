@@ -7,10 +7,11 @@ package com.example.connect_sphere.user.entity;
  * {@code @JdbcTypeCode(SqlTypes.NAMED_ENUM)} Hibernate matches on the constant's
  * {@code name()}, so these must equal the database labels exactly.
  *
- * These are the five application roles from the customer briefing:
+ * The original five application roles from the customer briefing are:
  * {@link #ec} Event Coordinator, {@link #eo} Event Organiser, {@link #vs} Venue
  * Staff, {@link #attendee} Attendee, {@link #technician} Technical Support Staff.
- * {@link #ecl} Event Coordinator Lead is a separate role added in V21 (ECL-C1).
+ * {@link #ecl} Event Coordinator Lead is a separate role added in V21 (ECL-C1),
+ * and {@link #safety_officer} Safety Officer is added in V22 (SO-C1–SO-C4).
  * "Developer"/"Scrum Master"/"Product Owner" are backlog-modelling categories,
  * not roles the software authenticates — do not add them here.
  */
@@ -20,5 +21,6 @@ public enum UserRole {
     vs,
     attendee,
     technician,
-    ecl
+    ecl,
+    safety_officer
 }

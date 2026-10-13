@@ -2,6 +2,7 @@
 
 Reference for the initial schema and subsequent migrations, updated through
 `V23__legacy_venue_booking_time_compatibility.sql`.
+`V22__safety_officer_readiness.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -64,8 +65,8 @@ painful. Settle these before there is production data.
 
 | Type | Values | Used by |
 |---|---|---|
-| `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician`, `ecl` (added V21 — Week 7 customer change, ECL-C1) | `users.role` |
-| `event_status` | `confirmed`, `cancelled`, `completed` | `events.status` |
+| `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician`, `ecl` (V21), `safety_officer` (V22, SO-C1–SO-C4) | `users.role` |
+| `event_status` | `pending`, `confirmed`, `cancelled`, `completed` (`pending` added V12) | `events.status` |
 | `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
@@ -83,6 +84,7 @@ painful. Settle these before there is production data.
 | `attendee` | Attendee | End user who attends events |
 | `technician` | Technician | Technician — presumably handles equipment issue/return |
 | `ecl` | Event Coordinator Lead | Oversees incoming event requests and assigns them to Event Coordinators |
+| `safety_officer` | Safety Officer | Reviews operational readiness and approves planned events after checklist completion |
 
 ### Single-character code columns
 
@@ -193,7 +195,8 @@ preserving database enum validation and existing GIN indexes (see `docs/venue-ap
 ---
 
 ### `events`
-A confirmed event. Created from an approved `event_request`.
+An event created from an approved `event_request`. It remains `pending` (Planning)
+until its Safety Officer readiness review is approved, then becomes `confirmed`.
 
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
@@ -212,6 +215,41 @@ A confirmed event. Created from an approved `event_request`.
 | `venue_requirements` | `TEXT` | no | | Free-text venue needs |
 | `equipment_requirements` | `TEXT` | yes | | Free-text equipment needs. TODO — clarify against `equipment_requests.technical_requirement` |
 | `status` | `event_status` | no | | Lifecycle state |
+
+---
+
+### `event_readiness_items` (V22, SO-C3)
+
+Persisted status and notes for a predefined event readiness item. The item keys
+and labels are defined in the backend so events share the same standard checklist.
+`checked_by`/`checked_at` preserve the most recent check attribution even if an
+item is later unchecked; `updated_by`/`updated_at` track the most recent edit.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `item_id` | `UUID` | no | PK | Application-generated state row identifier |
+| `event_id` | `UUID` | no | FK → `events` | Event, cascade-deleted with the event |
+| `item_key` | `VARCHAR(80)` | no | UQ with event | Stable key for a predefined checklist item |
+| `checked` | `BOOLEAN` | no | | Current checklist state |
+| `note` | `VARCHAR(2000)` | no | | Item note, empty by default |
+| `checked_by` | `UUID` | yes | FK → `users` | Most recent Safety Officer to check the item |
+| `checked_at` | `TIMESTAMPTZ` | yes | | Time of the most recent transition to checked |
+| `updated_by` | `UUID` | yes | FK → `users` | Most recent editor |
+| `updated_at` | `TIMESTAMPTZ` | yes | | Most recent edit time |
+
+### `event_safety_reviews` (V22, SO-C4)
+
+The latest Safety Officer decision for an event (`approved` or `rejected`), with
+the reviewer, time, and optional note. Approval updates `events.status` to
+`confirmed` in the same transaction; rejection leaves the event in Planning.
+
+| Column | Type | Null | Key | Description |
+|---|---|---|---|---|
+| `event_id` | `UUID` | no | PK, FK → `events` | Event under review, cascade-deleted with the event |
+| `review_status` | `VARCHAR(16)` | no | | `approved` or `rejected` |
+| `note` | `VARCHAR(2000)` | no | | Optional review note |
+| `reviewed_by` | `UUID` | no | FK → `users` | Safety Officer who made the latest decision |
+| `reviewed_at` | `TIMESTAMPTZ` | no | | Time of the latest decision |
 
 ---
 

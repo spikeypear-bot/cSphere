@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -8,6 +8,7 @@ import { TextField, NumberField, DateTimeField, CheckboxField } from '../../comp
 import { ChipGroup } from '../../components/ui/ChipGroup'
 import { StepIndicator, type Step } from '../../components/ui/StepIndicator'
 import { AutosaveIndicator } from '../../components/ui/AutosaveIndicator'
+import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type AccessibilityFeature } from '../../types/eventRequest'
 import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 import { useEventRequestDraft, type DraftFields } from './useEventRequestDraft'
@@ -24,6 +25,52 @@ const STEPS: Step[] = [
 ]
 
 const ACCESSIBILITY_OPTIONS = Object.keys(ACCESSIBILITY_LABELS) as AccessibilityFeature[]
+
+interface EquipmentCatalogueItem {
+  equipmentId: string
+  equipmentName: string
+  totalQuantity: number
+  serialised: boolean
+}
+
+const EQUIPMENT_ITEMS_HEADING = 'Equipment items:'
+const EQUIPMENT_NOTES_HEADING = 'Additional notes:'
+
+function equipmentRequirementsFrom(
+  selected: Record<string, string>,
+  notes: string,
+  catalogue: EquipmentCatalogueItem[],
+): string | null {
+  const lines = catalogue.flatMap((equipment) => {
+    const quantity = selected[equipment.equipmentId]
+    return quantity === undefined ? [] : [`${quantity} × ${equipment.equipmentName}`]
+  })
+  const sections = [
+    lines.length ? `${EQUIPMENT_ITEMS_HEADING}\n${lines.join('\n')}` : '',
+    notes.trim() ? `${EQUIPMENT_NOTES_HEADING}\n${notes.trim()}` : '',
+  ].filter(Boolean)
+  return sections.length ? sections.join('\n\n') : null
+}
+
+function equipmentDraftFrom(
+  value: string | null,
+  catalogue: EquipmentCatalogueItem[],
+): { selected: Record<string, string>; notes: string } {
+  if (!value?.startsWith(`${EQUIPMENT_ITEMS_HEADING}\n`)) {
+    return { selected: {}, notes: value ?? '' }
+  }
+
+  const [itemsSection, ...notesSections] = value.split(`\n\n${EQUIPMENT_NOTES_HEADING}\n`)
+  const selected: Record<string, string> = {}
+  const lines = itemsSection.slice(EQUIPMENT_ITEMS_HEADING.length).trim().split('\n').filter(Boolean)
+  for (const line of lines) {
+    const match = /^(\d+)\s+×\s+(.+)$/.exec(line)
+    const equipment = match && catalogue.find((item) => item.equipmentName === match[2])
+    if (match && equipment) selected[equipment.equipmentId] = match[1]
+    else return { selected: {}, notes: value }
+  }
+  return { selected, notes: notesSections.join(`\n\n${EQUIPMENT_NOTES_HEADING}\n`) }
+}
 
 export function EventRequestWizardPage() {
   const { requestId } = useParams()
@@ -43,7 +90,38 @@ export function EventRequestWizardPage() {
   const [missingFields, setMissingFields] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string>()
+  const [equipmentCatalogue, setEquipmentCatalogue] = useState<EquipmentCatalogueItem[] | null>(null)
+  const [catalogueError, setCatalogueError] = useState<string | null>(null)
+  const [selectedEquipment, setSelectedEquipment] = useState<Record<string, string>>({})
+  const [equipmentNotes, setEquipmentNotes] = useState('')
+  const equipmentDraftInitialized = useRef(false)
   const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
+  const invalidEquipmentQuantity = Object.values(selectedEquipment).some(
+    (quantity) => !/^[1-9]\d*$/.test(quantity),
+  )
+
+  useEffect(() => {
+    if (stepIndex !== 3 || equipmentCatalogue !== null || catalogueError) return
+    let cancelled = false
+    apiClient.get<EquipmentCatalogueItem[]>('/equipment/catalogue')
+      .then((catalogue) => {
+        if (!cancelled) setEquipmentCatalogue(catalogue)
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) {
+          setCatalogueError(error instanceof ApiClientError ? error.message : 'Could not load equipment options.')
+        }
+      })
+    return () => { cancelled = true }
+  }, [stepIndex, equipmentCatalogue, catalogueError])
+
+  useEffect(() => {
+    if (!equipmentCatalogue || equipmentDraftInitialized.current) return
+    const draft = equipmentDraftFrom(fields.equipmentRequirements, equipmentCatalogue)
+    setSelectedEquipment(draft.selected)
+    setEquipmentNotes(draft.notes)
+    equipmentDraftInitialized.current = true
+  }, [equipmentCatalogue, fields.equipmentRequirements])
 
   if (loading) {
     return <p>Loading your draft…</p>
@@ -69,8 +147,34 @@ export function EventRequestWizardPage() {
 
   async function goToStep(nextIndex: number) {
     if (nextIndex > stepIndex && rangeError) return
+    if (nextIndex > stepIndex && stepIndex === 3 && invalidEquipmentQuantity) return
     await save()
     setStepIndex(nextIndex)
+  }
+
+  function updateEquipmentRequirements(selected: Record<string, string>, notes: string) {
+    setFields({
+      equipmentRequirements: equipmentRequirementsFrom(selected, notes, equipmentCatalogue ?? []),
+    })
+  }
+
+  function toggleEquipment(equipmentId: string, checked: boolean) {
+    const updated = { ...selectedEquipment }
+    if (checked) updated[equipmentId] = '1'
+    else delete updated[equipmentId]
+    setSelectedEquipment(updated)
+    updateEquipmentRequirements(updated, equipmentNotes)
+  }
+
+  function updateEquipmentQuantity(equipmentId: string, quantity: string) {
+    const updated = { ...selectedEquipment, [equipmentId]: quantity }
+    setSelectedEquipment(updated)
+    updateEquipmentRequirements(updated, equipmentNotes)
+  }
+
+  function updateEquipmentNotes(notes: string) {
+    setEquipmentNotes(notes)
+    updateEquipmentRequirements(selectedEquipment, notes)
   }
 
   // Turns the flat missingFields list (from a blocked submit) into an inline
@@ -101,7 +205,7 @@ export function EventRequestWizardPage() {
   }
 
   async function handleSubmit() {
-    if (rangeError || submitting) return
+    if (rangeError || invalidEquipmentQuantity || submitting) return
     setSubmitError(undefined)
     setSubmitting(true)
     try {
@@ -238,12 +342,60 @@ export function EventRequestWizardPage() {
 
         {stepIndex === 3 && (
           <>
+            <fieldset className="wizard__choice-group">
+              <legend>Equipment requirements</legend>
+              <p className="field-hint">Select catalogue items and enter the quantity needed for each.</p>
+              {equipmentCatalogue === null && !catalogueError
+                ? <p role="status">Loading equipment options…</p>
+                : null}
+              {catalogueError ? (
+                <p role="alert">
+                  {catalogueError}{' '}
+                  <Button type="button" variant="secondary" onClick={() => setCatalogueError(null)}>
+                    Retry
+                  </Button>
+                </p>
+              ) : null}
+              {equipmentCatalogue?.length === 0 ? <p>No equipment types are currently listed.</p> : null}
+              {equipmentCatalogue?.map((equipment) => {
+                const checked = selectedEquipment[equipment.equipmentId] !== undefined
+                return (
+                  <div className="wizard__equipment-option" key={equipment.equipmentId}>
+                    <label>
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={(event) => toggleEquipment(equipment.equipmentId, event.target.checked)}
+                      />
+                      {equipment.equipmentName}
+                    </label>
+                    {checked ? (
+                      <label>
+                        Quantity
+                        <input
+                          type="number"
+                          min="1"
+                          step="1"
+                          value={selectedEquipment[equipment.equipmentId]}
+                          onChange={(event) => updateEquipmentQuantity(equipment.equipmentId, event.target.value)}
+                          aria-label={`${equipment.equipmentName} quantity`}
+                          aria-invalid={!/^[1-9]\d*$/.test(selectedEquipment[equipment.equipmentId])}
+                        />
+                      </label>
+                    ) : null}
+                  </div>
+                )
+              })}
+              {invalidEquipmentQuantity ? (
+                <p role="alert">Enter a whole quantity greater than zero for each selected item.</p>
+              ) : null}
+            </fieldset>
             <TextField
-              id="equipmentRequirements"
-              label="Equipment requirements"
-              hint="Optional — projectors, microphones, hybrid/video-conferencing needs…"
-              value={fields.equipmentRequirements ?? ''}
-              onChange={(value) => setFields({ equipmentRequirements: value || null })}
+              id="equipmentRequirementsNotes"
+              label="Additional equipment notes"
+              hint="Optional — describe special setup or equipment needs not covered by the catalogue."
+              value={equipmentNotes}
+              onChange={updateEquipmentNotes}
               multiline
             />
             <CheckboxField
@@ -282,9 +434,9 @@ export function EventRequestWizardPage() {
           </Button>
         )}
         {stepIndex < STEPS.length - 1 ? (
-          <Button disabled={!!rangeError} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
+          <Button disabled={!!rangeError || (stepIndex === 3 && invalidEquipmentQuantity)} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
         ) : (
-          <Button onClick={handleSubmit} disabled={submitting || !!rangeError}>
+          <Button onClick={handleSubmit} disabled={submitting || !!rangeError || invalidEquipmentQuantity}>
             {submitting ? 'Submitting…' : 'Submit for review'}
           </Button>
         )}

@@ -112,6 +112,11 @@ class EventRequestDraftSubmitFlowTest {
         return mvc.perform(get("/api/event-requests/queue").with(flow.as("ec1"))).andExpect(status().isOk());
     }
 
+    /** The Event Coordinator Lead's list of requests nobody is assigned to. */
+    private ResultActions unassignedQueue() throws Exception {
+        return mvc.perform(get("/api/event-requests/unassigned").with(flow.as("ecl1"))).andExpect(status().isOk());
+    }
+
     private static String entry(UUID requestId) {
         return "$[?(@.requestId == '" + requestId + "')]";
     }
@@ -226,11 +231,11 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
-    void aDraftIsNotShownToCoordinatorsForReview() throws Exception {
+    void aDraftIsNotShownToTheLeadOrToCoordinatorsForReview() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
 
+        unassignedQueue().andExpect(jsonPath(entry(requestId), empty()));
         reviewQueue()
-                .andExpect(jsonPath(queued("unassigned", requestId), empty()))
                 .andExpect(jsonPath(queued("needsReview", requestId), empty()))
                 .andExpect(jsonPath(queued("awaitingOrganiser", requestId), empty()));
     }
@@ -291,15 +296,20 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
-    void aSubmittedRequestBecomesAvailableToCoordinatorsForReview() throws Exception {
+    void aSubmittedRequestWaitsInTheLeadsUnassignedListAndInNoCoordinatorsQueue() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
 
         submit(requestId, "eo1").andExpect(status().isOk());
         sync();
 
+        unassignedQueue()
+                .andExpect(jsonPath(entry(requestId) + ".eventName", contains(eventName)))
+                .andExpect(jsonPath(entry(requestId) + ".status", contains("pending")));
+        // ELC-C6: coordinators see it only once the Lead assigns it to them.
         reviewQueue()
-                .andExpect(jsonPath(queued("unassigned", requestId) + ".eventName", contains(eventName)))
-                .andExpect(jsonPath(queued("unassigned", requestId) + ".status", contains("pending")));
+                .andExpect(jsonPath("$.unassigned").doesNotExist())
+                .andExpect(jsonPath(queued("needsReview", requestId), empty()))
+                .andExpect(jsonPath(queued("awaitingOrganiser", requestId), empty()));
     }
 
     @Test
@@ -312,7 +322,7 @@ class EventRequestDraftSubmitFlowTest {
                         "endDatetime", "expectedAttendance", "venueRequirements", "accessibilityNeeds")));
 
         assertThat(savedStatus(requestId)).isEqualTo("draft");
-        reviewQueue().andExpect(jsonPath(queued("unassigned", requestId), empty()));
+        unassignedQueue().andExpect(jsonPath(entry(requestId), empty()));
     }
 
     @Test

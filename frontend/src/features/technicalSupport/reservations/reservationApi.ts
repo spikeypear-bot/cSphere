@@ -1,5 +1,6 @@
 import type {
   EquipmentAvailability,
+  EquipmentRequestDecision,
   EquipmentReservation,
   EquipmentRequestSummary,
   RequestLine,
@@ -73,4 +74,15 @@ export function reserveEquipment(
 // AC 11
 export function fetchReservationsForEvent(eventId: string): Promise<EquipmentReservation[]> {
   return apiClient.get<EquipmentReservation[]>(`/equipment/events/${eventId}/reservations`)
+}
+
+export function updateEquipmentRequestStatus(
+  requestId: string,
+  status: 'approved' | 'rejected',
+  rejectReason?: string,
+): Promise<EquipmentRequestDecision> {
+  return apiClient.patch<EquipmentRequestDecision>(
+    `/equipment-requests/${requestId}/status`,
+    { status, rejectReason },
+  )
 }

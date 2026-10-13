@@ -15,12 +15,14 @@ import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
+import com.example.connect_sphere.safety.ReadinessService;
+import com.example.connect_sphere.safety.SafetyApprovalRequest;
+import com.example.connect_sphere.safety.ReadinessDto;
 import com.example.connect_sphere.user.entity.UserRole;
 
 /**
- * EO09's "Confirmed" transition and "view confirmed event arrangements".
- * SecurityConfig splits GET (either role, organisation-checked in the
- * service for an Organiser) from the Coordinator-only confirm action.
+ * Event and Coordinator read endpoints. Safety Officer event access and the
+ * checklist-gated confirmation flow live in the safety package.
  */
 @RestController
 @RequestMapping("/api/events")
@@ -28,10 +30,13 @@ public class EventController {
 
     private final EventService service;
     private final EventRequestService eventRequestService;
+    private final ReadinessService readinessService;
 
-    public EventController(EventService service, EventRequestService eventRequestService) {
+    public EventController(EventService service, EventRequestService eventRequestService,
+            ReadinessService readinessService) {
         this.service = service;
         this.eventRequestService = eventRequestService;
+        this.readinessService = readinessService;
     }
 
     private static UUID userIdOf(Jwt jwt) {
@@ -72,7 +77,7 @@ public class EventController {
     }
 
     @PostMapping("/{id}/confirm")
-    public EventDto confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
-        return service.confirm(userIdOf(jwt), id);
+    public ReadinessDto confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        return readinessService.review(userIdOf(jwt), id, new SafetyApprovalRequest("approve", null));
     }
 }

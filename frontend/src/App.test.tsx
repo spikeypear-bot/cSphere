@@ -85,17 +85,18 @@ describe('App routing — role consoles', () => {
     expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
   })
 
-  it('shows the vertical-slice checklist and story ID on a skeleton feature page', async () => {
+  it('opens equipment request review from the Technical Support console', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     const user = userEvent.setup()
     signInAs('technical-support', 'tech1', 'ConnectSphere')
     renderApp('/technical-support')
 
-    await user.click(screen.getByRole('link', { name: /Skeleton Check availability/i }))
+    const reviewLink = screen.getByRole('link', { name: /Equipment request review/i })
+    expect(reviewLink).toHaveAttribute('href', '/technical-support/availability')
+    await user.click(reviewLink)
 
-    expect(await screen.findByRole('heading', { name: 'Equipment Availability' })).toBeInTheDocument()
-    expect(screen.getByText('TS01')).toBeInTheDocument()
-    expect(screen.getByText(/Build this as one "strand of hair"/i)).toBeInTheDocument()
-    expect(screen.getByText('com.example.connect_sphere.equipment')).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Equipment request review' })).toBeInTheDocument()
+    expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
   })
 
   it("redirects a signed-in account away from another role's console and says why", async () => {

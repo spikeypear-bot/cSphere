@@ -87,9 +87,11 @@ public class AvailabilityService {
                 .toList();
     }
     public boolean unavailable(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
+        return !unavailablePeriods(venueId, start, end).isEmpty();
+    }
+    public List<Period> unavailablePeriods(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
         Settings s = repository.settings(venueId);
-        return repository.periods(venueId).stream().anyMatch(p -> overlaps(p.startDateTime(), p.endDateTime(),
-                start.minusMinutes(s.setupMinutes()), end.plusMinutes(s.turnaroundMinutes())));
+        return repository.periods(venueId, start.minusMinutes(s.setupMinutes()), end.plusMinutes(s.turnaroundMinutes()));
     }
     public static boolean overlaps(OffsetDateTime a, OffsetDateTime b, OffsetDateTime c, OffsetDateTime d) {
         return a.isBefore(d) && b.isAfter(c);

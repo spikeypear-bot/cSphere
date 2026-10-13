@@ -9,6 +9,18 @@ import { VenueBookingRequestPage } from './VenueBookingRequestPage'
 
 const EVENT = 'ev-1'
 
+it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('marks %s history labels for booking-only colour styling', async status => {
+  seedSession('coordinator')
+  stubApi(routes([{ bookingId: 'colour-booking', status, venueAddress: 'Colour test venue' }]))
+  renderPage()
+  const heading = await screen.findByRole('heading', { name: 'Earlier requests for this event' })
+  const label = heading.closest('.venue-request__history')!.querySelector('[data-booking-status]')
+  expect(label).toHaveAttribute('data-booking-status', status)
+  expect(label).toHaveTextContent(new RegExp(status, 'i'))
+  cleanup()
+  vi.unstubAllGlobals()
+})
+
 const event = {
   eventId: EVENT, eventName: 'Town Hall', purpose: 'Update', description: null,
   startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z', expectedAttendance: 150,
@@ -134,6 +146,23 @@ describe('VenueBookingRequestPage (EC03)', () => {
     await user.click(blocked)
     expect(screen.getByRole('table')).toHaveTextContent('Missing: Projection')
     expect(screen.getByRole('button', { name: 'Request 4 Missing Facility Road' })).toBeDisabled()
+  })
+
+  it('search narrows the list by address or details, and says so when nothing matches', async () => {
+    stubApi(routes())
+    const user = userEvent.setup()
+    renderPage()
+
+    const search = await screen.findByPlaceholderText('Search by address or details')
+    await user.type(search, 'garden')
+    const list = screen.getByRole('list', { name: 'Venues ranked for this event' })
+    expect(within(list).getAllByRole('button').map((b) => b.textContent)).toEqual([
+      expect.stringContaining('2 Garden Lane'),
+    ])
+
+    await user.clear(search)
+    await user.type(search, 'nowhere')
+    expect(screen.getByText(/No venues match/)).toBeInTheDocument()
   })
 
   it('shows capacity against attendance for each venue', async () => {

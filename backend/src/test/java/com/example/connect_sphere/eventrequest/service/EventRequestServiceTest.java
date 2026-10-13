@@ -28,6 +28,7 @@ import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.eventrequest.dto.CoordinatorDto;
 import com.example.connect_sphere.eventrequest.dto.EventRequestDto;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
@@ -67,6 +68,7 @@ class EventRequestServiceTest {
     private static final UUID CREATED_BY = UUID.randomUUID();
     private static final UUID COORDINATOR_ID = UUID.randomUUID();
     private static final UUID OTHER_COORDINATOR_ID = UUID.randomUUID();
+    private static final UUID LEAD_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -263,97 +265,105 @@ class EventRequestServiceTest {
         assertThat(results.get(0).organisation()).isEqualTo(ORG);
     }
 
-    // ---- EO19: coordinator assignment -------------------------------------
+    // ---- EO19 / ELC-C6: coordinator assignment, by the Lead ----------------
 
-    @Test
-    void assigningACoordinatorForTheFirstTimeNotifiesTheOrganiserAsInitialNotAReassignment() {
-        UUID id = UUID.randomUUID();
+    /** A request as the Lead assigns it: submitted by CREATED_BY, nobody assigned. */
+    private EventRequest awaitingAssignment(UUID id) {
         EventRequest existing = completeDraftEntity(id, ORG);
         existing.setStatus(EventRequestStatus.pending);
         existing.setCreatedBy(CREATED_BY);
         when(repository.findById(id)).thenReturn(Optional.of(existing));
+        return existing;
+    }
+
+    /** A refused assignment writes nothing and tells nobody. */
+    private void assertNoAssignmentWasMade(EventRequest request, UUID coordinatorId) {
+        assertThat(request.getCoordinatorId()).isEqualTo(coordinatorId);
+        verify(repository, never()).save(any());
+        verifyNoInteractions(activityService, notificationService);
+    }
+
+    @Test
+    void assigningACoordinatorNotifiesTheOrganiserWithTheirNameAndContactAsAnInitialAssignment() {
+        UUID id = UUID.randomUUID();
+        awaitingAssignment(id);
         User coordinator = coordinatorUser(COORDINATOR_ID, "ec1", "ec1@connectsphere.test");
         when(userRepository.findById(COORDINATOR_ID)).thenReturn(Optional.of(coordinator));
 
-        EventRequestDto result = service.assignCoordinator(id, COORDINATOR_ID);
+        EventRequestDto result = service.assignCoordinator(LEAD_ID, id, COORDINATOR_ID);
 
         assertThat(result.coordinatorId()).isEqualTo(COORDINATOR_ID);
         verify(notificationService).createCoordinatorAssignmentNotification(
                 eq(CREATED_BY), eq(id), isNull(), any(), eq("ec1"), eq("ec1@connectsphere.test"), eq(false));
+        // Only the organiser hears of it: telling the coordinator is EC-NEW4.
+        verifyNoMoreInteractions(notificationService);
     }
 
     @Test
-    void reassigningToADifferentCoordinatorNotifiesAsAReassignment() {
+    void aRequestThatAlreadyHasACoordinatorCannotBeAssignedToAnotherOne() {
         UUID id = UUID.randomUUID();
-        EventRequest existing = completeDraftEntity(id, ORG);
-        existing.setStatus(EventRequestStatus.pending);
-        existing.setCreatedBy(CREATED_BY);
+        EventRequest existing = awaitingAssignment(id);
         existing.setCoordinatorId(OTHER_COORDINATOR_ID);
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
         User coordinator = coordinatorUser(COORDINATOR_ID, "ec2", "ec2@connectsphere.test");
         when(userRepository.findById(COORDINATOR_ID)).thenReturn(Optional.of(coordinator));
 
-        service.assignCoordinator(id, COORDINATOR_ID);
-
-        verify(notificationService).createCoordinatorAssignmentNotification(
-                eq(CREATED_BY), eq(id), isNull(), any(), eq("ec2"), any(), eq(true));
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD_ID, id, COORDINATOR_ID))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("already been assigned");
+        assertNoAssignmentWasMade(existing, OTHER_COORDINATOR_ID);
     }
 
     @Test
-    void reassigningTheSameCoordinatorAgainIsANoOpAndSendsNoNotification() {
+    void assigningTheCoordinatorARequestAlreadyHasIsRefusedAndSendsNoNotification() {
         UUID id = UUID.randomUUID();
-        EventRequest existing = completeDraftEntity(id, ORG);
-        existing.setStatus(EventRequestStatus.pending);
-        existing.setCreatedBy(CREATED_BY);
+        EventRequest existing = awaitingAssignment(id);
         existing.setCoordinatorId(COORDINATOR_ID);
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        User coordinator = coordinatorUser(COORDINATOR_ID, "ec1", "ec1@connectsphere.test");
+        when(userRepository.findById(COORDINATOR_ID)).thenReturn(Optional.of(coordinator));
 
-        EventRequestDto result = service.assignCoordinator(id, COORDINATOR_ID);
-
-        assertThat(result.coordinatorId()).isEqualTo(COORDINATOR_ID);
-        verify(notificationService, never()).createCoordinatorAssignmentNotification(
-                any(), any(), any(), any(), any(), any(), anyBoolean());
-        // Confirms the AC's "does not receive a duplicate notification" is
-        // backed by an actual no-op, not just a skipped notification: no
-        // write happens at all when nothing changed.
-        verify(repository, never()).save(any());
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD_ID, id, COORDINATOR_ID))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("already been assigned");
+        assertNoAssignmentWasMade(existing, COORDINATOR_ID);
     }
 
     @Test
     void assigningANonCoordinatorUserIsRejected() {
         UUID id = UUID.randomUUID();
-        EventRequest existing = completeDraftEntity(id, ORG);
-        existing.setStatus(EventRequestStatus.pending);
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        EventRequest existing = awaitingAssignment(id);
         UUID organiserUserId = UUID.randomUUID();
         User notACoordinator = coordinatorUser(organiserUserId, "eo1", "eo1@acme.test");
         notACoordinator.setRole(UserRole.eo);
         when(userRepository.findById(organiserUserId)).thenReturn(Optional.of(notACoordinator));
 
-        assertThatThrownBy(() -> service.assignCoordinator(id, organiserUserId))
-                .isInstanceOf(InvalidCoordinatorException.class);
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD_ID, id, organiserUserId))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("is not an Event Coordinator");
+        assertNoAssignmentWasMade(existing, null);
     }
 
     @Test
     void assigningANonexistentUserIsRejected() {
         UUID id = UUID.randomUUID();
-        EventRequest existing = completeDraftEntity(id, ORG);
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        EventRequest existing = awaitingAssignment(id);
         UUID ghost = UUID.randomUUID();
         when(userRepository.findById(ghost)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assignCoordinator(id, ghost))
-                .isInstanceOf(InvalidCoordinatorException.class);
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD_ID, id, ghost))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("is not an Event Coordinator");
+        assertNoAssignmentWasMade(existing, null);
     }
 
     @Test
     void assigningWithNoCoordinatorSpecifiedIsRejected() {
         UUID id = UUID.randomUUID();
-        EventRequest existing = completeDraftEntity(id, ORG);
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        EventRequest existing = awaitingAssignment(id);
 
-        assertThatThrownBy(() -> service.assignCoordinator(id, null))
-                .isInstanceOf(InvalidCoordinatorException.class);
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD_ID, id, null))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessage("A coordinator must be specified");
+        assertNoAssignmentWasMade(existing, null);
     }
 
     @Test
@@ -361,8 +371,9 @@ class EventRequestServiceTest {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> service.assignCoordinator(id, COORDINATOR_ID))
+        assertThatThrownBy(() -> service.assignCoordinator(LEAD_ID, id, COORDINATOR_ID))
                 .isInstanceOf(EventRequestNotFoundException.class);
+        verifyNoInteractions(activityService, notificationService);
     }
 
     @Test
@@ -370,16 +381,27 @@ class EventRequestServiceTest {
         // Historical rows saved before createdBy was populated — the
         // notification simply has no valid recipient, not an error.
         UUID id = UUID.randomUUID();
-        EventRequest existing = completeDraftEntity(id, ORG);
+        EventRequest existing = awaitingAssignment(id);
         existing.setCreatedBy(null);
-        when(repository.findById(id)).thenReturn(Optional.of(existing));
         when(userRepository.findById(COORDINATOR_ID))
                 .thenReturn(Optional.of(coordinatorUser(COORDINATOR_ID, "ec1", "ec1@connectsphere.test")));
 
-        service.assignCoordinator(id, COORDINATOR_ID);
+        EventRequestDto result = service.assignCoordinator(LEAD_ID, id, COORDINATOR_ID);
 
+        assertThat(result.coordinatorId()).isEqualTo(COORDINATOR_ID);
         verify(notificationService, never()).createCoordinatorAssignmentNotification(
                 any(), any(), any(), any(), any(), any(), anyBoolean());
+    }
+
+    @Test
+    void theLeadsCoordinatorListIsEveryEventCoordinatorByUsername() {
+        when(userRepository.findByRole(UserRole.ec)).thenReturn(List.of(
+                coordinatorUser(OTHER_COORDINATOR_ID, "ec2", "ec2@connectsphere.test"),
+                coordinatorUser(COORDINATOR_ID, "ec1", "ec1@connectsphere.test")));
+
+        assertThat(service.coordinators()).containsExactly(
+                new CoordinatorDto(COORDINATOR_ID, "ec1"), new CoordinatorDto(OTHER_COORDINATOR_ID, "ec2"));
+        verifyNoInteractions(repository, notificationService, activityService);
     }
 
     // ---- EO09: approve / reject --------------------------------------------
@@ -500,17 +522,24 @@ class EventRequestServiceTest {
     // ---- EC review queue ----------------------------------------------
 
     @Test
-    void reviewQueueSplitsMyRequestsFromUnassignedOnes() {
+    void reviewQueueHoldsOnlyTheCallersOwnRequestsSplitByWhoNeedsToAct() {
+        EventRequest mine = completeDraftEntity(UUID.randomUUID(), ORG);
+        EventRequest waiting = completeDraftEntity(UUID.randomUUID(), ORG);
         when(repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(COORDINATOR_ID, EventRequestStatus.pending))
-                .thenReturn(List.of(completeDraftEntity(UUID.randomUUID(), ORG)));
-        when(repository.findByStatusAndCoordinatorIdIsNullOrderByCreatedAtAsc(EventRequestStatus.pending))
-                .thenReturn(List.of(completeDraftEntity(UUID.randomUUID(), ORG), completeDraftEntity(UUID.randomUUID(), ORG)));
+                .thenReturn(List.of(mine));
+        when(repository.findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
+                COORDINATOR_ID, EventRequestStatus.clarification_required)).thenReturn(List.of(waiting));
 
         var queue = service.reviewQueue(COORDINATOR_ID);
 
-        assertThat(queue.needsReview()).hasSize(1);
-        assertThat(queue.awaitingOrganiser()).isEmpty();
-        assertThat(queue.unassigned()).hasSize(2);
+        assertThat(queue.needsReview()).extracting(EventRequestDto::requestId).containsExactly(mine.getRequestId());
+        assertThat(queue.awaitingOrganiser()).extracting(EventRequestDto::requestId)
+                .containsExactly(waiting.getRequestId());
+        // ELC-C6: nothing is read but the caller's own requests, so no unassigned ones.
+        verify(repository).findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(COORDINATOR_ID, EventRequestStatus.pending);
+        verify(repository).findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
+                COORDINATOR_ID, EventRequestStatus.clarification_required);
+        verifyNoMoreInteractions(repository);
     }
 
     // ---- ECL-C1 unassigned queue (Event Coordinator Lead) ---------------
@@ -524,11 +553,15 @@ class EventRequestServiceTest {
         return entity;
     }
 
+    /** The two states an unassigned request can wait in (ELC-C6). */
+    private static final List<EventRequestStatus> UNASSIGNED_STATUSES =
+            List.of(EventRequestStatus.pending, EventRequestStatus.clarification_required);
+
     @Test
     void unassignedRequestsListsEveryOrganisationsWaitingRequestsLongestWaitingFirst() {
         EventRequest waitingLongest = submittedUnassigned(ORG);
         EventRequest submittedLater = submittedUnassigned(OTHER_ORG);
-        when(repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending))
+        when(repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES))
                 .thenReturn(List.of(waitingLongest, submittedLater));
 
         List<EventRequestDto> queue = service.unassignedRequests();
@@ -540,17 +573,28 @@ class EventRequestServiceTest {
     }
 
     @Test
-    void unassignedRequestsAsksOnlyForSubmittedRequestsWithNoCoordinator() {
+    void unassignedRequestsAsksOnlyForSubmittedOrClarifyingRequestsWithNoCoordinator() {
         service.unassignedRequests();
 
         // Any other status or ordering would be a second repository call.
-        verify(repository).findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending);
+        verify(repository).findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES);
         verifyNoMoreInteractions(repository);
     }
 
     @Test
+    void aRequestWaitingForClarificationIsListedWithThatStatus() {
+        EventRequest clarifying = submittedUnassigned(ORG);
+        clarifying.setStatus(EventRequestStatus.clarification_required);
+        when(repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES))
+                .thenReturn(List.of(clarifying));
+
+        assertThat(service.unassignedRequests()).extracting(EventRequestDto::status)
+                .containsExactly(EventRequestStatus.clarification_required);
+    }
+
+    @Test
     void unassignedRequestsIsAnEmptyListWhenNothingIsWaiting() {
-        when(repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending))
+        when(repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES))
                 .thenReturn(List.of());
 
         assertThat(service.unassignedRequests()).isEmpty();
@@ -559,7 +603,7 @@ class EventRequestServiceTest {
     @Test
     void viewingUnassignedRequestsChangesNothingAndNotifiesNoOne() {
         EventRequest waiting = submittedUnassigned(ORG);
-        when(repository.findByStatusAndCoordinatorIdIsNullOrderByUpdatedAtAsc(EventRequestStatus.pending))
+        when(repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES))
                 .thenReturn(List.of(waiting));
 
         service.unassignedRequests();

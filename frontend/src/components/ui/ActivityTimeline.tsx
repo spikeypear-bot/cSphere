@@ -25,7 +25,7 @@ const STATUS_LABELS: Record<string, string> = {
 /** What happened, in words, with the actor as the subject. */
 const TITLES: Record<ActivityTypeName, string> = {
   submitted: 'submitted the request',
-  coordinator_assigned: 'is coordinating this request',
+  coordinator_assigned: 'assigned an Event Coordinator',
   clarification_requested: 'asked for clarification',
   clarification_responded: 'responded and resubmitted',
   approved: 'approved the request. Planning has started',

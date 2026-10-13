@@ -2,6 +2,7 @@ package com.example.connect_sphere.equipment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -77,10 +78,14 @@ class EquipmentReservationFlowTest {
     }
 
     private UUID requested(UUID eventId, UUID equipmentId) throws Exception {
+        return requested(eventId, equipmentId, 1);
+    }
+
+    private UUID requested(UUID eventId, UUID equipmentId, int quantity) throws Exception {
         String response = mvc.perform(post("/api/events/" + eventId + "/equipment-request").with(flow.as("ec1"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"technicalRequirement\":\"Stage setup\",\"items\":[{\"equipmentId\":\"%s\",\"quantity\":1}]}"
-                                .formatted(equipmentId)))
+                        .content("{\"technicalRequirement\":\"Stage setup\",\"items\":[{\"equipmentId\":\"%s\",\"quantity\":%d}]}"
+                                .formatted(equipmentId, quantity)))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         sync();
         return UUID.fromString(flow.read(response).get("requestId").asString());
@@ -95,6 +100,11 @@ class EquipmentReservationFlowTest {
 
     private ResultActions reserve(String as, String body) throws Exception {
         return mvc.perform(post("/api/equipment/reservations").with(flow.as(as))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private ResultActions updateRequestStatus(String as, UUID requestId, String body) throws Exception {
+        return mvc.perform(patch("/api/equipment-requests/" + requestId + "/status").with(flow.as(as))
                 .contentType(MediaType.APPLICATION_JSON).content(body));
     }
 
@@ -335,6 +345,101 @@ class EquipmentReservationFlowTest {
 
         reserved(eventId, speakers, 4, null);
 
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+    }
+
+    @Test
+    void approvalIsRejectedUntilEveryRequestedQuantityIsReservedAndChangesNothing() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS06 Speaker", 10, false);
+        UUID requestId = requested(eventId, speakers, 2);
+        reserved(eventId, speakers, 1, null);
+
+        updateRequestStatus("ts1", requestId, "{\"status\":\"approved\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "Cannot approve: only 1 of 2 TS06 Speaker are reserved for the full event period."));
+
+        sync();
+        assertThat(jdbc.queryForObject(
+                "SELECT status::text FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId)).isEqualTo("processing");
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+    }
+
+    @Test
+    void approvalRequiresReservationsToCoverTheFullEventAndLeavesReservationsAndEventUnchanged()
+            throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS06 Speaker", 10, false);
+        UUID requestId = requested(eventId, speakers);
+        reserve("ts1", reservation(
+                eventId, speakers, 1, null, "2027-03-10T02:00:00Z", END))
+                .andExpect(status().isCreated());
+
+        updateRequestStatus("ts1", requestId, "{\"status\":\"approved\"}")
+                .andExpect(status().isConflict());
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+    }
+
+    @Test
+    void fullyReservedRequestCanBeApprovedAndTheCoordinatorSeesItImmediately() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS06 Speaker", 10, false);
+        UUID requestId = requested(eventId, speakers);
+        reserved(eventId, speakers, 1, null);
+
+        updateRequestStatus("ts1", requestId, "{\"status\":\"approved\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("approved"))
+                .andExpect(jsonPath("$.rejectReason").isEmpty());
+
+        mvc.perform(get("/api/events/" + eventId + "/equipment-requests").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("approved"));
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+    }
+
+    @Test
+    void rejectionRequiresAndPersistsAReasonForTheCoordinator() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS06 Speaker", 10, false);
+        UUID requestId = requested(eventId, speakers);
+        reserved(eventId, speakers, 1, null);
+
+        updateRequestStatus("ts1", requestId, "{\"status\":\"rejected\"}")
+                .andExpect(status().isBadRequest());
+        updateRequestStatus("ts1", requestId,
+                        "{\"status\":\"rejected\",\"rejectReason\":\"  No suitable units  \"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("rejected"))
+                .andExpect(jsonPath("$.rejectReason").value("No suitable units"));
+
+        mvc.perform(get("/api/events/" + eventId + "/equipment-requests").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("rejected"))
+                .andExpect(jsonPath("$[0].rejectReason").value("No suitable units"));
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+    }
+
+    @Test
+    void onlyTechnicalSupportCanChangeEquipmentRequestStatus() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS06 Speaker", 10, false);
+        UUID requestId = requested(eventId, speakers);
+
+        updateRequestStatus("ec1", requestId,
+                        "{\"status\":\"rejected\",\"rejectReason\":\"Not available\"}")
+                .andExpect(status().isForbidden());
+
+        sync();
+        assertThat(jdbc.queryForObject(
+                "SELECT status::text FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId)).isEqualTo("processing");
         assertThat(eventStatus(eventId)).isEqualTo("pending");
     }
 

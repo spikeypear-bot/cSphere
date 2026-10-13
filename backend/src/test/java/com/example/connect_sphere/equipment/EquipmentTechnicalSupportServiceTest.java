@@ -63,7 +63,7 @@ class EquipmentTechnicalSupportServiceTest {
         when(unitRepository.existsById(any())).thenReturn(true);
         when(periodRepository.findOverlapping(START, END)).thenReturn(List.of());
         when(logRepository.findOverlappingForEquipment(EQUIPMENT_ID, START, END)).thenReturn(List.of());
-        when(requestRepository.findByEventId(EVENT_ID)).thenReturn(List.of(
+        when(requestRepository.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(
                 new EquipmentRequest(REQUEST_ID, EVENT_ID, EquipmentRequestStatus.processing, "Projector")));
         when(requestLineRepository.findByIdRequestId(REQUEST_ID)).thenReturn(List.of(
                 new EquipmentRequestLine(

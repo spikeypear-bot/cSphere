@@ -147,6 +147,15 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    void aSingleFieldQuestionOver2000CharactersIsRefused() throws Exception {
+        UUID id = submittedRequest();
+
+        clarify(id, "ec1", "{\"message\":\"x\",\"flaggedFields\":[\"purpose\"],\"fieldQuestions\":{\"purpose\":\""
+                + "x".repeat(2001) + "\"}}", 422);
+        assertThat(statusOf(id)).isEqualTo("pending");
+    }
+
+    @Test
     void aRefusedResubmissionLeavesTheOrganisersEditsUnsaved() throws Exception {
         UUID id = submittedRequest();
         clarify(id, "ec1", "{\"message\":\"Please confirm.\"}", 200);
@@ -239,14 +248,17 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
-    void theReviewQueueShowsOnlyMyRequestsAndUnassignedOnes() throws Exception {
+    void theReviewQueueShowsOnlyMyRequestsNotUnassignedOnesOrAnotherCoordinators() throws Exception {
         UUID mine = submittedRequest();
         UUID theirs = flow.submittedAndAssigned("eo1", "ec2", FlowSupport.requestBody("Theirs", 50, "none"));
+        UUID nobodys = flow.submitted("eo1", FlowSupport.requestBody("Unassigned", 80, "none"));
 
         String body = mvc.perform(get("/api/event-requests/queue").with(flow.as("ec1")))
-                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.unassigned").doesNotExist())
+                .andReturn().getResponse().getContentAsString();
 
-        assertThat(body).contains(mine.toString()).doesNotContain(theirs.toString());
+        assertThat(body).contains(mine.toString()).doesNotContain(theirs.toString(), nobodys.toString());
     }
 
     @Test

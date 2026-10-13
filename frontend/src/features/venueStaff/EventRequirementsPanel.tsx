@@ -5,19 +5,21 @@ import type { VenueBookingDto } from '../../types/venueBooking'
 
 import { formatEventDateTime } from './formatEventDateTime'
 
-export function EventRequirementsPanel({ event, status, rejectReason, alternativeVenueAddress, alternativeArrangement }: {
+export function EventRequirementsPanel({ event, status, rejectReason, alternativeVenueAddress, alternativeArrangement, highlightStart, highlightEnd }: {
   event: VenueBookingDto['event']
   status: VenueBookingDto['status']
   rejectReason?: string | null
   alternativeVenueAddress?: string | null
   alternativeArrangement?: string | null
+  highlightStart?: boolean
+  highlightEnd?: boolean
 }) {
   const accessibility = event.accessibilityNeeds.map(value => value === 'none' ? 'No accessibility requirements'
     : venueAccessibilityLabels[value as AccessibilityFeature] ?? value).join(', ')
   return <Card className="feature-skeleton__body event-requirements-panel">
     <div className="event-requirements-panel__header">
       <h2 id="event-requirements-heading">Event Requirements</h2>
-      <span className="venue-card-preview__tag booking-status-tag" aria-label={'Status: ' + status} aria-live="polite">{status}</span>
+      <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status} aria-label={'Status: ' + status} aria-live="polite">{status}</span>
     </div>
     {status === 'rejected' && (rejectReason?.trim() || alternativeVenueAddress?.trim() || alternativeArrangement?.trim()) &&
       <Card className="booking-rejection-banner" role="status" aria-label="Rejection reason">
@@ -27,8 +29,12 @@ export function EventRequirementsPanel({ event, status, rejectReason, alternativ
       </Card>}
     <h3>{event.eventName}</h3>
     <dl className="venue-card-preview__information">
-      <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(event.startDatetime)}</dd></div>
-      <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(event.endDatetime)}</dd></div>
+      <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{highlightStart
+        ? <strong className="booking-time-conflict">{formatEventDateTime(event.startDatetime)} (overlap)</strong>
+        : formatEventDateTime(event.startDatetime)}</dd></div>
+      <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{highlightEnd
+        ? <strong className="booking-time-conflict">{formatEventDateTime(event.endDatetime)} (overlap)</strong>
+        : formatEventDateTime(event.endDatetime)}</dd></div>
       <div><dt>Expected attendance</dt><dd>{event.expectedAttendance.toLocaleString()} people</dd></div>
       <div><dt>Venue requirements</dt><dd>{event.venueRequirements?.trim() || 'Not specified'}</dd></div>
       <div><dt>Accessibility requirements</dt><dd>{accessibility || 'Not specified'}</dd></div>

@@ -10,13 +10,17 @@ import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
+import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
+import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
+import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import './EventDetailsPage.css'
 
 /**
  * EO09's "can view the confirmed event arrangements" — the notification's
  * own deep link lands here. Shared between the Organiser (read-only) and the
- * Event Coordinator (who also gets the Confirm action) rather than two
- * near-identical pages, since the only real difference is one button.
+ * Event Coordinator (who also gets the assigned-event readiness read view)
+ * rather than two near-identical pages. Confirmation itself belongs to the
+ * Safety Officer.
  */
 export function EventDetailsPage() {
   const { eventId } = useParams<{ eventId: string }>()
@@ -25,12 +29,9 @@ export function EventDetailsPage() {
   const flash = location.state as { justApproved?: boolean; bookingRequested?: string } | null
   const [event, setEvent] = useState<EventDto | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [confirming, setConfirming] = useState(false)
-  const [confirmError, setConfirmError] = useState<string | null>(null)
-  // Bumped after a successful confirm to re-trigger the fetch effect below —
-  // same inline-fetch-effect shape as useEventRequestDraft.ts, rather than
-  // calling a setState-ish function directly from inside the effect.
-  const [reloadToken, setReloadToken] = useState(0)
+  const readinessState = useSafetyData<ReadinessDto>(
+    eventId && role === 'coordinator' ? `/events/${eventId}/readiness` : null,
+  )
 
   useEffect(() => {
     if (!eventId) return
@@ -49,26 +50,10 @@ export function EventDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [eventId, reloadToken])
-
-  async function confirm() {
-    if (!eventId) return
-    setConfirming(true)
-    setConfirmError(null)
-    try {
-      await apiClient.post<EventDto>(`/events/${eventId}/confirm`)
-      setReloadToken((n) => n + 1)
-    } catch (err) {
-      setConfirmError(err instanceof ApiClientError ? err.message : 'Could not confirm this event.')
-    } finally {
-      setConfirming(false)
-    }
-  }
+  }, [eventId])
 
   if (error) return <p role="alert">{error}</p>
   if (!event) return <p>Loading…</p>
-
-  const canConfirm = role === 'coordinator' && event.status === 'pending'
 
   return (
     <div className="page">
@@ -138,14 +123,34 @@ export function EventDetailsPage() {
         </Card>
       ) : null}
 
-      {canConfirm ? (
+      {role === 'coordinator' && event.status === 'pending' ? (
         <Card className="event-details__confirm">
-          <p>Once venue and equipment arrangements are complete, confirm this event.</p>
-          {confirmError ? <p role="alert">{confirmError}</p> : null}
-          <Button onClick={() => void confirm()} disabled={confirming}>
-            {confirming ? 'Confirming…' : 'Confirm event'}
-          </Button>
+          <p>A Safety Officer must complete the operational readiness review and approve this event before it can be confirmed.</p>
         </Card>
+      ) : null}
+
+      {role === 'coordinator' ? (
+        readinessState.error ? <p role="alert">Could not load readiness checklist. {readinessState.error}</p>
+          : readinessState.data ? (
+            <>
+              <Card className="event-details__history">
+                <h2>Safety approval</h2>
+                <p>Current approval: {readinessState.data.approvalStatus.replace('_', ' ')}</p>
+                {readinessState.data.approvalNote ? <p>Note: {readinessState.data.approvalNote}</p> : null}
+                {readinessState.data.reviewedBy ? (
+                  <p>Reviewed by {readinessState.data.reviewedBy}
+                    {readinessState.data.reviewedAt ? ` · ${new Date(readinessState.data.reviewedAt).toLocaleString()}` : ''}
+                  </p>
+                ) : null}
+              </Card>
+              <ReadinessChecklistPanel
+                readiness={readinessState.data}
+                editable={false}
+                savingItem={null}
+                onSave={async () => undefined}
+              />
+            </>
+          ) : readinessState.loading ? <p role="status">Loading readiness checklist…</p> : null
       ) : null}
 
       <EventHistoryCard eventId={event.eventId} />

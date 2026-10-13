@@ -87,9 +87,9 @@ preserves test edits. The request is identified by
 
 After seeding:
 
-1. Sign in as an Event Coordinator.
-2. Open **Review requests**.
-3. Under **Unassigned**, choose **Assign to me**.
+1. Sign in as the Event Coordinator Lead (`ecl1`) and open **Unassigned requests**.
+2. Choose **Review request**, then **Assign**, and assign it to an Event Coordinator.
+3. Sign in as that Event Coordinator and open **Review requests**.
 4. Choose **Review**, then approve the request.
 5. The approved event opens in Planning; choose **Request a venue**.
 6. Select the seeded venue and inspect the capacity, facility, accessibility,

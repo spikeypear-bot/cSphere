@@ -8,6 +8,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -22,16 +23,19 @@ public class EquipmentRequestController {
     private final EquipmentRequestLineRepository lineRepository;
     private final EventRepository eventRepository;
     private final EquipmentRequestService service;
+    private final EquipmentRequestDecisionService decisionService;
 
     public EquipmentRequestController(
             EquipmentRequestRepository requestRepository,
             EquipmentRequestLineRepository lineRepository,
             EventRepository eventRepository,
-            EquipmentRequestService service) {
+            EquipmentRequestService service,
+            EquipmentRequestDecisionService decisionService) {
         this.requestRepository = requestRepository;
         this.lineRepository = lineRepository;
         this.eventRepository = eventRepository;
         this.service = service;
+        this.decisionService = decisionService;
     }
 
     private static UUID userIdOf(Jwt jwt) {
@@ -61,6 +65,9 @@ public class EquipmentRequestController {
     @GetMapping("/events/{eventId}/equipment-requests")
     public List<EquipmentRequestDetailsResponse> forEvent(
             @AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
+        if ("so".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+            return service.listForSafetyOfficer(eventId);
+        }
         return service.listForEvent(userIdOf(jwt), eventId);
     }
 
@@ -71,5 +78,12 @@ public class EquipmentRequestController {
             @RequestBody SubmitEquipmentRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(service.submit(userIdOf(jwt), eventId, request));
+    }
+
+    @PatchMapping("/equipment-requests/{requestId}/status")
+    public EquipmentRequestDetailsResponse updateStatus(
+            @PathVariable UUID requestId,
+            @RequestBody UpdateEquipmentRequestStatus request) {
+        return decisionService.updateStatus(requestId, request);
     }
 }

@@ -288,7 +288,7 @@ export function VenueBookingRequestPage() {
               <ul>
                 {bookings.map((b) => (
                   <li key={b.bookingId}>
-                    <strong>{b.venueAddress ?? 'Unknown venue'}</strong>: {BOOKING_STATUS_LABELS[b.status]}
+                    <strong>{b.venueAddress ?? 'Unknown venue'}</strong>: <span data-booking-status={b.status}>{BOOKING_STATUS_LABELS[b.status]}</span>
                     {b.requiresAlternative && <p>Alternative arrangements required</p>}
                     {b.replacesBookingId && <p>Replacement request</p>}
                     {b.rejectReason ? <> · Reason: {b.rejectReason}</> : null}

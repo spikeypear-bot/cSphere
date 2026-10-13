@@ -1,5 +1,19 @@
 import type { VenueDto } from './venue'
 
+export interface VenueBookingConflict {
+  bookingId: string
+  eventName: string
+  startDatetime: string
+  endDatetime: string
+}
+
+export interface VenueUnavailabilityConflict {
+  unavailabilityId: string
+  reason: string
+  startDatetime: string
+  endDatetime: string
+}
+
 export interface VenueBookingDto {
   bookingId: string
   requiresAlternative?: boolean

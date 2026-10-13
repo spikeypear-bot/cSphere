@@ -18,7 +18,13 @@ import './IncomingRequestReviewPage.css'
 const QUEUE_PATH = '/coordinator-lead/unassigned-requests'
 const ASSIGNMENTS_PATH = '/coordinator-lead/assignments'
 
-type Decision = 'clarify' | 'reject'
+type Decision = 'assign' | 'clarify' | 'reject'
+
+/** Mirrors backend CoordinatorDto (ELC-C6). */
+interface Coordinator {
+  userId: string
+  username: string
+}
 
 /** The organiser's submitted details, in the order the page lists them. */
 const DETAILS: { label: string; value: (request: EventRequestDto) => string | null }[] = [
@@ -47,8 +53,9 @@ const DETAILS: { label: string; value: (request: EventRequestDto) => string | nu
   },
 ]
 
-/** Why the Lead can no longer act on this request, or null while it is still
- * submitted with nobody assigned. `assignee` names the assigned coordinator. */
+/** Why the Lead can no longer act on this request, or null while nobody is
+ * assigned and it is submitted or waiting for the organiser's clarification.
+ * `assignee` names the assigned coordinator. */
 function closedReason(request: EventRequestDto, assignee: string): string | null {
   switch (request.status) {
     case 'pending':
@@ -58,7 +65,7 @@ function closedReason(request: EventRequestDto, assignee: string): string | null
     case 'clarification_required':
       return request.coordinatorId
         ? `This request has been assigned to ${assignee}, who is waiting for the organiser to answer a clarification.`
-        : 'Waiting for the organiser to answer a clarification. It returns to the unassigned list when they resubmit.'
+        : null
     case 'approved':
       return 'This request has been approved and is now an event in planning.'
     case 'rejected':
@@ -73,8 +80,10 @@ function closedReason(request: EventRequestDto, assignee: string): string | null
 /**
  * ECL-C3: an incoming request as the organiser submitted it, with its
  * history, for the Lead to look over before anyone is assigned. While it is
- * still unassigned the Lead can reject it or ask the organiser a question;
- * approving stays with the coordinator it is later assigned to.
+ * still unassigned the Lead can assign it to an Event Coordinator (ELC-C6),
+ * reject it or ask the organiser a question; approving stays with the
+ * coordinator it is assigned to. While it waits for the organiser's answer
+ * it can only be assigned.
  */
 export function IncomingRequestReviewPage() {
   const { requestId } = useParams<{ requestId: string }>()
@@ -90,6 +99,9 @@ export function IncomingRequestReviewPage() {
   const [decision, setDecision] = useState<Decision | null>(null)
   const [message, setMessage] = useState('')
   const [reason, setReason] = useState('')
+  // Loaded the first time the Lead chooses to assign.
+  const [coordinators, setCoordinators] = useState<Coordinator[] | null>(null)
+  const [coordinatorId, setCoordinatorId] = useState('')
   const [busy, setBusy] = useState(false)
   const [inputError, setInputError] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -130,12 +142,22 @@ export function IncomingRequestReviewPage() {
   // Only while the card's coordinator still holds the request.
   const closed = closedReason(request,
     from && from.id === request.coordinatorId ? from.name : 'an Event Coordinator')
+  const waiting = request.status === 'clarification_required'
   const name = request.eventName?.trim() || 'Untitled request'
 
   function choose(next: Decision) {
     setDecision(next)
     setInputError(null)
     setActionError(null)
+    if (next === 'assign' && coordinators === null) void loadCoordinators()
+  }
+
+  async function loadCoordinators() {
+    try {
+      setCoordinators(await apiClient.get<Coordinator[]>('/event-requests/unassigned/coordinators'))
+    } catch (err) {
+      setInputError(err instanceof ApiClientError ? err.message : 'Could not load the Event Coordinators.')
+    }
   }
 
   /** Sends one action, then returns to the queue with its outcome. A refusal
@@ -154,6 +176,13 @@ export function IncomingRequestReviewPage() {
     } finally {
       setBusy(false)
     }
+  }
+
+  function sendAssignment() {
+    const coordinator = coordinators?.find((c) => c.userId === coordinatorId)
+    if (!coordinator) return setInputError('Choose an Event Coordinator before assigning.')
+    void send('assign', { coordinatorUserId: coordinator.userId },
+      `“${name}” was assigned to ${coordinator.username}. The organiser has been notified.`)
   }
 
   function sendClarification() {
@@ -211,15 +240,44 @@ export function IncomingRequestReviewPage() {
           {closed ? null : (
             <Card className="lead-review__decision">
               <h2>Decision</h2>
-              <p className="field-hint">Leave the request as it is to assign it to an Event Coordinator.</p>
+              <p className="field-hint">
+                {waiting
+                  ? 'Waiting for the organiser to answer a clarification. It can still be assigned: the coordinator gets it when the organiser resubmits.'
+                  : 'Assign the request to an Event Coordinator, or ask the organiser a question or reject it first.'}
+              </p>
               <div className="lead-review__choices" role="group" aria-label="Choose an outcome">
-                <Button variant={decision === 'clarify' ? 'primary' : 'secondary'} onClick={() => choose('clarify')}>
-                  Ask for clarification
+                <Button variant={decision === 'assign' ? 'primary' : 'secondary'} onClick={() => choose('assign')}>
+                  Assign
                 </Button>
-                <Button variant={decision === 'reject' ? 'primary' : 'secondary'} onClick={() => choose('reject')}>
-                  Reject
-                </Button>
+                {waiting ? null : (
+                  <>
+                    <Button variant={decision === 'clarify' ? 'primary' : 'secondary'} onClick={() => choose('clarify')}>
+                      Ask for clarification
+                    </Button>
+                    <Button variant={decision === 'reject' ? 'primary' : 'secondary'} onClick={() => choose('reject')}>
+                      Reject
+                    </Button>
+                  </>
+                )}
               </div>
+
+              {decision === 'assign' ? (
+                <div className="lead-review__panel">
+                  <label htmlFor="lead-coordinator">Event Coordinator</label>
+                  <select id="lead-coordinator" value={coordinatorId} disabled={coordinators === null}
+                    onChange={(e) => setCoordinatorId(e.target.value)}>
+                    <option value="">Choose an Event Coordinator</option>
+                    {(coordinators ?? []).map((coordinator) => (
+                      <option key={coordinator.userId} value={coordinator.userId}>{coordinator.username}</option>
+                    ))}
+                  </select>
+                  <p className="field-hint">The request keeps its status and details. The coordinator reviews it
+                    from their own queue, and the organiser is told who they are.</p>
+                  <Button disabled={busy} onClick={sendAssignment}>
+                    {busy ? 'Assigning…' : 'Assign request'}
+                  </Button>
+                </div>
+              ) : null}
 
               {decision === 'clarify' ? (
                 <div className="lead-review__panel">
@@ -230,8 +288,8 @@ export function IncomingRequestReviewPage() {
                     className={message.trim().length > MAX_MESSAGE ? 'field-error' : 'field-hint'}>
                     {message.trim().length}/{MAX_MESSAGE}
                   </span>
-                  <p className="field-hint">Their submitted details are kept. The request returns to the unassigned
-                    list when they resubmit.</p>
+                  <p className="field-hint">Their submitted details are kept. The request stays in the unassigned
+                    list while it waits, and can still be assigned.</p>
                   <Button disabled={busy} onClick={sendClarification}>
                     {busy ? 'Sending…' : 'Send clarification request'}
                   </Button>

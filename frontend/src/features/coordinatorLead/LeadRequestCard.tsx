@@ -8,10 +8,12 @@ import './LeadRequestCard.css'
 
 /** One event request as an overview card on the Lead's lists (ECL-C1,
  * ECL-C2), opening its review page (ECL-C3). */
-export function LeadRequestCard({ request, submittedAt, coordinatorName, headingLevel = 2 }: {
+export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted', coordinatorName, headingLevel = 2 }: {
   request: EventRequestDto
   /** When the organiser submitted the request. */
   submittedAt: string
+  /** What that time is called, where it is not the submission time. */
+  timeLabel?: string
   /** The assigned Event Coordinator, on a list of assigned requests. */
   coordinatorName?: string
   /** 3 where the cards sit under a group heading. */
@@ -41,7 +43,7 @@ export function LeadRequestCard({ request, submittedAt, coordinatorName, heading
           <dd>{request.expectedAttendance != null ? `${request.expectedAttendance.toLocaleString()} people` : 'Not given'}</dd>
         </div>
         <div>
-          <dt>Submitted</dt>
+          <dt>{timeLabel}</dt>
           <dd>{formatRelativeTime(submittedAt)}</dd>
         </div>
         {coordinatorName ? (
