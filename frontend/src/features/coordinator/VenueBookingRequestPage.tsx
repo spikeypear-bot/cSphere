@@ -49,7 +49,8 @@ export function VenueBookingRequestPage() {
   const [loadError, setLoadError] = useState<string | null>(null)
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
-  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [bookingTimes, setBookingTimes] = useState<Record<string, { start: string; end: string }>>({})
   const [notes, setNotes] = useState('')
   const [justification, setJustification] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -101,28 +102,41 @@ export function VenueBookingRequestPage() {
   }
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
-  const active = bookings.find((b) => b.status === 'pending' || b.status === 'approved')
   const activeBookings = bookings.filter(b => b.status === 'pending' || b.status === 'approved')
   const replacing = activeBookings.length === 1 && activeBookings[0].requiresAlternative ? activeBookings[0] : null
-  const selected = options.find((o) => o.venue.venueId === selectedId) ?? null
-  const needsJustification = selected?.verdict === 'needs_justification'
+  const replacementPending = activeBookings.some((booking) => booking.replacesBookingId)
+  const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
+  const needsJustification = selected.some((o) => o.verdict === 'needs_justification')
   const notesTooLong = notes.trim().length > MAX_TEXT
   const justificationTooLong = justification.trim().length > MAX_TEXT
-  const canSubmit = Boolean(selected) && selected?.verdict !== 'blocked' && !notesTooLong && !justificationTooLong
-    && (!needsJustification || justification.trim().length > 0)
+  const timesValid = selected.every((option) => {
+    const times = bookingTimes[option.venue.venueId]
+    return times && times.start && times.end && new Date(times.end).getTime() > new Date(times.start).getTime()
+  })
+  const canSubmit = selected.length > 0 && selected.every((o) => o.verdict !== 'blocked') && !notesTooLong && !justificationTooLong
+    && timesValid && (!needsJustification || justification.trim().length > 0)
 
   async function submit() {
-    if (!selected || !eventId) return
+    if (selected.length === 0 || !eventId) return
     setSubmitting(true)
     setSubmitError(null)
     try {
-      await apiClient.post<EventVenueBookingDto>(`/events/${eventId}/venue-bookings`, {
-        venueId: selected.venue.venueId,
-        bookingNotes: notes.trim() || null,
-        suitabilityNote: needsJustification ? justification.trim() : null,
-        ...(replacing ? { replacesBookingId: replacing.bookingId } : {}),
+      const requests = selected.map((option, index) => ({
+          venueId: option.venue.venueId,
+          bookingNotes: notes.trim() || null,
+          suitabilityNote: option.verdict === 'needs_justification' ? justification.trim() : null,
+          startDatetime: new Date(bookingTimes[option.venue.venueId].start).toISOString(),
+          endDatetime: new Date(bookingTimes[option.venue.venueId].end).toISOString(),
+          ...(replacing && index === 0 ? { replacesBookingId: replacing.bookingId } : {}),
+        }))
+      if (requests.length === 1) {
+        await apiClient.post<EventVenueBookingDto>(`/events/${eventId}/venue-bookings`, requests[0])
+      } else {
+        await apiClient.post<EventVenueBookingDto[]>(`/events/${eventId}/venue-bookings/batch`, { bookings: requests })
+      }
+      navigate(`/coordinator/events/${eventId}`, {
+        state: { bookingRequested: selected.map((option) => option.venue.venueAddress).join(', ') },
       })
-      navigate(`/coordinator/events/${eventId}`, { state: { bookingRequested: selected.venue.venueAddress } })
     } catch (err) {
       setSubmitError(err instanceof ApiClientError ? err.message : 'The booking request could not be submitted. Nothing was sent.')
     } finally {
@@ -132,8 +146,8 @@ export function VenueBookingRequestPage() {
 
   const blockedReason = event.status !== 'pending' && !(event.status === 'confirmed' && replacing)
     ? 'Venue booking requests can only be made while the event is in Planning.'
-    : active && !replacing
-      ? `This event already has a ${BOOKING_STATUS_LABELS[active.status].toLowerCase()} booking request for ${active.venueAddress}.`
+    : replacementPending && !replacing
+      ? 'This event already has a replacement request. Resolve it before requesting another replacement.'
       : null
 
   return (
@@ -155,7 +169,7 @@ export function VenueBookingRequestPage() {
             <div><dt>Accessibility</dt><dd>{event.accessibilityNeeds.map(accessibilityLabel).join(', ') || 'None stated'}</dd></div>
             {event.equipmentRequirements ? <div><dt>Equipment</dt><dd>{event.equipmentRequirements}</dd></div> : null}
           </dl>
-          <p className="field-hint">The booking uses the event's own date and time.</p>
+          <p className="field-hint">Each selected venue can have its own date and time.</p>
         </Card>
 
         <div className="venue-request__main">
@@ -188,19 +202,53 @@ export function VenueBookingRequestPage() {
                   {visible.map((option) => (
                     <li key={option.venue.venueId}>
                       <VenueOptionCard option={option} attendance={event.expectedAttendance}
-                        selected={option.venue.venueId === selectedId}
-                        onSelect={() => { setSelectedId(option.venue.venueId); setSubmitError(null) }} />
+                        selected={selectedIds.includes(option.venue.venueId)}
+                        onSelect={() => {
+                          setSelectedIds((current) => current.includes(option.venue.venueId)
+                            ? current.filter((id) => id !== option.venue.venueId)
+                            : [...current, option.venue.venueId])
+                          setBookingTimes((current) => current[option.venue.venueId] ? current : {
+                            ...current,
+                            [option.venue.venueId]: {
+                              start: event.startDatetime.slice(0, 16),
+                              end: event.endDatetime.slice(0, 16),
+                            },
+                          })
+                          setSubmitError(null)
+                        }} />
                     </li>
                   ))}
                 </ul>
               )}
 
-              {selected ? (
+              {selected.length > 0 ? (
                 <Card className="venue-request__review" aria-labelledby="compare-heading">
-                  <h2 id="compare-heading">Compare and submit</h2>
-                  <SuitabilitySummary option={selected} />
-                  <VenueDetails venue={selected.venue} />
-                  <Comparison event={event} option={selected} />
+                  <h2 id="compare-heading">Review and submit {selected.length} venue{selected.length === 1 ? '' : 's'}</h2>
+                  <ul aria-label="Selected venues">
+                    {selected.map((option) => (
+                      <li key={option.venue.venueId}>
+                        <strong>{option.venue.venueAddress}</strong>
+                        <label>Start
+                          <input type="datetime-local" value={bookingTimes[option.venue.venueId]?.start ?? ''}
+                            onChange={(e) => setBookingTimes((current) => ({
+                              ...current, [option.venue.venueId]: { ...current[option.venue.venueId], start: e.target.value },
+                            }))} />
+                        </label>
+                        <label>End
+                          <input type="datetime-local" value={bookingTimes[option.venue.venueId]?.end ?? ''}
+                            onChange={(e) => setBookingTimes((current) => ({
+                              ...current, [option.venue.venueId]: { ...current[option.venue.venueId], end: e.target.value },
+                            }))} />
+                        </label>
+                        <Button onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
+                          Remove
+                        </Button>
+                      </li>
+                    ))}
+                  </ul>
+                  {selected.length === 1 ? <><SuitabilitySummary option={selected[0]} />
+                    <VenueDetails venue={selected[0].venue} />
+                    <Comparison event={event} option={selected[0]} /></> : null}
 
                   {needsJustification ? (
                     <div className="venue-request__field">
@@ -225,7 +273,9 @@ export function VenueBookingRequestPage() {
                     reserved until they approve it.</p>
                   {submitError ? <p role="alert" className="error-text">{submitError}</p> : null}
                   <Button disabled={!canSubmit || submitting} onClick={() => void submit()}>
-                    {submitting ? 'Submitting…' : `Request ${selected.venue.venueAddress}`}
+                    {submitting ? 'Submitting…' : selected.length === 1
+                      ? `Request ${selected[0].venue.venueAddress}`
+                      : `Request ${selected.length} venues`}
                   </Button>
                 </Card>
               ) : null}

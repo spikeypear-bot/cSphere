@@ -189,7 +189,7 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
   const [error, setError] = useState<string | null>(null)
   if (failed) return null
   if (!bookings) return null
-  const active = bookings.find((b) => b.status === 'pending' || b.status === 'approved')
+  const activeBookings = bookings.filter((b) => b.status === 'pending' || b.status === 'approved')
   const latestRejected = bookings.find((b) => b.status === 'rejected')
 
   async function cancelRequest(bookingId: string) {
@@ -213,27 +213,36 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
         <p>Alternative venue arrangements required. An existing booking is affected by venue unavailability.</p>
         <Link to={`/coordinator/events/${eventId}/venue-booking`}>Review bookings and arrange another venue</Link>
       </div>}
-      {active ? (
+      {activeBookings.length > 0 ? (
         <>
-          <p>
-            <strong>{active.venueAddress}</strong>: {BOOKING_STATUS_LABELS[active.status]}
-            {active.submittedAt ? <span className="field-hint"> · requested {new Date(active.submittedAt).toLocaleString()}</span> : null}
-          </p>
-          {active.status === 'pending' && !cancelling ? (
-            <Button variant="secondary" onClick={() => setCancelling(true)}>Cancel this request</Button>
-          ) : null}
-          {active.status === 'pending' && cancelling ? (
-            <div className="event-details__cancel">
-              <label htmlFor="cancel-reason">Reason for Venue Staff (optional)</label>
-              <textarea id="cancel-reason" rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
-              <div className="event-details__cancel-actions">
-                <Button variant="secondary" onClick={() => { setCancelling(false); setReason('') }}>Keep request</Button>
-                <Button disabled={busy} onClick={() => void cancelRequest(active.bookingId)}>
-                  {busy ? 'Cancelling…' : 'Confirm cancellation'}
-                </Button>
-              </div>
-            </div>
-          ) : null}
+          <ul aria-label="Venue bookings">
+            {activeBookings.map((booking) => (
+              <li key={booking.bookingId}>
+                <p>
+                  <strong>{booking.venueAddress}</strong>: {BOOKING_STATUS_LABELS[booking.status]}
+                  {booking.startDatetime && booking.endDatetime
+                    ? <span className="field-hint"> · {new Date(booking.startDatetime).toLocaleString()} – {new Date(booking.endDatetime).toLocaleString()}</span>
+                    : null}
+                  {booking.submittedAt ? <span className="field-hint"> · requested {new Date(booking.submittedAt).toLocaleString()}</span> : null}
+                </p>
+                {booking.status === 'pending' && !cancelling ? (
+                  <Button variant="secondary" onClick={() => setCancelling(true)}>Cancel this request</Button>
+                ) : null}
+                {booking.status === 'pending' && cancelling ? (
+                  <div className="event-details__cancel">
+                    <label htmlFor={`cancel-reason-${booking.bookingId}`}>Reason for Venue Staff (optional)</label>
+                    <textarea id={`cancel-reason-${booking.bookingId}`} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
+                    <div className="event-details__cancel-actions">
+                      <Button variant="secondary" onClick={() => { setCancelling(false); setReason('') }}>Keep request</Button>
+                      <Button disabled={busy} onClick={() => void cancelRequest(booking.bookingId)}>
+                        {busy ? 'Cancelling…' : 'Confirm cancellation'}
+                      </Button>
+                    </div>
+                  </div>
+                ) : null}
+              </li>
+            ))}
+          </ul>
           {error ? <p role="alert">{error}</p> : null}
         </>
       ) : (
