@@ -1,8 +1,7 @@
 # ConnectSphere — Schema Dictionary
 
 Reference for the initial schema and subsequent migrations, updated through
-`V23__legacy_venue_booking_time_compatibility.sql`.
-`V22__safety_officer_readiness.sql`.
+`V26__legacy_venue_booking_time_compatibility.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -408,8 +407,8 @@ over its life.
 | `suitability_note` | `TEXT` | yes | | V13, EC03: coordinator's justification when the venue lacks a requested accessibility feature |
 | `alternative_venue_id` | `UUID` | yes | FK → `venues` | V19, VS09: optional alternative venue suggested with a rejection; not a booking |
 | `alternative_arrangement` | `TEXT` | yes | | V19, VS09: optional free-text arrangement, at most 2,000 characters |
-| `start_datetime` | `TIMESTAMPTZ` | yes | | V22, EC-C2: this venue's requested start time; nullable for legacy rows |
-| `end_datetime` | `TIMESTAMPTZ` | yes | | V22, EC-C2: this venue's requested end time; nullable for legacy rows |
+| `start_datetime` | `TIMESTAMPTZ` | yes | | V25, EC-C2: this venue's requested start time; nullable for legacy rows |
+| `end_datetime` | `TIMESTAMPTZ` | yes | | V25, EC-C2: this venue's requested end time; nullable for legacy rows |
 
 Each new booking has its own time window. Existing rows are backfilled when their event has
 dates; legacy fixture rows may remain nullable. EC-C2 permits multiple `pending`/`approved`
