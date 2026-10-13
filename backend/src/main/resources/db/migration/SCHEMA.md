@@ -1,7 +1,7 @@
 # ConnectSphere — Schema Dictionary
 
 Reference for the initial schema and subsequent migrations, updated through
-`V19__venue_booking_alternative_suggestions.sql`.
+`V23__legacy_venue_booking_time_compatibility.sql`.
 Column names, types and constraints below are generated from the migrations and are
 authoritative. **Descriptions are a first draft inferred from the SQL comments — correct
 anything that misreads the intent.**
@@ -365,11 +365,15 @@ over its life.
 | `suitability_note` | `TEXT` | yes | | V13, EC03: coordinator's justification when the venue lacks a requested accessibility feature |
 | `alternative_venue_id` | `UUID` | yes | FK → `venues` | V19, VS09: optional alternative venue suggested with a rejection; not a booking |
 | `alternative_arrangement` | `TEXT` | yes | | V19, VS09: optional free-text arrangement, at most 2,000 characters |
+| `start_datetime` | `TIMESTAMPTZ` | yes | | V22, EC-C2: this venue's requested start time; nullable for legacy rows |
+| `end_datetime` | `TIMESTAMPTZ` | yes | | V22, EC-C2: this venue's requested end time; nullable for legacy rows |
 
-The booking's time window is the event's `start_datetime`/`end_datetime`, never a copy. EC03
-allows at most one `pending`/`approved` booking per event; that rule is enforced in
-`VenueBookingRequestService` under a row lock on the event, not by a unique index (VS02's test
-fixtures deliberately hold several bookings per event).
+Each new booking has its own time window. Existing rows are backfilled when their event has
+dates; legacy fixture rows may remain nullable. EC-C2 permits multiple `pending`/`approved`
+bookings per event; each venue is validated independently and duplicate overlapping venues
+in one batch are rejected transactionally.
+The service validates each batch under the event row lock rather than using a unique index
+(test fixtures deliberately hold several bookings per event).
 
 V19 stores optional alternative suggestions on the rejected booking request. The suggested venue
 must differ from the venue that was rejected. Suggestions do not create a booking or change the

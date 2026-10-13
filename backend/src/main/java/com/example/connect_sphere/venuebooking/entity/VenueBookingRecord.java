@@ -41,6 +41,12 @@ public class VenueBookingRecord {
     @Column(name = "event_id")
     private UUID eventId;
 
+    @Column(name = "start_datetime")
+    private OffsetDateTime startDatetime;
+
+    @Column(name = "end_datetime")
+    private OffsetDateTime endDatetime;
+
     @Column(name = "replaces_booking_id")
     private UUID replacesBookingId;
 
