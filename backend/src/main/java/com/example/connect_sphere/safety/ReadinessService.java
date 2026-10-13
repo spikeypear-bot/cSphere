@@ -13,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.event.service.EventLifecycleService;
+import com.example.connect_sphere.event.service.EventLifecycleService.SafetyDecision;
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
 import com.example.connect_sphere.notification.service.NotificationService;
@@ -39,16 +41,19 @@ public class ReadinessService {
     private final UserRepository users;
     private final EventRequestRepository eventRequests;
     private final NotificationService notifications;
+    private final EventLifecycleService lifecycle;
 
     public ReadinessService(EventRepository events, ReadinessItemStateRepository itemStates,
             EventSafetyReviewRepository reviews, UserRepository users,
-            EventRequestRepository eventRequests, NotificationService notifications) {
+            EventRequestRepository eventRequests, NotificationService notifications,
+            EventLifecycleService lifecycle) {
         this.events = events;
         this.itemStates = itemStates;
         this.reviews = reviews;
         this.users = users;
         this.eventRequests = eventRequests;
         this.notifications = notifications;
+        this.lifecycle = lifecycle;
     }
 
     @Transactional(readOnly = true)
@@ -88,44 +93,58 @@ public class ReadinessService {
         return readiness(event);
     }
 
+    /**
+     * SO-C4 and EC08: the Safety Officer's decision on an event the
+     * coordinator sent for review. Approval still needs every checklist item
+     * ticked; it marks the event Safety Approved so the coordinator can
+     * confirm it (EC08). Rejecting or requesting changes sends it back to the
+     * coordinator with the note as feedback (Week 7: "the event returns to
+     * the relevant earlier planning stage"). The status change, timeline
+     * entry and coordinator notification are EventLifecycleService's.
+     */
     @Transactional
     public ReadinessDto review(UUID safetyOfficerId, UUID eventId, SafetyApprovalRequest input) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        requirePlanning(event);
+        if (event.getStatus() != EventStatus.awaiting_safety_review) {
+            throw new InvalidReadinessUpdateException(event.getStatus() == EventStatus.pending
+                    ? "The Event Coordinator has not sent this event for its safety check yet."
+                    : "A safety decision can only be made while the event is awaiting safety review.");
+        }
         if (input == null || input.decision() == null) {
-            throw new InvalidReadinessUpdateException("Choose approve or reject.");
+            throw new InvalidReadinessUpdateException("Choose approve, request changes or reject.");
         }
         String decision = input.decision().strip().toLowerCase();
-        if (!decision.equals("approve") && !decision.equals("reject")) {
-            throw new InvalidReadinessUpdateException("Decision must be approve or reject.");
-        }
+        SafetyDecision outcome = switch (decision) {
+            case "approve" -> SafetyDecision.APPROVE;
+            case "request_changes" -> SafetyDecision.REQUEST_CHANGES;
+            case "reject" -> SafetyDecision.REJECT;
+            default -> throw new InvalidReadinessUpdateException("Decision must be approve, request_changes or reject.");
+        };
         String note = input.note() == null ? "" : input.note().strip();
         if (note.length() > MAX_NOTE_LENGTH) {
             throw new InvalidReadinessUpdateException("Approval notes must be 2000 characters or fewer.");
         }
-        if (decision.equals("approve")) {
+        if (outcome == SafetyDecision.APPROVE) {
             List<String> outstanding = outstandingItems(eventId);
             if (!outstanding.isEmpty()) {
                 throw new IncompleteReadinessException(outstanding);
             }
+        } else if (note.isEmpty()) {
+            throw new InvalidReadinessUpdateException(outcome == SafetyDecision.REJECT
+                    ? "Explain why the safety arrangement is rejected, so the coordinator knows what to fix."
+                    : "Explain what needs to change, so the coordinator knows what to fix.");
         }
-
-        String status = decision.equals("approve") ? "approved" : "rejected";
+        String status = switch (outcome) {
+            case APPROVE -> "approved";
+            case REQUEST_CHANGES -> "changes_requested";
+            case REJECT -> "rejected";
+        };
         OffsetDateTime now = OffsetDateTime.now();
         EventSafetyReview review = reviews.findByEventId(eventId)
                 .orElseGet(() -> new EventSafetyReview(eventId, status, note, safetyOfficerId, now));
         review.update(status, note, safetyOfficerId, now);
         reviews.save(review);
-
-        if (decision.equals("approve")) {
-            event.setStatus(EventStatus.confirmed);
-            events.save(event);
-            eventRequests.findByEventId(eventId)
-                    .map(com.example.connect_sphere.eventrequest.entity.EventRequest::getCreatedBy)
-                    .filter(java.util.Objects::nonNull)
-                    .ifPresent(recipientId -> notifications.createStatusChangeNotification(
-                            recipientId, null, eventId, event.getEventName(), "confirmed", note.isBlank() ? null : note));
-        }
+        lifecycle.recordSafetyDecision(safetyOfficerId, eventId, outcome, note.isEmpty() ? null : note);
         return readiness(event);
     }
 
@@ -169,17 +188,23 @@ public class ReadinessService {
                 .toList();
     }
 
+    /** Events from Planning through the safety check to Confirmed (EC08 adds the safety stages). */
+    static final java.util.Set<EventStatus> VISIBLE = java.util.EnumSet.of(EventStatus.pending,
+            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested,
+            EventStatus.safety_approved, EventStatus.confirmed);
+
     private Event activeEvent(UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (event.getStatus() != EventStatus.pending && event.getStatus() != EventStatus.confirmed) {
+        if (!VISIBLE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return event;
     }
 
+    /** The checklist can be worked on in Planning and while the Safety Officer is reviewing. */
     private static void requirePlanning(Event event) {
-        if (event.getStatus() != EventStatus.pending) {
-            throw new InvalidReadinessUpdateException("Readiness and safety approval can only be changed while the event is in Planning.");
+        if (!event.getStatus().isPlanningEditable() && event.getStatus() != EventStatus.awaiting_safety_review) {
+            throw new InvalidReadinessUpdateException("Readiness can only be changed before the safety check is decided.");
         }
     }
 }

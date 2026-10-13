@@ -10,7 +10,9 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalTime;
 import java.util.List;
+import java.util.stream.IntStream;
 import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
@@ -31,6 +33,10 @@ import org.springframework.transaction.support.TransactionTemplate;
 
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.repository.UserRepository;
+import com.example.connect_sphere.venue.dto.CreateVenueDto;
+import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
+import com.example.connect_sphere.venue.entity.VenueLayout;
+import com.example.connect_sphere.venue.service.VenueService;
 
 @Tag("integration")
 @Tag("EO09")
@@ -43,6 +49,7 @@ class NotificationFlowTest {
     @Autowired UserRepository users;
     @Autowired JdbcTemplate jdbc;
     @Autowired PlatformTransactionManager transactionManager;
+    @Autowired VenueService venues;
 
     private FlowSupport flow;
     private String eventName;
@@ -63,7 +70,12 @@ class NotificationFlowTest {
                     WHERE request_id IN (SELECT request_id FROM event_requests WHERE event_name = ?)
                     """, eventName);
             jdbc.update("DELETE FROM event_requests WHERE event_name = ?", eventName);
+            jdbc.update("""
+                    DELETE FROM venue_bookings
+                    WHERE event_id IN (SELECT event_id FROM events WHERE event_name = ?)
+                    """, eventName);
             jdbc.update("DELETE FROM events WHERE event_name = ?", eventName);
+            jdbc.update("DELETE FROM venues WHERE venue_address = ?", eventName);
             jdbc.execute("ALTER TABLE event_request_activity ENABLE TRIGGER trg_activity_append_only");
         });
     }
@@ -91,6 +103,21 @@ class NotificationFlowTest {
 
     private ResultActions confirm(UUID eventId, String as) throws Exception {
         return mvc.perform(post("/api/events/" + eventId + "/confirm").with(flow.as(as)));
+    }
+
+    private static final List<VenueOperatingHourDto> ALL_WEEK = IntStream.rangeClosed(1, 7)
+            .mapToObj(day -> new VenueOperatingHourDto(day, LocalTime.of(0, 0), LocalTime.of(23, 59))).toList();
+
+    /** EC03/VS02: an approved venue, which EC08 needs before the safety check. */
+    private void bookAndApproveVenue(UUID eventId) throws Exception {
+        UUID venueId = venues.createVenue(new CreateVenueDto(eventName, 200, List.of(VenueLayout.theatre),
+                "Open daily", null, List.of(), List.of(), ALL_WEEK)).venueId();
+        String booking = mvc.perform(post("/api/events/" + eventId + "/venue-bookings").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"venueId\":\"" + venueId + "\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        mvc.perform(patch("/api/venue-bookings/" + flow.read(booking).get("bookingId").asString() + "/approve")
+                        .with(flow.as("vs1")))
+                .andExpect(status().isOk());
     }
 
     private void completeReadiness(UUID eventId) throws Exception {
@@ -238,15 +265,32 @@ class NotificationFlowTest {
         assertThat(saved("status_change")).isZero();
     }
 
+    /**
+     * SO-C4 + EC08, end to end: the coordinator sends the event for its
+     * safety check, the Safety Officer ticks the checklist and approves, the
+     * coordinator is told and confirms, and only then is the organiser told
+     * the event is confirmed.
+     */
     @Test
-    void confirmingTheEventSetsItToConfirmedAndNotifiesTheOrganiser() throws Exception {
+    void safetyApprovalThenCoordinatorConfirmationNotifiesTheOrganiser() throws Exception {
         UUID eventId = approve(assignedRequest());
+        bookAndApproveVenue(eventId);
+        mvc.perform(post("/api/events/" + eventId + "/safety-review").with(flow.as("ec1")))
+                .andExpect(status().isOk());
         completeReadiness(eventId);
 
-        confirm(eventId, "so1")
+        mvc.perform(post("/api/safety/events/" + eventId + "/approval").with(flow.as("so1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"approve\",\"note\":\"\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.approvalStatus").value("approved"));
+        assertThat(eventStatus(eventId)).isEqualTo("safety_approved");
+        assertThat(saved("event_safety_approved")).isEqualTo(1);
+        assertThat(savedStatusChange("confirmed")).isZero();
+
+        confirm(eventId, "ec1")
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.eventId").value(eventId.toString()))
-                .andExpect(jsonPath("$.approvalStatus").value("approved"));
+                .andExpect(jsonPath("$.status").value("confirmed"));
 
         assertThat(eventStatus(eventId)).isEqualTo("confirmed");
         assertThat(savedStatusChange("confirmed")).isEqualTo(1);
@@ -255,6 +299,29 @@ class NotificationFlowTest {
                 .andExpect(jsonPath(statusChange("confirmed") + ".eventName", contains(eventName)))
                 .andExpect(jsonPath(statusChange("confirmed") + ".occurredAt", contains(notNullValue())))
                 .andExpect(jsonPath(statusChange("confirmed") + ".linkPath", contains("/organiser/events/" + eventId)));
+    }
+
+    /**
+     * Week 7 Change #6 (EC08): an event is confirmed only after the Safety
+     * Officer approves it, so confirming straight from Planning is refused
+     * (even with the checklist ticked) and nobody is told it is confirmed.
+     */
+    @Test
+    void confirmingStraightFromPlanningIsRefusedAndNotifiesNobody() throws Exception {
+        UUID eventId = approve(assignedRequest());
+        completeReadiness(eventId);
+
+        confirm(eventId, "ec1")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "An event can only be confirmed after the Safety Officer approves it (this one is Planning)."));
+        // The Safety Officer cannot decide before the coordinator sends it.
+        mvc.perform(post("/api/safety/events/" + eventId + "/approval").with(flow.as("so1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"decision\":\"approve\"}"))
+                .andExpect(status().is4xxClientError());
+
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+        assertThat(savedStatusChange("confirmed")).isZero();
     }
 
     @ParameterizedTest

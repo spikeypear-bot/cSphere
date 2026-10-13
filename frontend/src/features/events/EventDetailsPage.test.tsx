@@ -74,7 +74,7 @@ function renderPage(basePath: string) {
   )
 }
 
-describe('EventDetailsPage — EO09 confirmed-arrangements and SO-C3 readiness view', () => {
+describe('EventDetailsPage — shared event view and SO-C3 readiness view', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
@@ -93,7 +93,7 @@ describe('EventDetailsPage — EO09 confirmed-arrangements and SO-C3 readiness v
     expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
   })
 
-  it('shows coordinator planning actions while the event is pending', async () => {
+  it('shows coordinator planning actions while the event is in Planning', async () => {
     seedSession('coordinator')
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -102,9 +102,8 @@ describe('EventDetailsPage — EO09 confirmed-arrangements and SO-C3 readiness v
 
     renderPage('/coordinator')
 
-    expect(await screen.findByText(/A Safety Officer must complete the operational readiness review/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Request equipment' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Request equipment' })).toHaveAttribute(
       'href',
       `/coordinator/events/${EVENT_ID}/equipment-request`,
     )

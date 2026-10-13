@@ -251,3 +251,30 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests)', () => {
     expect(screen.queryByText(/assigned to ec1/)).not.toBeInTheDocument()
   })
 })
+
+const sv = (code: string, label: string) => ({ code, label, explanation: '', nextActor: null, stage: 'REQUEST', isFinal: false, datePassed: false })
+
+describe('CoordinatorAssignmentsPage status filter (EC-NEW2)', () => {
+  beforeEach(() => seedSession('coordinator-lead', 'ecl-1'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('filters assigned requests by the shared status and keeps every coordinator heading', async () => {
+    stubApi({ [ASSIGNED]: () => jsonResponse(200, [
+      coordinator('ec1', [assigned('r1', 'Town Hall', { journeyStatus: sv('UNDER_REVIEW', 'Under Review') })]),
+      coordinator('ec2', [assigned('r2', 'Gala', { status: 'clarification_required',
+        journeyStatus: sv('CLARIFICATION_REQUIRED', 'Clarification Required') })]),
+    ]) })
+    const user = userEvent.setup()
+    renderPage()
+
+    const filters = await screen.findByRole('group', { name: 'Filter assigned requests by status' })
+    await user.click(within(filters).getByRole('button', { name: /Clarification Required/ }))
+    expect(screen.getByText('Gala')).toBeInTheDocument()
+    expect(screen.queryByText('Town Hall')).not.toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /ec1/ })).toBeInTheDocument()
+  })
+})

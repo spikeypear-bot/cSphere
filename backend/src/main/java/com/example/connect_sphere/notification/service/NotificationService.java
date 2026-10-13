@@ -135,6 +135,37 @@ public class NotificationService {
         }
     }
 
+    /** EC08: tell the staff involved in an event's arrangements it is confirmed. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventConfirmedNotifications(List<UUID> recipientUserIds, UUID eventId, String eventName,
+            String message) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, NotificationType.event_confirmed, eventName);
+            notification.setEventId(eventId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
+    /** EC08/EC-NEW2: tell the coordinator their event went back to Planning. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createReturnedToPlanningNotification(UUID coordinatorId, UUID eventId, String eventName,
+            String reason) {
+        Notification notification = base(coordinatorId, NotificationType.event_returned_to_planning, eventName);
+        notification.setEventId(eventId);
+        notification.setReason(reason);
+        notification.setMessage(reason);
+        saveBestEffort(notification);
+    }
+
+    /** EC08: the Safety Officer approved, so the coordinator can confirm the event. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createSafetyApprovedNotification(UUID coordinatorId, UUID eventId, String eventName) {
+        Notification notification = base(coordinatorId, NotificationType.event_safety_approved, eventName);
+        notification.setEventId(eventId);
+        saveBestEffort(notification);
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -216,6 +247,11 @@ public class NotificationService {
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
             case venue_unavailable -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
+            // Sent to Venue Staff and Technical Support alike; neither has an
+            // event page of its own yet, so the notification itself carries
+            // the information and links nowhere.
+            case event_confirmed -> null;
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();

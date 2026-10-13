@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { JourneyStatusBadge, JourneyStatusExplainer, JourneyStepper } from '../../components/ui/JourneyStatus'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
@@ -9,18 +10,21 @@ import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
+import { EventReadinessPanel } from './EventReadinessPanel'
+import { OrganiserArrangements } from './OrganiserArrangements'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
+import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
 
 /**
- * EO09's "can view the confirmed event arrangements" — the notification's
- * own deep link lands here. Shared between the Organiser (read-only) and the
- * Event Coordinator (who also gets the assigned-event readiness read view)
- * rather than two near-identical pages. Confirmation itself belongs to the
- * Safety Officer.
+ * One page per event, shared by the Organiser and the Event Coordinator. Both
+ * see the same status and explanation (EC-NEW2). The coordinator also gets
+ * the EC08 lifecycle panel (send for safety review, withdraw, confirm) and a
+ * read-only view of the Safety Officer's checklist (SO-C3); the organiser
+ * gets the confirmed arrangements (EO04).
  */
 export function EventDetailsPage() {
   const { eventId } = useParams<{ eventId: string }>()
@@ -32,6 +36,10 @@ export function EventDetailsPage() {
   const readinessState = useSafetyData<ReadinessDto>(
     eventId && role === 'coordinator' ? `/events/${eventId}/readiness` : null,
   )
+  // Bumped after a lifecycle action to re-trigger the fetch effect below —
+  // same inline-fetch-effect shape as useEventRequestDraft.ts, rather than
+  // calling a setState-ish function directly from inside the effect.
+  const [reloadToken, setReloadToken] = useState(0)
 
   useEffect(() => {
     if (!eventId) return
@@ -50,21 +58,33 @@ export function EventDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [eventId])
+  }, [eventId, reloadToken])
 
   if (error) return <p role="alert">{error}</p>
   if (!event) return <p>Loading…</p>
+
+  const journey = event.journeyStatus ?? null
+  // Planning-stage edits (venues, equipment) stay open while changes are
+  // requested by the Safety Officer, matching EventStatus.isPlanningEditable.
+  const planning = event.status === 'pending' || event.status === 'safety_changes_requested'
 
   return (
     <div className="page">
       <PageHeader
         title={event.eventName}
-        actions={
+        actions={journey ? <JourneyStatusBadge status={journey} /> : (
           <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
             {EVENT_STATUS_LABELS[event.status] ?? event.status}
           </span>
-        }
+        )}
       />
+
+      {journey ? (
+        <div className="event-details__journey">
+          <JourneyStepper status={journey} />
+          <JourneyStatusExplainer status={journey} />
+        </div>
+      ) : null}
 
       <Card className="event-details__card">
         <dl className="event-details__grid">
@@ -73,12 +93,12 @@ export function EventDetailsPage() {
             <dd>{event.purpose}</dd>
           </div>
           <div>
-            <dt>Start</dt>
-            <dd>{new Date(event.startDatetime).toLocaleString()}</dd>
+            <dt>Start (Singapore time)</dt>
+            <dd>{formatEventDateTime(event.startDatetime)}</dd>
           </div>
           <div>
-            <dt>End</dt>
-            <dd>{new Date(event.endDatetime).toLocaleString()}</dd>
+            <dt>End (Singapore time)</dt>
+            <dd>{formatEventDateTime(event.endDatetime)}</dd>
           </div>
           <div>
             <dt>Expected attendance</dt>
@@ -112,8 +132,13 @@ export function EventDetailsPage() {
         <Notice>Booking request for {flash.bookingRequested} sent to Venue Staff for review.</Notice>
       ) : null}
 
-      {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={event.status === 'pending'} /> : null}
-      {role === 'coordinator' && event.status === 'pending' ? (
+      {role === 'coordinator' ? (
+        <EventReadinessPanel eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
+      ) : null}
+      {role === 'organiser' ? <OrganiserArrangements key={reloadToken} eventId={event.eventId} /> : null}
+
+      {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning} /> : null}
+      {role === 'coordinator' && planning ? (
         <Card className="event-details__venue">
           <h2>Equipment</h2>
           <p>Submit the equipment needs for Technical Support Staff to review and prepare.</p>
@@ -123,18 +148,12 @@ export function EventDetailsPage() {
         </Card>
       ) : null}
 
-      {role === 'coordinator' && event.status === 'pending' ? (
-        <Card className="event-details__confirm">
-          <p>A Safety Officer must complete the operational readiness review and approve this event before it can be confirmed.</p>
-        </Card>
-      ) : null}
-
       {role === 'coordinator' ? (
         readinessState.error ? <p role="alert">Could not load readiness checklist. {readinessState.error}</p>
           : readinessState.data ? (
             <>
               <Card className="event-details__history">
-                <h2>Safety approval</h2>
+                <h2>Safety Officer's review</h2>
                 <p>Current approval: {readinessState.data.approvalStatus.replace('_', ' ')}</p>
                 {readinessState.data.approvalNote ? <p>Note: {readinessState.data.approvalNote}</p> : null}
                 {readinessState.data.reviewedBy ? (
@@ -153,7 +172,7 @@ export function EventDetailsPage() {
           ) : readinessState.loading ? <p role="status">Loading readiness checklist…</p> : null
       ) : null}
 
-      <EventHistoryCard eventId={event.eventId} />
+      <EventHistoryCard key={reloadToken} eventId={event.eventId} />
     </div>
   )
 }

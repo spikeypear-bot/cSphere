@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from './useNotifications'
 import type { NotificationDto } from '../../types/notification'
+import { JOURNEY_LABELS } from '../../types/status'
 import './notifications.css'
 
 /** Relative time, same coarse style as EO01/EO15's "edited X ago"
@@ -19,6 +20,9 @@ function timeAgo(iso: string): string {
 
 function describe(n: NotificationDto): string {
   if (n.type === 'venue_unavailable') return `Alternative venue arrangements required for "${n.eventName}"`
+  if (n.type === 'event_confirmed') return `"${n.eventName}" is confirmed`
+  if (n.type === 'event_returned_to_planning') return `"${n.eventName}" is back in Planning`
+  if (n.type === 'event_safety_approved') return `"${n.eventName}" passed its safety check and is ready to confirm`
   if (n.type === 'clarification_requested') return `Clarification needed on "${n.eventName}"`
   if (n.type === 'clarification_responded') return `"${n.eventName}" was updated and resubmitted`
   if (n.type === 'venue_booking_requested') return `New venue booking request for "${n.eventName}"`
@@ -27,8 +31,19 @@ function describe(n: NotificationDto): string {
     const verb = n.isReassignment ? 'reassigned to' : 'assigned to'
     return `"${n.eventName}" ${verb} ${n.coordinatorName ?? 'a coordinator'}`
   }
-  const statusLabel = n.newStatus ? n.newStatus.charAt(0).toUpperCase() + n.newStatus.slice(1) : 'updated'
+  const statusLabel = n.newStatus ? STATUS_CHANGE_LABELS[n.newStatus] ?? n.newStatus : 'updated'
   return `"${n.eventName}" is now ${statusLabel}`
+}
+
+/** EC-NEW2: the stored status a notification carries, in the shared status
+ * vocabulary. An approved request is an event in Planning; "Approved" is not
+ * one of the statuses any screen shows. */
+const STATUS_CHANGE_LABELS: Record<string, string> = {
+  approved: `in ${JOURNEY_LABELS.PLANNING}`,
+  confirmed: JOURNEY_LABELS.CONFIRMED,
+  rejected: JOURNEY_LABELS.REJECTED,
+  cancelled: JOURNEY_LABELS.CANCELLED,
+  clarification_required: JOURNEY_LABELS.CLARIFICATION_REQUIRED,
 }
 
 /** EO09/EO19: unread-count badge + a dropdown of every notification for the

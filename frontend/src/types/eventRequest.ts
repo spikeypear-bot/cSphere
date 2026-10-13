@@ -1,3 +1,4 @@
+import type { StatusView } from './status'
 // Mirrors backend/src/main/java/com/example/connect_sphere/eventrequest/dto/*
 // and common/enums/AccessibilityFeature.java — keep these in sync by hand for
 // now (see docs/decision-log.md for why there's no shared-schema codegen yet).
@@ -74,6 +75,8 @@ export interface EventRequestDto {
   rejectionReason: string | null
   /** Username of the organiser who created the request. */
   createdByName?: string | null
+  /** EC-NEW2: the one status every screen shows. */
+  journeyStatus?: StatusView | null
 }
 
 /** ECL-C2: one Event Coordinator and the requests they hold that are still

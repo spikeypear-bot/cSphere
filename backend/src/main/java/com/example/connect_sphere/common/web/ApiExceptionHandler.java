@@ -9,7 +9,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.connect_sphere.event.service.EventLifecycleException;
+import com.example.connect_sphere.event.service.EventLifecycleValidationException;
 import com.example.connect_sphere.event.service.EventNotFoundException;
+import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStateException;
 import com.example.connect_sphere.equipmentrequest.InvalidEquipmentRequestException;
@@ -133,6 +136,25 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(MissingRejectionReasonException.class)
     public ResponseEntity<ApiError> handleMissingRejectionReason(MissingRejectionReasonException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
+    }
+
+    /** EC08: wrong status for this action (already confirmed, not in
+     * Planning, …). The message names the current status. */
+    @ExceptionHandler(EventLifecycleException.class)
+    public ResponseEntity<ApiError> handleEventLifecycle(EventLifecycleException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    /** EC08: not ready yet; every outstanding prerequisite is listed. */
+    @ExceptionHandler(EventNotReadyException.class)
+    public ResponseEntity<ApiError> handleEventNotReady(EventNotReadyException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiError.missingFields(ex.getMessage(), ex.getBlockers()));
+    }
+
+    @ExceptionHandler(EventLifecycleValidationException.class)
+    public ResponseEntity<ApiError> handleEventLifecycleValidation(EventLifecycleValidationException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
     }
 

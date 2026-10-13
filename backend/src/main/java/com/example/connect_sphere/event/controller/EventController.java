@@ -7,22 +7,25 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.event.dto.EventDto;
+import com.example.connect_sphere.event.dto.EventReadinessDto;
+import com.example.connect_sphere.event.dto.OrganiserArrangementsDto;
+import com.example.connect_sphere.event.service.EventArrangementsService;
+import com.example.connect_sphere.event.service.EventLifecycleService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
-import com.example.connect_sphere.safety.ReadinessService;
-import com.example.connect_sphere.safety.SafetyApprovalRequest;
-import com.example.connect_sphere.safety.ReadinessDto;
 import com.example.connect_sphere.user.entity.UserRole;
 
 /**
- * Event and Coordinator read endpoints. Safety Officer event access and the
- * checklist-gated confirmation flow live in the safety package.
+ * Event endpoints for Organisers and Coordinators, including the EC08
+ * lifecycle (send for safety review, withdraw, confirm). The Safety Officer's
+ * checklist and decision endpoints live in the safety package (SO-C1–C4).
  */
 @RestController
 @RequestMapping("/api/events")
@@ -30,13 +33,15 @@ public class EventController {
 
     private final EventService service;
     private final EventRequestService eventRequestService;
-    private final ReadinessService readinessService;
+    private final EventLifecycleService lifecycle;
+    private final EventArrangementsService arrangements;
 
     public EventController(EventService service, EventRequestService eventRequestService,
-            ReadinessService readinessService) {
+            EventLifecycleService lifecycle, EventArrangementsService arrangements) {
         this.service = service;
         this.eventRequestService = eventRequestService;
-        this.readinessService = readinessService;
+        this.lifecycle = lifecycle;
+        this.arrangements = arrangements;
     }
 
     private static UUID userIdOf(Jwt jwt) {
@@ -76,8 +81,38 @@ public class EventController {
         return eventRequestService.timelineForEvent(role, organisationOf(jwt), userIdOf(jwt), id);
     }
 
+    /**
+     * EC08: the coordinator's checklist (venues, equipment, safety check) and
+     * which lifecycle actions are available now. Separate from
+     * {@code /readiness}, which is the Safety Officer's SO-C3 checklist.
+     */
+    @GetMapping("/{id}/lifecycle")
+    public EventReadinessDto readiness(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        return lifecycle.readiness(userIdOf(jwt), id);
+    }
+
+    /** EC08: hand a ready event to the Safety Officer. */
+    @PostMapping("/{id}/safety-review")
+    public EventReadinessDto sendForSafetyReview(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        return lifecycle.sendForSafetyReview(userIdOf(jwt), id);
+    }
+
+    /** EC08: take it back before the Safety Officer decides. Body: {"reason": "..."}. */
+    @PostMapping("/{id}/safety-review/withdraw")
+    public EventReadinessDto withdrawFromSafetyReview(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id,
+            @RequestBody(required = false) java.util.Map<String, String> body) {
+        return lifecycle.withdrawFromSafetyReview(userIdOf(jwt), id, body == null ? null : body.get("reason"));
+    }
+
+    /** EO04: the organiser's view of the confirmed arrangements. */
+    @GetMapping("/{id}/arrangements")
+    public OrganiserArrangementsDto arrangements(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        return arrangements.forOrganiser(organisationOf(jwt), id);
+    }
+
+    /** EC08: confirm once the Safety Officer has approved (SO-C4). Assigned coordinator only. */
     @PostMapping("/{id}/confirm")
-    public ReadinessDto confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
-        return readinessService.review(userIdOf(jwt), id, new SafetyApprovalRequest("approve", null));
+    public EventDto confirm(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        return service.confirm(userIdOf(jwt), id);
     }
 }

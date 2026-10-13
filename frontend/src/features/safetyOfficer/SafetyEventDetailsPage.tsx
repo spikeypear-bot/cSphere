@@ -62,7 +62,7 @@ export function SafetyEventDetailsPage() {
     }
   }
 
-  async function review(decision: 'approve' | 'reject') {
+  async function review(decision: 'approve' | 'request_changes' | 'reject') {
     if (!eventId) return
     setReviewing(true)
     setActionError(null)
@@ -73,6 +73,7 @@ export function SafetyEventDetailsPage() {
       })
       readinessState.setData(result)
       eventState.reload()
+      setReviewNote('')
     } catch (err) {
       setActionError(err instanceof ApiClientError ? err.message : 'Could not save the safety review.')
     } finally {
@@ -83,7 +84,12 @@ export function SafetyEventDetailsPage() {
   if (eventState.error) return <p role="alert">Could not load this event. {eventState.error}</p>
   if (!event) return <p role="status">Loading event…</p>
 
-  const isPlanning = event.status === 'pending'
+  // EC08: the checklist can be worked on until a decision is made; a
+  // decision is possible once the coordinator has sent the event for review.
+  const checklistEditable = event.status === 'pending' || event.status === 'awaiting_safety_review'
+    || event.status === 'safety_changes_requested'
+  const awaitingDecision = event.status === 'awaiting_safety_review'
+  const noteGiven = reviewNote.trim() !== ''
   return (
     <div className="page">
       <PageHeader
@@ -151,7 +157,7 @@ export function SafetyEventDetailsPage() {
       {readiness ? (
         <ReadinessChecklistPanel
           readiness={readiness}
-          editable={isPlanning}
+          editable={checklistEditable}
           savingItem={savingItem}
           onSave={saveItem}
         />
@@ -160,19 +166,33 @@ export function SafetyEventDetailsPage() {
       {readiness ? (
         <Card className="safety-panel">
           <h2>Safety approval</h2>
-          <p>Current approval: {readiness.approvalStatus.replace('_', ' ')}</p>
+          <p>Current approval: {readiness.approvalStatus.replaceAll('_', ' ')}</p>
           {readiness.approvalNote ? <p>Note: {readiness.approvalNote}</p> : null}
           {readiness.reviewedBy ? <p>Reviewed by {readiness.reviewedBy}{readiness.reviewedAt ? ` · ${new Date(readiness.reviewedAt).toLocaleString()}` : ''}</p> : null}
-          {isPlanning ? (
+          {event.status === 'pending' || event.status === 'safety_changes_requested' ? (
+            <p role="status">Waiting for the Event Coordinator to send this event for its safety check.
+              You can work on the checklist in the meantime.</p>
+          ) : null}
+          {event.status === 'safety_approved' ? (
+            <p role="status">Approved. Waiting for the Event Coordinator to confirm the event.</p>
+          ) : null}
+          {awaitingDecision ? (
             <>
-              <label htmlFor="safety-review-note">Reason or approval note (optional)</label>
-              <textarea id="safety-review-note" maxLength={2000} value={reviewNote} onChange={(e) => setReviewNote(e.target.value)} />
+              <label htmlFor="safety-review-note">Note for the Event Coordinator</label>
+              <textarea id="safety-review-note" maxLength={2000} value={reviewNote} onChange={(e) => setReviewNote(e.target.value)}
+                aria-describedby="safety-review-note-hint" />
+              <p id="safety-review-note-hint" className="field-hint">
+                Optional when approving. Required to request changes or reject, so the coordinator knows what to fix.
+              </p>
               <div className="safety-actions">
                 <Button disabled={reviewing || readiness.completedItems !== readiness.totalItems}
                   onClick={() => void review('approve')}>
-                  {reviewing ? 'Saving…' : 'Approve and confirm'}
+                  {reviewing ? 'Saving…' : 'Approve'}
                 </Button>
-                <Button variant="secondary" disabled={reviewing} onClick={() => void review('reject')}>
+                <Button variant="secondary" disabled={reviewing || !noteGiven} onClick={() => void review('request_changes')}>
+                  Request changes
+                </Button>
+                <Button variant="secondary" disabled={reviewing || !noteGiven} onClick={() => void review('reject')}>
                   Reject
                 </Button>
               </div>

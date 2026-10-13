@@ -1,9 +1,11 @@
+import { useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
+import { StatusFilter } from '../../components/ui/JourneyStatus'
 import type { EventRequestDto } from '../../types/eventRequest'
 import { useVenueRead } from '../venueStaff/useVenueRead'
 import { LeadRequestCard } from './LeadRequestCard'
@@ -17,6 +19,10 @@ export function UnassignedRequestsPage() {
   const refreshing = loading && requests !== undefined
   // Set by the review page after the Lead assigns, rejects or sends a request back.
   const notice = (useLocation().state as { notice?: string } | null)?.notice
+  // EC-NEW2: filter by the same status everyone sees.
+  const [filter, setFilter] = useState<string | null>(null)
+  const statuses = (requests ?? []).flatMap((r) => (r.journeyStatus ? [r.journeyStatus] : []))
+  const shown = (requests ?? []).filter((r) => filter === null || r.journeyStatus?.code === filter)
 
   return (
     <div className="page">
@@ -45,8 +51,9 @@ export function UnassignedRequestsPage() {
           <p className="field-hint" role="status">
             {requests.length === 1 ? '1 request is' : `${requests.length} requests are`} waiting for a coordinator.
           </p>
+          <StatusFilter statuses={statuses} selected={filter} onChange={setFilter} label="Filter unassigned requests by status" />
           <ul className="lead-request-cards">
-            {requests.map((request) => (
+            {shown.map((request) => (
               <li key={request.requestId}>
                 {/* For a pending request, updatedAt is when it was submitted. One
                     waiting for clarification (ELC-C6) was sent back, and perhaps

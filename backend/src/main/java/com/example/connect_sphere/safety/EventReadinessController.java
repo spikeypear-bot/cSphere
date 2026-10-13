@@ -21,7 +21,8 @@ public class EventReadinessController {
 
     @GetMapping
     public ReadinessDto get(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
-        if ("so".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+        // The token's role claim is the UserRole name (TokenService).
+        if ("safety_officer".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
             return readiness.forSafetyOfficer(eventId);
         }
         return readiness.forCoordinator(UUID.fromString(jwt.getSubject()), eventId);

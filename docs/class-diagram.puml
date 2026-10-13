@@ -223,4 +223,66 @@ note bottom of VenueEvent
   No writes or approval behavior are implemented here.
 end note
 
+' EC-NEW2: the one status vocabulary every response carries.
+enum JourneyStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  CLARIFICATION_REQUIRED
+  REJECTED
+  PLANNING
+  AWAITING_SAFETY_REVIEW
+  SAFETY_CHANGES_REQUESTED
+  SAFETY_APPROVED
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  --
+  label : String
+  explanation : String
+  nextActor : String
+  isFinal() : boolean
+}
+
+class StatusView <<record>> {
+  code : JourneyStatus
+  label : String
+  explanation : String
+  nextActor : String
+  datePassed : boolean
+}
+
+' EC08: the only class that moves an event between lifecycle statuses.
+class EventLifecycleService <<service>> {
+  readiness(coordinatorId, eventId) : EventReadinessDto
+  sendForSafetyReview(coordinatorId, eventId)
+  withdrawFromSafetyReview(coordinatorId, eventId, reason)
+  confirm(coordinatorId, eventId)
+  recordSafetyDecision(officerId, eventId, SafetyDecision, feedback)
+  returnToPlanning(eventId, actorId, reason) : boolean
+}
+
+class EventReadinessDto <<record>> {
+  journeyStatus : StatusView
+  items : List<Item>
+  canSendForReview : boolean
+  canWithdraw : boolean
+  canConfirm : boolean
+  blockers : List<String>
+}
+
+StatusView ..> JourneyStatus : of
+EventLifecycleService ..> EventReadinessDto : builds
+EventReadinessDto *-- StatusView
+class ReadinessService <<service, SO-C3/C4>> {
+  review(officerId, eventId, decision, note)
+}
+ReadinessService ..> EventLifecycleService : recordSafetyDecision
+note right of EventLifecycleService
+  Event (V23) gains safetyApprovedAt, safetyFeedback,
+  firstConfirmedAt, confirmedAt, confirmedBy.
+  Returned to Planning on VenueBecameUnavailable
+  (after commit, own transaction). See D22.
+end note
+
 @enduml
