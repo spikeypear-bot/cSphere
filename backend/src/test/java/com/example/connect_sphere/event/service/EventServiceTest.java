@@ -4,10 +4,8 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.OffsetDateTime;
@@ -27,10 +25,6 @@ import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
-import com.example.connect_sphere.eventrequest.entity.EventRequest;
-import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
-import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
-import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
@@ -41,23 +35,17 @@ class EventServiceTest {
     @Mock
     private EventRepository repository;
     @Mock
-    private EventRequestRepository eventRequestRepository;
-    @Mock
     private UserRepository userRepository;
-    @Mock
-    private NotificationService notificationService;
 
     private EventService service;
 
     private static final String ORG = "Acme Conferences";
     private static final UUID COORDINATOR_ID = UUID.randomUUID();
-    private static final UUID OTHER_COORDINATOR_ID = UUID.randomUUID();
-    private static final UUID ORGANISER_ID = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new EventService(repository, eventRequestRepository, userRepository, notificationService);
+        service = new EventService(repository, userRepository);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 
@@ -79,61 +67,6 @@ class EventServiceTest {
 
         assertThatThrownBy(() -> service.get(ORG, event.getEventId()))
                 .isInstanceOf(EventNotFoundException.class);
-    }
-
-    @Test
-    void confirmingTransitionsToConfirmedAndNotifiesTheOriginatingOrganiser() {
-        Event event = pendingEvent(ORG);
-        event.setCoordinatorId(COORDINATOR_ID);
-        when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
-        EventRequest originatingRequest = new EventRequest();
-        originatingRequest.setCreatedBy(ORGANISER_ID);
-        when(eventRequestRepository.findByEventId(event.getEventId()))
-                .thenReturn(Optional.of(originatingRequest));
-
-        EventDto confirmed = service.confirm(COORDINATOR_ID, event.getEventId());
-
-        assertThat(confirmed.status()).isEqualTo("confirmed");
-        verify(notificationService).createStatusChangeNotification(
-                eq(ORGANISER_ID), isNull(), eq(event.getEventId()), any(), eq("confirmed"), isNull());
-    }
-
-    @Test
-    void confirmingWithoutBeingTheAssignedCoordinatorIsRejected() {
-        Event event = pendingEvent(ORG);
-        event.setCoordinatorId(COORDINATOR_ID);
-        when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
-
-        assertThatThrownBy(() -> service.confirm(OTHER_COORDINATOR_ID, event.getEventId()))
-                .isInstanceOf(NotAssignedCoordinatorException.class);
-        verify(notificationService, never()).createStatusChangeNotification(
-                any(), any(), any(), any(), any(), any());
-    }
-
-    @Test
-    void confirmingAnAlreadyConfirmedEventIsRejectedSoAtMostOneConfirmationNotificationIsSent() {
-        Event event = pendingEvent(ORG);
-        event.setCoordinatorId(COORDINATOR_ID);
-        event.setStatus(EventStatus.confirmed);
-        when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
-
-        assertThatThrownBy(() -> service.confirm(COORDINATOR_ID, event.getEventId()))
-                .isInstanceOf(EventNotPendingException.class);
-    }
-
-    @Test
-    void confirmingNeverNotifiesWhenNoOriginatingRequestCanBeFound() {
-        // Defensive: should never happen in practice (every event comes from
-        // an approved request), but must not throw if it somehow does.
-        Event event = pendingEvent(ORG);
-        event.setCoordinatorId(COORDINATOR_ID);
-        when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
-        when(eventRequestRepository.findByEventId(event.getEventId())).thenReturn(Optional.empty());
-
-        service.confirm(COORDINATOR_ID, event.getEventId());
-
-        verify(notificationService, never()).createStatusChangeNotification(
-                any(), any(), any(), any(), any(), any());
     }
 
     @Test
@@ -204,7 +137,7 @@ class EventServiceTest {
     }
 
     @Test
-    void listingAssignedEventsSavesNothingAndNotifiesNoOne() {
+    void listingAssignedEventsIsReadOnly() {
         Event event = pendingEvent(ORG);
         event.setCoordinatorId(COORDINATOR_ID);
         when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any()))
@@ -213,7 +146,6 @@ class EventServiceTest {
         service.assignedEvents(COORDINATOR_ID);
 
         verify(repository, never()).save(any());
-        verifyNoInteractions(notificationService, eventRequestRepository);
         assertThat(event.getStatus()).isEqualTo(EventStatus.pending);
         assertThat(event.getCoordinatorId()).isEqualTo(COORDINATOR_ID);
     }

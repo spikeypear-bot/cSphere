@@ -6,6 +6,7 @@ export type Role =
   | 'organiser'
   | 'coordinator'
   | 'coordinator-lead'
+  | 'safety-officer'
   | 'venue-staff'
   | 'technical-support'
   | 'attendee'
@@ -42,6 +43,7 @@ const ROLE_BY_CLAIM: Record<string, Role> = {
   ec: 'coordinator',
   // ECL-C1: the Lead is a separate role with its own console.
   ecl: 'coordinator-lead',
+  safety_officer: 'safety-officer',
   vs: 'venue-staff',
   technician: 'technical-support',
   attendee: 'attendee',

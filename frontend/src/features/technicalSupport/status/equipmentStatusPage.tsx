@@ -26,8 +26,10 @@ export function EquipmentStatusPage() {
     start: '2026-09-25T09:00',
     end: '2026-09-25T17:00',
   })
-  const [units, setUnits] = useState<EquipmentUnit[]>([])
-  const [loading, setLoading] = useState(false)
+  const [unitsResult, setUnitsResult] = useState<{
+    key: string
+    units: EquipmentUnit[]
+  } | null>(null)
   // Bumping this number makes both lists reload from the backend.
   const [reloadCount, setReloadCount] = useState(0)
 
@@ -48,34 +50,38 @@ export function EquipmentStatusPage() {
   // ---- Values worked out from the state ----
   const periodIsValid =
     period.start !== '' && period.end !== '' && period.end > period.start
-  const selectedUnit = units.find((u) => unitKey(u) === selectedKey) ?? null
+  const periodRequestKey = JSON.stringify([period.start, period.end, reloadCount])
+  const visibleUnits =
+    periodIsValid && unitsResult?.key === periodRequestKey ? unitsResult.units : []
+  const loading = periodIsValid && unitsResult?.key !== periodRequestKey
+  const selectedUnit = visibleUnits.find((u) => unitKey(u) === selectedKey) ?? null
   const selectedEquipmentId = selectedUnit?.equipmentId
   const selectedSerial = selectedUnit?.serialNumber
-  const counts = countAvailableByType(units)
+  const visibleBlocks = selectedEquipmentId && selectedSerial ? blocks : []
+  const counts = countAvailableByType(visibleUnits)
   const formIsValid =
     draftStart !== '' && (indefinite || (draftEnd !== '' && draftEnd > draftStart))
 
   // ---- Load every unit's status for the viewed period ----
   useEffect(() => {
-    if (!periodIsValid) {
-      setUnits([])
-      return
-    }
+    if (!periodIsValid) return
     let cancelled = false
-    setLoading(true)
     fetchEquipmentUnits(period)
-      .then((data) => { if (!cancelled) setUnits(data) })
-      .catch(() => { if (!cancelled) setError('Could not load equipment.') })
-      .finally(() => { if (!cancelled) setLoading(false) })
+      .then((data) => {
+        if (!cancelled) setUnitsResult({ key: periodRequestKey, units: data })
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setError('Could not load equipment.')
+          setUnitsResult({ key: periodRequestKey, units: [] })
+        }
+      })
     return () => { cancelled = true }
-  }, [period, periodIsValid, reloadCount])
+  }, [period, periodIsValid, periodRequestKey])
 
   // ---- Load the selected unit's blocks ----
   useEffect(() => {
-    if (!selectedEquipmentId || !selectedSerial) {
-      setBlocks([])
-      return
-    }
+    if (!selectedEquipmentId || !selectedSerial) return
     let cancelled = false
     fetchStatusPeriods(selectedEquipmentId, selectedSerial)
       .then((data) => { if (!cancelled) setBlocks(data) })
@@ -193,7 +199,7 @@ export function EquipmentStatusPage() {
       <Card className="tech-card">
         <h2>Equipment</h2>
         <ul className="tech-choice-list">
-          {units.map((unit) => (
+          {visibleUnits.map((unit) => (
             <li key={unitKey(unit)}>
               <button
                 type="button"
@@ -218,11 +224,11 @@ export function EquipmentStatusPage() {
           </p>
 
           <h3>Faulty / unavailable periods</h3>
-          {blocks.length === 0 ? (
+          {visibleBlocks.length === 0 ? (
             <p>None. This unit is available at all times.</p>
           ) : (
             <ul className="tech-choice-list">
-              {blocks.map((block) => (
+              {visibleBlocks.map((block) => (
                 <li key={block.id} className="tech-block">
                   <span>
                     <strong>{block.status}</strong>: {describePeriod(block)}

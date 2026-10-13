@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
 
-type Role = 'organiser' | 'coordinator' | 'coordinator-lead' | 'venue-staff' | 'technical-support'
+type Role = 'organiser' | 'coordinator' | 'coordinator-lead' | 'venue-staff' | 'technical-support' | 'safety-officer'
 
 /** A signed-in session, shaped like what LoginPage stores. */
 export function seedSession(role: Role, userId = `${role}-1`) {
@@ -11,6 +11,7 @@ export function seedSession(role: Role, userId = `${role}-1`) {
     username: role === 'organiser' ? 'eo1'
       : role === 'coordinator' ? 'ec1'
         : role === 'coordinator-lead' ? 'ecl1'
+          : role === 'safety-officer' ? 'so1'
           : role === 'technical-support' ? 'tech1' : 'vs1',
     role,
     organisation: role === 'organiser' ? 'Acme Pte Ltd' : 'ConnectSphere',

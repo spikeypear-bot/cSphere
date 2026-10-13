@@ -32,6 +32,8 @@ import com.example.connect_sphere.venue.service.InvalidVenueException;
 import com.example.connect_sphere.user.service.InvalidRefreshTokenException;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venueissue.service.InvalidVenueOperationalIssueException;
+import com.example.connect_sphere.safety.IncompleteReadinessException;
+import com.example.connect_sphere.safety.InvalidReadinessUpdateException;
 
 /** One place that turns domain exceptions into HTTP responses, so every
  * controller can just let them propagate. Add a handler here per new domain
@@ -142,6 +144,17 @@ public class ApiExceptionHandler {
     @ExceptionHandler(EventNotPendingException.class)
     public ResponseEntity<ApiError> handleEventNotPending(EventNotPendingException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(IncompleteReadinessException.class)
+    public ResponseEntity<ApiError> handleIncompleteReadiness(IncompleteReadinessException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiError.missingFields(ex.getMessage(), ex.getOutstandingItems()));
+    }
+
+    @ExceptionHandler(InvalidReadinessUpdateException.class)
+    public ResponseEntity<ApiError> handleInvalidReadinessUpdate(InvalidReadinessUpdateException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(EquipmentRequestStateException.class)

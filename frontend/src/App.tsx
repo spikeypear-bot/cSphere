@@ -40,6 +40,8 @@ import { EquipmentReservationPage } from './features/technicalSupport/reservatio
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
+import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
+import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
 
 /** Route-level role gating. The role comes from the access token's `role`
  * claim (D19), so editing localStorage no longer promotes anyone: a tampered
@@ -175,6 +177,19 @@ function AttendeeRoutes() {
   )
 }
 
+function SafetyOfficerRoutes() {
+  const permitted = useRoleGate('safety-officer')
+  const { pathname } = useLocation()
+  const { role } = useSession()
+  if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
+  return (
+    <Routes>
+      <Route index element={<SafetyOfficerHomePage />} />
+      <Route path="events/:eventId" element={<SafetyEventDetailsPage />} />
+    </Routes>
+  )
+}
+
 /** "/" is the login page when signed out, and a redirect to your own console
  * when signed in — there is no role to pick any more. */
 function LandingRoute() {
@@ -192,6 +207,7 @@ function AppRoutes() {
       <Route path="/venue-staff/*" element={<VenueStaffRoutes />} />
       <Route path="/technical-support/*" element={<TechnicalSupportRoutes />} />
       <Route path="/attendee/*" element={<AttendeeRoutes />} />
+      <Route path="/safety-officer/*" element={<SafetyOfficerRoutes />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

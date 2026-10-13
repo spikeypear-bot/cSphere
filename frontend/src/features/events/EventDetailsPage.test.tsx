@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { EventDetailsPage } from './EventDetailsPage'
@@ -46,6 +45,23 @@ function pendingEvent() {
   }
 }
 
+function readiness() {
+  return {
+    eventId: EVENT_ID,
+    approvalStatus: 'rejected',
+    approvalNote: 'Recheck the venue setup',
+    reviewedBy: 'so1',
+    reviewedAt: '2026-09-22T02:00:00Z',
+    completedItems: 1,
+    totalItems: 6,
+    items: [{
+      itemKey: 'venue_booking', label: 'Venue booking is approved and suitable', checked: true,
+      note: 'Approved by Venue Staff', checkedBy: 'ec1', checkedAt: '2026-09-22T01:00:00Z',
+      updatedBy: 'ec1', updatedAt: '2026-09-22T01:00:00Z',
+    }],
+  }
+}
+
 function renderPage(basePath: string) {
   return render(
     <MemoryRouter initialEntries={[`${basePath}/events/${EVENT_ID}`]}>
@@ -58,7 +74,7 @@ function renderPage(basePath: string) {
   )
 }
 
-describe('EventDetailsPage — EO09 confirmed-arrangements view and Confirm action', () => {
+describe('EventDetailsPage — EO09 confirmed-arrangements and SO-C3 readiness view', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()
@@ -79,37 +95,37 @@ describe('EventDetailsPage — EO09 confirmed-arrangements view and Confirm acti
 
   it('shows coordinator planning actions while the event is pending', async () => {
     seedSession('coordinator')
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, pendingEvent())))
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return jsonResponse(200, url.endsWith('/readiness') ? readiness() : url.endsWith('/timeline') ? [] : pendingEvent())
+    }))
 
     renderPage('/coordinator')
 
-    expect(await screen.findByRole('button', { name: 'Confirm event' })).toBeInTheDocument()
+    expect(await screen.findByText(/A Safety Officer must complete the operational readiness review/)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Request equipment' })).toHaveAttribute(
       'href',
       `/coordinator/events/${EVENT_ID}/equipment-request`,
     )
+    expect(await screen.findByText('1 of 6 items complete')).toBeInTheDocument()
+    expect(screen.getByText(/Checked by ec1/)).toBeInTheDocument()
+    expect(screen.getByText('Current approval: rejected')).toBeInTheDocument()
+    expect(screen.getByText('Note: Recheck the venue setup')).toBeInTheDocument()
+    expect(screen.getByText(/Reviewed by so1/)).toBeInTheDocument()
   })
 
-  it('confirming reloads the event and hides the Confirm button once confirmed', async () => {
+  it('does not let an Event Coordinator confirm an event directly', async () => {
     seedSession('coordinator')
-    let confirmed = false
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
-      if (url === `/api/events/${EVENT_ID}/confirm` && init?.method === 'POST') {
-        confirmed = true
-        return jsonResponse(200, { ...pendingEvent(), status: 'confirmed' })
-      }
-      if (url === `/api/events/${EVENT_ID}`) {
-        return jsonResponse(200, confirmed ? { ...pendingEvent(), status: 'confirmed' } : pendingEvent())
-      }
+      if (url === `/api/events/${EVENT_ID}/readiness`) return jsonResponse(200, readiness())
+      if (url === `/api/events/${EVENT_ID}/timeline`) return jsonResponse(200, [])
+      if (url === `/api/events/${EVENT_ID}`) return jsonResponse(200, pendingEvent())
       throw new Error(`Unexpected fetch: ${init?.method ?? 'GET'} ${url}`)
     }))
-    const user = userEvent.setup()
     renderPage('/coordinator')
 
-    await user.click(await screen.findByRole('button', { name: 'Confirm event' }))
-
-    expect(await screen.findByText('Confirmed')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
   })
 

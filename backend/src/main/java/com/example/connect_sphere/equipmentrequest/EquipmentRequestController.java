@@ -65,6 +65,9 @@ public class EquipmentRequestController {
     @GetMapping("/events/{eventId}/equipment-requests")
     public List<EquipmentRequestDetailsResponse> forEvent(
             @AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
+        if ("so".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+            return service.listForSafetyOfficer(eventId);
+        }
         return service.listForEvent(userIdOf(jwt), eventId);
     }
 
