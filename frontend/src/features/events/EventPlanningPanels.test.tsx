@@ -76,6 +76,25 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
     expect(screen.getByText(/Pending venue review/)).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Request a venue' })).not.toBeInTheDocument()
   })
+
+  it('shows every active venue booking for the event', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { bookingId: 'b1', status: 'pending', venueId: 'v1', venueAddress: '1 Harbour Road',
+          venueCapacity: 160, bookingNotes: null, suitabilityNote: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1' },
+        { bookingId: 'b2', status: 'approved', venueId: 'v2', venueAddress: '2 Garden Lane',
+          venueCapacity: 200, bookingNotes: null, suitabilityNote: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    expect(await screen.findByText('1 Harbour Road')).toBeInTheDocument()
+    expect(screen.getByText('2 Garden Lane')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Venue bookings' })).toHaveTextContent('Approved')
+  })
 })
 
 describe('Cancelling a pending venue booking request (EC03)', () => {

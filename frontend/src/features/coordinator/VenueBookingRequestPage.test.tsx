@@ -51,7 +51,10 @@ function routes(bookings: unknown[] = [], post?: (body: unknown) => Response) {
     [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
     [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, OPTIONS),
     [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, bookings),
-    ...(post ? { [`POST /api/events/${EVENT}/venue-bookings`]: post } : {}),
+    ...(post ? {
+      [`POST /api/events/${EVENT}/venue-bookings`]: post,
+      [`POST /api/events/${EVENT}/venue-bookings/batch`]: post,
+    } : {}),
   }
 }
 
@@ -89,7 +92,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
       { bookingId: 'original', status: 'approved', venueAddress: 'Closed Hall', requiresAlternative: true },
     ]))
     renderPage()
-    expect(await screen.findByText(/already has a pending venue review booking request/)).toBeInTheDocument()
+    expect(await screen.findByText(/already has a replacement request/)).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Venues ranked for this event' })).not.toBeInTheDocument()
   })
   beforeEach(() => seedSession('coordinator'))
@@ -151,8 +154,29 @@ describe('VenueBookingRequestPage (EC03)', () => {
     await user.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
 
     expect(await screen.findByText('Event page')).toBeInTheDocument()
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+    expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({
       venueId: 'v1', bookingNotes: 'Stage needed', suitabilityNote: null,
+    })
+  })
+
+  it('reviews and submits multiple venues for the same event', async () => {
+    const calls = stubApi(routes([], () => jsonResponse(201, { status: 'pending' })))
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    await user.click(screen.getByRole('button', { name: /2 Garden Lane/ }))
+    expect(screen.getByRole('heading', { name: 'Review and submit 2 venues' })).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Why is this venue still suitable? (required)'), 'Ramp hire arranged')
+    expect(screen.getByRole('button', { name: 'Request 2 venues' })).toBeEnabled()
+    await user.click(screen.getByRole('button', { name: 'Request 2 venues' }))
+
+    expect(await screen.findByText('Event page')).toBeInTheDocument()
+    expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({
+      bookings: expect.arrayContaining([
+        expect.objectContaining({ venueId: 'v1', startDatetime: expect.any(String), endDatetime: expect.any(String) }),
+        expect.objectContaining({ venueId: 'v2', startDatetime: expect.any(String), endDatetime: expect.any(String) }),
+      ]),
     })
   })
 
@@ -173,14 +197,12 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ suitabilityNote: 'Ramp hire arranged' })
   })
 
-  it('an event that already has an active request cannot request another', async () => {
+  it('allows adding another venue when the event already has an active request', async () => {
     stubApi(routes([{ bookingId: 'b1', status: 'pending', venueId: 'v1', venueAddress: '1 Harbour Road',
       venueCapacity: 160, bookingNotes: null, suitabilityNote: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1' }]))
     renderPage()
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'This event already has a pending venue review booking request for 1 Harbour Road.')
-    expect(screen.queryByRole('list', { name: 'Venues ranked for this event' })).not.toBeInTheDocument()
+    expect(await screen.findByRole('list', { name: 'Venues ranked for this event' })).toBeInTheDocument()
   })
 
   it('shows rejection reason and alternative suggestions in coordinator booking history', async () => {

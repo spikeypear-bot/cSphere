@@ -176,19 +176,14 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
-    void anEventCanHaveOnlyOneActiveRequestUntilThatOneIsRejected() throws Exception {
+    void anEventCanHaveMultipleActiveRequestsForDifferentVenues() throws Exception {
         UUID eventId = event(150, "none");
         UUID first = venue(200, List.of());
         UUID second = venue(300, List.of());
         submit(eventId, "ec1", bookingFor(first)).andExpect(status().isCreated());
 
-        submit(eventId, "ec1", bookingFor(second)).andExpect(status().isConflict());
-        assertThat(bookingsFor(eventId)).isEqualTo(1);
-
-        sync();
-        jdbc.update("UPDATE venue_bookings SET status = 'rejected' WHERE event_id = ?", eventId);
-        sync();
         submit(eventId, "ec1", bookingFor(second)).andExpect(status().isCreated());
+        assertThat(bookingsFor(eventId)).isEqualTo(2);
     }
 
     @Test
