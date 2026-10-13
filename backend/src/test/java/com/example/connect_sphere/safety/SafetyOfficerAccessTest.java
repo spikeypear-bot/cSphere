@@ -97,9 +97,18 @@ class SafetyOfficerAccessTest {
                 .andExpect(jsonPath("$[0].venueAddress").value("1 Harbour Road"));
     }
 
+    /**
+     * EC08: the Safety Officer decides through /api/safety/.../approval; the
+     * confirm itself is the assigned coordinator's, so a Safety Officer (or a
+     * coordinator going around the Safety Officer) cannot use it to decide.
+     */
     @Test
-    void coordinatorConfirmationIsDeniedByTheRealSecurityConfiguration() throws Exception {
-        mockMvc.perform(post("/api/events/" + EVENT_ID + "/confirm").with(tokenFor("ec")))
+    void safetyOfficerCannotUseTheCoordinatorsConfirmAndCoordinatorCannotApprove() throws Exception {
+        mockMvc.perform(post("/api/events/" + EVENT_ID + "/confirm").with(tokenFor("safety_officer")))
+                .andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/safety/events/" + EVENT_ID + "/approval")
+                        .contentType("application/json").content("{\"decision\":\"approve\"}")
+                        .with(tokenFor("ec")))
                 .andExpect(status().isForbidden());
         verifyNoInteractions(readiness);
     }

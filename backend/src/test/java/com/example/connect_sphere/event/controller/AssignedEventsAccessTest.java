@@ -30,9 +30,10 @@ import com.example.connect_sphere.common.web.RestAuthenticationEntryPoint;
 import com.example.connect_sphere.config.JwtConfig;
 import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.event.dto.EventDto;
+import com.example.connect_sphere.event.service.EventArrangementsService;
+import com.example.connect_sphere.event.service.EventLifecycleService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
-import com.example.connect_sphere.safety.ReadinessService;
 
 /**
  * EC09: only an Event Coordinator may open "My events", and the list is
@@ -61,7 +62,10 @@ class AssignedEventsAccessTest {
     private EventRequestService eventRequestService;
 
     @MockitoBean
-    private ReadinessService readinessService;
+    private EventLifecycleService lifecycle;
+
+    @MockitoBean
+    private EventArrangementsService arrangements;
 
     /** A token for {@link #CALLER_ID} with the given role claim, run through the real converter. */
     private JwtRequestPostProcessor tokenFor(String roleClaim) {

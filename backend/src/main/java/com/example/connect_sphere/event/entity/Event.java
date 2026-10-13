@@ -96,6 +96,26 @@ public class Event {
     @Column(name = "coordinator_id")
     private UUID coordinatorId;
 
+    /** V22, EO04: when the Safety Officer approved the safety check. */
+    @Column(name = "safety_approved_at")
+    private OffsetDateTime safetyApprovedAt;
+
+    /** V22, EC08: the Safety Officer's latest feedback (changes requested or
+     * rejected), shown to the coordinator. */
+    @Column(name = "safety_feedback")
+    private String safetyFeedback;
+
+    /** V22, EO04: first confirmation, kept when the event is re-confirmed. */
+    @Column(name = "first_confirmed_at")
+    private OffsetDateTime firstConfirmedAt;
+
+    /** V22, EO04: latest confirmation. */
+    @Column(name = "confirmed_at")
+    private OffsetDateTime confirmedAt;
+
+    @Column(name = "confirmed_by")
+    private UUID confirmedBy;
+
     public Event() {
     }
 }

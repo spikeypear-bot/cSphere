@@ -2,6 +2,7 @@ import type { ActivityDto, ActivityTypeName } from '../../types/activity'
 import { FIELD_LABELS } from '../../types/eventRequest'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import { changedFields } from '../../lib/fieldChanges'
+import { JOURNEY_LABELS } from '../../types/status'
 import './ActivityTimeline.css'
 
 const ROLE_LABELS: Record<string, string> = {
@@ -13,7 +14,10 @@ const ROLE_LABELS: Record<string, string> = {
   attendee: 'Attendee',
 }
 
+// Request entries store request statuses; event entries (EC08 onwards) store
+// journey codes (EC-NEW2), so both are labelled here.
 const STATUS_LABELS: Record<string, string> = {
+  ...JOURNEY_LABELS,
   draft: 'Draft',
   pending: 'Submitted',
   clarification_required: 'Clarification required',
@@ -32,6 +36,13 @@ const TITLES: Record<ActivityTypeName, string> = {
   rejected: 'rejected the request',
   venue_booking_requested: 'requested a venue',
   venue_booking_cancelled: 'cancelled a venue booking request',
+  sent_for_safety_review: 'sent the event for its Operational Safety Check',
+  safety_review_withdrawn: 'withdrew the event from safety review',
+  safety_approved: 'approved the Operational Safety Check',
+  safety_changes_requested: 'asked for safety changes',
+  safety_rejected: 'rejected the safety arrangement',
+  returned_to_planning: 'returned the event to Planning',
+  event_confirmed: 'confirmed the event',
 }
 
 /** Venue entries move through booking statuses, not request statuses. */
@@ -56,7 +67,8 @@ function askedValues(entries: ActivityDto[], index: number) {
 }
 
 /** Entries whose message is a conversation turn, shown as a speech bubble. */
-const CONVERSATIONAL: ActivityTypeName[] = ['clarification_requested', 'clarification_responded', 'rejected']
+const CONVERSATIONAL: ActivityTypeName[] = ['clarification_requested', 'clarification_responded', 'rejected',
+  'safety_changes_requested', 'safety_rejected', 'safety_review_withdrawn', 'returned_to_planning']
 
 function exactTime(iso: string) {
   return new Intl.DateTimeFormat('en-SG', {

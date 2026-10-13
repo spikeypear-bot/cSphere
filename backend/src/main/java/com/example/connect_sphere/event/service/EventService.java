@@ -6,12 +6,17 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.repository.UserRepository;
+import com.example.connect_sphere.eventrequest.entity.EventRequest;
+import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
+import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
+import com.example.connect_sphere.notification.service.NotificationService;
 
 /**
  * The Event Coordinator/Organiser-facing event read model — see
@@ -22,17 +27,30 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Service
 public class EventService {
 
-    /** EC09: cancelled and completed events need no further planning. */
-    private static final List<EventStatus> ACTIVE_STATUSES = List.of(EventStatus.pending, EventStatus.confirmed);
+    /** EC09: cancelled and completed events need no further planning. Events
+     * in safety review (EC08) are still the coordinator's responsibility. */
+    private static final List<EventStatus> ACTIVE_STATUSES = List.of(EventStatus.pending,
+            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested, EventStatus.safety_approved,
+            EventStatus.confirmed);
 
     private final EventRepository repository;
     private final UserRepository userRepository;
+    private final NotificationService notificationService;
+    private final JourneyStatusResolver statuses;
+    private final EventLifecycleService lifecycle;
 
     public EventService(
             EventRepository repository,
-            UserRepository userRepository) {
+            EventRequestRepository eventRequestRepository,
+            UserRepository userRepository,
+            NotificationService notificationService,
+            JourneyStatusResolver statuses,
+            EventLifecycleService lifecycle) {
         this.repository = repository;
         this.userRepository = userRepository;
+        this.notificationService = notificationService;
+        this.statuses = statuses;
+        this.lifecycle = lifecycle;
     }
 
     /** EO09 "can view the confirmed event arrangements ... subject to the
@@ -65,6 +83,19 @@ public class EventService {
                 .stream().map(this::toDto).toList();
     }
 
+    /** EO09 "Confirmed". */
+    /**
+     * EC08: confirming now requires the Safety Officer's approval and every
+     * arrangement still in place (Week 7 Change #6); the rules live in
+     * {@link EventLifecycleService}. Kept here so the existing endpoint and
+     * its callers are unchanged.
+     */
+    @Transactional
+    public EventDto confirm(UUID actingCoordinatorId, UUID eventId) {
+        lifecycle.confirm(actingCoordinatorId, eventId);
+        return toDto(repository.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId)));
+    }
+
     private EventDto toDto(Event event) {
         String coordinatorName = null;
         String coordinatorEmail = null;
@@ -85,12 +116,17 @@ public class EventService {
                 event.getExpectedAttendance(),
                 event.getVenueId(),
                 event.getAccessibilityNeeds(),
+                event.getRequiredFacilities(),
                 event.getRegistrationNeeds(),
                 event.getOrganisation(),
                 event.getVenueRequirements(),
                 event.getEquipmentRequirements(),
                 event.getStatus().name(),
                 coordinatorName,
-                coordinatorEmail);
+                coordinatorEmail,
+                statuses.forEvent(event),
+                event.getSafetyFeedback(),
+                event.getSafetyApprovedAt(),
+                event.getConfirmedAt());
     }
 }

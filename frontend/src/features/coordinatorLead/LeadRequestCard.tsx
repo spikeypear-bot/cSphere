@@ -26,7 +26,7 @@ export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted',
     <Card className="lead-request-card">
       <div className="lead-request-card__head">
         <Heading>{request.eventName?.trim() || 'Untitled request'}</Heading>
-        <StatusBadge status={request.status} />
+        <StatusBadge status={request.status} journey={request.journeyStatus} />
       </div>
       <p className="lead-request-card__organisation">{request.organisation}</p>
       <dl className="lead-request-card__facts">

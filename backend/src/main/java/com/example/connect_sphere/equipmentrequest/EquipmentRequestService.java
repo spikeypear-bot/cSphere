@@ -64,7 +64,7 @@ public class EquipmentRequestService {
             UUID coordinatorId, UUID eventId, SubmitEquipmentRequest input) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
-        if (event.getStatus() != EventStatus.pending) {
+        if (!event.getStatus().isPlanningEditable()) {
             throw new EquipmentRequestStateException(
                     "Equipment can only be requested while the event is in Planning.");
         }

@@ -36,7 +36,23 @@ public enum ActivityType {
      * booking is decided and the event confirmed, not every venue tried. */
     venue_booking_requested(Set.of(UserRole.ec, UserRole.vs)),
     /** EC03: the coordinator withdrew a pending booking request. */
-    venue_booking_cancelled(Set.of(UserRole.ec, UserRole.vs));
+    venue_booking_cancelled(Set.of(UserRole.ec, UserRole.vs)),
+    /** EC08: arrangements complete; handed to the Safety Officer. Internal. */
+    sent_for_safety_review(Set.of(UserRole.ec)),
+    /** EC08: the coordinator took the event back before a safety decision. */
+    safety_review_withdrawn(Set.of(UserRole.ec)),
+    /** SO-C4: the Operational Safety Check passed. */
+    safety_approved(Set.of(UserRole.eo, UserRole.ec)),
+    /** SO-C6: the Safety Officer asked for changes. Internal. */
+    safety_changes_requested(Set.of(UserRole.ec)),
+    /** SO-C5: the Safety Officer rejected the safety arrangement. Internal. */
+    safety_rejected(Set.of(UserRole.ec)),
+    /** EC08/EC-NEW2: something the event depended on broke (e.g. a venue became
+     * unavailable), so it went back to Planning. The organiser sees that their
+     * arrangements are being re-confirmed. */
+    returned_to_planning(Set.of(UserRole.eo, UserRole.ec)),
+    /** EC08: the coordinator confirmed the event. */
+    event_confirmed(Set.of(UserRole.eo, UserRole.ec, UserRole.vs));
 
     private final Set<UserRole> audience;
 

@@ -113,7 +113,7 @@ function QueueSection({ title, hint, requests, renderAction }: {
                 </p>
               </div>
               <div className="review-queue__actions">
-                <StatusBadge status={request.status} />
+                <StatusBadge status={request.status} journey={request.journeyStatus} />
                 {renderAction(request)}
               </div>
             </Card>

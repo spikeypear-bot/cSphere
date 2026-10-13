@@ -9,7 +9,20 @@ package com.example.connect_sphere.event.entity;
  */
 public enum EventStatus {
     pending,
+    /** EC08 (V22): sent to the Safety Officer for the Operational Safety Check. */
+    awaiting_safety_review,
+    /** SO-C5/SO-C6 (V22): the Safety Officer asked for changes or rejected the
+     * safety arrangement; the coordinator revises and sends it again. */
+    safety_changes_requested,
+    /** SO-C4 (V22): cleared by the Safety Officer; ready for EC08's confirm. */
+    safety_approved,
     confirmed,
     cancelled,
-    completed
+    completed;
+
+    /** EC08: arrangements (venues, equipment) can still be changed — in
+     * Planning, or after the Safety Officer asked for changes. */
+    public boolean isPlanningEditable() {
+        return this == pending || this == safety_changes_requested;
+    }
 }

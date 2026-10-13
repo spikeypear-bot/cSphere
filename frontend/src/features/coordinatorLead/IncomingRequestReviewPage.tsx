@@ -210,7 +210,7 @@ export function IncomingRequestReviewPage() {
             createdByName={request.createdByName}
             updatedAt={request.updatedAt} timeline={timeline} />
         }
-        actions={<StatusBadge status={request.status} />}
+        actions={<StatusBadge status={request.status} journey={request.journeyStatus} />}
       />
 
       {actionError ? <Notice tone="danger">{actionError}</Notice> : null}

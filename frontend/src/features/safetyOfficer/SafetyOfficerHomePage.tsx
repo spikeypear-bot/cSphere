@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
+import { EVENT_STATUS_LABELS } from '../../types/event'
 import type { SafetyEventListItem } from './readinessTypes'
 import { useSafetyData } from './useSafetyData'
 import './safetyOfficer.css'
@@ -46,6 +47,12 @@ function EventList({ events }: { events: SafetyEventListItem[] }) {
           <Card className="safety-event-card">
             <div>
               <h3>{event.eventName}</h3>
+              {event.status !== 'confirmed' ? (
+                <span className={`status-badge status-badge--${event.status === 'awaiting_safety_review' ? 'pending' : 'approved'}`}
+                  data-status={event.status}>
+                  {EVENT_STATUS_LABELS[event.status] ?? event.status}
+                </span>
+              ) : null}
               <dl className="safety-event-facts">
                 <div><dt>Date and time</dt><dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd></div>
                 <div><dt>Venue</dt><dd>{event.venueAddress || 'Not finalised'}</dd></div>

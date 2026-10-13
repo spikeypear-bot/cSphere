@@ -15,7 +15,8 @@ const EVENT = {
   expectedAttendance: 150, venueId: 'venue-1', accessibilityNeeds: ['step_free_access'],
   requiredFacilities: ['stage'], registrationNeeds: true, organisation: 'Acme',
   venueRequirements: 'Theatre seating', equipmentRequirements: 'Microphones',
-  status: 'pending', coordinatorName: null, coordinatorEmail: null,
+  // EC08: the coordinator has sent it for its safety check.
+  status: 'awaiting_safety_review', coordinatorName: null, coordinatorEmail: null,
 }
 const READINESS: ReadinessDto = {
   eventId: EVENT_ID, approvalStatus: 'not_reviewed', approvalNote: null, reviewedBy: null, reviewedAt: null,
@@ -99,14 +100,44 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(await screen.findByText('1 Harbour Road')).toBeInTheDocument()
     expect(screen.getByText('Capacity')).toBeInTheDocument()
     expect(screen.getByText('Microphone × 2')).toBeInTheDocument()
-    const approve = await screen.findByRole('button', { name: 'Approve and confirm' })
+    const approve = await screen.findByRole('button', { name: 'Approve' })
     expect(approve).toBeDisabled()
 
     await user.click(screen.getByRole('checkbox', { name: 'Venue booking is approved and suitable' }))
 
     expect(await screen.findByText('1 of 6 items complete')).toBeInTheDocument()
     expect(screen.getByText(/Checked by so1/)).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Approve and confirm' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
     expect(calls.some((call) => call.method === 'PATCH')).toBe(true)
+  })
+
+  it('asks for a note before requesting changes, and sends the decision', async () => {
+    seedSession('safety-officer')
+    const complete = { ...READINESS, completedItems: 6, totalItems: 6 }
+    const calls = stubApi({
+      [`GET /api/safety/events/${EVENT_ID}`]: () => jsonResponse(200, EVENT),
+      [`GET /api/safety/events/${EVENT_ID}/readiness`]: () => jsonResponse(200, complete),
+      [`GET /api/venues/venue-1`]: () => jsonResponse(404, { message: 'not needed here' }),
+      [`GET /api/events/${EVENT_ID}/venue-bookings`]: () => jsonResponse(200, []),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, []),
+      [`GET /api/equipment/events/${EVENT_ID}/reservations`]: () => jsonResponse(200, []),
+      [`POST /api/safety/events/${EVENT_ID}/approval`]: () =>
+        jsonResponse(200, { ...complete, approvalStatus: 'changes_requested', approvalNote: 'Add a marshal' }),
+    })
+    const user = userEvent.setup()
+    render(<MemoryRouter initialEntries={[`/safety-officer/events/${EVENT_ID}`]}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer/events/:eventId" element={<SafetyEventDetailsPage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+
+    const requestChanges = await screen.findByRole('button', { name: 'Request changes' })
+    expect(requestChanges).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeEnabled()
+    await user.type(screen.getByLabelText('Note for the Event Coordinator'), 'Add a marshal')
+    await user.click(requestChanges)
+
+    expect(await screen.findByText('Current approval: changes requested')).toBeInTheDocument()
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ decision: 'request_changes', note: 'Add a marshal' })
   })
 })

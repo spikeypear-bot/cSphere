@@ -9,6 +9,13 @@ export type ActivityTypeName =
   | 'rejected'
   | 'venue_booking_requested'
   | 'venue_booking_cancelled'
+  | 'sent_for_safety_review'
+  | 'safety_review_withdrawn'
+  | 'safety_approved'
+  | 'safety_changes_requested'
+  | 'safety_rejected'
+  | 'returned_to_planning'
+  | 'event_confirmed'
 
 /** One entry of a request's timeline (V13 event_request_activity). The
  * server has already filtered out entries the viewer's role may not see. */

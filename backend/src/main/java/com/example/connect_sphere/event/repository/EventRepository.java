@@ -35,4 +35,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     /** Safety Officer queues; both planning and confirmed events are ordered soonest first. */
     List<Event> findByStatusOrderByStartDatetimeAsc(EventStatus status);
+
+    /** SO-C1 + EC08: every event not yet confirmed, soonest first. */
+    List<Event> findByStatusInOrderByStartDatetimeAsc(Collection<EventStatus> statuses);
 }

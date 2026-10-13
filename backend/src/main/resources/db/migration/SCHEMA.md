@@ -65,7 +65,7 @@ painful. Settle these before there is production data.
 | Type | Values | Used by |
 |---|---|---|
 | `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician`, `ecl` (V21), `safety_officer` (V22, SO-C1–SO-C4) | `users.role` |
-| `event_status` | `pending`, `confirmed`, `cancelled`, `completed` (`pending` added V12) | `events.status` |
+| `event_status` | `pending` (shown as Planning; added V12), `confirmed`, `cancelled`, `completed`; V23 adds `awaiting_safety_review`, `safety_changes_requested`, `safety_approved` (EC08) | `events.status` |
 | `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
 | `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
@@ -214,6 +214,11 @@ until its Safety Officer readiness review is approved, then becomes `confirmed`.
 | `venue_requirements` | `TEXT` | no | | Free-text venue needs |
 | `equipment_requirements` | `TEXT` | yes | | Free-text equipment needs. TODO — clarify against `equipment_requests.technical_requirement` |
 | `status` | `event_status` | no | | Lifecycle state |
+| `safety_approved_at` | `TIMESTAMPTZ` | yes | | V23. When the Safety Officer approved; cleared when the event returns to Planning |
+| `safety_feedback` | `TEXT` | yes | | V23. The Safety Officer's latest feedback when changes were requested |
+| `first_confirmed_at` | `TIMESTAMPTZ` | yes | | V23. First confirmation; never overwritten (EO04 "updated since") |
+| `confirmed_at` | `TIMESTAMPTZ` | yes | | V23. Latest confirmation |
+| `confirmed_by` | `UUID` | yes | FK → `users` | V23. The coordinator who last confirmed |
 
 ---
 
@@ -493,3 +498,7 @@ The schema uses Postgres types that plain JPA annotations do not map by default:
 V20 adds `venue_unavailability` (UUID primary key, required venue/creator foreign keys, required start/end `timestamptz`, trimmed nonblank reason up to 2000 characters, creation timestamp and strict end-after-start check). `venue_unavailability_bookings` links unavailable periods to affected bookings with a composite primary key. These links preserve history and do not replace operational issues.
 
 `venues` now has `setup_minutes` and `turnaround_minutes`, non-null integers defaulting to zero, constrained to 0–10080. `venue_bookings.replaces_booking_id` is a nullable self-reference. A partial unique index permits at most one pending replacement per original. `notifications.type` includes `venue_unavailable`, requiring a booking reference. See [VS01 API and consistency rules](../../../../../../docs/venue-unavailability-api.md).
+
+## V23 update — event safety review lifecycle (EC08, EC-NEW2, EO04)
+
+V23 adds three `event_status` values (`awaiting_safety_review`, `safety_changes_requested`, `safety_approved`) and five nullable `events` columns (`safety_approved_at`, `safety_feedback`, `first_confirmed_at`, `confirmed_at`, `confirmed_by` → `users`). Already-confirmed or completed events are backfilled so that `confirmed_at`/`first_confirmed_at` are not null. `notification_type` gains `event_confirmed`, `event_returned_to_planning` and `event_safety_approved`; `chk_notification_shape` requires an `event_id` for all three. `event_safety_reviews.review_status` (V22) also allows `changes_requested`. See decision-log D22.

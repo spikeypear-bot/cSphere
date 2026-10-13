@@ -7,6 +7,7 @@ import java.time.OffsetDateTime;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.connect_sphere.venue.repository.VenueRepository;
@@ -20,8 +21,10 @@ import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
 public class AvailabilityService {
     private final AvailabilityRepository repository;
     private final VenueRepository venues;
-    public AvailabilityService(AvailabilityRepository repository, VenueRepository venues) {
-        this.repository = repository; this.venues = venues;
+    private final ApplicationEventPublisher publisher;
+    public AvailabilityService(AvailabilityRepository repository, VenueRepository venues,
+            ApplicationEventPublisher publisher) {
+        this.repository = repository; this.venues = venues; this.publisher = publisher;
     }
     private void requireVenue(UUID id) {
         if (!venues.existsById(id)) throw new VenueNotFoundException(id);
@@ -75,6 +78,12 @@ public class AvailabilityService {
             throw new VenueBookingStateException("Affected bookings changed or need confirmation. Review the affected bookings again.");
         UUID key = UUID.randomUUID();
         repository.insert(key, id, actor, r, p.affectedBookings());
+        if (!p.affectedBookings().isEmpty()) {
+            // EC08: events relying on these bookings go back to Planning.
+            publisher.publishEvent(new VenueBecameUnavailable(
+                    p.affectedBookings().stream().map(Booking::eventId).distinct().toList(), actor,
+                    "A venue for this event became unavailable: " + r.reason().strip()));
+        }
         return repository.periods(id).stream().filter(x -> x.unavailabilityId().equals(key)).findFirst().orElseThrow();
     }
 
