@@ -19,5 +19,7 @@ public record EventVenueBookingDto(
         String submittedBy, boolean requiresAlternative, UUID replacesBookingId,
         UUID alternativeVenueId,
         String alternativeVenueAddress,
-        String alternativeArrangement) {
+        String alternativeArrangement,
+        OffsetDateTime startDatetime,
+        OffsetDateTime endDatetime) {
 }

@@ -162,43 +162,51 @@ public class VenueBookingRequestService {
                 throw new VenueBookingStateException("This booking does not require alternative arrangements.");
             if (active.stream().anyMatch(b -> !b.getBookingId().equals(original.getBookingId())))
                 throw new VenueBookingStateException("This event already has a replacement request. Resolve it first.");
-        } else if (!active.isEmpty()) {
-            throw new VenueBookingStateException("This event already has an active venue booking request.");
         }
         if (request == null || request.venueId() == null) {
             throw new InvalidVenueBookingException("Select a venue before submitting the booking request.");
         }
         Venue venue = venues.findForUpdate(request.venueId())
                 .orElseThrow(() -> new VenueNotFoundException(request.venueId()));
+        if (!replacement && active.stream().anyMatch(b -> b.getVenueId().equals(venue.getVenueId()))) {
+            throw new InvalidVenueBookingException("This venue has already been added to this event for the same time. Choose another venue.");
+        }
         String notes = optionalText(request.bookingNotes(), "Booking notes");
         String justification = optionalText(request.suitabilityNote(), "The justification");
+        OffsetDateTime start = request.startDatetime() == null ? event.getStartDatetime() : request.startDatetime();
+        OffsetDateTime end = request.endDatetime() == null ? event.getEndDatetime() : request.endDatetime();
+        if (start == null || end == null || !end.isAfter(start)) {
+            throw new InvalidVenueBookingException("Each venue must have an end date/time later than its start date/time.");
+        }
 
         VenueSuitability suitability = VenueSuitability.of(event, venue);
         if (!suitability.capacityOk()) {
             throw new InvalidVenueBookingException("Expected attendance (" + suitability.expectedAttendance()
                     + ") exceeds this venue's capacity (" + suitability.capacity() + ").");
         }
-        if (availability.unavailable(venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime()))
-            throw new InvalidVenueBookingException("This venue is unavailable during the event, setup or turnaround period. Choose another venue.");
-        List<VenueOptionDto.ConflictDto> conflicts = conflicts(event, venue);
+        if (availability.unavailable(venue.getVenueId(), start, end))
+            throw new InvalidVenueBookingException("Venue '" + venue.getVenueAddress()
+                    + "' is unavailable during the requested time, including setup or turnaround. Choose another venue.");
+        List<VenueOptionDto.ConflictDto> conflicts = conflicts(event, venue, start, end);
         if (!suitability.facilitiesOk()) {
             throw new InvalidVenueBookingException("This venue does not offer the required facilities: "
                     + String.join(", ", suitability.missingFacilities()) + ".");
         }
         List<VenueOptionDto.UnavailablePeriodDto> unavailable =
-                unavailableByVenue(event).getOrDefault(venue.getVenueId(), List.of());
+                unavailableByVenue(event, start, end).getOrDefault(venue.getVenueId(), List.of());
         List<VenueOptionDto.UnavailablePeriodDto> hoursUnavailable =
-                hoursByVenue(event).getOrDefault(venue.getVenueId(), List.of());
+                hoursByVenue(event, start, end).getOrDefault(venue.getVenueId(), List.of());
         if (!hoursUnavailable.isEmpty()) {
-            throw new InvalidVenueBookingException("This venue is outside its operating hours: "
+            throw new InvalidVenueBookingException("Venue '" + venue.getVenueAddress() + "' is outside its operating hours: "
                     + hoursUnavailable.get(0).description() + ".");
         }
         if (!unavailable.isEmpty()) {
-            throw new InvalidVenueBookingException("This venue is unavailable during the event period: "
+            throw new InvalidVenueBookingException("Venue '" + venue.getVenueAddress() + "' is unavailable during the requested period: "
                     + unavailable.get(0).description() + ".");
         }
         if (!conflicts.isEmpty()) {
-            throw new InvalidVenueBookingException("This venue already has an approved booking that overlaps the "
+            throw new InvalidVenueBookingException("Venue '" + venue.getVenueAddress()
+                    + "' already has an approved booking that overlaps the "
                     + "event's time (" + conflicts.get(0).eventName() + "). Choose another venue.");
         }
         if (suitability.needsJustification() && justification == null) {
@@ -211,6 +219,8 @@ public class VenueBookingRequestService {
         booking.setBookingId(UUID.randomUUID());
         booking.setVenueId(venue.getVenueId());
         booking.setEventId(eventId);
+        booking.setStartDatetime(start);
+        booking.setEndDatetime(end);
         booking.setReplacesBookingId(request.replacesBookingId());
         booking.setStatus(VenueBookingStatus.pending);
         booking.setBookingNotes(notes);
@@ -232,6 +242,28 @@ public class VenueBookingRequestService {
                     venueStaff, saved.getBookingId(), eventId, event.getEventName()));
         }
         return toDto(saved);
+    }
+
+    @Transactional
+    public List<EventVenueBookingDto> submitBatch(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest.Batch batch) {
+        if (batch == null || batch.bookings() == null || batch.bookings().isEmpty()) {
+            throw new InvalidVenueBookingException("Add at least one venue before submitting.");
+        }
+        List<SubmitVenueBookingRequest> requests = batch.bookings();
+        for (int i = 0; i < requests.size(); i++) {
+            for (int j = i + 1; j < requests.size(); j++) {
+                SubmitVenueBookingRequest a = requests.get(i);
+                SubmitVenueBookingRequest b = requests.get(j);
+                if (a != null && b != null && a.venueId() != null && a.venueId().equals(b.venueId())
+                        && a.startDatetime() != null && a.endDatetime() != null
+                        && b.startDatetime() != null && b.endDatetime() != null
+                        && a.startDatetime().isBefore(b.endDatetime())
+                        && a.endDatetime().isAfter(b.startDatetime())) {
+                    throw new InvalidVenueBookingException("The same venue cannot be added for overlapping times in one request.");
+                }
+            }
+        }
+        return requests.stream().map(request -> submit(coordinatorId, eventId, request)).toList();
     }
 
     /**
@@ -308,19 +340,28 @@ public class VenueBookingRequestService {
     }
 
     private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue) {
-        return availability.conflicts(venue.getVenueId(), event.getEventId(), event.getStartDatetime(), event.getEndDatetime())
+        return conflicts(event, venue, event.getStartDatetime(), event.getEndDatetime());
+    }
+
+    private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue, OffsetDateTime start, OffsetDateTime end) {
+        return availability.conflicts(venue.getVenueId(), event.getEventId(), start, end)
                 .stream().map(c -> new VenueOptionDto.ConflictDto(c.eventName(), c.startDateTime(), c.endDateTime())).toList();
     }
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(Event event) {
+        return unavailableByVenue(event, event.getStartDatetime(), event.getEndDatetime());
+    }
+
+    private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(
+            Event event, OffsetDateTime start, OffsetDateTime end) {
         if (operationalIssues == null) return Map.of();
-        if (event.getStartDatetime() == null || event.getEndDatetime() == null) {
+        if (start == null || end == null) {
             return Map.of();
         }
         return operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(
                         venues.findAll().stream().map(Venue::getVenueId).toList())
                 .stream()
-                .filter(issue -> overlaps(issue, event))
+                .filter(issue -> overlaps(issue, start, end))
                 .collect(Collectors.groupingBy(
                         VenueOperationalIssue::getVenueId,
                         Collectors.mapping(issue -> new VenueOptionDto.UnavailablePeriodDto(
@@ -328,19 +369,25 @@ public class VenueBookingRequestService {
                                 Collectors.toList())));
     }
 
-    private static boolean overlaps(VenueOperationalIssue issue, Event event) {
+    private static boolean overlaps(VenueOperationalIssue issue, OffsetDateTime start, OffsetDateTime end) {
         return issue.getAffectedFrom() != null && issue.getAffectedUntil() != null
-                && issue.getAffectedFrom().isBefore(event.getEndDatetime())
-                && issue.getAffectedUntil().isAfter(event.getStartDatetime());
+                && issue.getAffectedFrom().isBefore(end)
+                && issue.getAffectedUntil().isAfter(start);
     }
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue(Event event) {
+        return hoursByVenue(event, event.getStartDatetime(), event.getEndDatetime());
+    }
+
+    private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue(
+            Event event, OffsetDateTime startDatetime, OffsetDateTime endDatetime) {
         if (operatingHours == null) return Map.of();
-        if (event.getStartDatetime() == null || event.getEndDatetime() == null) return Map.of();
+        if (startDatetime == null || endDatetime == null) return Map.of();
         List<UUID> ids = venues.findAll().stream().map(Venue::getVenueId).toList();
         Map<UUID, List<VenueOperatingHour>> grouped = operatingHours.findByVenueIdIn(ids).stream()
                 .collect(Collectors.groupingBy(VenueOperatingHour::getVenueId));
-        return ids.stream().filter(id -> grouped.getOrDefault(id, List.of()).stream().noneMatch(hour -> covers(hour, event)))
+        return ids.stream().filter(id -> grouped.getOrDefault(id, List.of()).stream()
+                .noneMatch(hour -> covers(hour, startDatetime, endDatetime)))
                 .collect(Collectors.toMap(id -> id, id -> List.of(new VenueOptionDto.UnavailablePeriodDto(
                         grouped.containsKey(id) ? "No operating hours cover the requested event period"
                                 : "No operating hours have been configured",
@@ -348,8 +395,12 @@ public class VenueBookingRequestService {
     }
 
     private static boolean covers(VenueOperatingHour hour, Event event) {
-        var start = event.getStartDatetime().atZoneSameInstant(BUSINESS_ZONE);
-        var end = event.getEndDatetime().atZoneSameInstant(BUSINESS_ZONE);
+        return covers(hour, event.getStartDatetime(), event.getEndDatetime());
+    }
+
+    private static boolean covers(VenueOperatingHour hour, OffsetDateTime startDatetime, OffsetDateTime endDatetime) {
+        var start = startDatetime.atZoneSameInstant(BUSINESS_ZONE);
+        var end = endDatetime.atZoneSameInstant(BUSINESS_ZONE);
         LocalDate startDate = start.toLocalDate();
         LocalDate endDate = end.toLocalDate();
         if (!startDate.equals(endDate) || hour.getDayOfWeek() != startDate.getDayOfWeek().getValue()) return false;
@@ -390,12 +441,15 @@ public class VenueBookingRequestService {
                 : venues.findById(b.getAlternativeVenueId()).orElse(null);
         String submittedBy = b.getSubmittedBy() == null ? null
                 : users.findById(b.getSubmittedBy()).map(User::getUsername).orElse(null);
+        Event event = events.findById(b.getEventId()).orElse(null);
         return new EventVenueBookingDto(b.getBookingId(), b.getStatus(), b.getVenueId(),
                 venue == null ? null : venue.getVenueAddress(), venue == null ? null : venue.getVenueCapacity(),
                 b.getBookingNotes(), b.getSuitabilityNote(), b.getRejectReason(), b.getSubmittedAt(), submittedBy,
                 availability.affected(b.getBookingId()), b.getReplacesBookingId(),
                 b.getAlternativeVenueId(), alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
-                b.getAlternativeArrangement());
+                b.getAlternativeArrangement(),
+                b.getStartDatetime() == null && event != null ? event.getStartDatetime() : b.getStartDatetime(),
+                b.getEndDatetime() == null && event != null ? event.getEndDatetime() : b.getEndDatetime());
     }
 
     /** Same reason as EventRequestService.afterThisTransactionCommits: the

@@ -70,4 +70,12 @@ public class EventVenueBookingController {
             @RequestBody SubmitVenueBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.submit(userIdOf(jwt), eventId, request));
     }
+
+    @PostMapping("/venue-bookings/batch")
+    public ResponseEntity<List<EventVenueBookingDto>> submitBatch(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @RequestBody SubmitVenueBookingRequest.Batch request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.submitBatch(userIdOf(jwt), eventId, request));
+    }
 }

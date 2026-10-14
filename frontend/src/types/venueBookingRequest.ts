@@ -34,6 +34,8 @@ export interface EventVenueBookingDto {
   alternativeArrangement?: string | null
   submittedAt: string | null
   submittedBy: string | null
+  startDatetime?: string | null
+  endDatetime?: string | null
 }
 
 export const BOOKING_STATUS_LABELS: Record<VenueBookingStatus, string> = {
