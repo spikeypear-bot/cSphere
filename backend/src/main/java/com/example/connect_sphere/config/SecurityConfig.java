@@ -114,8 +114,9 @@ public class SecurityConfig{
 		    // ECL-C1 queue and ECL-C3 review, reject and clarification: Lead
 		    // only. Must sit above the blanket EO rule below.
 		    .requestMatchers("/api/event-requests/unassigned/**").hasRole("ECL")
-		    // ECL-C2 assignments list: Lead only, above the same blanket rule.
-		    .requestMatchers("/api/event-requests/assigned").hasRole("ECL")
+		    // ECL-C2 assignments list and ELC-C5 reassign action: Lead only,
+		    // above the same blanket rule.
+		    .requestMatchers("/api/event-requests/assigned", "/api/event-requests/assigned/**").hasRole("ECL")
 		    // Organisers only, deliberately narrower than D20's first draft.
 		    // Coordinators are internal (organisation "ConnectSphere") and no
 		    // Organiser belongs to it, so scoping them by their own claim would

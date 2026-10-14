@@ -1,7 +1,8 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { StatusFilter } from '../../components/ui/JourneyStatus'
@@ -13,9 +14,11 @@ import './CoordinatorAssignmentsPage.css'
 
 /** ECL-C2: every Event Coordinator with the requests they hold that are
  * still under review, in the server's order (coordinators by name, each
- * one's requests soonest event first). View-only: each card opens the
- * request's review page (ECL-C3). */
+ * one's requests soonest event first). Each card opens the request's
+ * review page (ECL-C3), where the Lead can reassign it (ELC-C5). */
 export function CoordinatorAssignmentsPage() {
+  // The outcome of a reassignment made on the review page.
+  const notice = (useLocation().state as { notice?: string } | null)?.notice
   // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
   const { data: coordinators, error, loading, retry } =
     useVenueRead<CoordinatorAssignmentsDto[]>('/event-requests/assigned', true)
@@ -40,6 +43,7 @@ export function CoordinatorAssignmentsPage() {
         }
       />
 
+      {notice ? <Notice>{notice}</Notice> : null}
       {error ? <p role="alert">Could not load coordinator assignments. {error}</p> : null}
       {loading && coordinators === undefined ? <p role="status">Loading coordinator assignments…</p> : null}
       {coordinators && total === 0 ? (

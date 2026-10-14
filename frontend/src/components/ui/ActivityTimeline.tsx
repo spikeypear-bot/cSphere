@@ -32,6 +32,7 @@ const STATUS_LABELS: Record<string, string> = {
 const TITLES: Record<ActivityTypeName, string> = {
   submitted: 'submitted the request',
   coordinator_assigned: 'assigned an Event Coordinator',
+  coordinator_reassigned: 'reassigned the Event Coordinator',
   clarification_requested: 'asked for clarification',
   clarification_responded: 'responded and resubmitted',
   approved: 'approved the request. Planning has started',

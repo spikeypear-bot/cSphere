@@ -44,6 +44,16 @@ describe('ActivityTimeline', () => {
     expect(entry).not.toHaveTextContent(/ecl1.*is coordinating/)
   })
 
+  it('says the Lead reassigned the coordinator and names the previous and the new one (ELC-C5)', () => {
+    render(<ActivityTimeline entries={[{ activityId: 'a5', type: 'coordinator_reassigned', actorName: 'ecl1',
+      actorRole: 'ecl', message: 'Reassigned from ec1 to ec2', flaggedFields: [], fromStatus: null, toStatus: null,
+      occurredAt: '2026-09-21T01:00:00Z' }]} />)
+
+    const entry = screen.getByRole('listitem')
+    expect(entry).toHaveTextContent('ecl1 (Event Coordinator Lead) reassigned the Event Coordinator')
+    expect(within(entry).getByText('Reassigned from ec1 to ec2')).toBeInTheDocument()
+  })
+
   it('shows the message, the flagged fields by name, and the status change', () => {
     render(<ActivityTimeline entries={entries} />)
 

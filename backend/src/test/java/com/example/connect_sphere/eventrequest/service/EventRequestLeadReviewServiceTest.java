@@ -3,6 +3,7 @@ package com.example.connect_sphere.eventrequest.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
@@ -42,9 +43,9 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * ECL-C3 and ELC-C6: the Event Coordinator Lead's review of an unassigned
- * request and its assignment to an Event Coordinator, with every repository
- * mocked. Each test is named after the acceptance criterion it checks, and
+ * ECL-C3, ELC-C6 and ELC-C5: the Event Coordinator Lead's review of an
+ * unassigned request, its assignment to an Event Coordinator and its
+ * reassignment to another, with every repository mocked. Each test is named after the acceptance criterion it checks, and
  * expected values come from the criteria, not from the code.
  */
 @Tag("unit")
@@ -61,6 +62,7 @@ class EventRequestLeadReviewServiceTest {
     private static final String ORG = "Acme Pte Ltd";
     private static final UUID LEAD = UUID.randomUUID();
     private static final UUID COORDINATOR = UUID.randomUUID();
+    private static final UUID PREVIOUS_COORDINATOR = UUID.randomUUID();
     private static final UUID ORGANISER = UUID.randomUUID();
     private static final UUID SECOND_ORGANISER = UUID.randomUUID();
     private static final OffsetDateTime STARTS = OffsetDateTime.parse("2027-03-01T09:00:00+08:00");
@@ -492,6 +494,199 @@ class EventRequestLeadReviewServiceTest {
                 COORDINATOR, request.getRequestId(), "Q1 Town Hall", "It is for our staff.");
     }
 
+    // ---- Reassigning (ELC-C5) ----------------------------------------
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
+    void reassigningMovesTheRequestToTheChosenCoordinatorAndKeepsItsStatus(EventRequestStatus status) {
+        EventRequest request = assignedToPrevious(status);
+        coordinator("ec2");
+
+        EventRequestDto result = service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        assertThat(result.coordinatorId()).isEqualTo(COORDINATOR);
+        assertThat(result.status()).isEqualTo(status);
+    }
+
+    @Test
+    void reassigningIsRecordedOnTheTimelineWithTheLeadAsTheActorAndBothCoordinatorsNames() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        coordinator("ec2");
+
+        service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(ActivityType.coordinator_reassigned);
+        assertThat(entry.getValue().actorUserId()).isEqualTo(LEAD);
+        assertThat(entry.getValue().message()).isEqualTo("Reassigned from ec1 to ec2");
+        // The status did not move, so the entry claims no status change.
+        assertThat(entry.getValue().fromStatus()).isNull();
+        assertThat(entry.getValue().toStatus()).isNull();
+    }
+
+    @Test
+    void reassigningDoesNotApproveTheRequestCreateAnEventOrChangeAnyOtherDetail() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        coordinator("ec2");
+
+        EventRequestDto result = service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        assertThat(result.eventId()).isNull();
+        verifyNoInteractions(eventRepository);
+        assertThat(result.eventName()).isEqualTo("Q1 Town Hall");
+        assertThat(result.organisation()).isEqualTo(ORG);
+        assertThat(result.purpose()).isEqualTo("All-hands update");
+        assertThat(result.description()).isEqualTo("Quarterly results and Q&A");
+        assertThat(result.startDatetime()).isEqualTo(STARTS);
+        assertThat(result.endDatetime()).isEqualTo(ENDS);
+        assertThat(result.expectedAttendance()).isEqualTo(150);
+        assertThat(result.venueRequirements()).isEqualTo("Theatre-style seating for 150");
+        assertThat(result.equipmentRequirements()).isEqualTo("Two wireless microphones");
+        assertThat(result.accessibilityNeeds()).containsExactly(AccessibilityFeature.none);
+        assertThat(result.registrationNeeds()).isTrue();
+        assertThat(result.rejectionReason()).isNull();
+        assertThat(request.getCreatedBy()).isEqualTo(ORGANISER);
+    }
+
+    @Test
+    void reassigningTellsTheOrganiserTheirCoordinatorChangedAndNotifiesNobodyElse() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        coordinator("ec2");
+
+        service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        // EO19's notice, marked as a reassignment and naming the new coordinator.
+        verify(notificationService).createCoordinatorAssignmentNotification(
+                ORGANISER, request.getRequestId(), null, "Q1 Town Hall", "ec2", "ec2@connectsphere.test", true);
+        // Telling either coordinator is a separate story (EC-NEW4).
+        verifyNoMoreInteractions(notificationService);
+    }
+
+    @Test
+    void reassigningWithoutChoosingACoordinatorIsBlockedAndNothingChanges() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, request.getRequestId(), null))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessage("A coordinator must be specified");
+        assertNothingChanged(request, EventRequestStatus.pending, PREVIOUS_COORDINATOR);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = UserRole.class, mode = EnumSource.Mode.EXCLUDE, names = "ec")
+    void aRequestCannotBeReassignedToAUserWhoIsNotAnEventCoordinator(UserRole otherRole) {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        coordinator("someone").setRole(otherRole);
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("is not an Event Coordinator");
+        assertNothingChanged(request, EventRequestStatus.pending, PREVIOUS_COORDINATOR);
+    }
+
+    @Test
+    void aRequestCannotBeReassignedToAUserThatDoesNotExist() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        when(userRepository.findById(COORDINATOR)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("is not an Event Coordinator");
+        assertNothingChanged(request, EventRequestStatus.pending, PREVIOUS_COORDINATOR);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
+    void aRequestCannotBeReassignedToTheCoordinatorItAlreadyHas(EventRequestStatus status) {
+        EventRequest request = assignedToPrevious(status);
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, request.getRequestId(), PREVIOUS_COORDINATOR))
+                .isInstanceOf(InvalidCoordinatorException.class)
+                .hasMessageContaining("already assigned to that Event Coordinator");
+        assertNothingChanged(request, status, PREVIOUS_COORDINATOR);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
+    void aRequestWithNoCoordinatorCannotBeReassigned(EventRequestStatus status) {
+        EventRequest request = stored(status, null);
+        coordinator("ec2");
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("has no Event Coordinator yet");
+        assertNothingChanged(request, status, null);
+    }
+
+    @ParameterizedTest
+    @EnumSource(value = EventRequestStatus.class, names = {"approved", "rejected", "cancelled"})
+    void aRequestDecidedSinceThePageLoadedCannotBeReassigned(EventRequestStatus status) {
+        EventRequest request = assignedToPrevious(status);
+        coordinator("ec2");
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR))
+                .isInstanceOf(EventRequestStateException.class)
+                .hasMessageContaining("can no longer be reassigned");
+        assertNothingChanged(request, status, PREVIOUS_COORDINATOR);
+    }
+
+    @Test
+    void aDraftCannotBeReassignedAndIsReportedAsNotFound() {
+        EventRequest draft = assignedToPrevious(EventRequestStatus.draft);
+        coordinator("ec2");
+
+        assertThatThrownBy(() -> service.reassignCoordinator(LEAD, draft.getRequestId(), COORDINATOR))
+                .isInstanceOf(EventRequestNotFoundException.class);
+        assertNothingChanged(draft, EventRequestStatus.draft, PREVIOUS_COORDINATOR);
+    }
+
+    @Test
+    void afterReassignmentThePreviousCoordinatorCanNoLongerOpenOrDecideTheRequest() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        coordinator("ec2");
+        service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+        UUID id = request.getRequestId();
+
+        assertThatThrownBy(() -> service.getForReview(PREVIOUS_COORDINATOR, id))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThatThrownBy(() -> service.approve(PREVIOUS_COORDINATOR, id))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThatThrownBy(() -> service.reject(PREVIOUS_COORDINATOR, id, "Not suitable"))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThatThrownBy(() -> service.requestClarification(PREVIOUS_COORDINATOR, id, "Which hall?", List.of()))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThat(request.getStatus()).isEqualTo(EventRequestStatus.pending);
+        assertThat(request.getCoordinatorId()).isEqualTo(COORDINATOR);
+    }
+
+    @Test
+    void afterReassignmentTheNewCoordinatorCanOpenTheRequest() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.pending);
+        coordinator("ec2");
+        service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        EventRequestReviewDto review = service.getForReview(COORDINATOR, request.getRequestId());
+
+        assertThat(review.request().requestId()).isEqualTo(request.getRequestId());
+    }
+
+    @Test
+    void whenTheOrganiserResubmitsARequestReassignedWhileItWaitedOnlyTheNewCoordinatorIsTold() {
+        EventRequest request = assignedToPrevious(EventRequestStatus.clarification_required);
+        coordinator("ec2");
+        service.reassignCoordinator(LEAD, request.getRequestId(), COORDINATOR);
+
+        EventRequestDto result = service.resubmit(ORG, ORGANISER, request.getRequestId(), "It is for our staff.");
+
+        assertThat(result.status()).isEqualTo(EventRequestStatus.pending);
+        assertThat(result.coordinatorId()).isEqualTo(COORDINATOR);
+        verify(notificationService).createClarificationRespondedNotification(
+                COORDINATOR, request.getRequestId(), "Q1 Town Hall", "It is for our staff.");
+        verify(notificationService, never()).createClarificationRespondedNotification(
+                eq(PREVIOUS_COORDINATOR), any(), any(), any());
+    }
+
     // ---- Fixtures -----------------------------------------------------
 
     /** A refused action leaves the request as it was, with no timeline
@@ -535,13 +730,24 @@ class EventRequestLeadReviewServiceTest {
 
     /** Makes COORDINATOR a real Event Coordinator account the Lead can pick. */
     private User coordinator(String username) {
+        return coordinator(COORDINATOR, username);
+    }
+
+    private User coordinator(UUID id, String username) {
         User user = new User();
-        user.setUserId(COORDINATOR);
+        user.setUserId(id);
         user.setUsername(username);
         user.setEmail(username + "@connectsphere.test");
         user.setRole(UserRole.ec);
-        when(userRepository.findById(COORDINATOR)).thenReturn(Optional.of(user));
+        when(userRepository.findById(id)).thenReturn(Optional.of(user));
         return user;
+    }
+
+    /** A request in {@code status} that Event Coordinator ec1
+     * (PREVIOUS_COORDINATOR) currently holds. */
+    private EventRequest assignedToPrevious(EventRequestStatus status) {
+        coordinator(PREVIOUS_COORDINATOR, "ec1");
+        return stored(status, PREVIOUS_COORDINATOR);
     }
 
     private static User organiser(UUID id) {

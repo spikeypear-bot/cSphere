@@ -24,6 +24,9 @@ public enum ActivityType {
     submitted(Set.of(UserRole.eo, UserRole.ec)),
     /** ELC-C6: the Lead assigned an Event Coordinator, named in the message. */
     coordinator_assigned(Set.of(UserRole.eo, UserRole.ec)),
+    /** ELC-C5: the Lead moved the request to another Event Coordinator;
+     * the message names both. */
+    coordinator_reassigned(Set.of(UserRole.eo, UserRole.ec)),
     /** EC01: the coordinator asked for missing/unclear information. */
     clarification_requested(Set.of(UserRole.eo, UserRole.ec)),
     /** EO26: the organiser answered and resubmitted. */

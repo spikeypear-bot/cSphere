@@ -3,6 +3,7 @@
 export type ActivityTypeName =
   | 'submitted'
   | 'coordinator_assigned'
+  | 'coordinator_reassigned'
   | 'clarification_requested'
   | 'clarification_responded'
   | 'approved'
