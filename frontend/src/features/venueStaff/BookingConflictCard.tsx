@@ -1,7 +1,7 @@
 import { Card } from '../../components/ui/Card'
 import type { VenueBookingConflict, VenueBookingDto, VenueUnavailabilityConflict } from '../../types/venueBooking'
 import { bookingConflictHighlights } from './bookingConflictHighlights'
-import { formatEventDateTime } from './formatEventDateTime'
+import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
 
 export function BookingConflictCard({ conflict, request }: {
   conflict: VenueBookingConflict
@@ -14,8 +14,14 @@ export function BookingConflictCard({ conflict, request }: {
         <dd className="booking-conflict-card__id">Booking ID: {conflict.bookingId}</dd></div>
       <div><dt>Starts</dt><dd><ConflictDateTime value={conflict.startDatetime} highlighted={highlights.existingStart} /></dd></div>
       <div><dt>Ends</dt><dd><ConflictDateTime value={conflict.endDatetime} highlighted={highlights.existingEnd} /></dd></div>
-      <div><dt>Setup Period</dt><dd>Not available yet</dd></div>
-      <div><dt>Turnaround Period</dt><dd>Not available yet</dd></div>
+      <div><dt>Setup Period</dt><dd>{conflict.setupDurationMinutes == null || !conflict.effectiveStart ? 'Timing data unavailable. Refresh booking details.'
+        : conflict.setupDurationMinutes === 0 ? '0 minutes (no setup period)'
+        : `${conflict.setupDurationMinutes} minutes · ${formatEventTimeRange(conflict.effectiveStart, conflict.startDatetime)}`}</dd></div>
+      <div><dt>Turnaround Period</dt><dd>{conflict.turnaroundDurationMinutes == null || !conflict.effectiveEnd ? 'Timing data unavailable. Refresh booking details.'
+        : conflict.turnaroundDurationMinutes === 0 ? '0 minutes (no turnaround period)'
+        : `${conflict.turnaroundDurationMinutes} minutes · ${formatEventTimeRange(conflict.endDatetime, conflict.effectiveEnd)}`}</dd></div>
+      {conflict.effectiveStart && conflict.effectiveEnd && <div className="booking-conflict-card__name"><dt>Venue Occupied</dt>
+        <dd>{formatEventTimeRange(conflict.effectiveStart, conflict.effectiveEnd)}</dd></div>}
     </dl>
   </Card>
 }

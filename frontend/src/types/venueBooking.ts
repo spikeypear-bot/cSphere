@@ -5,6 +5,10 @@ export interface VenueBookingConflict {
   eventName: string
   startDatetime: string
   endDatetime: string
+  setupDurationMinutes?: number
+  turnaroundDurationMinutes?: number
+  effectiveStart?: string
+  effectiveEnd?: string
 }
 
 export interface VenueUnavailabilityConflict {
@@ -15,6 +19,7 @@ export interface VenueUnavailabilityConflict {
 }
 
 export interface VenueBookingDto {
+  timing?: import('./bookingTiming').BookingTiming
   bookingId: string
   requiresAlternative?: boolean
   replacesBookingId?: string | null

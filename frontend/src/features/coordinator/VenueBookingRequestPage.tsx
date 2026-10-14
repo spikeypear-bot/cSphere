@@ -15,6 +15,26 @@ import {
 } from '../../types/venueBookingRequest'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './VenueBookingRequestPage.css'
+import { validMinutes, occupiedPeriod } from '../../lib/bookingTiming'
+import { BookingTimingSummary } from '../../components/BookingTimingSummary'
+
+type BookingInput = { start: string; end: string; setup: string; turnaround: string; reason: string }
+type TimingReview = { key: string; option?: VenueOptionDto; error?: string }
+function singaporeInput(value: string) {
+  return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Singapore', year: 'numeric', month: '2-digit',
+    day: '2-digit', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(value)).replace(' ', 'T')
+}
+function instant(value: string) { return new Date(value + '+08:00').toISOString() }
+function validInput(input: BookingInput | undefined): input is BookingInput {
+  return !!input && validMinutes(input.setup) && validMinutes(input.turnaround)
+    && Number.isFinite(Date.parse(input.start + '+08:00'))
+    && Date.parse(input.end + '+08:00') > Date.parse(input.start + '+08:00')
+}
+function timingKey(input: BookingInput) { return [input.start, input.end, input.setup, input.turnaround].join('|') }
+function changedTiming(input: BookingInput, option: VenueOptionDto, event: EventDto) {
+  return input.start !== singaporeInput(event.startDatetime) || input.end !== singaporeInput(event.endDatetime)
+    || Number(input.setup) !== (option.venue.setupMinutes ?? 0) || Number(input.turnaround) !== (option.venue.turnaroundMinutes ?? 0)
+}
 
 const MAX_TEXT = 2000
 
@@ -50,11 +70,34 @@ export function VenueBookingRequestPage() {
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
-  const [bookingTimes, setBookingTimes] = useState<Record<string, { start: string; end: string }>>({})
+  const [bookingTimes, setBookingTimes] = useState<Record<string, BookingInput>>({})
   const [notes, setNotes] = useState('')
   const [justification, setJustification] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [submitError, setSubmitError] = useState<string | null>(null)
+  const [timingReviews, setTimingReviews] = useState<Record<string, TimingReview>>({})
+  const [retry, setRetry] = useState(0)
+
+  useEffect(() => {
+    if (!eventId || !event || !options) return
+    let active = true
+    const timer = setTimeout(() => {
+      for (const id of selectedIds) {
+        const input = bookingTimes[id]
+        const option = options.find(o => o.venue.venueId === id)
+        if (!option || !validInput(input) || !changedTiming(input, option, event)) continue
+        const key = timingKey(input)
+        const params = new URLSearchParams({ setupDurationMinutes: input.setup, turnaroundDurationMinutes: input.turnaround,
+          startDatetime: instant(input.start), endDatetime: instant(input.end) })
+        apiClient.get<VenueOptionDto[]>('/events/' + eventId + '/venue-options?' + params).then(values => {
+          if (active) setTimingReviews(current => ({ ...current, [id]: { key, option: values.find(o => o.venue.venueId === id) } }))
+        }).catch((error: unknown) => {
+          if (active) setTimingReviews(current => ({ ...current, [id]: { key, error: error instanceof Error ? error.message : 'Could not check occupied time.' } }))
+        })
+      }
+    }, 250)
+    return () => { active = false; clearTimeout(timer) }
+  }, [eventId, event, options, selectedIds, bookingTimes, retry])
 
   useEffect(() => {
     if (!eventId) return
@@ -106,27 +149,38 @@ export function VenueBookingRequestPage() {
   const replacing = activeBookings.length === 1 && activeBookings[0].requiresAlternative ? activeBookings[0] : null
   const replacementPending = activeBookings.some((booking) => booking.replacesBookingId)
   const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
-  const needsJustification = selected.some((o) => o.verdict === 'needs_justification')
+  const reviewed = (option: VenueOptionDto) => {
+    const input = bookingTimes[option.venue.venueId]
+    if (!validInput(input)) return undefined
+    if (!changedTiming(input, option, event)) return option
+    const review = timingReviews[option.venue.venueId]
+    return review?.key === timingKey(input) ? review.option : undefined
+  }
+  const needsJustification = selected.some(o => reviewed(o)?.verdict === 'needs_justification')
   const notesTooLong = notes.trim().length > MAX_TEXT
   const justificationTooLong = justification.trim().length > MAX_TEXT
   const timesValid = selected.every((option) => {
     const times = bookingTimes[option.venue.venueId]
-    return times && times.start && times.end && new Date(times.end).getTime() > new Date(times.start).getTime()
+    return validInput(times) && times.reason.trim().length <= MAX_TEXT
+      && ((Number(times.setup) === (option.venue.setupMinutes ?? 0) && Number(times.turnaround) === (option.venue.turnaroundMinutes ?? 0)) || !!times.reason.trim())
   })
-  const canSubmit = selected.length > 0 && selected.every((o) => o.verdict !== 'blocked') && !notesTooLong && !justificationTooLong
+  const canSubmit = selected.length > 0 && selected.every(o => !!reviewed(o) && reviewed(o)?.verdict !== 'blocked') && !notesTooLong && !justificationTooLong
     && timesValid && (!needsJustification || justification.trim().length > 0)
 
   async function submit() {
-    if (selected.length === 0 || !eventId) return
+    if (!canSubmit || !eventId) return
     setSubmitting(true)
     setSubmitError(null)
     try {
       const requests = selected.map((option, index) => ({
           venueId: option.venue.venueId,
           bookingNotes: notes.trim() || null,
-          suitabilityNote: option.verdict === 'needs_justification' ? justification.trim() : null,
-          startDatetime: new Date(bookingTimes[option.venue.venueId].start).toISOString(),
-          endDatetime: new Date(bookingTimes[option.venue.venueId].end).toISOString(),
+          suitabilityNote: reviewed(option)?.verdict === 'needs_justification' ? justification.trim() : null,
+          startDatetime: instant(bookingTimes[option.venue.venueId].start),
+          endDatetime: instant(bookingTimes[option.venue.venueId].end),
+          setupDurationMinutes: Number(bookingTimes[option.venue.venueId].setup),
+          turnaroundDurationMinutes: Number(bookingTimes[option.venue.venueId].turnaround),
+          timingNote: bookingTimes[option.venue.venueId].reason.trim() || null,
           ...(replacing && index === 0 ? { replacesBookingId: replacing.bookingId } : {}),
         }))
       if (requests.length === 1) {
@@ -144,7 +198,7 @@ export function VenueBookingRequestPage() {
     }
   }
 
-  const blockedReason = event.status !== 'pending' && !(event.status === 'confirmed' && replacing)
+  const blockedReason = event.status !== 'pending' && event.status !== 'safety_changes_requested' && !(event.status === 'confirmed' && replacing)
     ? 'Venue booking requests can only be made while the event is in Planning.'
     : replacementPending && !replacing
       ? 'This event already has a replacement request. Resolve it before requesting another replacement.'
@@ -169,7 +223,7 @@ export function VenueBookingRequestPage() {
             <div><dt>Accessibility</dt><dd>{event.accessibilityNeeds.map(accessibilityLabel).join(', ') || 'None stated'}</dd></div>
             {event.equipmentRequirements ? <div><dt>Equipment</dt><dd>{event.equipmentRequirements}</dd></div> : null}
           </dl>
-          <p className="field-hint">Each selected venue can have its own date and time.</p>
+          <p className="field-hint">Each selected venue has its own booking times, setup and turnaround. Times are in Singapore time. Advertised event times stay unchanged.</p>
         </Card>
 
         <div className="venue-request__main">
@@ -210,8 +264,9 @@ export function VenueBookingRequestPage() {
                           setBookingTimes((current) => current[option.venue.venueId] ? current : {
                             ...current,
                             [option.venue.venueId]: {
-                              start: event.startDatetime.slice(0, 16),
-                              end: event.endDatetime.slice(0, 16),
+                              start: singaporeInput(event.startDatetime),
+                              end: singaporeInput(event.endDatetime),
+                              setup: String(option.venue.setupMinutes ?? 0), turnaround: String(option.venue.turnaroundMinutes ?? 0), reason: '',
                             },
                           })
                           setSubmitError(null)
@@ -228,27 +283,25 @@ export function VenueBookingRequestPage() {
                     {selected.map((option) => (
                       <li key={option.venue.venueId}>
                         <strong>{option.venue.venueAddress}</strong>
-                        <label>Start
-                          <input type="datetime-local" value={bookingTimes[option.venue.venueId]?.start ?? ''}
-                            onChange={(e) => setBookingTimes((current) => ({
-                              ...current, [option.venue.venueId]: { ...current[option.venue.venueId], start: e.target.value },
-                            }))} />
-                        </label>
-                        <label>End
-                          <input type="datetime-local" value={bookingTimes[option.venue.venueId]?.end ?? ''}
-                            onChange={(e) => setBookingTimes((current) => ({
-                              ...current, [option.venue.venueId]: { ...current[option.venue.venueId], end: e.target.value },
-                            }))} />
-                        </label>
+                        <BookingTimingInputs option={option} input={bookingTimes[option.venue.venueId]} disabled={submitting}
+                          onChange={input => setBookingTimes(current => ({ ...current, [option.venue.venueId]: input }))} />
+                        {changedTiming(bookingTimes[option.venue.venueId], option, event) && validInput(bookingTimes[option.venue.venueId]) && !reviewed(option) && (
+                          timingReviews[option.venue.venueId]?.key === timingKey(bookingTimes[option.venue.venueId])
+                            ? <p role="alert">{timingReviews[option.venue.venueId]?.error ?? 'Could not check this venue.'} <Button onClick={() => setRetry(n => n + 1)}>Retry timing check</Button></p>
+                            : <p role="status">Checking occupied time…</p>
+                        )}
+                        {reviewed(option) && <SuitabilitySummary option={reviewed(option)!} />}
+                        {reviewed(option) && changedTiming(bookingTimes[option.venue.venueId], option, event) &&
+                          <ul>{reviewed(option)!.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
                         <Button onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
                           Remove
                         </Button>
                       </li>
                     ))}
                   </ul>
-                  {selected.length === 1 ? <><SuitabilitySummary option={selected[0]} />
+                  {selected.length === 1 ? <>
                     <VenueDetails venue={selected[0].venue} />
-                    <Comparison event={event} option={selected[0]} /></> : null}
+                    <Comparison event={event} option={reviewed(selected[0]) ?? selected[0]} input={bookingTimes[selected[0].venue.venueId]} /></> : null}
 
                   {needsJustification ? (
                     <div className="venue-request__field">
@@ -294,6 +347,7 @@ export function VenueBookingRequestPage() {
                     {b.rejectReason ? <> · Reason: {b.rejectReason}</> : null}
                     {b.alternativeVenueAddress ? <> · Suggested venue: {b.alternativeVenueAddress}</> : null}
                     {b.alternativeArrangement ? <> · Alternative arrangement: {b.alternativeArrangement}</> : null}
+                    <BookingTimingSummary timing={b.timing} />
                   </li>
                 ))}
               </ul>
@@ -303,6 +357,30 @@ export function VenueBookingRequestPage() {
       </div>
     </div>
   )
+}
+
+function BookingTimingInputs({ option, input, disabled, onChange }: {
+  option: VenueOptionDto; input: BookingInput; disabled: boolean; onChange: (input: BookingInput) => void
+}) {
+  const custom = Number(input.setup) !== (option.venue.setupMinutes ?? 0)
+    || Number(input.turnaround) !== (option.venue.turnaroundMinutes ?? 0)
+  return <fieldset disabled={disabled} aria-label={'Timings for ' + option.venue.venueAddress}>
+    <legend>Booking times (Singapore time)</legend>
+    <label>Start<input type="datetime-local" value={input.start} onChange={e => onChange({ ...input, start: e.target.value })} /></label>
+    <label>End<input type="datetime-local" value={input.end} onChange={e => onChange({ ...input, end: e.target.value })} /></label>
+    <p>Venue defaults: {option.venue.setupMinutes ?? 0} minutes setup / {option.venue.turnaroundMinutes ?? 0} minutes turnaround.</p>
+    <label>Setup (minutes)<input type="number" min="0" max="10080" step="1" value={input.setup}
+      onChange={e => onChange({ ...input, setup: e.target.value })} /></label>
+    <label>Turnaround (minutes)<input type="number" min="0" max="10080" step="1" value={input.turnaround}
+      onChange={e => onChange({ ...input, turnaround: e.target.value })} /></label>
+    {custom && <label>Reason for different timings (required)<textarea maxLength={MAX_TEXT} value={input.reason}
+      onChange={e => onChange({ ...input, reason: e.target.value })} /></label>}
+    {!validInput(input) && <p role="alert">Enter an end after the start and whole durations from 0 to 10,080 minutes.</p>}
+    {validInput(input) && <BookingTimingSummary timing={{ startDatetime: instant(input.start), endDatetime: instant(input.end),
+      setupDurationMinutes: Number(input.setup), turnaroundDurationMinutes: Number(input.turnaround),
+      ...occupiedPeriod(instant(input.start), instant(input.end), Number(input.setup), Number(input.turnaround)),
+      timingNote: input.reason || null, conflicts: [] }} />}
+  </fieldset>
 }
 
 function VenueDetails({ venue }: { venue: VenueOptionDto['venue'] }) {
@@ -359,7 +437,7 @@ function VenueOptionCard({ option, attendance, selected, onSelect }: {
       ) : null}
       {option.conflicts.map((c) => (
         <span key={c.startDatetime + c.eventName} className="venue-option__conflict">
-          Booked: {c.eventName}, {timeRange(c.startDatetime, c.endDatetime)}
+          Occupied: {c.eventName}, {timeRange(c.startDatetime, c.endDatetime)}
         </span>
       ))}
       {(option.unavailablePeriods ?? []).map((period) => (
@@ -403,7 +481,8 @@ function SuitabilitySummary({ option }: { option: VenueOptionDto }) {
   )
 }
 
-function Comparison({ event, option }: { event: EventDto; option: VenueOptionDto }) {
+function Comparison({ event, option, input }: { event: EventDto; option: VenueOptionDto; input: BookingInput }) {
+  const period = validInput(input) ? occupiedPeriod(instant(input.start), instant(input.end), Number(input.setup), Number(input.turnaround)) : null
   const { venue } = option
   const needs = event.accessibilityNeeds.filter((n) => n !== 'none')
   return (
@@ -419,7 +498,7 @@ function Comparison({ event, option }: { event: EventDto; option: VenueOptionDto
         </tr>
         <tr data-ok={(option.unavailablePeriods ?? []).length === 0 && option.conflicts.length === 0}>
           <th scope="row">Availability</th>
-          <td>{timeRange(event.startDatetime, event.endDatetime)}</td>
+          <td>{period ? timeRange(period.effectiveStart, period.effectiveEnd) : 'Enter valid booking times'}</td>
           <td>{(option.unavailablePeriods ?? []).length
             ? `Unavailable: ${(option.unavailablePeriods ?? []).map((p) => p.description).join(', ')} ✗`
             : option.conflicts.length
@@ -458,7 +537,7 @@ function Comparison({ event, option }: { event: EventDto; option: VenueOptionDto
         </tr>
         <tr>
           <th scope="row">Opening hours</th>
-          <td>{timeRange(event.startDatetime, event.endDatetime)}</td>
+          <td>{period ? timeRange(period.effectiveStart, period.effectiveEnd) : 'Enter valid booking times'}</td>
           <td>{venue.operatingInformation}</td>
         </tr>
       </tbody>

@@ -246,7 +246,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
-            case venue_unavailable -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
             // Sent to Venue Staff and Technical Support alike; neither has an
             // event page of its own yet, so the notification itself carries

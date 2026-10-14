@@ -5,6 +5,8 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { venueFacilities, venueFacilityLabels, type Facility, type VenueDto } from '../../types/venue'
 import './VenueSearchPage.css'
+import { BookingTimingSummary } from '../../components/BookingTimingSummary'
+import { occupiedPeriod } from '../../lib/bookingTiming'
 
 function parseLocalDateTime(value: string): Date | null {
   const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value)
@@ -167,6 +169,12 @@ export function VenueSearchPage() {
                       ? venue.venueFacilities.map(facility => venueFacilityLabels[facility]).join(', ')
                       : 'No facilities listed'}</p>
                     <p>{venue.operatingInformation}</p>
+                    {startDatetime && endDatetime && <BookingTimingSummary timing={{
+                      setupDurationMinutes: venue.setupMinutes ?? 0, turnaroundDurationMinutes: venue.turnaroundMinutes ?? 0,
+                      startDatetime: parseLocalDateTime(startDatetime)!.toISOString(), endDatetime: parseLocalDateTime(endDatetime)!.toISOString(),
+                      ...occupiedPeriod(parseLocalDateTime(startDatetime)!.toISOString(), parseLocalDateTime(endDatetime)!.toISOString(),
+                        venue.setupMinutes ?? 0, venue.turnaroundMinutes ?? 0), timingNote: null, conflicts: [],
+                    }} />}
                   </Card>
                 </li>
               ))}

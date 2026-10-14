@@ -300,3 +300,10 @@ protection. Native date-picker appearance was not browser-tested.
 ## VS01 — agreed replacement workflow (6 October 2026)
 
 The user approved implementing the supplied VS01 overview end to end, including setup/turnaround and coordinator replacement handling. This supersedes earlier deferral notes for setup/turnaround within this feature. Recording unavailability preserves original booking status and flags the booking separately. A single pending replacement is allowed. Only approval of that replacement marks the original `changed`; rejection/withdrawal leaves the original flagged. Pending and approved bookings are considered affected; changed/rejected/cancelled bookings are historical and do not reserve space. See [VS01 documentation](venue-unavailability-api.md).
+
+## VS-C2 / EC-C2 — Independent booking windows and duration snapshots (14 October 2026)
+
+- **Decision:** Retain incoming main's multi-venue bookings and event safety lifecycle, then apply setup/turnaround calculations independently to each booking's own window. Save selected durations per booking; later venue-default changes affect future requests only. Retain the incoming restriction on duplicate active venues for one event.
+- **Validation:** Check full occupied intervals during selection, submission, approval and staff timing edits, including opening hours, unavailable periods and operational issues. Batch submission is transactional.
+- **Database:** Keep incoming V1–V26 unchanged. V27 backfills duration snapshots without changing booking windows; V28 adds timing review, overlap notification tracking and timing notification types while retaining lifecycle notification constraint branches. Legacy nullable windows fall back to event times. Old unpublished local V23/V24 timing histories require separate reconciliation.
+- **Consequence:** Screens distinguish booking windows from advertised event times. Timing edits affect only the selected booking's buffers. Existing overlaps are reported without automatic cancellation. See [implementation and verification](venue-booking-duration-snapshots.md).

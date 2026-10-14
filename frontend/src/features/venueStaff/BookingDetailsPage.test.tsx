@@ -379,7 +379,9 @@ it('shows a buffer-only restriction without falsely highlighting the event times
   const message = 'This booking conflicts with the setup or turnaround time required around an existing approved booking.'
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
     init.method === 'PATCH' ? response({ message, conflicts: [{ bookingId: 'buffer-booking', eventName: 'Earlier event',
-      startDatetime: '2026-09-24T10:00:00Z', endDatetime: '2026-09-24T14:00:00Z' }] }, 409) : response(booking)))
+      startDatetime: '2026-09-24T10:00:00Z', endDatetime: '2026-09-24T14:00:00Z',
+      setupDurationMinutes: 30, turnaroundDurationMinutes: 90,
+      effectiveStart: '2026-09-24T09:30:00Z', effectiveEnd: '2026-09-24T15:30:00Z' }] }, 409) : response(booking)))
   page('/venue-staff/bookings/b1?from=booking-approvals')
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
@@ -389,7 +391,11 @@ it('shows a buffer-only restriction without falsely highlighting the event times
   const card = within(alert).getByRole('group', { name: 'Conflicting booking: Earlier event' })
   expect(card).toHaveTextContent('Setup Period')
   expect(card).toHaveTextContent('Turnaround Period')
-  expect(within(card).getAllByText('Not available yet')).toHaveLength(2)
+  expect(card).toHaveTextContent('30 minutes')
+  expect(card).toHaveTextContent('90 minutes')
+  expect(card).toHaveTextContent('Venue Occupied')
+  expect(card).toHaveTextContent('24 Sept 2026, 05:30 pm')
+  expect(card).toHaveTextContent('24 Sept 2026, 11:30 pm')
   expect(card.querySelector('.booking-time-conflict')).toBeNull()
   expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
 })
@@ -452,7 +458,7 @@ it.each([false, true])('shows unavailable periods and highlights both sides (ref
     await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
     expect(screen.queryByRole('group', { name: 'Unavailable period: Maintenance' })).not.toBeInTheDocument()
     expect(currentPanel.querySelector('.booking-time-conflict')).toBeNull()
-    expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Reject Booking' })).toBeEnabled()
     cleanup()
     page('/venue-staff/bookings/b1?from=booking-approvals')

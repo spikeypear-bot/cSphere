@@ -1,5 +1,13 @@
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 
+export function approvedOverlaps(schedule: VenueSchedule) {
+  const bookings = schedule.bookings.filter(b => b.status === 'approved')
+  return bookings.flatMap((first, index) => bookings.slice(index + 1)
+    .filter(second => Date.parse(first.effectiveStart) < Date.parse(second.effectiveEnd)
+      && Date.parse(first.effectiveEnd) > Date.parse(second.effectiveStart))
+    .map(second => ({ first, second })))
+}
+
 export interface CalendarEntry {
   id: string
   entryId: string

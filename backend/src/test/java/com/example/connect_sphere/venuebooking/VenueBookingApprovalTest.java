@@ -44,6 +44,7 @@ class VenueBookingApprovalTest {
         UUID id = venues.createVenue(new CreateVenueDto("VS03 " + UUID.randomUUID(), 200,
                 List.of(VenueLayout.classroom), "Daily", null, null, null)).venueId();
         venueIds.add(id);
+        jdbc.update("INSERT INTO venue_operating_hours(operating_hour_id,venue_id,day_of_week,open_time,close_time) SELECT gen_random_uuid(),?,day,'00:00'::time,'23:59'::time FROM generate_series(1,7) day", id);
         return id;
     }
     UUID booking(UUID venueId, String status, String start, String end) {
@@ -57,9 +58,11 @@ class VenueBookingApprovalTest {
                 """, event, start, end);
         UUID id = UUID.randomUUID();
         jdbc.update("""
-                INSERT INTO venue_bookings (booking_id,venue_id,event_id,status,booking_notes,suitability_note)
-                VALUES (?,?,?,?::venue_booking_status,'Preserve notes','Preserve justification')
-                """, id, venueId, event, status);
+                INSERT INTO venue_bookings (booking_id,venue_id,event_id,status,booking_notes,suitability_note,
+                    setup_duration_minutes,turnaround_duration_minutes)
+                SELECT ?,venue_id,?,?::venue_booking_status,'Preserve notes','Preserve justification',setup_minutes,turnaround_minutes
+                FROM venues WHERE venue_id=?
+                """, id, event, status, venueId);
         return id;
     }
     UUID booking(UUID venue, String status) {
@@ -78,7 +81,10 @@ class VenueBookingApprovalTest {
             jdbc.update("DELETE FROM venue_bookings WHERE event_id=?", id);
             jdbc.update("DELETE FROM events WHERE event_id=?", id);
         }
-        for (UUID id : venueIds) jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
+        for (UUID id : venueIds) {
+            jdbc.update("DELETE FROM venue_operating_hours WHERE venue_id=?", id);
+            jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
+        }
     }
     @Test void migrationRenamesExistingCommittedRowsWithoutChangingTheirData() throws Exception {
         String migration = new org.springframework.core.io.ClassPathResource(
@@ -174,13 +180,51 @@ class VenueBookingApprovalTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("This booking conflicts with the setup or turnaround time required around an existing approved booking."))
                 .andExpect(jsonPath("$.conflicts[0].bookingId").value(existing.toString()))
-                .andExpect(jsonPath("$.conflicts[0].eventName").value("VS03 Workshop"));
+                .andExpect(jsonPath("$.conflicts[0].eventName").value("VS03 Workshop"))
+                .andExpect(jsonPath("$.conflicts[0].setupDurationMinutes").value(30))
+                .andExpect(jsonPath("$.conflicts[0].turnaroundDurationMinutes").value(45))
+                .andExpect(jsonPath("$.conflicts[0].effectiveStart").exists())
+                .andExpect(jsonPath("$.conflicts[0].effectiveEnd").exists());
         assertThat(statusOf(requested)).isEqualTo("pending");
         assertThat(statusOf(existing)).isEqualTo("approved");
         assertThat(snapshot(existing)).isEqualTo(before);
         assertThat(snapshot(requested)).isEqualTo(pendingBefore);
         UUID adjacent = booking(venue, "pending", "2027-04-01T13:15:00+08:00", "2027-04-01T15:00:00+08:00");
         assertThat(bookings.approve(adjacent).status().name()).isEqualTo("approved");
+    }
+
+    @Test void approvalUsesBothBookingSnapshotsRatherThanCurrentDefaults() {
+        UUID v = venue(), existing = booking(v, "approved");
+        jdbc.update("UPDATE venue_bookings SET turnaround_duration_minutes=45 WHERE booking_id=?", existing);
+        UUID pending = booking(v, "pending", "2027-04-01T13:00:00+08:00", "2027-04-01T14:00:00+08:00");
+        jdbc.update("UPDATE venue_bookings SET setup_duration_minutes=30 WHERE booking_id=?", pending);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> bookings.approve(pending))
+                .isInstanceOf(com.example.connect_sphere.venuebooking.service.VenueBookingConflictException.class);
+        assertThat(statusOf(pending)).isEqualTo("pending");
+        assertThat(statusOf(existing)).isEqualTo("approved");
+        // Exactly touching snapshots remain approvable even if venue defaults now imply overlap.
+        jdbc.update("UPDATE venue_bookings SET setup_duration_minutes=15 WHERE booking_id=?", pending);
+        jdbc.update("UPDATE venues SET setup_minutes=120,turnaround_minutes=120 WHERE venue_id=?", v);
+        assertThat(bookings.approve(pending).status().name()).isEqualTo("approved");
+    }
+
+    @Test void concurrentApprovalsCannotOverlapOnlyThroughBookingSnapshots() throws Exception {
+        UUID v = venue();
+        UUID first = booking(v, "pending", "2027-04-01T09:00:00+08:00", "2027-04-01T10:00:00+08:00");
+        UUID second = booking(v, "pending", "2027-04-01T11:00:00+08:00", "2027-04-01T12:00:00+08:00");
+        jdbc.update("UPDATE venue_bookings SET turnaround_duration_minutes=45 WHERE booking_id=?", first);
+        jdbc.update("UPDATE venue_bookings SET setup_duration_minutes=30 WHERE booking_id=?", second);
+        CountDownLatch start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var results = List.of(first, second).stream().map(id -> pool.submit(() -> {
+                start.await();
+                try { bookings.approve(id); return true; }
+                catch (VenueBookingStateException ex) { return false; }
+            })).toList();
+            start.countDown();
+            assertThat(results.get(0).get(15, TimeUnit.SECONDS)).isNotEqualTo(results.get(1).get(15, TimeUnit.SECONDS));
+            assertThat(List.of(statusOf(first), statusOf(second))).containsExactlyInAnyOrder("approved", "pending");
+        }
     }
 
     @Test void failedDatabaseWriteRollsBack() throws Exception {
@@ -208,7 +252,7 @@ class VenueBookingApprovalTest {
                 .andReturn();
         var json = new tools.jackson.databind.ObjectMapper().readTree(result.getResponse().getContentAsString());
         for (var conflict : json.get("conflicts")) {
-            assertThat(conflict.size()).isEqualTo(4);
+            assertThat(conflict.size()).isEqualTo(8);
             assertThat(java.time.OffsetDateTime.parse(conflict.get("startDatetime").asText()).toInstant())
                     .isEqualTo(java.time.OffsetDateTime.parse("2027-04-01T09:00:00+08:00").toInstant());
             assertThat(java.time.OffsetDateTime.parse(conflict.get("endDatetime").asText()).toInstant())

@@ -18,6 +18,8 @@ public record CoordinatorVenueOperationalIssueDto(
             UUID eventId,
             String eventName,
             OffsetDateTime startDatetime,
-            OffsetDateTime endDatetime) {
+            OffsetDateTime endDatetime,
+            OffsetDateTime effectiveStart,
+            OffsetDateTime effectiveEnd) {
     }
 }

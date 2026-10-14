@@ -1,4 +1,24 @@
-# VS02 / VS16 — Pending booking review and booking/event reads
+# Venue booking API and review workflows
+
+## Current timing and multi-venue contract (14 October 2026)
+
+Each booking has its own start/end window and saved setup/turnaround durations. Occupied time is `[booking start − setup, booking end + turnaround)`. Legacy nullable booking timestamps fall back to event timestamps. Advertised event requirements remain available separately in the staff response's `event` object.
+
+| Method | Endpoint | Behavior |
+| --- | --- | --- |
+| GET | `/api/events/{eventId}/venue-options` | Assigned coordinator; optional `startDatetime`, `endDatetime`, `setupDurationMinutes`, `turnaroundDurationMinutes` recheck the proposed occupied window |
+| POST | `/api/events/{eventId}/venue-bookings` | Assigned coordinator; creates one pending booking, returns 201 |
+| POST | `/api/events/{eventId}/venue-bookings/batch` | Assigned coordinator; accepts `{ "bookings": [...] }`, returns 201 and an array; all bookings succeed or the transaction rolls back |
+| GET | `/api/events/{eventId}/venue-bookings` | Assigned coordinator or Safety Officer under existing event-access rules; includes booking-specific times and `timing` |
+| PUT | `/api/venue-bookings/{bookingId}/timing` | Venue Staff; updates saved setup/turnaround durations with a reason and stale-write guard |
+| GET | `/api/venues/{venueId}/timing-conflicts` | Venue Staff; lists overlaps between approved occupied periods |
+| POST | `/api/venues/{venueId}/timing-conflicts/scan` | Venue Staff; detects overlaps and sends deduplicated coordinator notifications |
+
+New requests are allowed in Planning (`pending` or `safety_changes_requested`), with the existing confirmed-event replacement exception. Multiple venues are supported; another active booking for the same venue on the same event remains disallowed. Existing replacement restrictions are unchanged.
+
+See [timing request/response examples, editing rules and migration policy](venue-booking-duration-snapshots.md). The sections below retain the individual slices' historical implementation and verification notes; the current contract above and VS08 conflict fields below describe the integrated behavior.
+
+## VS02 / VS16 — Pending booking review and booking/event reads
 
 VS16 exposes existing booking relationships and current event requirements through
 Venue Staff catalogue navigation and a shared read-only booking-detail page. VS02
@@ -408,12 +428,12 @@ modify the original event requirements.
 ## VS08 approval conflicts
 
 Approval now returns HTTP 409 with `message` and a `conflicts` array for direct
-overlaps and buffer-only conflicts with approved bookings. Each conflict contains only `bookingId`,
-`eventName`, `startDatetime`, and `endDatetime`. Timestamps are offset date/time
+overlaps and buffer-only conflicts with approved bookings. Each conflict contains `bookingId`,
+`eventName`, booking `startDatetime`/`endDatetime`, saved `setupDurationMinutes`/`turnaroundDurationMinutes`, and `effectiveStart`/`effectiveEnd`. Timestamps are offset date/time
 values; clients should display them using the existing Singapore-time formatter.
 
 The query runs after the existing venue lock and before any booking updates. It
-uses the stored event times, the same venue, booking status `approved`, and
+uses stored booking times (event-time fallback for legacy nulls), the same venue, booking status `approved`, and
 `existingStart < requestedEnd AND existingEnd > requestedStart`. Only the current
 booking ID is excluded; an approved booking still counts when its associated
 event is completed or cancelled. Results are ordered by start time and booking ID.
@@ -433,9 +453,7 @@ Other booking-state errors retain the message-only format. Database and transact
 The existing booking approval page displays every returned conflicting event name,
 booking ID, and start/end date and time in Singapore time, using the shared Card
 and Button components. Each card has a full-width Booking Name row, a two-column
-Starts/Ends row, and a two-column Setup Period/Turnaround Period row. Both fields
-in the third row show "Not available yet" pending the separate display story;
-existing backend buffer enforcement still applies.
+Starts/Ends row, and a two-column Setup Period/Turnaround Period row. The third row displays the saved durations and corresponding setup/turnaround ranges, including explicit zero-minute values. A separate occupied-period row shows the full interval.
 
 For partial direct overlaps, the request end and conflicting start (or request
 start and conflicting end) are bold red and labelled "overlap". Containment and
@@ -456,8 +474,7 @@ No approval success is inferred from a conflict response.
 
 After a confirmed approval attempt is blocked by recorded unavailability, the
 page shows one combined explanation with the Singapore timezone and disables
-Approve Booking for the remainder of that page visit. Automatic and manual
-booking-detail refreshes do not unlock approval; reloading the page resets it.
+Approve Booking for the remainder of that page visit. A successful explicit booking-detail refresh permits a new server-checked approval attempt. Saving timing edits clears stale approval conflicts.
 Reject Booking remains available after a successful status refresh. The pending
 status remains visible on the booking rather than being repeated in this error.
 

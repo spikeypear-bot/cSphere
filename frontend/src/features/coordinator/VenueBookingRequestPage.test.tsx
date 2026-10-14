@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { render, screen, cleanup, within, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -84,6 +84,77 @@ function renderPage() {
 }
 
 describe('VenueBookingRequestPage (EC03)', () => {
+  it('submits independent windows and buffers for multiple venues in Singapore time', async () => {
+    const first = { ...OPTIONS[0], venue: { ...OPTIONS[0].venue, setupMinutes: 30, turnaroundMinutes: 15 } }
+    const second = { ...OPTIONS[1], verdict: 'suitable' as const, missingAccessibility: [], reasons: [] }
+    const available = [first, second]
+    const query = (start: string, end: string, setup: string, turnaround: string) =>
+      'GET /api/events/' + EVENT + '/venue-options?' + new URLSearchParams({ setupDurationMinutes: setup,
+        turnaroundDurationMinutes: turnaround, startDatetime: start, endDatetime: end })
+    const calls = stubApi({ ...routes([], () => jsonResponse(201, [])),
+      ['GET /api/events/' + EVENT + '/venue-options']: () => jsonResponse(200, available),
+      [query('2027-03-10T02:00:00.000Z','2027-03-10T04:00:00.000Z','30','15')]: () => jsonResponse(200, available),
+      [query('2027-03-10T06:00:00.000Z','2027-03-10T08:00:00.000Z','45','30')]: () => jsonResponse(200, available),
+    })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    await userEvent.click(screen.getByRole('button', { name: /2 Garden Lane/ }))
+    const a = within(screen.getByRole('group', { name: 'Timings for 1 Harbour Road' }))
+    const b = within(screen.getByRole('group', { name: 'Timings for 2 Garden Lane' }))
+    expect(a.getByLabelText('Start')).toHaveValue('2027-03-10T09:00')
+    fireEvent.change(a.getByLabelText('Start'), { target: { value: '2027-03-10T10:00' } })
+    fireEvent.change(b.getByLabelText('Start'), { target: { value: '2027-03-10T14:00' } })
+    fireEvent.change(b.getByLabelText('End'), { target: { value: '2027-03-10T16:00' } })
+    fireEvent.change(b.getByLabelText('Setup (minutes)'), { target: { value: '45' } })
+    fireEvent.change(b.getByLabelText('Turnaround (minutes)'), { target: { value: '30' } })
+    expect(screen.getByRole('button', { name: 'Request 2 venues' })).toBeDisabled()
+    fireEvent.change(b.getByLabelText('Reason for different timings (required)'), { target: { value: 'Stage crew' } })
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Request 2 venues' })).toBeEnabled())
+    expect(a.getByLabelText('Setup (minutes)')).toHaveValue(30)
+    expect(b.getByText(/01:15 pm/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Request 2 venues' }))
+    expect(await screen.findByText('Event page')).toBeInTheDocument()
+    expect(calls.find(c => c.method === 'POST')?.body).toMatchObject({ bookings: [
+      { venueId: 'v1', startDatetime: '2027-03-10T02:00:00.000Z', endDatetime: '2027-03-10T04:00:00.000Z', setupDurationMinutes: 30, turnaroundDurationMinutes: 15 },
+      { venueId: 'v2', startDatetime: '2027-03-10T06:00:00.000Z', endDatetime: '2027-03-10T08:00:00.000Z', setupDurationMinutes: 45, turnaroundDurationMinutes: 30, timingNote: 'Stage crew' },
+    ] })
+  })
+
+  it('blocks submission when a changed booking window has an occupied-time conflict', async () => {
+    const params = new URLSearchParams({ setupDurationMinutes: '0', turnaroundDurationMinutes: '0',
+      startDatetime: '2027-03-10T02:00:00.000Z', endDatetime: '2027-03-10T04:00:00.000Z' })
+    stubApi({ ...routes(), ['GET /api/events/' + EVENT + '/venue-options?' + params]: () => jsonResponse(200,
+      [{ ...OPTIONS[0], verdict: 'blocked', reasons: ['Setup overlaps another booking.'] }]) })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeEnabled()
+    fireEvent.change(screen.getByLabelText('Start'), { target: { value: '2027-03-10T10:00' } })
+    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
+    expect(await screen.findByText('Setup overlaps another booking.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
+  })
+
+  it('initialises saved venue defaults, rechecks overrides and requires a timing reason', async () => {
+    seedSession('coordinator')
+    const timed = { ...OPTIONS[0], venue: { ...OPTIONS[0].venue, setupMinutes: 30, turnaroundMinutes: 45 } }
+    let submitted: unknown
+    stubApi({ ...routes([], body => { submitted = body; return jsonResponse(201, {}) }),
+      [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, [timed]),
+      [`GET /api/events/${EVENT}/venue-options?setupDurationMinutes=60&turnaroundDurationMinutes=45&startDatetime=2027-03-10T01%3A00%3A00.000Z&endDatetime=2027-03-10T04%3A00%3A00.000Z`]: () => jsonResponse(200, [timed]),
+    })
+    renderPage()
+    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    expect(screen.getByLabelText('Setup (minutes)')).toHaveValue(30)
+    expect(screen.getByLabelText('Turnaround (minutes)')).toHaveValue(45)
+    await userEvent.clear(screen.getByLabelText('Setup (minutes)'))
+    await userEvent.type(screen.getByLabelText('Setup (minutes)'), '60')
+    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
+    await userEvent.type(screen.getByLabelText('Reason for different timings (required)'), 'Organiser needs early crew access')
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
+    expect(await screen.findByText('Event page')).toBeInTheDocument()
+    expect(submitted).toMatchObject({ setupDurationMinutes: 60, turnaroundDurationMinutes: 45, timingNote: 'Organiser needs early crew access' })
+  })
   it('allows a replacement for an affected confirmed event and sends the original booking id', async () => {
     seedSession('coordinator')
     let submitted: unknown
@@ -185,6 +256,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({
       venueId: 'v1', bookingNotes: 'Stage needed', suitabilityNote: null,
+      setupDurationMinutes: 0, turnaroundDurationMinutes: 0, timingNote: null,
     })
   })
 

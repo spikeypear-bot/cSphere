@@ -510,3 +510,13 @@ V23 adds three `event_status` values (`awaiting_safety_review`, `safety_changes_
 ## V24 update — safety review status length (SO-C5, EC08)
 
 V24 widens `event_safety_reviews.review_status` from `VARCHAR(16)` to `VARCHAR(32)`. V23 allowed `changes_requested` in the CHECK constraint, but that value is 17 characters, so the Safety Officer's "Request changes" decision failed with a 500 until this migration.
+
+## V27 update — booking duration snapshots
+
+`venue_bookings.setup_duration_minutes` and `turnaround_duration_minutes` are non-null integers constrained to 0–10080. V27 copies the associated venue's current values into all existing bookings, preserving their previously calculated occupancy and all original fields. A zero SQL default supports existing fixtures; application requests snapshot selected durations, falling back to venue defaults, under the venue lock. Effective timestamps remain computed from the booking values. See [backfill policy and scope](../../../../../../docs/venue-booking-duration-snapshots.md).
+
+## V28 update — booking timing review
+
+`venue_bookings` adds `timing_note`, `timing_updated_at` and `timing_updated_by` (nullable users foreign key) for the latest timing review. `venue_timing_conflicts` stores ordered booking pairs with cascading foreign keys and a fingerprint for deduplicating coordinator alerts. Resolved pairs are removed only from this tracking table. Notification types `venue_timing_changed` and `venue_timing_conflict` require a booking reference. No booking is cancelled by migration or overlap detection.
+
+Booking occupied periods use `COALESCE(venue_bookings.start_datetime, events.start_datetime)` and the equivalent end time, expanded by each booking's saved durations. Event times are a fallback only for legacy nullable windows from V26. V28 retains V23's event-lifecycle notification constraint branches alongside the timing notification types.

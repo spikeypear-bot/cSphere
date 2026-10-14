@@ -20,6 +20,16 @@ public class VenueBooking {
     private UUID bookingId;
     @Column(name = "replaces_booking_id")
     private UUID replacesBookingId;
+    @Column(name = "setup_duration_minutes", nullable = false)
+    private int setupDurationMinutes;
+    @Column(name = "turnaround_duration_minutes", nullable = false)
+    private int turnaroundDurationMinutes;
+    @Column(name = "start_datetime")
+    private OffsetDateTime startDatetime;
+    @Column(name = "end_datetime")
+    private OffsetDateTime endDatetime;
+    @Column(name = "timing_note")
+    private String timingNote;
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "venue_booking_status")

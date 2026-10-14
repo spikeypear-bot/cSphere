@@ -27,17 +27,20 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
         String getEventName();
         OffsetDateTime getStartDatetime();
         OffsetDateTime getEndDatetime();
+        int getSetupDurationMinutes();
+        int getTurnaroundDurationMinutes();
     }
 
     /** Read after acquiring the venue lock; compare the stored event periods as [start, end). */
     @Query("""
             SELECT b.bookingId AS bookingId, e.eventName AS eventName,
-                   e.startDatetime AS startDatetime, e.endDatetime AS endDatetime
+                   COALESCE(b.startDatetime, e.startDatetime) AS startDatetime, COALESCE(b.endDatetime, e.endDatetime) AS endDatetime,
+                   b.setupDurationMinutes AS setupDurationMinutes, b.turnaroundDurationMinutes AS turnaroundDurationMinutes
             FROM VenueBookingRecord b, Event e
             WHERE e.eventId = b.eventId AND b.venueId = :venueId
               AND b.bookingId <> :bookingId AND b.status = :status
-              AND e.startDatetime < :end AND e.endDatetime > :start
-            ORDER BY e.startDatetime, b.bookingId
+              AND COALESCE(b.startDatetime, e.startDatetime) < :end AND COALESCE(b.endDatetime, e.endDatetime) > :start
+            ORDER BY COALESCE(b.startDatetime, e.startDatetime), b.bookingId
             """)
     List<ApprovalConflict> findApprovalConflicts(@Param("venueId") UUID venueId, @Param("bookingId") UUID bookingId,
             @Param("status") VenueBookingStatus status, @Param("start") OffsetDateTime start,
@@ -86,16 +89,19 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
         String getEventName();
         OffsetDateTime getStartDatetime();
         OffsetDateTime getEndDatetime();
+        int getSetupDurationMinutes();
+        int getTurnaroundDurationMinutes();
     }
 
     @Query("""
             SELECT b.venueId AS venueId, e.eventId AS eventId, e.eventName AS eventName,
-                   e.startDatetime AS startDatetime, e.endDatetime AS endDatetime
+                   COALESCE(b.startDatetime, e.startDatetime) AS startDatetime, COALESCE(b.endDatetime, e.endDatetime) AS endDatetime,
+                   b.setupDurationMinutes AS setupDurationMinutes, b.turnaroundDurationMinutes AS turnaroundDurationMinutes
             FROM VenueBookingRecord b, Event e
             WHERE e.eventId = b.eventId
               AND e.coordinatorId = :coordinatorId
               AND b.status = :status
-            ORDER BY e.startDatetime
+            ORDER BY COALESCE(b.startDatetime, e.startDatetime)
             """)
     List<CoordinatorBooking> findApprovedForCoordinator(
             @Param("coordinatorId") UUID coordinatorId,
@@ -103,13 +109,13 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
 
     @Query("""
             SELECT b.venueId AS venueId, e.eventName AS eventName,
-                   e.startDatetime AS startDatetime, e.endDatetime AS endDatetime
+                   COALESCE(b.startDatetime, e.startDatetime) AS startDatetime, COALESCE(b.endDatetime, e.endDatetime) AS endDatetime
             FROM VenueBookingRecord b, Event e
             WHERE e.eventId = b.eventId
               AND b.status = :status
               AND b.eventId <> :eventId
-              AND e.startDatetime < :end AND e.endDatetime > :start
-            ORDER BY e.startDatetime
+              AND COALESCE(b.startDatetime, e.startDatetime) < :end AND COALESCE(b.endDatetime, e.endDatetime) > :start
+            ORDER BY COALESCE(b.startDatetime, e.startDatetime)
             """)
     List<Conflict> findOverlapping(
             @Param("status") VenueBookingStatus status,
@@ -122,7 +128,7 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
             FROM VenueBookingRecord b, Event e
             WHERE e.eventId = b.eventId
               AND b.status = :status
-              AND e.startDatetime < :end AND e.endDatetime > :start
+              AND COALESCE(b.startDatetime, e.startDatetime) < :end AND COALESCE(b.endDatetime, e.endDatetime) > :start
             """)
     List<UUID> findVenueIdsWithOverlappingBookings(
             @Param("status") VenueBookingStatus status,

@@ -24,6 +24,13 @@ public class VenueBookingController {
     @PatchMapping("/venue-bookings/{bookingId}/approve")
     public VenueBookingDto approve(@PathVariable UUID bookingId) { return service.approve(bookingId); }
 
+    @PutMapping("/venue-bookings/{bookingId}/timing")
+    public VenueBookingDto timing(@PathVariable UUID bookingId,
+            @org.springframework.security.core.annotation.AuthenticationPrincipal org.springframework.security.oauth2.jwt.Jwt jwt,
+            @RequestBody com.example.connect_sphere.venuebooking.dto.UpdateBookingTimingRequest request) {
+        return service.updateTiming(bookingId, UUID.fromString(jwt.getSubject()), request);
+    }
+
     @PatchMapping("/venue-bookings/{bookingId}/reject")
     public VenueBookingDto reject(@PathVariable UUID bookingId,
             @RequestBody RejectVenueBookingRequest request) {

@@ -19,6 +19,7 @@ export interface VenueOptionDto {
 export type VenueBookingStatus = 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
 
 export interface EventVenueBookingDto {
+  timing?: import('./bookingTiming').BookingTiming
   bookingId: string
   requiresAlternative?: boolean
   replacesBookingId?: string | null

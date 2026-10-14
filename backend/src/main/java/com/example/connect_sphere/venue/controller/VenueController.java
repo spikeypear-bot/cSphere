@@ -31,12 +31,14 @@ public class VenueController {
     }
 
     @PostMapping
+    @org.springframework.security.access.prepost.PreAuthorize("(#input.setupMinutes() == null && #input.turnaroundMinutes() == null) || hasRole('VS')")
     public ResponseEntity<VenueDto> create(@RequestBody CreateVenueDto input) {
         VenueDto saved = service.createVenue(input);
         return ResponseEntity.created(URI.create("/api/venues/" + saved.venueId())).body(saved);
     }
 
     @PutMapping("/{venueId}")
+    @org.springframework.security.access.prepost.PreAuthorize("(#input.setupMinutes == null && #input.turnaroundMinutes == null) || hasRole('VS')")
     public VenueDto update(@PathVariable("venueId") UUID venueId, @RequestBody UpdateVenueDto input) {
         return service.updateVenue(venueId, input);
     }

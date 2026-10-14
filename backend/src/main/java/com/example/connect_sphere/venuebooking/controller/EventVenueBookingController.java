@@ -40,8 +40,12 @@ public class EventVenueBookingController {
 
     /** Every venue, judged and ranked for this event. */
     @GetMapping("/venue-options")
-    public List<VenueOptionDto> venueOptions(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
-        return service.venueOptions(userIdOf(jwt), eventId);
+    public List<VenueOptionDto> venueOptions(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.math.BigDecimal setupDurationMinutes,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.math.BigDecimal turnaroundDurationMinutes,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.time.OffsetDateTime startDatetime,
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.time.OffsetDateTime endDatetime) {
+        return service.venueOptions(userIdOf(jwt), eventId, setupDurationMinutes, turnaroundDurationMinutes, startDatetime, endDatetime);
     }
 
     @GetMapping("/venue-bookings")

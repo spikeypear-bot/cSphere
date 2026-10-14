@@ -25,6 +25,19 @@ public class AvailabilityRepository {
                 (r, n) -> new Settings(r.getInt(1), r.getInt(2)), venueId);
     }
 
+    public boolean outsideOperatingHours(UUID venueId, EffectivePeriod period) {
+        return jdbc.query("SELECT day_of_week,open_time,close_time FROM venue_operating_hours WHERE venue_id=?",
+                (r,n) -> OperatingHours.covers(r.getInt(1), r.getObject(2,java.time.LocalTime.class),
+                        r.getObject(3,java.time.LocalTime.class), period), venueId).stream().noneMatch(Boolean::booleanValue);
+    }
+
+    public boolean hasOperationalIssue(UUID venueId, EffectivePeriod period) {
+        return Boolean.TRUE.equals(jdbc.queryForObject("""
+                SELECT EXISTS(SELECT 1 FROM venue_operational_issues
+                WHERE venue_id=? AND affected_from < ? AND affected_until > ?)
+                """, Boolean.class, venueId, period.end(), period.start()));
+    }
+
     public void settings(UUID venueId, Settings s) {
         jdbc.update("UPDATE venues SET setup_minutes=?, turnaround_minutes=? WHERE venue_id=?",
                 s.setupMinutes(), s.turnaroundMinutes(), venueId);
@@ -38,16 +51,16 @@ public class AvailabilityRepository {
     public List<Booking> bookings(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
         boolean calendar = start != null && end != null;
         String filter = calendar
-                ? " AND e.status <> 'cancelled' AND e.start_datetime - v.setup_minutes * interval '1 minute' < ? AND e.end_datetime + v.turnaround_minutes * interval '1 minute' > ?"
+                ? " AND e.status <> 'cancelled' AND COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' < ? AND COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' > ?"
                 : " AND e.status NOT IN ('cancelled','completed')";
         return jdbc.query("""
                 SELECT b.booking_id, b.status::text, e.event_id, e.coordinator_id, e.event_name,
-                       e.start_datetime, e.end_datetime,
-                       e.start_datetime - v.setup_minutes * interval '1 minute' AS effective_start,
-                       e.end_datetime + v.turnaround_minutes * interval '1 minute' AS effective_end
-                FROM venue_bookings b JOIN events e ON e.event_id=b.event_id JOIN venues v ON v.venue_id=b.venue_id
+                       COALESCE(b.start_datetime,e.start_datetime) AS start_datetime, COALESCE(b.end_datetime,e.end_datetime) AS end_datetime,
+                       COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' AS effective_start,
+                       COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' AS effective_end
+                FROM venue_bookings b JOIN events e ON e.event_id=b.event_id
                 WHERE b.venue_id=? AND b.status IN ('pending','approved')
-                """ + filter + " ORDER BY e.start_datetime, b.booking_id", (r, n) -> new Booking(r.getObject("booking_id", UUID.class), r.getObject("event_id", UUID.class),
+                """ + filter + " ORDER BY COALESCE(b.start_datetime,e.start_datetime), b.booking_id", (r, n) -> new Booking(r.getObject("booking_id", UUID.class), r.getObject("event_id", UUID.class),
                         r.getObject("coordinator_id", UUID.class), r.getString("event_name"), r.getString("status"),
                         r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
                         r.getObject("effective_start", OffsetDateTime.class), r.getObject("effective_end", OffsetDateTime.class)),

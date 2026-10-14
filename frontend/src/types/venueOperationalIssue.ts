@@ -21,5 +21,7 @@ export interface CoordinatorVenueOperationalIssueDto {
     eventName: string
     startDatetime: string
     endDatetime: string
+    effectiveStart?: string
+    effectiveEnd?: string
   }[]
 }

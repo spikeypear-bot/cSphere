@@ -14,6 +14,10 @@ import lombok.Setter;
 @Getter
 @Setter
 public class UpdateVenueDto {
+    @JsonSetter(nulls = Nulls.FAIL)
+    private java.math.BigDecimal setupMinutes;
+    @JsonSetter(nulls = Nulls.FAIL)
+    private java.math.BigDecimal turnaroundMinutes;
     private Integer venueCapacity;
     /** Avoid Jackson's default truncation of fractional numbers to integers. */
     @JsonSetter(value = "venueCapacity", nulls = Nulls.FAIL)

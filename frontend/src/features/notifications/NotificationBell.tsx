@@ -19,6 +19,8 @@ function timeAgo(iso: string): string {
 }
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
+  if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
   if (n.type === 'venue_unavailable') return `Alternative venue arrangements required for "${n.eventName}"`
   if (n.type === 'event_confirmed') return `"${n.eventName}" is confirmed`
   if (n.type === 'event_returned_to_planning') return `"${n.eventName}" is back in Planning`

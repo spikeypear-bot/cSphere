@@ -42,6 +42,9 @@
   .venue-operational-issues__period { grid-template-columns: minmax(0, 1fr); }
 }
 
+.booking-timings-panel > .notice { margin-top: 1rem; }
+.booking-timings-panel { min-width: 0; overflow-wrap: anywhere; }
+.booking-timings-panel details { margin-top: 1.25rem; }
 .booking-approval { margin-bottom: 1rem; }
 .booking-approval__error { overflow-wrap: anywhere; }
 .booking-conflict-card { padding: 1rem 1.25rem; margin-bottom: 1rem; }

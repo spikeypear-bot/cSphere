@@ -10,7 +10,7 @@ import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 public record VenueBookingDto(UUID bookingId, VenueBookingStatus status, VenueDto venue,
         EventRequirements event, String bookingNotes, String suitabilityNote, OffsetDateTime submittedAt, String rejectReason,
         boolean requiresAlternative, UUID replacesBookingId,
-        UUID alternativeVenueId, String alternativeVenueAddress, String alternativeArrangement) {
+        UUID alternativeVenueId, String alternativeVenueAddress, String alternativeArrangement, BookingTimingDto timing) {
     public record EventRequirements(UUID eventId, String eventName, OffsetDateTime startDatetime,
             OffsetDateTime endDatetime, Integer expectedAttendance, String venueRequirements,
             List<String> accessibilityNeeds, String equipmentRequirements) {}

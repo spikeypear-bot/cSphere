@@ -30,6 +30,12 @@ public class Venue {
     @Column(name = "venue_id", nullable = false)
     private UUID venueId;
 
+    @Column(name = "setup_minutes", nullable = false)
+    private int setupMinutes;
+
+    @Column(name = "turnaround_minutes", nullable = false)
+    private int turnaroundMinutes;
+
     @Column(name = "venue_address", nullable = false, columnDefinition = "text")
     private String venueAddress;
 

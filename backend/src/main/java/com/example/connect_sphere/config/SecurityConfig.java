@@ -76,6 +76,8 @@ public class SecurityConfig{
 		    // deleting the package, which is a separate call.
 		    .requestMatchers("/api/mock", "/api/mock/**").denyAll()
                 .requestMatchers(HttpMethod.PATCH, "/api/venue-bookings/*/approve", "/api/venue-bookings/*/reject").hasRole("VS")
+                .requestMatchers(HttpMethod.PUT, "/api/venue-bookings/*/timing").hasRole("VS")
+                .requestMatchers("/api/venues/*/timing-conflicts", "/api/venues/*/timing-conflicts/scan").hasRole("VS")
                 // VS02 queue only; existing shared booking reads keep their access rules.
                 .requestMatchers(HttpMethod.GET, "/api/venue-staff/booking-requests").hasRole("VS")
 		    // Reads are open to any authenticated role: Organisers browse

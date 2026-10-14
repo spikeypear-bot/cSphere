@@ -28,14 +28,13 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("unit")
 class VenueSearchServiceTest {
     private final VenueRepository venues = mock(VenueRepository.class);
-    private final VenueBookingRecordRepository bookings = mock(VenueBookingRecordRepository.class);
+    private final com.example.connect_sphere.venueavailability.AvailabilityService availability = mock(com.example.connect_sphere.venueavailability.AvailabilityService.class);
     private final VenueMapper mapper = mock(VenueMapper.class);
-    private final VenueSearchService service = new VenueSearchService(venues, bookings, mapper);
+    private final VenueSearchService service = new VenueSearchService(venues, availability, mapper);
 
     @BeforeEach
     void setUp() {
-        when(bookings.findVenueIdsWithOverlappingBookings(
-                eq(VenueBookingStatus.approved), any(), any())).thenReturn(List.of());
+        when(availability.conflicts(any(), org.mockito.ArgumentMatchers.isNull(), any(), any())).thenReturn(List.of());
     }
 
     @Test
@@ -53,8 +52,7 @@ class VenueSearchServiceTest {
                 List.of("stage", "projection"));
 
         assertThat(results).extracting(VenueDto::venueId).containsExactly(exactFit.getVenueId());
-        verify(bookings).findVenueIdsWithOverlappingBookings(
-                eq(VenueBookingStatus.approved), any(), any());
+        verify(availability).conflicts(eq(exactFit.getVenueId()), org.mockito.ArgumentMatchers.isNull(), any(), any());
     }
 
     @Test

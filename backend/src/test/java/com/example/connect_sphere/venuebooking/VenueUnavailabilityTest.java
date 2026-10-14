@@ -30,6 +30,7 @@ import com.example.connect_sphere.venuebooking.service.*;
 /** Committed, uniquely identified fixtures exercise transactions and locking on PostgreSQL. */
 @SpringBootTest
 @AutoConfigureMockMvc
+@Tag("integration")
 class VenueUnavailabilityTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;
@@ -64,8 +65,12 @@ class VenueUnavailabilityTest {
                 100,'Seating','{}','pending',?)
                 """, event, coordinator);
         UUID id = UUID.randomUUID();
-        jdbc.update("INSERT INTO venue_bookings(booking_id,venue_id,event_id,status,booking_notes) VALUES (?,?,?,?::venue_booking_status,'Preserve me')",
-                id, venue, event, status);
+        jdbc.update("""
+                INSERT INTO venue_bookings(booking_id,venue_id,event_id,status,booking_notes,
+                    setup_duration_minutes,turnaround_duration_minutes)
+                SELECT ?,venue_id,?,?::venue_booking_status,'Preserve me',setup_minutes,turnaround_minutes
+                FROM venues WHERE venue_id=?
+                """, id, event, status, venue);
         return id;
     }
     UUID event(UUID booking) { return jdbc.queryForObject("SELECT event_id FROM venue_bookings WHERE booking_id=?", UUID.class, booking); }
@@ -91,6 +96,75 @@ class VenueUnavailabilityTest {
             jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
         }
     }
+    @Test void submissionAndReplacementSnapshotTheirOwnVenueDefaults() {
+        UUID source = venue(), target = venue(), original = booking(source, "approved");
+        availability.updateSettings(target, new Settings(25, 55));
+        record(source, period("10:00", "11:00"));
+        UUID replacement = requests.submit(coordinator, event(original),
+                new SubmitVenueBookingRequest(target, null, null, original)).bookingId();
+        assertThat(jdbc.queryForMap("SELECT setup_duration_minutes,turnaround_duration_minutes FROM venue_bookings WHERE booking_id=?", replacement))
+                .containsEntry("setup_duration_minutes", 25).containsEntry("turnaround_duration_minutes", 55);
+        assertThat(jdbc.queryForObject("SELECT setup_duration_minutes FROM venue_bookings WHERE booking_id=?", Integer.class, original)).isZero();
+
+        UUID other = booking(venue(), "rejected"), next = venue();
+        availability.updateSettings(next, new Settings(10, 20));
+        UUID submitted = requests.submit(coordinator, event(other), new SubmitVenueBookingRequest(next, null, null)).bookingId();
+        assertThat(jdbc.queryForMap("SELECT setup_duration_minutes,turnaround_duration_minutes FROM venue_bookings WHERE booking_id=?", submitted))
+                .containsEntry("setup_duration_minutes", 10).containsEntry("turnaround_duration_minutes", 20);
+    }
+
+    @Test void snapshotsSurviveDefaultChangesAcrossCalendarPreviewAndApproval() {
+        UUID v = venue();
+        availability.updateSettings(v, new Settings(60, 45));
+        UUID pending = booking(v, "pending");
+        jdbc.update("UPDATE events SET start_datetime='2027-04-02T00:30:00+08:00',end_datetime='2027-04-02T01:00:00+08:00' WHERE event_id=?", event(pending));
+        // Simulate a later policy change without relaxing the current settings endpoint guard.
+        jdbc.update("UPDATE venues SET setup_minutes=0,turnaround_minutes=0 WHERE venue_id=?", v);
+        var start = OffsetDateTime.parse("2027-04-01T23:30:00+08:00");
+        var end = OffsetDateTime.parse("2027-04-02T01:45:00+08:00");
+        Booking saved = availability.schedule(v, start, start.plusMinutes(15)).bookings().getFirst();
+        assertThat(saved.bookingId()).isEqualTo(pending);
+        assertThat(saved.effectiveStart()).isEqualTo(start);
+        assertThat(saved.effectiveEnd()).isEqualTo(end);
+        assertThat(availability.schedule(v, end, end.plusMinutes(1)).bookings()).isEmpty();
+        assertThat(availability.schedule(v, start.minusMinutes(1), start).bookings()).isEmpty();
+        Request maintenance = new Request(start, start.plusMinutes(15), "Night maintenance", null, null);
+        assertThat(availability.preview(v, maintenance).affectedBookings()).extracting(Booking::bookingId).containsExactly(pending);
+        record(v, maintenance);
+        assertThatThrownBy(() -> bookings.approve(pending)).isInstanceOf(VenueBookingConflictException.class);
+        assertThat(statusOf(pending)).isEqualTo("pending");
+    }
+
+    @Test void prospectiveRequestsUseDefaultsButExistingConflictsUseSnapshots() {
+        UUID v = venue();
+        availability.updateSettings(v, new Settings(0, 45));
+        booking(v, "approved");
+        jdbc.update("UPDATE venues SET setup_minutes=15,turnaround_minutes=0 WHERE venue_id=?", v);
+        var touching = period("13:00", "14:00");
+        assertThat(availability.conflicts(v, UUID.randomUUID(), touching.startDateTime(), touching.endDateTime())).isEmpty();
+        assertThat(availability.conflicts(v, UUID.randomUUID(), touching.startDateTime().minusMinutes(1), touching.endDateTime())).hasSize(1);
+    }
+
+    @Test void completedBookingCalendarRetainsSnapshotAfterAllowedDefaultEdit() {
+        UUID v = venue();
+        availability.updateSettings(v, new Settings(30, 45));
+        UUID original = booking(v, "approved");
+        jdbc.update("UPDATE events SET status='completed' WHERE event_id=?", event(original));
+        availability.updateSettings(v, new Settings(0, 0));
+        var calendar = availability.schedule(v, period("09:30", "09:45").startDateTime(), period("09:30", "09:45").endDateTime());
+        assertThat(calendar.settings()).isEqualTo(new Settings(0, 0));
+        assertThat(calendar.bookings()).extracting(Booking::bookingId).containsExactly(original);
+        assertThat(calendar.bookings().getFirst().effectiveStart()).isEqualTo(period("09:30", "12:45").startDateTime());
+        assertThat(calendar.bookings().getFirst().effectiveEnd()).isEqualTo(period("09:30", "12:45").endDateTime());
+    }
+
+    @Test void approvalDoesNotPadSnapshotWithLargerCurrentVenueDefaults() {
+        UUID v = venue(), pending = booking(v, "pending");
+        jdbc.update("UPDATE venues SET setup_minutes=60,turnaround_minutes=60 WHERE venue_id=?", v);
+        record(v, period("09:00", "09:45"));
+        assertThat(bookings.approve(pending).status().name()).isEqualTo("approved");
+    }
+
     @Test void calendarIncludesHistoryBuffersAndOverlapsWithoutChangingOperationalReads() throws Exception {
         UUID v=venue();
         availability.updateSettings(v, new Settings(30,45));
@@ -317,7 +391,7 @@ class VenueUnavailabilityTest {
         mvc.perform(put("/api/venues/"+v+"/occupancy-settings").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"setupMinutes\":30,\"turnaroundMinutes\":45}")).andExpect(status().isOk()).andExpect(jsonPath("$.setupMinutes").value(30));
         booking(v,"pending");
-        assertThatThrownBy(() -> availability.updateSettings(v,new Settings(15,0))).isInstanceOf(VenueBookingStateException.class);
+        assertThat(availability.updateSettings(v,new Settings(15,0))).isEqualTo(new Settings(15,0));
     }
     @Test void approvalReportsBookingsAndAllUnavailablePeriodsTogether() throws Exception {
         UUID v = venue(), approved = booking(v, "approved"), pending = booking(v, "pending");

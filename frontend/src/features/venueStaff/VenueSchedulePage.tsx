@@ -7,6 +7,8 @@ import { formatEventTimeRange as range } from './formatEventDateTime'
 import { calendarDays, calendarEntries, dayTime, entriesOnDay, entryLabels, midnight, shiftMonth, singaporeDate } from './venueCalendar'
 import type { CalendarEntry } from './venueCalendar'
 import './VenueSchedulePage.css'
+import { Link } from 'react-router-dom'
+import { approvedOverlaps } from './venueCalendar'
 
 export function VenueSchedulePage() {
   const venues = useVenueRead<VenueDto[]>('/venues')
@@ -66,8 +68,17 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
   if (read.error) return <section aria-label="Venue schedule"><CalendarLegend onRefresh={refresh} /><p role="alert">{read.error} <Button type="button" onClick={refresh}>Retry schedule</Button></p></section>
   if (!read.data) return <section aria-label="Venue schedule" aria-busy="true"><CalendarLegend onRefresh={refresh} loading /><p role="status">Loading schedule…</p></section>
   const entries = calendarEntries(read.data)
+  const overlaps = approvedOverlaps(read.data)
   return <section aria-label="Venue schedule">
     <CalendarLegend onRefresh={refresh} />
+    {overlaps.length > 0 && <div role="status" className="unavailability-warning">
+      <p>Approved bookings have overlapping occupied times. No booking has been cancelled.</p>
+      <ul>{overlaps.map(({ first, second }) => <li key={`${first.bookingId}:${second.bookingId}`}>
+        <Link to={`/venue-staff/bookings/${first.bookingId}`}>{first.eventName}</Link> ({range(first.effectiveStart, first.effectiveEnd)})
+        {' overlaps '}<Link to={`/venue-staff/bookings/${second.bookingId}`}>{second.eventName}</Link> ({range(second.effectiveStart, second.effectiveEnd)})
+      </li>)}</ul>
+      <Link to={`/venue-staff/catalogue/${venueId}`}>Review all active conflicts for this venue</Link>
+    </div>}
     {!days.filter(day => day.startsWith(month)).some(day => entriesOnDay(entries, day).length) && <p role="status">No schedule entries for this month.</p>}
     <p className="venue-calendar__hint">Select an entry for details. Arrows indicate that an entry continues across dates.</p>
     <div className="venue-calendar__scroll" role="region" aria-label="Monthly calendar" tabIndex={0}>
@@ -106,6 +117,7 @@ function EntryDetails({ entry, venueName, onClose }: { entry: CalendarEntry; ven
       {entry.eventStart && entry.eventEnd && entry.phase !== 'Event' && <><dt>Event timing (SGT)</dt><dd>{range(entry.eventStart, entry.eventEnd)}</dd></>}
       {entry.type === 'unavailable' && <><dt>Reason</dt><dd>{entry.title}</dd></>}
     </dl>
+    {entry.type !== 'unavailable' && <Link to={`/venue-staff/bookings/${entry.entryId}`}>View booking details</Link>}
     <Button onClick={onClose}>Close</Button>
   </dialog>
 }
