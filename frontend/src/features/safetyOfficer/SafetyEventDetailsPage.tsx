@@ -11,6 +11,7 @@ import { useSafetyData } from './useSafetyData'
 import { ReadinessChecklistPanel } from './ReadinessChecklistPanel'
 import type { ReadinessDto, ReadinessItem } from './readinessTypes'
 import './safetyOfficer.css'
+import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 
 interface EquipmentRequest {
   requestId: string
@@ -127,6 +128,7 @@ export function SafetyEventDetailsPage() {
           bookingState.loading ? 'Loading…' : bookingState.data?.length
             ? bookingState.data.map((booking) => `${booking.venueAddress ?? 'Venue'} — ${booking.status}`).join('; ')
             : 'No venue booking has been submitted.'}</p>
+          {bookingState.data?.map(booking => <BookingTimingSummary key={booking.bookingId} timing={booking.timing} />)}
       </Card>
 
       <Card className="safety-panel">

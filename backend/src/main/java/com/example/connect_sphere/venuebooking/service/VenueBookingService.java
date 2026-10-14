@@ -19,6 +19,8 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRepository
 @Service
 @Transactional(readOnly = true)
 public class VenueBookingService {
+    @jakarta.persistence.PersistenceContext private jakarta.persistence.EntityManager entityManager;
+    private final com.example.connect_sphere.venueavailability.TimingConflictService timingConflicts;
     private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
     private static final int MAX_TEXT_LENGTH = 2000;
 
@@ -30,7 +32,9 @@ public class VenueBookingService {
 
     public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper,
             VenueBookingRecordRepository records,
-            EventRepository events, com.example.connect_sphere.venueavailability.AvailabilityService availability) {
+            EventRepository events, com.example.connect_sphere.venueavailability.AvailabilityService availability,
+            com.example.connect_sphere.venueavailability.TimingConflictService timingConflicts) {
+        this.timingConflicts = timingConflicts;
         this.availability = availability;
         this.bookings = bookings;
         this.venues = venues;
@@ -62,17 +66,21 @@ public class VenueBookingService {
             venueIds.add(original.getVenueId());
         }
         for (UUID venueId : venueIds) venues.findForUpdate(venueId).orElseThrow(() -> new VenueNotFoundException(venueId));
+        var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
+        var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
         var conflicts = records.findApprovalConflicts(booking.getVenueId(), bookingId,
-                VenueBookingStatus.approved, event.getStartDatetime(), event.getEndDatetime());
-        var unavailablePeriods = availability.unavailablePeriods(booking.getVenueId(), event.getStartDatetime(), event.getEndDatetime())
+                VenueBookingStatus.approved, start, end);
+        var durations = new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(
+                booking.getSetupDurationMinutes(), booking.getTurnaroundDurationMinutes());
+        var unavailablePeriods = availability.unavailablePeriods(booking.getVenueId(), start, end, durations)
                 .stream().map(period -> new VenueUnavailabilityConflictDto(period.unavailabilityId(), period.reason(),
                         period.startDateTime(), period.endDateTime())).toList();
-        var bufferConflicts = availability.conflicts(booking.getVenueId(), eventId, event.getStartDatetime(), event.getEndDatetime());
+        var bufferConflicts = availability.conflictsForBooking(booking.getVenueId(), bookingId, start, end, durations);
         var blockingBookings = new java.util.LinkedHashMap<UUID, VenueBookingConflictDto>();
-        conflicts.forEach(conflict -> blockingBookings.put(conflict.getBookingId(), new VenueBookingConflictDto(
-                conflict.getBookingId(), conflict.getEventName(), conflict.getStartDatetime(), conflict.getEndDatetime())));
-        bufferConflicts.forEach(conflict -> blockingBookings.putIfAbsent(conflict.bookingId(), new VenueBookingConflictDto(
-                conflict.bookingId(), conflict.eventName(), conflict.startDateTime(), conflict.endDateTime())));
+        conflicts.forEach(conflict -> blockingBookings.put(conflict.getBookingId(), VenueBookingConflictDto.of(
+                conflict.getBookingId(), conflict.getEventName(), conflict.getStartDatetime(), conflict.getEndDatetime(),
+                conflict.getSetupDurationMinutes(), conflict.getTurnaroundDurationMinutes())));
+        bufferConflicts.forEach(conflict -> blockingBookings.putIfAbsent(conflict.bookingId(), VenueBookingConflictDto.from(conflict)));
         if (!blockingBookings.isEmpty() || !unavailablePeriods.isEmpty()) {
             String message = !unavailablePeriods.isEmpty()
                     ? blockingBookings.isEmpty()
@@ -86,6 +94,10 @@ public class VenueBookingService {
                             .thenComparing(VenueBookingConflictDto::bookingId)).toList();
             throw new VenueBookingConflictException(message, orderedBookings, unavailablePeriods);
         }
+        if (availability.hasOperationalIssue(booking.getVenueId(), start, end, durations))
+            throw new VenueBookingStateException("A venue operational issue overlaps the occupied booking period.");
+        if (availability.outsideOperatingHours(booking.getVenueId(), start, end, durations))
+            throw new VenueBookingStateException("The full occupied period, including setup and turnaround, must fit within configured venue opening hours.");
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow(() -> new VenueBookingStateException("Original booking no longer exists."));
             if (!original.getEventId().equals(eventId) || !availability.affected(original.getBookingId()))
@@ -141,6 +153,57 @@ public class VenueBookingService {
                 .stream().map(this::toDto).toList();
     }
 
+    @Transactional
+    public VenueBookingDto updateTiming(UUID bookingId, UUID actor,
+            com.example.connect_sphere.venuebooking.dto.UpdateBookingTimingRequest request) {
+        UUID eventId = records.findEventId(bookingId).orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        var event = events.findForUpdate(eventId).orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        var booking = records.findById(bookingId).orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
+        venues.findForUpdate(booking.getVenueId()).orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
+        if ((booking.getStatus() != VenueBookingStatus.pending && booking.getStatus() != VenueBookingStatus.approved)
+                || event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.cancelled
+                || event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.completed)
+            throw new VenueBookingStateException("Only active pending or approved booking timings can be edited.");
+        if (request == null || request.setupDurationMinutes() == null || request.turnaroundDurationMinutes() == null)
+            throw new InvalidVenueBookingException("Both setup and turnaround durations are required.");
+        if (!java.util.Objects.equals(request.previousSetupDurationMinutes(), booking.getSetupDurationMinutes())
+                || !java.util.Objects.equals(request.previousTurnaroundDurationMinutes(), booking.getTurnaroundDurationMinutes()))
+            throw new VenueBookingStateException("Booking timings changed. Refresh the booking before saving again.");
+        int setup = com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(request.setupDurationMinutes(), 0);
+        int turnaround = com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(request.turnaroundDurationMinutes(), 0);
+        String note = optionalText(request.timingNote(), "Timing reason");
+        if (note == null) throw new InvalidVenueBookingException("Explain the reason for these booking timings.");
+        var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
+        var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
+        var durations = new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(setup, turnaround);
+        if (availability.hasOperationalIssue(booking.getVenueId(), start, end, durations))
+            throw new VenueBookingStateException("A venue operational issue overlaps the occupied booking period.");
+        if (availability.outsideOperatingHours(booking.getVenueId(), start, end, durations))
+            throw new VenueBookingStateException("The full occupied period, including setup and turnaround, must fit within configured venue opening hours.");
+        var overlaps = availability.conflictsForBooking(booking.getVenueId(), bookingId, start, end, durations);
+        var periods = availability.unavailablePeriods(booking.getVenueId(), start, end, durations);
+        boolean reducing = setup <= booking.getSetupDurationMinutes() && turnaround <= booking.getTurnaroundDurationMinutes();
+        if (!reducing && (!overlaps.isEmpty() || !periods.isEmpty()))
+            throw new VenueBookingConflictException("These timings would introduce or extend a conflict. Reduce the occupied period or resolve the conflicting arrangements first.",
+                    overlaps.stream().map(VenueBookingConflictDto::from).toList(),
+                    periods.stream().map(p -> new VenueUnavailabilityConflictDto(p.unavailabilityId(), p.reason(), p.startDateTime(), p.endDateTime())).toList());
+        if (setup == booking.getSetupDurationMinutes() && turnaround == booking.getTurnaroundDurationMinutes()
+                && java.util.Objects.equals(note, booking.getTimingNote())) return get(bookingId);
+        booking.setSetupDurationMinutes(setup);
+        booking.setTurnaroundDurationMinutes(turnaround);
+        booking.setTimingNote(note);
+        booking.setTimingUpdatedAt(java.time.OffsetDateTime.now());
+        booking.setTimingUpdatedBy(actor);
+        records.saveAndFlush(booking);
+        var period = com.example.connect_sphere.venueavailability.EffectivePeriod.of(start, end, durations);
+        timingConflicts.notifyCoordinator(event.getCoordinatorId(), eventId, bookingId, event.getEventName(), "venue_timing_changed",
+                "Venue Staff saved setup " + setup + " minutes and turnaround " + turnaround + " minutes. Occupied: "
+                        + period.start() + " to " + period.end() + ". Reason: " + note);
+        timingConflicts.scan(booking.getVenueId());
+        entityManager.clear();
+        return get(bookingId);
+    }
+
     public VenueBookingDto get(UUID bookingId) {
         return toDto(bookings.findById(bookingId)
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId)));
@@ -155,6 +218,8 @@ public class VenueBookingService {
     private VenueBookingDto toDto(VenueBooking booking) {
         var event = booking.getEvent();
         var alternativeVenue = booking.getAlternativeVenue();
+        var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
+        var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
         return new VenueBookingDto(booking.getBookingId(), booking.getStatus(),
                 venueMapper.toDto(booking.getVenue()), new VenueBookingDto.EventRequirements(
                         event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
@@ -164,7 +229,12 @@ public class VenueBookingService {
                 availability.affected(booking.getBookingId()), booking.getReplacesBookingId(),
                 booking.getAlternativeVenueId(),
                 alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
-                booking.getAlternativeArrangement());
+                booking.getAlternativeArrangement(), availability.timing(booking.getVenue().getVenueId(), booking.getBookingId(),
+                        start, end, booking.getSetupDurationMinutes(),
+                        booking.getTurnaroundDurationMinutes(), booking.getTimingNote(),
+                        (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved)
+                        && event.getStatus() != com.example.connect_sphere.event.entity.EventStatus.completed
+                        && event.getStatus() != com.example.connect_sphere.event.entity.EventStatus.cancelled));
     }
 
     private static String optionalText(String raw, String what) {

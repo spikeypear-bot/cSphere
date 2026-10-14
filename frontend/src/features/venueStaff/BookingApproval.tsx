@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import type { VenueBookingDto, VenueBookingConflict, VenueUnavailabilityConflict } from '../../types/venueBooking'
 import type { VenueDto } from '../../types/venue'
-import { formatEventDateTime } from './formatEventDateTime'
+import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
 import { BookingConflictCard, UnavailabilityConflictCard } from './BookingConflictCard'
 
 const MAX_ALTERNATIVE_ARRANGEMENT_LENGTH = 2000
@@ -62,6 +62,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
         onApproved(current)
         setNeedsRefresh(false)
         setError(previous => previous?.replace(' Checking the latest booking status.', ' Latest booking status: ' + current.status + '.'))
+        return true
       }
     } catch (cause) {
       if (!active.current) return
@@ -72,6 +73,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
         setNeedsRefresh(true)
       }
     }
+    return false
   }
 
   async function refresh() {
@@ -80,7 +82,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
     setBusy(true)
     setError(undefined)
     onConflicts([], [])
-    await readCurrentBooking()
+    if (await readCurrentBooking()) setApprovalBlocked(false)
     submitting.current = false
     if (active.current) setBusy(false)
   }
@@ -205,8 +207,12 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
       <dl>
         <dt>Event</dt><dd>{booking.event.eventName}</dd>
         <dt>Venue</dt><dd>{booking.venue.venueAddress}</dd>
-        <dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.event.startDatetime)}</dd>
-        <dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.event.endDatetime)}</dd>
+        <dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd>
+        <dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd>
+        {booking.timing && <>
+          <dt>Setup / Turnaround</dt><dd>{booking.timing.setupDurationMinutes} / {booking.timing.turnaroundDurationMinutes} minutes</dd>
+          <dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd>
+        </>}
       </dl>
       <div className="booking-approval__actions">
         <Button disabled={busy || approvalBlocked} onClick={() => { void decide('approve') }}>{busy ? 'Approving…' : 'Confirm approval'}</Button>

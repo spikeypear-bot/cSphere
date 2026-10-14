@@ -102,13 +102,15 @@ public class VenueOperationalIssueService {
         }
         return managedBookings.stream()
                 .filter(booking -> booking.getStartDatetime() != null && booking.getEndDatetime() != null)
-                .filter(booking -> booking.getStartDatetime().isBefore(issue.getAffectedUntil())
-                        && booking.getEndDatetime().isAfter(issue.getAffectedFrom()))
+                .filter(booking -> booking.getStartDatetime().minusMinutes(booking.getSetupDurationMinutes()).isBefore(issue.getAffectedUntil())
+                        && booking.getEndDatetime().plusMinutes(booking.getTurnaroundDurationMinutes()).isAfter(issue.getAffectedFrom()))
                 .map(booking -> new OverlappingEventDto(
                         booking.getEventId(),
                         booking.getEventName(),
                         booking.getStartDatetime(),
-                        booking.getEndDatetime()))
+                        booking.getEndDatetime(),
+                        booking.getStartDatetime().minusMinutes(booking.getSetupDurationMinutes()),
+                        booking.getEndDatetime().plusMinutes(booking.getTurnaroundDurationMinutes())))
                 .toList();
     }
 

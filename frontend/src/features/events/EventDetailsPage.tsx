@@ -18,6 +18,7 @@ import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
+import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 
 /**
  * One page per event, shared by the Organiser and the Event Coordinator. Both
@@ -249,6 +250,7 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
                     : null}
                   {booking.submittedAt ? <span className="field-hint"> · requested {new Date(booking.submittedAt).toLocaleString()}</span> : null}
                 </p>
+                <BookingTimingSummary timing={booking.timing} />
                 {booking.status === 'pending' && !cancelling ? (
                   <Button variant="secondary" onClick={() => setCancelling(true)}>Cancel this request</Button>
                 ) : null}

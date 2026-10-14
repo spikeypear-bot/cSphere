@@ -5,7 +5,7 @@ import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import type { VenueBookingDto } from '../../types/venueBooking'
-import { formatEventDateTime } from './formatEventDateTime'
+import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
 import { useVenueRead } from './useVenueRead'
 import '../../components/skeleton.css'
 import './BookingApprovalsPage.css'
@@ -46,8 +46,9 @@ export function BookingApprovalsPage() {
           </div>
           <dl>
             <div><dt>Requested venue</dt><dd>{booking.venue.venueAddress?.trim() || 'Not specified'}</dd></div>
-            <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.event.startDatetime)}</dd></div>
-            <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.event.endDatetime)}</dd></div>
+            <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd></div>
+            <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd></div>
+            {booking.timing && <div><dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd></div>}
             <div><dt>Expected attendance</dt><dd>{booking.event.expectedAttendance.toLocaleString()} people</dd></div>
             <div><dt>Venue requirements summary</dt><dd>{requirementsSummary(booking.event.venueRequirements)}</dd></div>
           </dl>

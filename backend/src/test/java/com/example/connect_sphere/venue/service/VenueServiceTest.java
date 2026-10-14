@@ -144,7 +144,7 @@ class VenueServiceTest {
         venue.setVenueCapacity(100); venue.setSupportedLayouts(List.of("classroom"));
         venue.setVenueAccessibilities(List.of("step_free_access")); venue.setVenueFacilities(List.of("projection"));
         venue.setOperatingInformation("Daily");
-        when(repository.findById(venue.getVenueId())).thenReturn(java.util.Optional.of(venue));
+        when(repository.findForUpdate(venue.getVenueId())).thenReturn(java.util.Optional.of(venue));
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
         var input = new com.example.connect_sphere.venue.dto.UpdateVenueDto();
         boolean all = field.equals("all");
@@ -171,7 +171,7 @@ class VenueServiceTest {
         venue.setVenueId(java.util.UUID.randomUUID()); venue.setVenueAddress("Venue");
         venue.setVenueCapacity(100); venue.setSupportedLayouts(List.of("classroom"));
         venue.setOperatingInformation("Daily");
-        when(repository.findById(venue.getVenueId())).thenReturn(java.util.Optional.of(venue));
+        when(repository.findForUpdate(venue.getVenueId())).thenReturn(java.util.Optional.of(venue));
         var input = new com.example.connect_sphere.venue.dto.UpdateVenueDto();
         input.setVenueCapacity(java.math.BigDecimal.valueOf(150));
         input.setOperatingInformation(" ");

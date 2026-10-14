@@ -18,5 +18,7 @@ public enum NotificationType {
     /** EC08 (V22): the coordinator told an event went back to Planning, and why. */
     event_returned_to_planning,
     // EC08: the Safety Officer approved; the coordinator can now confirm.
-    event_safety_approved
+    event_safety_approved,
+    venue_timing_changed,
+    venue_timing_conflict
 }

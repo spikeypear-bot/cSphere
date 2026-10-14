@@ -75,7 +75,7 @@ export function OperationalIssuesPage() {
                       {issue.overlappingEvents.map(event => (
                         <li key={event.eventId}>
                           <Link to={`/coordinator/events/${event.eventId}`}>{event.eventName}</Link>
-                          {' '}({formatEventDateTime(event.startDatetime)} – {formatEventDateTime(event.endDatetime)})
+                          {' '}(occupied: {formatEventDateTime(event.effectiveStart ?? event.startDatetime)} – {formatEventDateTime(event.effectiveEnd ?? event.endDatetime)})
                         </li>
                       ))}
                     </ul>

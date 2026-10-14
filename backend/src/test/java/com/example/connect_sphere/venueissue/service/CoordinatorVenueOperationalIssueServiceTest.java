@@ -71,6 +71,20 @@ class CoordinatorVenueOperationalIssueServiceTest {
         assertThat(result.get(0).venueAddress()).isEqualTo("1 Harbour Road");
         assertThat(result.get(0).overlappingEvents()).extracting("eventName")
                 .containsExactly("Town Hall");
+
+        when(booking.getSetupDurationMinutes()).thenReturn(30);
+        when(booking.getTurnaroundDurationMinutes()).thenReturn(45);
+        var setupIssue = new VenueOperationalIssue(venueId, "Setup access blocked", from.minusMinutes(20), from, coordinatorId);
+        var teardownIssue = new VenueOperationalIssue(venueId, "Cleaning", until, until.plusMinutes(30), coordinatorId);
+        var touchingIssue = new VenueOperationalIssue(venueId, "After occupancy", until.plusMinutes(45), until.plusHours(1), coordinatorId);
+        when(issues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.of(venueId)))
+                .thenReturn(List.of(setupIssue, teardownIssue, touchingIssue));
+        var buffered = service.listForCoordinator(coordinatorId);
+        assertThat(buffered.get(0).overlappingEvents()).hasSize(1);
+        assertThat(buffered.get(1).overlappingEvents()).hasSize(1);
+        assertThat(buffered.get(2).overlappingEvents()).isEmpty();
+        assertThat(buffered.get(0).overlappingEvents().get(0).effectiveStart()).isEqualTo(from.minusMinutes(30));
+        assertThat(buffered.get(0).overlappingEvents().get(0).effectiveEnd()).isEqualTo(until.plusMinutes(45));
     }
 
     @Test

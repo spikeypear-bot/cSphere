@@ -4,6 +4,7 @@ import { apiClient } from '../../lib/apiClient'
 import { VenueSchedulePage } from './VenueSchedulePage'
 import { calendarDays, calendarEntries, entriesOnDay, shiftMonth, singaporeDate } from './venueCalendar'
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
+import { MemoryRouter } from 'react-router-dom'
 vi.mock('../../lib/apiClient', async original => ({ ...await original<typeof import('../../lib/apiClient')>(), apiClient: { get: vi.fn() } }))
 const month = singaporeDate().slice(0, 7)
 const at = (time: string) => `${month}-15T${time}:00+08:00`
@@ -15,7 +16,7 @@ beforeEach(() => {
 })
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 async function mount() {
-  render(<VenueSchedulePage />)
+  render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>)
   fireEvent.change(await screen.findByLabelText('Venue'), { target: { value: 'v1' } })
   await screen.findByRole('table')
 }
@@ -61,7 +62,7 @@ it('clears previous entries on refresh failure and supports retry', async () => 
 it('ignores a late response for the previous venue', async () => {
   let resolve!: (value: VenueSchedule) => void
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{ venueId: 'v1', venueAddress: 'Main Hall' }, { venueId: 'v2', venueAddress: 'Other Hall' }] : path.includes('/v1/') ? new Promise<VenueSchedule>(r => { resolve = r }) : { ...schedule, bookings: [], unavailablePeriods: [] })
-  render(<VenueSchedulePage />)
+  render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>)
   fireEvent.change(await screen.findByLabelText('Venue'), { target: { value: 'v1' } })
   fireEvent.change(screen.getByLabelText('Venue'), { target: { value: 'v2' } })
   await screen.findByText('No schedule entries for this month.')

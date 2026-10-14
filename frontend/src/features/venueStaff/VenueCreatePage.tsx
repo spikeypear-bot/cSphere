@@ -10,6 +10,7 @@ import { venueLayouts, venueLayoutLabels, venueAccessibilities, venueAccessibili
   venueFacilities, venueFacilityLabels, type CreateVenueDto, type VenueDto } from '../../types/venue'
 import '../../components/skeleton.css'
 import './VenueForm.css'
+import { validMinutes } from '../../lib/bookingTiming'
 
 export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   const navigate = useNavigate()
@@ -17,9 +18,9 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [form, setForm] = useState<CreateVenueDto>(initialVenue ?? { venueAddress: '', venueCapacity: 50,
+  const [form, setForm] = useState<CreateVenueDto>(initialVenue ? { ...initialVenue, setupMinutes: initialVenue.setupMinutes ?? 0, turnaroundMinutes: initialVenue.turnaroundMinutes ?? 0 } : { venueAddress: '', venueCapacity: 50,
     supportedLayouts: [], venueAccessibilities: [], venueFacilities: [], operatingInformation: '', additionalInformation: '',
-    operatingHours: [] })
+    operatingHours: [], setupMinutes: 0, turnaroundMinutes: 0 })
   function change<K extends keyof CreateVenueDto>(key: K, value: CreateVenueDto[K]) {
     setForm(previous => ({ ...previous, [key]: value }))
     let message = ''
@@ -35,6 +36,8 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     event.preventDefault()
     if (busy.current) return
     const next: Record<string, string> = {}
+    if (!validMinutes(form.setupMinutes)) next.setupMinutes = 'Enter whole minutes from 0 to 10,080.'
+    if (!validMinutes(form.turnaroundMinutes)) next.turnaroundMinutes = 'Enter whole minutes from 0 to 10,080.'
     if (!form.venueAddress.trim()) next.venueAddress = 'Enter the venue address.'
     else if (form.venueAddress.trim().length > 500) next.venueAddress = 'Use 500 characters or fewer.'
     if (form.venueCapacity === null || !Number.isInteger(form.venueCapacity) || form.venueCapacity < 1 || form.venueCapacity > 50000)
@@ -49,9 +52,10 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     try {
       if (initialVenue) {
         const changes: Partial<CreateVenueDto> = {}
-        const fields = ['venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation', 'operatingHours'] as const
+        const fields = ['venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation', 'operatingHours', 'setupMinutes', 'turnaroundMinutes'] as const
         for (const field of fields) {
-          if (JSON.stringify(form[field]) !== JSON.stringify(initialVenue[field])) {
+          const original = field === 'setupMinutes' || field === 'turnaroundMinutes' ? initialVenue[field] ?? 0 : initialVenue[field]
+          if (JSON.stringify(form[field]) !== JSON.stringify(original)) {
             Object.assign(changes, { [field]: form[field] })
           }
         }
@@ -72,6 +76,8 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
       {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. School A - Classroom 1, Level 2, 123 Example Road" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Create one venue per independently bookable room or space. Include its room identity and location; this is its displayed identifier. Maximum 500 characters." />}
       <NumberField id="venueCapacity" label="Overall capacity" value={form.venueCapacity} min={1} onChange={v => change('venueCapacity', v)} error={errors.venueCapacity} hint="1–50,000 people. One capacity applies to every selected layout." />
+      <NumberField id="setupMinutes" label="Default setup (minutes)" value={form.setupMinutes ?? null} min={0} onChange={v => change('setupMinutes', v)} error={errors.setupMinutes} hint="Whole minutes, 0–10,080, before the event." />
+      <NumberField id="turnaroundMinutes" label="Default turnaround (minutes)" value={form.turnaroundMinutes ?? null} min={0} onChange={v => change('turnaroundMinutes', v)} error={errors.turnaroundMinutes} hint="Whole minutes, 0–10,080, after the event. Defaults apply to new requests; existing booking timings are preserved." />
       <div className="field"><ChipGroup label="Supported layouts" options={venueLayouts} labels={venueLayoutLabels} selected={form.supportedLayouts} onChange={v => change('supportedLayouts', v)} />
         <span className="field-hint">Select the arrangements this room or space supports.</span>
         {errors.supportedLayouts && <span className="field-error" role="alert">{errors.supportedLayouts}</span>}</div>

@@ -44,6 +44,18 @@ class VenueOperationalIssueFlowTest {
     private static final String EVENT_END = "2027-03-10T04:00:00Z";
     private static final String LATER = "2027-03-10T06:00:00Z";
 
+    @Test void coordinatorSeesIssuesDuringSavedSetupAndTurnaround() throws Exception {
+        UUID v = venue(), e = eventManagedByEc1(), b = booking(v, e, "approved");
+        jdbc.update("UPDATE venue_bookings SET setup_duration_minutes=30,turnaround_duration_minutes=45 WHERE booking_id=?", b);
+        UUID setup = reported(v, "Crew access", "2027-03-10T00:40:00Z", EVENT_START);
+        UUID turnaround = reported(v, "Teardown access", EVENT_END, "2027-03-10T04:30:00Z");
+        UUID touching = reported(v, "After occupancy", "2027-03-10T04:45:00Z", LATER);
+        coordinatorIssues("ec1").andExpect(status().isOk())
+                .andExpect(jsonPath(entry(setup) + ".overlappingEvents[0].eventId", contains(e.toString())))
+                .andExpect(jsonPath(entry(turnaround) + ".overlappingEvents[0].eventId", contains(e.toString())))
+                .andExpect(jsonPath(entry(touching) + ".overlappingEvents[0].eventId", empty()));
+    }
+
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
     @Autowired JdbcTemplate jdbc;

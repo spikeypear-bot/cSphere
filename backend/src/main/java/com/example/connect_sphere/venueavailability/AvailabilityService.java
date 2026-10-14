@@ -44,17 +44,26 @@ public class AvailabilityService {
     }
     public Settings settings(UUID id) { requireVenue(id); return repository.settings(id); }
 
+    public boolean hasOperationalIssue(UUID id, OffsetDateTime start, OffsetDateTime end, Settings durations) {
+        return repository.hasOperationalIssue(id, EffectivePeriod.of(start, end, durations));
+    }
+
+    public boolean outsideOperatingHours(UUID id, OffsetDateTime start, OffsetDateTime end) {
+        return outsideOperatingHours(id, start, end, repository.settings(id));
+    }
+
+    public boolean outsideOperatingHours(UUID id, OffsetDateTime start, OffsetDateTime end, Settings durations) {
+        return repository.outsideOperatingHours(id, EffectivePeriod.of(start, end, durations));
+    }
+
     @Transactional
     public Settings updateSettings(UUID id, Settings settings) {
-        venues.findForUpdate(id).orElseThrow(() -> new VenueNotFoundException(id));
-        if (settings == null || settings.setupMinutes() == null || settings.turnaroundMinutes() == null
-                || settings.setupMinutes() < 0 || settings.turnaroundMinutes() < 0
-                || settings.setupMinutes() > 10080 || settings.turnaroundMinutes() > 10080)
-            throw new InvalidVenueBookingException("Setup and turnaround must be whole minutes from 0 to 10080.");
-        // Changing occupancy around existing commitments needs a separate impact-review workflow.
-        if (!repository.bookings(id).isEmpty())
-            throw new VenueBookingStateException("Setup and turnaround cannot be changed while this venue has active bookings.");
-        repository.settings(id, settings);
+        var venue = venues.findForUpdate(id).orElseThrow(() -> new VenueNotFoundException(id));
+        EffectivePeriod.validate(settings);
+        // Bookings retain their own snapshots; these defaults apply only to future requests.
+        venue.setSetupMinutes(settings.setupMinutes());
+        venue.setTurnaroundMinutes(settings.turnaroundMinutes());
+        venues.saveAndFlush(venue);
         return settings;
     }
 
@@ -89,18 +98,46 @@ public class AvailabilityService {
 
     public boolean affected(UUID bookingId) { return repository.affected(bookingId); }
 
+    public com.example.connect_sphere.venuebooking.dto.BookingTimingDto timing(UUID venueId, UUID bookingId,
+            OffsetDateTime start, OffsetDateTime end, int setup, int turnaround, String note, boolean active) {
+        Settings durations = new Settings(setup, turnaround);
+        EffectivePeriod period = EffectivePeriod.of(start, end, durations);
+        var conflicts = active ? conflictsForBooking(venueId, bookingId, start, end, durations).stream()
+                .map(com.example.connect_sphere.venuebooking.dto.VenueBookingConflictDto::from).toList()
+                : java.util.List.<com.example.connect_sphere.venuebooking.dto.VenueBookingConflictDto>of();
+        return new com.example.connect_sphere.venuebooking.dto.BookingTimingDto(setup, turnaround,
+                start, end, period.start(), period.end(), note, conflicts, active);
+    }
+
     public List<Booking> conflicts(UUID venueId, UUID eventId, OffsetDateTime start, OffsetDateTime end) {
-        Settings s = repository.settings(venueId);
+        return conflicts(venueId, eventId, start, end, repository.settings(venueId));
+    }
+
+    /** Existing bookings supply their snapshot; prospective requests use venue defaults above. */
+    public List<Booking> conflicts(UUID venueId, UUID eventId, OffsetDateTime start, OffsetDateTime end, Settings durations) {
+        EffectivePeriod period = EffectivePeriod.of(start, end, durations);
         return repository.bookings(venueId).stream().filter(b -> b.status().equals("approved") && !b.eventId().equals(eventId))
-                .filter(b -> overlaps(b.effectiveStart(), b.effectiveEnd(), start.minusMinutes(s.setupMinutes()), end.plusMinutes(s.turnaroundMinutes())))
+                .filter(b -> overlaps(b.effectiveStart(), b.effectiveEnd(), period.start(), period.end()))
                 .toList();
     }
+    /** Editing/approving an existing booking excludes only itself, including legacy same-event bookings. */
+    public List<Booking> conflictsForBooking(UUID venueId, UUID bookingId, OffsetDateTime start, OffsetDateTime end, Settings durations) {
+        EffectivePeriod period = EffectivePeriod.of(start, end, durations);
+        return repository.bookings(venueId).stream()
+                .filter(b -> b.status().equals("approved") && !b.bookingId().equals(bookingId))
+                .filter(b -> overlaps(b.effectiveStart(), b.effectiveEnd(), period.start(), period.end())).toList();
+    }
+
     public boolean unavailable(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
         return !unavailablePeriods(venueId, start, end).isEmpty();
     }
     public List<Period> unavailablePeriods(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
-        Settings s = repository.settings(venueId);
-        return repository.periods(venueId, start.minusMinutes(s.setupMinutes()), end.plusMinutes(s.turnaroundMinutes()));
+        return unavailablePeriods(venueId, start, end, repository.settings(venueId));
+    }
+
+    public List<Period> unavailablePeriods(UUID venueId, OffsetDateTime start, OffsetDateTime end, Settings durations) {
+        EffectivePeriod period = EffectivePeriod.of(start, end, durations);
+        return repository.periods(venueId, period.start(), period.end());
     }
     public static boolean overlaps(OffsetDateTime a, OffsetDateTime b, OffsetDateTime c, OffsetDateTime d) {
         return a.isBefore(d) && b.isAfter(c);

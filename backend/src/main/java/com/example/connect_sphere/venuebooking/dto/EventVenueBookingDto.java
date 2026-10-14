@@ -21,5 +21,5 @@ public record EventVenueBookingDto(
         String alternativeVenueAddress,
         String alternativeArrangement,
         OffsetDateTime startDatetime,
-        OffsetDateTime endDatetime) {
+        OffsetDateTime endDatetime, BookingTimingDto timing) {
 }

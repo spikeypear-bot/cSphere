@@ -70,6 +70,7 @@ class VenueBookingRequestServiceTest {
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
                 activityService, notificationService, operationalIssues, null, availability);
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
+        when(availability.settings(any())).thenReturn(new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0, 0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());
         when(operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any())).thenReturn(List.of());
         when(users.findByRole(UserRole.vs)).thenReturn(List.of(user(VS_ONE), user(VS_TWO)));

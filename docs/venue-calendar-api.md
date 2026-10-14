@@ -10,7 +10,7 @@ Approved bookings display as Confirmed booking. Pending requests display as Tent
 
 `GET /api/venues/{venueId}/schedule?start=<offset timestamp>&end=<offset timestamp>` returns the existing schedule response shape and `Cache-Control: no-store`. Supply both bounds, with end later than start and no more than 93 days apart. Encode the plus sign in timezone offsets (the frontend uses URLSearchParams). Invalid ranges return 422 and malformed timestamps return 400. Existing Venue Staff role restrictions apply.
 
-The frontend requests the entire visible calendar grid, including adjacent-month dates. Queries include intervals where start < range end and end > range start; touching boundaries do not overlap. Booking retrieval considers the full buffered interval, then the frontend displays event/setup/turnaround separately. Calendar reads include completed events with pending or approved bookings, but exclude cancelled events and changed/rejected/cancelled bookings. Calls without bounds retain the previous active-only behaviour, and operational conflict checks are unchanged.
+The frontend requests the entire visible calendar grid, including adjacent-month dates. Queries include intervals where start < range end and end > range start; touching boundaries do not overlap. Booking retrieval considers the full buffered interval, then the frontend displays booking-window/setup/turnaround segments separately. Calendar reads include completed events with pending or approved bookings, but exclude cancelled events and changed/rejected/cancelled bookings. Calls without bounds retain the previous active-only behaviour, and operational conflict checks are unchanged.
 
 Navigation and refresh retrieve current stored data. Old entries and details disappear while reloading or after failure. Late responses for a previous venue/month are ignored. There is an explicit empty state and retry action. No polling is introduced.
 
@@ -32,4 +32,8 @@ Manual acceptance check:
 4. Interrupt schedule retrieval and refresh. Confirm old entries disappear, an error and retry action appear, and the page retains its height. Restore connectivity and retry.
 5. Check a narrow viewport: the legend and refresh occupy their two columns, the venue selector stays within the page, and the calendar scrolls horizontally.
 
-Historical buffers are derived from the venue's stored setup/turnaround settings, as in the existing schedule API; the current schema does not snapshot buffer settings per booking.
+As of V27, historical and current buffers are derived from each booking's saved setup/turnaround durations. Existing records receive their venue's current values during migration, preserving existing booking windows while capturing their venue defaults. The response shape is unchanged; see [booking snapshot policy](venue-booking-duration-snapshots.md).
+
+VS-C2 also lists overlaps between approved bookings in the loaded range, comparing their occupied periods and allowing touching boundaries. Booking entries link to the existing details screen for timing review. The calendar remains read-only; overlap notification scans are available on Venue Details and run at application startup for active bookings.
+
+Each booking uses its own stored start/end window, falling back to event times only for nullable legacy rows from V26. Setup and turnaround expand that booking window independently of other venues on the event.

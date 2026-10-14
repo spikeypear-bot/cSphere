@@ -20,6 +20,10 @@ public class VenueEvent {
     private UUID eventId;
     @Column(name = "event_name")
     private String eventName;
+    @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
+    @Column(name = "status", columnDefinition = "event_status")
+    private com.example.connect_sphere.event.entity.EventStatus status;
     @Column(name = "start_datetime")
     private OffsetDateTime startDatetime;
     @Column(name = "end_datetime")

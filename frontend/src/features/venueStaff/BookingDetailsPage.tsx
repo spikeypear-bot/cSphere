@@ -8,10 +8,12 @@ import { EventRequirementsPanel } from './EventRequirementsPanel'
 import { useVenueRead } from './useVenueRead'
 import './BookingDetailsPage.css'
 import { BookingApproval, BookingInformationHeading } from './BookingApproval'
+import { BookingTimingEditor } from './BookingTimingEditor'
 
 /** Shared booking details for Catalogue and the VS02 pending queue. */
 export function BookingDetailsPage() {
   const { bookingId } = useParams()
+  const [timingRevision, setTimingRevision] = useState(0)
   const [conflictState, setConflictState] = useState<{ bookingId?: string; items: VenueBookingConflict[]; periods: VenueUnavailabilityConflict[] }>({ bookingId, items: [], periods: [] })
   if (conflictState.bookingId !== bookingId) setConflictState({ bookingId, items: [], periods: [] })
   const conflicts = conflictState.bookingId === bookingId ? conflictState.items : []
@@ -33,7 +35,7 @@ export function BookingDetailsPage() {
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>
         {!loading && !error && data.bookingId === bookingId
-          ? <BookingApproval key={bookingId} booking={data} onApproved={replaceData} onUnavailable={failRead}
+          ? <BookingApproval key={`${bookingId}:${timingRevision}`} booking={data} onApproved={replaceData} onUnavailable={failRead}
               conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts} />
           : <div className="booking-details-page__section-header"><BookingInformationHeading /></div>}
         <div className="booking-detail-layout">
@@ -48,6 +50,9 @@ export function BookingDetailsPage() {
                 alternativeVenueAddress={data.alternativeVenueAddress} alternativeArrangement={data.alternativeArrangement} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
+            <BookingTimingEditor key={data.bookingId} booking={data} onSaved={saved => {
+              replaceData(saved); setConflicts([], []); setTimingRevision(value => value + 1)
+            }} disabled={loading || !!error} />
             {!fromApprovals && <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />}
           </div>
         </div>

@@ -9,9 +9,10 @@ import type { VenueDto } from '../../types/venue'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { VenueDetailsPanel } from './VenueDetailsPanel'
 import { VenueOperationalIssuesPanel } from './VenueOperationalIssuesPanel'
-import { formatEventDateTime } from './formatEventDateTime'
+import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
 import { useVenueRead } from './useVenueRead'
 import './BookingDetailsPage.css'
+import { TimingConflictReview } from './TimingConflictReview'
 
 export function VenueDetailsPage() {
   const { venueId } = useParams()
@@ -31,7 +32,8 @@ export function VenueDetailsPage() {
     />
     {venue.error ? <div><p role="alert">{venue.error}</p><Button onClick={venue.retry}>Retry venue</Button></div>
       : !venue.data ? <p role="status">Loading venue…</p> : <VenueDetailsPanel venue={venue.data} />}
-    {venue.data && <VenueOccupancySettings key={venue.data.venueId} venueId={venue.data.venueId} />}
+    {venue.data && <VenueOccupancySettings key={venue.data.venueId} venueId={venue.data.venueId} onSaved={venue.retry} />}
+    {venue.data && <TimingConflictReview key={`conflicts:${venue.data.venueId}`} venueId={venue.data.venueId} />}
     {venue.data && <AssociatedBookings key={`bookings-${venue.data.venueId}-${bookingRevision}`} venueId={venue.data.venueId} />}
     {venue.data && <VenueUnavailabilityPanel key={`unavailability-${venue.data.venueId}`} venueId={venue.data.venueId}
       onRecorded={() => setBookingRevision(n => n + 1)} />}
@@ -50,7 +52,8 @@ function AssociatedBookings({ venueId }: { venueId: string }) {
         : <ul className="associated-bookings">{bookings.data.map(booking => <li key={booking.bookingId}>
           <Card className="feature-skeleton__body">
             <h3>{booking.event.eventName}</h3>
-            <p>{formatEventDateTime(booking.event.startDatetime)} (Singapore time)</p>
+            <p>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)} (Singapore time)</p>
+            {booking.timing && <p><strong>Venue Occupied (SGT):</strong> {formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</p>}
             <p>Status: <span data-booking-status={booking.status ?? 'pending'}>{booking.status ?? 'pending'}</span></p>
             {booking.requiresAlternative && <p className="field-error">Alternative arrangements required</p>}
             <Link to={`/venue-staff/bookings/${booking.bookingId}`}>View booking details</Link>

@@ -119,3 +119,13 @@ xdg-open frontend/coverage/index.html
 ## Venue unavailability (VS01)
 
 Venue Staff can record unavailable periods from Venue Details, review affected bookings, and notify coordinators without cancelling events. Availability includes setup/turnaround buffers. Coordinators can request a replacement; approval preserves the original as a changed booking. See [VS01 API, workflow, and manual testing](docs/venue-unavailability-api.md).
+
+## Venue booking timing (VS-C2 / EC-C2)
+
+Coordinators can request multiple venues, each with its own booking window, setup duration and turnaround duration. Occupied-time checks include both buffers; Venue Staff can review and edit saved durations. Advertised event times remain unchanged.
+
+- [Booking API and request examples](docs/venue-booking-api.md)
+- [Timing workflow, V27/V28 migrations and verification](docs/venue-booking-duration-snapshots.md)
+- [Calendar behavior](docs/venue-calendar-api.md)
+
+Incoming migrations through V26 are retained. Databases that used the superseded unpublished local V23/V24 timing migrations need separate migration-history reconciliation before running this branch; do not rewrite applied migrations or blindly repair checksums.

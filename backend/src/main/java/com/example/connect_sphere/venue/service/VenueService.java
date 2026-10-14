@@ -43,6 +43,8 @@ public class VenueService {
     public VenueDto createVenue(CreateVenueDto input) {
         validate(input);
         Venue venue = new Venue();
+        venue.setSetupMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.setupMinutes(), 0));
+        venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.turnaroundMinutes(), 0));
         venue.setVenueId(UUID.randomUUID());
         venue.setVenueAddress(input.venueAddress().strip());
         venue.setVenueCapacity(input.venueCapacity());
@@ -61,7 +63,7 @@ public class VenueService {
     /** Updates catalogue characteristics without accessing bookings. */
     @Transactional
     public VenueDto updateVenue(UUID id, UpdateVenueDto input) {
-        Venue venue = repository.findById(id).orElseThrow(() -> new VenueNotFoundException(id));
+        Venue venue = repository.findForUpdate(id).orElseThrow(() -> new VenueNotFoundException(id));
         if (input == null) throw new InvalidVenueException(List.of("venue details are required"));
         VenueDto current = mapper.toDto(venue);
         CreateVenueDto merged = new CreateVenueDto(current.venueAddress(),
@@ -73,6 +75,8 @@ public class VenueService {
                 input.getVenueFacilities() == null ? current.venueFacilities() : input.getVenueFacilities(),
                 input.getOperatingHours() == null ? current.operatingHours() : input.getOperatingHours());
         validate(merged);
+        venue.setSetupMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.getSetupMinutes(), venue.getSetupMinutes()));
+        venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.getTurnaroundMinutes(), venue.getTurnaroundMinutes()));
         if (input.getVenueCapacity() != null) venue.setVenueCapacity(merged.venueCapacity());
         if (input.getSupportedLayouts() != null) venue.setSupportedLayouts(labels(merged.supportedLayouts()));
         if (input.getVenueAccessibilities() != null) venue.setVenueAccessibilities(labels(merged.venueAccessibilities()));
@@ -155,7 +159,7 @@ public class VenueService {
         VenueDto base = mapper.toDto(venue);
         return new VenueDto(base.venueId(), base.venueAddress(), base.venueCapacity(), base.supportedLayouts(),
                 base.operatingInformation(), base.additionalInformation(), base.venueAccessibilities(),
-                base.venueFacilities(), values);
+                base.venueFacilities(), values, venue.getSetupMinutes(), venue.getTurnaroundMinutes());
     }
 
     private void saveHours(UUID venueId, List<VenueOperatingHourDto> values) {

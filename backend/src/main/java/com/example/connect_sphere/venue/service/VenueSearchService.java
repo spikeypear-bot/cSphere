@@ -22,15 +22,15 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Service
 public class VenueSearchService {
     private final VenueRepository venues;
-    private final VenueBookingRecordRepository bookings;
+    private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
     private final VenueMapper mapper;
 
     public VenueSearchService(
             VenueRepository venues,
-            VenueBookingRecordRepository bookings,
+            com.example.connect_sphere.venueavailability.AvailabilityService availability,
             VenueMapper mapper) {
         this.venues = venues;
-        this.bookings = bookings;
+        this.availability = availability;
         this.mapper = mapper;
     }
 
@@ -48,13 +48,13 @@ public class VenueSearchService {
 
         Integer capacity = parseCapacity(rawCapacity);
         List<String> facilities = parseFacilities(rawFacilities);
-        Set<UUID> unavailable = new HashSet<>(bookings.findVenueIdsWithOverlappingBookings(
-                VenueBookingStatus.approved, start, end));
-
         return venues.findAll(Sort.by("venueAddress", "venueId")).stream()
-                .filter(venue -> !unavailable.contains(venue.getVenueId()))
                 .filter(venue -> capacity == null || venue.getVenueCapacity() >= capacity)
                 .filter(venue -> hasFacilities(venue, facilities))
+                .filter(venue -> availability.conflicts(venue.getVenueId(), null, start, end).isEmpty()
+                        && !availability.unavailable(venue.getVenueId(), start, end)
+                        && !availability.outsideOperatingHours(venue.getVenueId(), start, end)
+                        && !availability.hasOperationalIssue(venue.getVenueId(), start, end, availability.settings(venue.getVenueId())))
                 .map(mapper::toDto)
                 .toList();
     }

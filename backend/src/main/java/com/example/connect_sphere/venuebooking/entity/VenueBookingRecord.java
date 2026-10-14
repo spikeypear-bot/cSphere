@@ -50,6 +50,20 @@ public class VenueBookingRecord {
     @Column(name = "replaces_booking_id")
     private UUID replacesBookingId;
 
+    /** Captured at submission; independent of subsequent venue defaults. */
+    @Column(name = "setup_duration_minutes", nullable = false)
+    private int setupDurationMinutes;
+
+    @Column(name = "turnaround_duration_minutes", nullable = false)
+    private int turnaroundDurationMinutes;
+
+    @Column(name = "timing_note")
+    private String timingNote;
+    @Column(name = "timing_updated_at")
+    private OffsetDateTime timingUpdatedAt;
+    @Column(name = "timing_updated_by")
+    private UUID timingUpdatedBy;
+
     @Enumerated(EnumType.STRING)
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(name = "status", columnDefinition = "venue_booking_status")

@@ -130,25 +130,26 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
   </section>
 }
 
-export function VenueOccupancySettings({ venueId }: { venueId: string }) {
+export function VenueOccupancySettings({ venueId, onSaved }: { venueId: string; onSaved?: () => void }) {
   const read = useVenueRead<OccupancySettings>(`/venues/${venueId}/occupancy-settings`)
   return read.error ? <p role="alert">{read.error} <Button onClick={read.retry}>Retry setup settings</Button></p>
-    : read.data ? <SettingsForm key={`${venueId}-${read.data.setupMinutes}-${read.data.turnaroundMinutes}`} venueId={venueId} settings={read.data} />
+    : read.data ? <SettingsForm key={`${venueId}-${read.data.setupMinutes}-${read.data.turnaroundMinutes}`} venueId={venueId} settings={read.data} onSaved={onSaved} />
     : <p>Loading setup settings…</p>
 }
 
-function SettingsForm({ venueId, settings }: { venueId: string; settings: OccupancySettings }) {
+function SettingsForm({ venueId, settings, onSaved }: { venueId: string; settings: OccupancySettings; onSaved?: () => void }) {
   const [setup, setSetup] = useState(String(settings.setupMinutes))
   const [turnaround, setTurnaround] = useState(String(settings.turnaroundMinutes))
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
   return <details className="venue-unavailability"><summary>Setup and turnaround settings</summary>
-    <p>These buffers apply to availability checks. Configure them before booking this venue; active bookings prevent changes.</p>
+    <p>These defaults apply to new requests. Existing bookings retain their saved setup and turnaround durations.</p>
     <form onSubmit={async e => {
       e.preventDefault(); setBusy(true); setFeedback('')
       try {
         await apiClient.put(`/venues/${venueId}/occupancy-settings`, { setupMinutes: Number(setup), turnaroundMinutes: Number(turnaround) })
         setFeedback('Setup and turnaround saved.')
+        onSaved?.()
       } catch (e) { setFeedback(message(e, 'Could not save settings.')) }
       finally { setBusy(false) }
     }}>

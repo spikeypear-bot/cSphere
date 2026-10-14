@@ -336,6 +336,7 @@ export function EventRequestWizardPage() {
               value={fields.venueRequirements ?? ''}
               onChange={(value) => setFields({ venueRequirements: value || null })}
               placeholder="Theatre-style seating for 150, one breakout room…"
+              hint="Include any special setup, early-access or teardown needs here. Your coordinator will review the operational timings with Venue Staff."
               multiline
               error={fieldError('venueRequirements')}
             />

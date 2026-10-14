@@ -6,7 +6,7 @@ Implemented from the supplied VS01 implementation overview and the agreed replac
 
 Venue Details now places **Unavailability** after Associated Bookings and before Operational Issues. Venue Staff enter start/end date and time and a reason. All inputs and displayed times use Singapore time; API timestamps carry an explicit offset and PostgreSQL stores `timestamptz`.
 
-The application previews affected bookings before saving. If any are affected, staff see the event, event times, effective occupied times and booking status. They can return to the form or explicitly confirm. Recording unavailability never deletes or automatically cancels/rejects a booking or event.
+The application previews affected bookings before saving. If any are affected, staff see the event, booking times, effective occupied times and booking status. They can return to the form or explicitly confirm. Recording unavailability never deletes or automatically cancels/rejects a booking or event.
 
 Pending and approved bookings for active events are checked. Changed, rejected and cancelled bookings, and cancelled/completed events, are excluded. A pending booking does not reserve a venue, but still needs follow-up if the venue becomes unavailable.
 
@@ -16,11 +16,13 @@ Replacement approval also updates the event's current venue reference. The chang
 
 ## Availability and setup/turnaround
 
-Effective occupancy is `[event start − setup, event end + turnaround)`. Two intervals overlap only when `firstStart < secondEnd && firstEnd > secondStart`; touching boundaries do not overlap. Both bookings' buffers participate in booking-to-booking checks. An unavailability interval is not itself padded.
+Effective occupancy is `[booking start − saved setup, booking end + saved turnaround)`. Two intervals overlap only when `firstStart < secondEnd && firstEnd > secondStart`; touching boundaries do not overlap. Both bookings' buffers participate in booking-to-booking checks. An unavailability interval is not itself padded.
 
 The shared availability service is used by coordinator venue options, booking submission, staff approval, and unavailability preview. Approved bookings and unavailable periods block new requests/approvals. Pending requests remain non-reserving.
 
-Venue Details includes setup/turnaround settings in whole minutes, 0–10080, defaulting to zero for existing venues. Settings are locked while a venue has active bookings: changing buffers around existing commitments requires an impact-review workflow beyond VS01. Configure buffers before taking bookings. VS01 does not add editing or deletion of unavailable periods.
+V27 saves setup/turnaround durations per booking. Existing bookings are backfilled from their venue's current values; subsequent availability, approval, impact-preview and schedule reads use those snapshots. New requests capture selected durations (venue defaults when omitted) under the venue lock. See [VS-C2 timing workflow and backfill policy](venue-booking-duration-snapshots.md).
+
+Venue Details includes setup/turnaround settings in whole minutes, 0–10080, defaulting to zero for existing venues. VS-C2 allows defaults to change independently of existing bookings and adds guarded booking-specific timing edits. Editing or deletion of unavailable periods remains outside this story.
 
 Unavailable periods for the same venue cannot overlap. Both preview and creation return `409` for duplicate, contained, enclosing or partially overlapping ranges, comparing complete timestamp instants. Touching boundaries are allowed: if an existing period ends on 20 October at 14:00, another may start at 14:00 or 17:00 that day. Different venues are checked independently. Creation rechecks existing periods while holding the venue lock, so simultaneous submissions and stale previews cannot insert overlapping periods. Existing historical records are preserved.
 
@@ -35,7 +37,7 @@ These endpoints require Venue Staff (`VS`). There is no venue-owner mapping in t
 | GET | `/api/venues/{id}/unavailability` | Periods ordered by start, then identifier |
 | POST | `/api/venues/{id}/unavailability/preview` | Affected bookings and preview token; no writes |
 | POST | `/api/venues/{id}/unavailability` | `201` and saved period |
-| GET / PUT | `/api/venues/{id}/occupancy-settings` | Read/update setup and turnaround minutes |
+| GET / PUT | `/api/venues/{id}/occupancy-settings` | Read/update venue defaults for future booking requests; existing snapshots stay unchanged |
 | GET | `/api/venues/{id}/schedule` | Settings, active bookings with effective occupancy, unavailable periods; optional paired `start`/`end` parameters select calendar-range reads including completed events (see VS15) |
 
 Preview request:
@@ -101,7 +103,7 @@ Verified locally on 6 October 2026: the full backend suite passed 337 tests; aft
 
 Manual walkthrough:
 
-1. As Venue Staff, open a venue without active bookings. Set setup to 30 and turnaround to 45 minutes.
+1. As Venue Staff, open a venue. Existing bookings keep their saved durations. Set setup to 30 and turnaround to 45 minutes.
 2. Request and approve an event from 10:00 to 12:00 at that venue.
 3. Record maintenance from 09:20 to 09:40. Verify the conflict appears even though the event starts later.
 4. Return to the form once and verify nothing was saved; then review and confirm.
@@ -119,3 +121,5 @@ Venue unavailability moved from V17 to V19 without changing its SQL contents, pr
 For the local database that had already applied `V17__venue_unavailability.sql`, the existing successful history entry was renamed to version 19 / `V19__venue_unavailability.sql`, retaining its checksum and all application data. V17 and V18 then require a one-time `SPRING_FLYWAY_OUT_OF_ORDER=true` migration run. Do not use Flyway clean or delete database volumes. Other databases with the old branch migration need the same verified history reconciliation before upgrading; do not rename main's V17 entry.
 
 A subsequent main merge introduced V19 alternative suggestions. Venue unavailability is now V20, again with unchanged SQL. The local history entry was advanced from V19 to V20 before applying the incoming V19 with the same one-time out-of-order migration procedure. Fresh databases apply all migrations normally.
+
+Each booking uses its own stored start/end window, falling back to event times only for nullable legacy rows from V26. Setup and turnaround expand that booking window independently of other venues on the event.

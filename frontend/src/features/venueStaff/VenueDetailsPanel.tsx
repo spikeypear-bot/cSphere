@@ -23,6 +23,7 @@ export function VenueDetailsPanel({ venue, linkToDetails = false }: { venue: Ven
         <dd>{venue.venueAccessibilities.map(value => venueAccessibilityLabels[value]).join(', ') || 'Not recorded'}</dd></div>
       <div><dt>Facilities</dt>
         <dd>{venue.venueFacilities.map(value => venueFacilityLabels[value]).join(', ') || 'Not recorded'}</dd></div>
+      <div><dt>Default setup / turnaround</dt><dd>{venue.setupMinutes ?? 0} / {venue.turnaroundMinutes ?? 0} minutes (new requests only)</dd></div>
       <div><dt>Additional information</dt><dd>{venue.additionalInformation?.trim() || 'No Additional Information'}</dd></div>
     </dl>
     {linkToDetails && <Link className="button button--secondary venue-card-preview__details" to={`/venue-staff/catalogue/${venue.venueId}`}>View venue details</Link>}
