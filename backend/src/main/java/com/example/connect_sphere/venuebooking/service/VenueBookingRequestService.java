@@ -26,6 +26,7 @@ import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
 import com.example.connect_sphere.notification.service.NotificationService;
+import com.example.connect_sphere.safety.ReadinessService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
@@ -137,7 +138,7 @@ public class VenueBookingRequestService {
     @Transactional(readOnly = true)
     public List<EventVenueBookingDto> bookingsForSafetyOfficer(UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (event.getStatus() != EventStatus.pending && event.getStatus() != EventStatus.confirmed) {
+        if (!ReadinessService.VISIBLE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return bookings.findForEvent(eventId).stream().map(this::toDto).toList();

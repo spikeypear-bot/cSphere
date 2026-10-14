@@ -112,6 +112,12 @@ class EquipmentRequestFlowTest {
         return jdbc.queryForObject("SELECT status::text FROM events WHERE event_id = ?", String.class, eventId);
     }
 
+    private void moveTo(UUID eventId, String status) {
+        sync();
+        jdbc.update("UPDATE events SET status = ?::event_status WHERE event_id = ?", status, eventId);
+        sync();
+    }
+
     @Test
     void coordinatorSubmitsItemsWithQuantitiesAndNotesAndTheRequestIsSavedAsProcessing() throws Exception {
         UUID eventId = event();
@@ -193,6 +199,32 @@ class EquipmentRequestFlowTest {
         mvc.perform(get("/api/events/" + eventId + "/equipment-requests").with(flow.as("ec1")))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.length()").value(0));
+    }
+
+    // SO-C2: the Safety Officer reads any active event's requests, with a real
+    // safety_officer token, including once the event awaits its safety review.
+    @ParameterizedTest
+    @ValueSource(strings = {"pending", "awaiting_safety_review", "safety_changes_requested", "safety_approved", "confirmed"})
+    void theSafetyOfficerCanViewTheRequestsOfAnActiveEvent(String eventStatus) throws Exception {
+        UUID eventId = event();
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(equipment("EC07 Projector"), 2)));
+        moveTo(eventId, eventStatus);
+
+        mvc.perform(get("/api/events/" + eventId + "/equipment-requests").with(flow.as("so1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].requestId").value(requestId.toString()))
+                .andExpect(jsonPath("$[0].lines[0].quantity").value(2));
+    }
+
+    @Test
+    void theSafetyOfficerCannotViewTheRequestsOfACancelledEvent() throws Exception {
+        UUID eventId = event();
+        submitted(eventId, body("Two screens on stage", item(equipment("EC07 Projector"), 2)));
+        moveTo(eventId, "cancelled");
+
+        mvc.perform(get("/api/events/" + eventId + "/equipment-requests").with(flow.as("so1")))
+                .andExpect(status().isNotFound());
     }
 
     @Test

@@ -189,7 +189,7 @@ public class ReadinessService {
     }
 
     /** Events from Planning through the safety check to Confirmed (EC08 adds the safety stages). */
-    static final java.util.Set<EventStatus> VISIBLE = java.util.EnumSet.of(EventStatus.pending,
+    public static final java.util.Set<EventStatus> VISIBLE = java.util.EnumSet.of(EventStatus.pending,
             EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested,
             EventStatus.safety_approved, EventStatus.confirmed);
 
