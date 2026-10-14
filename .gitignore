@@ -31,6 +31,9 @@ bin/
 *.log
 logs/
 
+### Generated test output ###
+backend/test-output.txt
+
 ### OS ###
 .DS_Store
 Thumbs.db
