@@ -46,7 +46,8 @@ public class EventVenueBookingController {
 
     @GetMapping("/venue-bookings")
     public List<EventVenueBookingDto> bookings(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
-        if ("so".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+        // The token's role claim is the UserRole name (TokenService).
+        if ("safety_officer".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
             return service.bookingsForSafetyOfficer(eventId);
         }
         return service.bookingsForEvent(userIdOf(jwt), eventId);

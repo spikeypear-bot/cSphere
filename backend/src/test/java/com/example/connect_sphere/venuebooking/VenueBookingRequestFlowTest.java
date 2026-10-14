@@ -13,6 +13,8 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -118,6 +120,12 @@ class VenueBookingRequestFlowTest {
     private int bookingsFor(UUID eventId) {
         sync();
         return jdbc.queryForObject("SELECT count(*) FROM venue_bookings WHERE event_id = ?", Integer.class, eventId);
+    }
+
+    private void moveTo(UUID eventId, String status) {
+        sync();
+        jdbc.update("UPDATE events SET status = ?::event_status WHERE event_id = ?", status, eventId);
+        sync();
     }
 
     @Test
@@ -436,6 +444,32 @@ class VenueBookingRequestFlowTest {
                 .andExpect(jsonPath("$[-1].type").value("venue_booking_requested"));
         mvc.perform(get("/api/events/" + eventId + "/timeline").with(flow.as("eo1")))
                 .andExpect(jsonPath("$[?(@.type == 'venue_booking_requested')]").isEmpty());
+    }
+
+    // SO-C2: the Safety Officer reads any active event's bookings, with a real
+    // safety_officer token, including once the event awaits its safety review.
+    @ParameterizedTest
+    @ValueSource(strings = {"pending", "awaiting_safety_review", "safety_changes_requested", "safety_approved", "confirmed"})
+    void theSafetyOfficerCanViewTheBookingsOfAnActiveEvent(String eventStatus) throws Exception {
+        UUID eventId = event(150, "none");
+        UUID venueId = venue(200, List.of());
+        submit(eventId, "ec1", bookingFor(venueId)).andExpect(status().isCreated());
+        moveTo(eventId, eventStatus);
+
+        mvc.perform(get("/api/events/" + eventId + "/venue-bookings").with(flow.as("so1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].venueId").value(venueId.toString()));
+    }
+
+    @Test
+    void theSafetyOfficerCannotViewTheBookingsOfACancelledEvent() throws Exception {
+        UUID eventId = event(150, "none");
+        submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());
+        moveTo(eventId, "cancelled");
+
+        mvc.perform(get("/api/events/" + eventId + "/venue-bookings").with(flow.as("so1")))
+                .andExpect(status().isNotFound());
     }
     @Test
     void staffRejectionIsVisibleToAssignedCoordinator() throws Exception {
