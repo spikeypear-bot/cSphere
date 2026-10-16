@@ -45,6 +45,8 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("EC03")
+@Tag("EC-C2")
 class VenueBookingRequestFlowTest {
     private static final List<VenueOperatingHourDto> FULL_DAY_HOURS = List.of(
             new VenueOperatingHourDto(1, LocalTime.of(0, 0), LocalTime.of(23, 59)),
@@ -201,7 +203,7 @@ class VenueBookingRequestFlowTest {
 
         submit(eventId, "ec1", bookingFor(venueId))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("step_free_access")));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Step-free access")));
         assertThat(bookingsFor(eventId)).isZero();
 
         submit(eventId, "ec1", "{\"venueId\":\"" + venueId + "\",\"suitabilityNote\":\"Ramp hire arranged\"}")
