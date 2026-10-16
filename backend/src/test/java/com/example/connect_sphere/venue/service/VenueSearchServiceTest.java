@@ -26,6 +26,8 @@ import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
 @Tag("unit")
+@Tag("EC04")
+@Tag("EC05")
 class VenueSearchServiceTest {
     private final VenueRepository venues = mock(VenueRepository.class);
     private final com.example.connect_sphere.venueavailability.AvailabilityService availability = mock(com.example.connect_sphere.venueavailability.AvailabilityService.class);

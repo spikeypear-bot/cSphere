@@ -23,6 +23,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.server.ResponseStatusException;
 
 @Tag("unit")
+@Tag("TS06")
 class EquipmentRequestDecisionServiceTest {
 
     private static final UUID REQUEST_ID = UUID.randomUUID();

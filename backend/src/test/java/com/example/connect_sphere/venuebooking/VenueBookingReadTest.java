@@ -27,6 +27,7 @@ import com.example.connect_sphere.venue.service.VenueService;
 @AutoConfigureMockMvc
 @Transactional
 @org.springframework.security.test.context.support.WithMockUser(username = "vs16-reader", roles = "VS")
+@Tag("VS16")
 class VenueBookingReadTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;

@@ -36,6 +36,8 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
+@Tag("ECL-C1")
+@Tag("AU04")
 class UnassignedRequestsAccessTest {
 
     private static final String UNASSIGNED = "/api/event-requests/unassigned";

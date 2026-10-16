@@ -223,6 +223,52 @@ Built on `feature/ec08-eo04-ecnew2-event_lifecycle` (2026-10-11, merged with SO-
 - **EO04 organiser arrangements** (`GET /api/events/{id}/arrangements`). The response is built field by field, so internal notes, holds, buffers and rejected requests cannot leak. Nothing is shown before confirmation. After confirmation the organiser sees approved venues (with capacity, supported layouts, facilities and operating information), how their accessibility needs are met, equipment merged by item, the safety-approval and confirmation dates, and an "updated since first confirmed" or "being updated" marker (`first_confirmed_at` vs `confirmed_at`). Another organisation's event returns 404.
 - **Timeline entries** for event-stage actions store journey codes (e.g. `PLANNING` → `AWAITING_SAFETY_REVIEW`) in from/to status, anchored on the originating request.
 
+### D23 — IS212 Week 9: CI extended with lint, audit, package-once, smoke and browser E2E (no deployment)
+
+2026-10-13. Week 9's lab: "the front half of this pipeline transfers directly: lint, tests, a dependency audit, a smoke test of the running app, and a browser test of a key user journey are all worth adding to your project's workflow". The lecture puts continuous *delivery/deployment* in scope for the exam but not the project ("doesn't score extra marks"), so there are no staging/production jobs.
+
+- **Lint** runs inside `frontend-build`, so it is gated by the existing required check without a settings change. It surfaced one long-standing error (a redundant triple-slash reference in `vite.config.ts`), now fixed.
+- **Audit:** `npm audit --audit-level=high` blocks. It found 2 high-severity issues in build tools (`brace-expansion`, `source-map-js`), fixed with a lockfile-only `npm audit fix`. The backend jar gets an SBOM and a Grype scan that **reports but does not yet block**; make it blocking once the first report on `main` is reviewed, so a Spring upgrade is planned, not forced by a red build.
+- **Package once, test the package:** `package` builds the jar and the frontend bundle once; `smoke` and `e2e` run those artifacts, not the source (the lab's "tidy-packaging" lesson: checks on source cannot notice that what ships differs from what was tested).
+- **Smoke** (`.github/scripts/smoke.sh`): health UP, a bad password gets 401, `eo1` signs in, a signed-in call reaches the database, and an organiser gets 403 from a coordinator endpoint.
+- **E2E** (`frontend/e2e/`, Playwright): sign-in, a refused password, and an organiser's draft persisting through a reload. Kept deliberately few. Verified locally against the packaged jar: 3/3, then 9/9 with `--repeat-each=3`.
+- **Test-suite fixes from the lecture's flakiness list:** the autosave test's real 1.7 s sleep is now fake timers that pin the exact 1500 ms debounce boundary (a mutation from 1500 to 1000 ms is now caught; the old sleep could not catch it). Four database-backed Spring tests that were missing `@Tag("integration")` now have it, so CI runs them in the integration phase.
+- **For the team:** add `audit`, `smoke` and `e2e` to `main`'s required status checks once they have run green there. The vite proxy target is overridable (`API_PROXY_TARGET`) so E2E can run beside a dev backend.
+
+### D24 — Testing and traceability conventions (IS212 Weeks 4, 6, 9)
+
+2026-10-16, branch `test/week9-testing-traceability`. **Why:** the rubric grades "testing and traceability". Its top band reads "comprehensive and traceable … normal, boundary, conflict, and failure scenarios. 100% coverage unless not possible and stated why", and the deliverables say test evidence must let a reader "trace important user stories or acceptance criteria to the relevant tests". Before this, 9 of 53 backend test classes named a story; the Sprint 3 test-case tab had IDs but no content; coverage was measured but never shown.
+
+**Decided:**
+- **Every test traces to a story.**
+  - Java: a class-level `@Tag("<StoryID>")` per story covered, next to its layer tag.
+  - TypeScript: story IDs in the `describe`/`it` title, or a `// @stories` header.
+  - CI's new `traceability` job fails if a test file names no story. `.github/scripts/traceability.py` writes `docs/test-traceability.md`, including High-priority stories with no test.
+  - The team's 100 test files now trace to 45 stories.
+- **Test names cite the AC and the case type**, e.g. `EC08 AC26, AC27 (conflict): …`. Done in depth for EC-NEW2, EC08 and EO04: all 95 ACs trace to automated tests (`docs/test-cases/sprint3-jillian.md`, which also holds their Week 4 test cases for the Sheet). Other owners adopt it for their stories as they touch them.
+- **Test-double vocabulary** (dummy, stub, mock, fake) as defined in `docs/testing-strategy.md`, with ConnectSphere examples. No fakes: integration tests use real PostgreSQL.
+- **E2E for the critical journeys only**, chosen from High-priority stories:
+  - the cross-role golden path (request → assignment → approval → venue → safety check → confirmation → organiser's arrangements);
+  - two failure paths: rejection, safety changes requested.
+
+  Decisions are made in the browser; the API is used only for test data outside the journey and for ID lookups.
+- **Coverage is published, not gated.** The story's classes are brought to 100% or the exclusion is stated.
+
+**Evidence recorded while doing it (Weeks 6/9: think in mutants; fix flakiness, don't retry):**
+- **A test caught a real bug.** EO04's new unmount test caught React's duplicate-key warning on the organiser's event page: two sibling panels both used `key={reloadToken}`. Fixed.
+- **Mutation checks:**
+  - removing EO04's approved-bookings filter → caught by exactly the AC19 test;
+  - removing the print rule → all 43 component tests stayed green and **only** the E2E print step failed (lab steps 27–28: the gate catches what only a user would notice).
+- **Two flaky E2E runs, both timing, both fixed by waiting for a condition (never retries):**
+  - the wizard's Next saves before moving on, and the test clicked it twice without waiting;
+  - a failure-path setup opened the coordinator's page before Venue Staff's approval was saved.
+
+  After both fixes, 18/18 runs passed on a fresh packaged build.
+- **Coverage removed dead code instead of testing the impossible:** `formatDate(null)`; a Confirmed check that could never be false; a "no approved venue" branch that confirmation already rules out.
+- **EO04 AC25** now marks a Completed event "kept as a record" inside the arrangements card.
+
+**For the team:** add `traceability` (with `audit`, `smoke`, `e2e`) to `main`'s required checks once green. Fill your Sheet test-case lanes in the same format, naming your automated tests in Remarks. Turn any `// @stories` header into AC-level names when you next work on that story.
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?

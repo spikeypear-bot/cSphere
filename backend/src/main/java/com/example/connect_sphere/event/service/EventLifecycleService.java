@@ -396,16 +396,14 @@ public class EventLifecycleService {
         }
     }
 
-    /** Venue Staff when the event has approved bookings; Technical Support
-     * when it has approved equipment. Approvers are not recorded, so the
-     * whole team is told (decision-log D22). */
+    /** Venue Staff always (an event can only be confirmed with an approved
+     * booking, EC08 AC7); Technical Support when it has approved equipment.
+     * Approvers are not recorded, so the whole team is told (decision-log D22). */
     private List<UUID> staffInvolved(Event event) {
-        boolean hasVenue = bookings.findForEvent(event.getEventId()).stream()
-                .anyMatch(b -> b.getStatus() == VenueBookingStatus.approved);
         boolean hasEquipment = equipmentRequests.findByEventId(event.getEventId()).stream()
                 .anyMatch(r -> r.getStatus() == EquipmentRequestStatus.approved);
         return Stream.concat(
-                        hasVenue ? users.findByRole(UserRole.vs).stream() : Stream.<User>empty(),
+                        users.findByRole(UserRole.vs).stream(),
                         hasEquipment ? users.findByRole(UserRole.technician).stream() : Stream.<User>empty())
                 .map(User::getUserId).distinct().toList();
     }

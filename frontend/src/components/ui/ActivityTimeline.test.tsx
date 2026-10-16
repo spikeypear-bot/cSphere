@@ -1,3 +1,4 @@
+// @stories EC01 EC02 EO26 EC-NEW2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { ActivityTimeline } from './ActivityTimeline'

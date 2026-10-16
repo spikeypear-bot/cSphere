@@ -1,3 +1,4 @@
+// @stories VS15 VS-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { apiClient } from '../../lib/apiClient'

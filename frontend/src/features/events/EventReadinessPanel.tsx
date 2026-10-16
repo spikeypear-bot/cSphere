@@ -62,6 +62,7 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
       setReload((n) => n + 1)
       onChanged()
     } catch (err) {
+      /* v8 ignore else -- @preserve: see the stated exclusion below */
       if (err instanceof ApiClientError) {
         setError(err.message)
         // What no longer holds (e.g. a booking back to pending), so the
@@ -74,6 +75,10 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
           onChanged()
         }
       } else {
+        // Stated coverage exclusion (docs/testing-strategy.md): apiClient turns
+        // every failure, network included, into an ApiClientError, so this
+        // only guards against a programming error and no test can reach it.
+        /* v8 ignore next -- @preserve */
         setError('That did not go through. Please try again.')
       }
     } finally {

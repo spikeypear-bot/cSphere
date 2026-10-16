@@ -42,6 +42,8 @@ import tools.jackson.databind.JsonNode;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("ECL-C2")
+@Tag("ELC-C5")
 class AssignedRequestsFlowTest {
 
     private static final String ASSIGNED = "/api/event-requests/assigned";

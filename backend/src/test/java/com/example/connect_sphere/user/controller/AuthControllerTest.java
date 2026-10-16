@@ -29,6 +29,8 @@ import tools.jackson.databind.ObjectMapper;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("DEV05")
+@Tag("AU04")
 class AuthControllerTest {
 
     private static final String PASSWORD = "123456";

@@ -136,7 +136,7 @@ export function EventDetailsPage() {
       {role === 'coordinator' ? (
         <EventReadinessPanel eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
-      {role === 'organiser' ? <OrganiserArrangements key={reloadToken} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
 
       {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning} /> : null}
       {role === 'coordinator' && planning ? (
@@ -173,7 +173,7 @@ export function EventDetailsPage() {
           ) : readinessState.loading ? <p role="status">Loading readiness checklist…</p> : null
       ) : null}
 
-      <EventHistoryCard key={reloadToken} eventId={event.eventId} />
+      <EventHistoryCard key={`history-${reloadToken}`} eventId={event.eventId} />
     </div>
   )
 }

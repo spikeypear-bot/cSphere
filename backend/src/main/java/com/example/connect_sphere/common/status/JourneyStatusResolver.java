@@ -58,7 +58,9 @@ public class JourneyStatusResolver {
     public StatusView forEvent(Event event) {
         JourneyStatus status = journeyOf(event);
         boolean passed = event.getEndDatetime() != null && event.getEndDatetime().isBefore(now());
-        boolean datePassed = passed && !status.isFinal() && status != JourneyStatus.CONFIRMED;
+        // A Confirmed event whose end has passed is already Completed (final),
+        // so only unconfirmed, unfinished events can be flagged.
+        boolean datePassed = passed && !status.isFinal();
         return StatusView.of(status, datePassed);
     }
 

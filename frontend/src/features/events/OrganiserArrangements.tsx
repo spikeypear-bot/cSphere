@@ -14,8 +14,8 @@ const facilityLabel = (v: string) => venueFacilityLabels[v as Facility] ?? v.rep
 const layoutLabel = (v: string) => venueLayoutLabels[v as VenueLayout] ?? v.replaceAll('_', ' ')
 
 /** Singapore time, whatever the viewer's own timezone (EO04). */
-function formatDate(value: string | null) {
-  return value ? formatEventDateTime(value) : null
+function formatDate(value: string) {
+  return formatEventDateTime(value)
 }
 
 /**
@@ -68,8 +68,9 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
     )
   }
 
-  const updated = data.view === 'reconfirming'
-    || (data.firstConfirmedAt && data.confirmedAt && data.firstConfirmedAt !== data.confirmedAt)
+  // Re-confirmed since the first confirmation: when to show "Updated since".
+  const updatedSince = data.firstConfirmedAt && data.confirmedAt && data.firstConfirmedAt !== data.confirmedAt
+    ? data.firstConfirmedAt : null
   const needs = data.accessibilityNeeds.filter((n) => n !== 'none')
 
   return (
@@ -86,14 +87,18 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
         </Button>
       </div>
 
-      {data.view === 'reconfirming' ? (
+      {data.view === 'completed' ? (
+        <div className="arrangements__alert arrangements__alert--info" role="status">
+          <strong>Completed.</strong> This event has taken place; these arrangements are kept as a record.
+        </div>
+      ) : data.view === 'reconfirming' ? (
         <div className="arrangements__alert" role="status">
           <strong>Arrangements are being updated.</strong> Something changed after confirmation; your coordinator is
           sorting it out and you will be notified once it is confirmed again.
         </div>
-      ) : updated ? (
+      ) : updatedSince ? (
         <div className="arrangements__alert arrangements__alert--info" role="status">
-          Updated since first confirmed on {formatDate(data.firstConfirmedAt)}. Please re-check the details below.
+          Updated since first confirmed on {formatDate(updatedSince)}. Please re-check the details below.
         </div>
       ) : null}
 

@@ -37,6 +37,9 @@ import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorExc
 import com.example.connect_sphere.notification.service.NotificationService;
 
 @Tag("unit")
+@Tag("EC09")
+@Tag("EC08")
+@Tag("EO09")
 class EventServiceTest {
 
     @Mock

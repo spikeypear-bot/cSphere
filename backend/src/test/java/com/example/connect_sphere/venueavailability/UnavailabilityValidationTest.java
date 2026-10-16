@@ -3,11 +3,14 @@ package com.example.connect_sphere.venueavailability;
 import static org.assertj.core.api.Assertions.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import com.example.connect_sphere.venueavailability.AvailabilityModels.Request;
 
+@Tag("unit")
+@Tag("VS01")
 class UnavailabilityValidationTest {
     private static final LocalDate TODAY = LocalDate.of(2026,10,7);
 
