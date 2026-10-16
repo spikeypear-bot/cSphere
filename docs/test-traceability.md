@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**103 test files, 1030 tests, 45 stories traced, 0 files untraced.**
+**102 test files, 1023 tests, 45 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -13,7 +13,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | DEV05 |  | 3 | 4 |  | 53 | — | — |
 | EC01 | 2 | 2 | 2 |  | 71 | — | — |
 | EC02 | 1 | 3 | 5 | 2 | 88 | — | — |
-| EC03 | 3 | 2 | 3 | 2 | 77 | — | happy, negative, failure, cross-cutting |
+| EC03 | 2 | 2 | 3 | 2 | 70 | — | happy, negative, failure, cross-cutting |
 | EC04 | 1 |  | 1 |  | 7 | — | — |
 | EC05 | 1 |  |  |  | 2 | — | — |
 | EC07 | 1 | 1 | 1 |  | 24 | — | — |
@@ -137,7 +137,6 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
