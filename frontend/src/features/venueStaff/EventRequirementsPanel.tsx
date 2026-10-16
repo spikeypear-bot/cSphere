@@ -5,12 +5,9 @@ import type { VenueBookingDto } from '../../types/venueBooking'
 
 import { formatEventDateTime } from './formatEventDateTime'
 
-export function EventRequirementsPanel({ event, status, rejectReason, alternativeVenueAddress, alternativeArrangement, highlightStart, highlightEnd }: {
+export function EventRequirementsPanel({ event, status, highlightStart, highlightEnd }: {
   event: VenueBookingDto['event']
   status: VenueBookingDto['status']
-  rejectReason?: string | null
-  alternativeVenueAddress?: string | null
-  alternativeArrangement?: string | null
   highlightStart?: boolean
   highlightEnd?: boolean
 }) {
@@ -21,12 +18,6 @@ export function EventRequirementsPanel({ event, status, rejectReason, alternativ
       <h2 id="event-requirements-heading">Event Requirements</h2>
       <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status} aria-label={'Status: ' + status} aria-live="polite">{status}</span>
     </div>
-    {status === 'rejected' && (rejectReason?.trim() || alternativeVenueAddress?.trim() || alternativeArrangement?.trim()) &&
-      <Card className="booking-rejection-banner" role="status" aria-label="Rejection reason">
-        {rejectReason?.trim() && <><strong>Rejection Reason</strong><p>{rejectReason}</p></>}
-        {alternativeVenueAddress?.trim() && <p><strong>Suggested alternative venue:</strong> {alternativeVenueAddress}</p>}
-        {alternativeArrangement?.trim() && <p><strong>Alternative arrangement:</strong> {alternativeArrangement}</p>}
-      </Card>}
     <h3>{event.eventName}</h3>
     <dl className="venue-card-preview__information">
       <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{highlightStart

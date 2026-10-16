@@ -72,13 +72,13 @@
 .event-requirements-panel__header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .event-requirements-panel__header h2 { margin: 0; }
 .event-requirements-panel__header .booking-status-tag { flex-shrink: 0; }
-.event-requirements-panel .booking-rejection-banner {
-  margin-top: 0.75rem;
-  padding: 0.5rem 1.25rem;
-  border: 1px solid var(--danger);
-  border-left-width: 4px;
+.booking-rejection-details {
+  margin-bottom: 1.25rem;
+  border-color: var(--danger);
   background: color-mix(in srgb, var(--danger) 8%, var(--panel));
-  overflow-wrap: anywhere;
 }
-.booking-rejection-banner strong { color: var(--danger); }
-.booking-rejection-banner p { margin: 0.25rem 0 0; white-space: pre-wrap; }
+.booking-details-page .booking-rejection-details h3 { margin-top: 0; color: var(--danger); }
+.booking-rejection-details dt { color: var(--danger); }
+.booking-rejection-details p,
+.booking-rejection-details dd { white-space: pre-wrap; }
+.booking-rejection-details > :last-child { margin-bottom: 0; }

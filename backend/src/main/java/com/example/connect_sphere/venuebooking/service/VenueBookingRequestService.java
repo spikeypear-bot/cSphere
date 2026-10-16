@@ -74,6 +74,7 @@ public class VenueBookingRequestService {
     private final NotificationService notificationService;
     private final VenueOperationalIssueRepository operationalIssues;
     private final VenueOperatingHourRepository operatingHours;
+    private final com.example.connect_sphere.event.service.EventLifecycleService lifecycle;
 
     @Autowired
     public VenueBookingRequestService(
@@ -87,7 +88,9 @@ public class VenueBookingRequestService {
             NotificationService notificationService,
             VenueOperationalIssueRepository operationalIssues,
             VenueOperatingHourRepository operatingHours,
-            com.example.connect_sphere.venueavailability.AvailabilityService availability) {
+            com.example.connect_sphere.venueavailability.AvailabilityService availability,
+            com.example.connect_sphere.event.service.EventLifecycleService lifecycle) {
+        this.lifecycle = lifecycle;
         this.availability = availability;
         this.events = events;
         this.venues = venues;
@@ -307,10 +310,8 @@ public class VenueBookingRequestService {
     }
 
     /**
-     * EC03: the coordinator withdraws their own pending request (e.g. they
-     * picked the wrong venue), which frees the event to request another.
-     * An approved booking cannot be withdrawn here: undoing a commitment Venue
-     * Staff have made is a change request (EO03/EC-NEW3), not a cancellation.
+     * VS25: the assigned coordinator cancels an active booking. Status is the
+     * reservation: retaining the cancelled row releases its entire occupied period.
      */
     @Transactional
     public EventVenueBookingDto cancel(UUID coordinatorId, UUID eventId, UUID bookingId, String reason) {
@@ -320,21 +321,27 @@ public class VenueBookingRequestService {
                 .filter(b -> eventId.equals(b.getEventId()))
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         venues.findForUpdate(booking.getVenueId()).orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
-        if (booking.getStatus() != VenueBookingStatus.pending) {
-            throw new VenueBookingStateException("Only a pending booking request can be cancelled (this one is "
+        if (!ACTIVE.contains(booking.getStatus())) {
+            throw new VenueBookingStateException("Only a pending or approved booking can be cancelled (this one is "
                     + booking.getStatus().name() + ").");
         }
+        if (event.getStatus() == EventStatus.completed || event.getStatus() == EventStatus.cancelled)
+            throw new VenueBookingStateException("Bookings for completed or cancelled events cannot be changed.");
         if (bookings.existsByReplacesBookingIdAndStatus(bookingId, VenueBookingStatus.pending))
             throw new VenueBookingStateException("Resolve the pending replacement request before cancelling the original booking.");
         String why = optionalText(reason, "The reason");
+        VenueBookingStatus previous = booking.getStatus();
         booking.setStatus(VenueBookingStatus.cancelled);
         VenueBookingRecord saved = bookings.save(booking);
+        if (previous == VenueBookingStatus.approved)
+            lifecycle.returnToPlanning(eventId, coordinatorId, "An approved venue booking was cancelled."
+                    + (why == null ? "" : " " + why));
 
         String venueName = venues.findById(saved.getVenueId()).map(Venue::getVenueAddress).orElse("the venue");
         eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
                 new ActivityService.Entry(origin.getRequestId(), eventId, ActivityType.venue_booking_cancelled,
                         coordinatorId, "Cancelled the request for " + venueName + (why == null ? "" : ". " + why),
-                        null, VenueBookingStatus.pending.name(), VenueBookingStatus.cancelled.name())));
+                        null, previous.name(), VenueBookingStatus.cancelled.name())));
 
         List<UUID> venueStaff = users.findByRole(UserRole.vs).stream().map(User::getUserId).toList();
         if (!venueStaff.isEmpty()) {

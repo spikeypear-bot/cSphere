@@ -85,6 +85,8 @@ class VenueUnavailabilityTest {
                 p.affectedBookings().stream().map(Booking::bookingId).toList(), p.previewToken()));
     }
     @AfterEach void clean() {
+        jdbc.execute("DROP TRIGGER IF EXISTS vs25_fail_approval ON venue_bookings");
+        jdbc.execute("DROP FUNCTION IF EXISTS vs25_fail_approval()");
         for (UUID id : eventIds) {
             jdbc.update("DELETE FROM notifications WHERE event_id=?", id);
             jdbc.update("DELETE FROM venue_unavailability_bookings WHERE booking_id IN (SELECT booking_id FROM venue_bookings WHERE event_id=?)", id);
@@ -94,6 +96,93 @@ class VenueUnavailabilityTest {
         for (UUID id : venueIds) {
             jdbc.update("DELETE FROM venue_unavailability WHERE venue_id=?", id);
             jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
+        }
+    }
+    @Test void cancellationReleasesBuffersAndPreservesOtherOccupancyAndHistory() {
+        UUID v = venue();
+        availability.updateSettings(v, new Settings(60, 60));
+        UUID original = booking(v, "approved"), other = booking(v, "approved");
+        Period maintenance = record(v, period("10:00", "11:00"));
+        jdbc.update("UPDATE events SET status='confirmed' WHERE event_id=?", event(original));
+        requests.cancel(coordinator, event(original), original, "No longer needed");
+        assertThat(statusOf(original)).isEqualTo("cancelled");
+        assertThat(statusOf(other)).isEqualTo("approved");
+        assertThat(jdbc.queryForObject("SELECT status::text FROM events WHERE event_id=?", String.class, event(original))).isEqualTo("pending");
+        assertThat(requests.bookingsForEvent(coordinator, event(original))).extracting(b -> b.bookingId()).contains(original);
+        var window = period("09:00", "13:00");
+        assertThat(availability.schedule(v, window.startDateTime(), window.endDateTime()).bookings())
+                .extracting(Booking::bookingId).containsExactly(other);
+        assertThat(availability.list(v)).containsExactly(maintenance);
+        assertThatThrownBy(() -> requests.cancel(coordinator, event(original), original, null))
+                .isInstanceOf(VenueBookingStateException.class);
+        requests.cancel(coordinator, event(other), other, null);
+        assertThat(availability.conflicts(v, UUID.randomUUID(), window.startDateTime(), window.endDateTime(), new Settings(0, 0))).isEmpty();
+        assertThat(availability.list(v)).containsExactly(maintenance);
+    }
+
+    @Test void sameVenueReplacementExcludesOnlyOriginalAndReleasesItsOldPeriod() {
+        UUID v = venue(), original = booking(v, "approved");
+        record(v, period("10:00", "10:30"));
+        var window = period("11:00", "13:00");
+        UUID replacement = requests.submit(coordinator, event(original), new SubmitVenueBookingRequest(
+                v, null, null, original, window.startDateTime(), window.endDateTime())).bookingId();
+        assertThat(statusOf(original)).isEqualTo("approved");
+        UUID other = booking(v, "approved");
+        assertThatThrownBy(() -> bookings.approve(replacement)).isInstanceOf(VenueBookingConflictException.class);
+        assertThat(statusOf(original)).isEqualTo("approved");
+        requests.cancel(coordinator, event(other), other, null);
+        bookings.approve(replacement);
+        assertThat(statusOf(original)).isEqualTo("changed");
+        assertThat(statusOf(replacement)).isEqualTo("approved");
+        assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(replacement);
+    }
+
+    @Test void failedReplacementApprovalRollsBackOriginalRelease() {
+        UUID source = venue(), target = venue(), original = booking(source, "approved");
+        record(source, period("10:00", "11:00"));
+        UUID replacement = requests.submit(coordinator, event(original),
+                new SubmitVenueBookingRequest(target, null, null, original)).bookingId();
+        jdbc.execute("""
+                CREATE FUNCTION vs25_fail_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN IF NEW.status = 'approved' AND OLD.status = 'pending' THEN
+                    RAISE EXCEPTION 'VS25 simulated approval failure'; END IF; RETURN NEW; END $$
+                """);
+        jdbc.execute("CREATE TRIGGER vs25_fail_approval BEFORE UPDATE ON venue_bookings FOR EACH ROW EXECUTE FUNCTION vs25_fail_approval()");
+        assertThatThrownBy(() -> bookings.approve(replacement)).isInstanceOf(RuntimeException.class);
+        assertThat(statusOf(original)).isEqualTo("approved");
+        assertThat(statusOf(replacement)).isEqualTo("pending");
+        assertThat(availability.schedule(source).bookings()).extracting(Booking::bookingId).containsExactly(original);
+    }
+
+    @Test void failedCancellationPreservesApprovedReservationAndEventStatus() {
+        UUID v = venue(), original = booking(v, "approved");
+        jdbc.update("UPDATE events SET status='confirmed' WHERE event_id=?", event(original));
+        jdbc.execute("""
+                CREATE FUNCTION vs25_fail_approval() RETURNS trigger LANGUAGE plpgsql AS $$
+                BEGIN IF NEW.status = 'cancelled' THEN
+                    RAISE EXCEPTION 'VS25 simulated cancellation failure'; END IF; RETURN NEW; END $$
+                """);
+        jdbc.execute("CREATE TRIGGER vs25_fail_approval BEFORE UPDATE ON venue_bookings FOR EACH ROW EXECUTE FUNCTION vs25_fail_approval()");
+        assertThatThrownBy(() -> requests.cancel(coordinator, event(original), original, null)).isInstanceOf(RuntimeException.class);
+        assertThat(statusOf(original)).isEqualTo("approved");
+        assertThat(jdbc.queryForObject("SELECT status::text FROM events WHERE event_id=?", String.class, event(original))).isEqualTo("confirmed");
+        assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(original);
+    }
+
+    @Test void concurrentCancellationAndApprovalKeepOneConsistentReservation() throws Exception {
+        UUID v = venue(), original = booking(v, "approved"), contender = booking(v, "pending");
+        CountDownLatch start = new CountDownLatch(1);
+        try (var pool = Executors.newFixedThreadPool(2)) {
+            var cancel = pool.submit(() -> { start.await(); return requests.cancel(coordinator, event(original), original, null); });
+            var approve = pool.submit(() -> { start.await(); try { bookings.approve(contender); return true; }
+                catch (VenueBookingConflictException ex) { return false; } });
+            start.countDown();
+            cancel.get(15, TimeUnit.SECONDS);
+            boolean approved = approve.get(15, TimeUnit.SECONDS);
+            assertThat(statusOf(original)).isEqualTo("cancelled");
+            assertThat(statusOf(contender)).isEqualTo(approved ? "approved" : "pending");
+            if (!approved) bookings.approve(contender);
+            assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(contender);
         }
     }
     @Test void submissionAndReplacementSnapshotTheirOwnVenueDefaults() {

@@ -66,6 +66,13 @@ public class VenueBookingService {
             venueIds.add(original.getVenueId());
         }
         for (UUID venueId : venueIds) venues.findForUpdate(venueId).orElseThrow(() -> new VenueNotFoundException(venueId));
+        // Validate before excluding the original from conflict checks. Both rows remain
+        // active until approval succeeds; the event and venue locks cover the swap.
+        if (booking.getReplacesBookingId() != null) {
+            var original = records.findById(booking.getReplacesBookingId()).orElseThrow();
+            if (!original.getEventId().equals(eventId) || !availability.affected(original.getBookingId()))
+                throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
+        }
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
         var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
         var conflicts = records.findApprovalConflicts(booking.getVenueId(), bookingId,
@@ -81,6 +88,7 @@ public class VenueBookingService {
                 conflict.getBookingId(), conflict.getEventName(), conflict.getStartDatetime(), conflict.getEndDatetime(),
                 conflict.getSetupDurationMinutes(), conflict.getTurnaroundDurationMinutes())));
         bufferConflicts.forEach(conflict -> blockingBookings.putIfAbsent(conflict.bookingId(), VenueBookingConflictDto.from(conflict)));
+        if (booking.getReplacesBookingId() != null) blockingBookings.remove(booking.getReplacesBookingId());
         if (!blockingBookings.isEmpty() || !unavailablePeriods.isEmpty()) {
             String message = !unavailablePeriods.isEmpty()
                     ? blockingBookings.isEmpty()

@@ -57,7 +57,7 @@ public class EventVenueBookingController {
         return service.bookingsForEvent(userIdOf(jwt), eventId);
     }
 
-    /** EC03: withdraw a pending request. Body: {"reason": "..."} (optional). */
+    /** VS25: cancel a pending or approved booking. Body: {"reason": "..."} (optional). */
     @PostMapping("/venue-bookings/{bookingId}/cancel")
     public EventVenueBookingDto cancel(
             @AuthenticationPrincipal Jwt jwt,
