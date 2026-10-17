@@ -41,6 +41,8 @@ export function EventDetailsPage() {
   // same inline-fetch-effect shape as useEventRequestDraft.ts, rather than
   // calling a setState-ish function directly from inside the effect.
   const [reloadToken, setReloadToken] = useState(0)
+  // Only external booking changes reset the panel; its own actions retain feedback.
+  const [bookingReloadToken, setBookingReloadToken] = useState(0)
 
   useEffect(() => {
     if (!eventId) return
@@ -134,13 +136,13 @@ export function EventDetailsPage() {
       ) : null}
 
       {role === 'coordinator' ? (
-        <EventReadinessPanel key={reloadToken} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
+        <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={reloadToken} eventId={event.eventId} /> : null}
 
       {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning}
         active={event.status !== 'completed' && event.status !== 'cancelled'}
-        onCancelled={() => { setReloadToken(n => n + 1); readinessState.reload() }} /> : null}
+        onCancelled={() => { setBookingReloadToken(n => n + 1); setReloadToken(n => n + 1); readinessState.reload() }} /> : null}
       {role === 'coordinator' && planning ? (
         <Card className="event-details__venue">
           <h2>Equipment</h2>
