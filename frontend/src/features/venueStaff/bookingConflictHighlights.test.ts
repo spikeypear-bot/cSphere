@@ -1,3 +1,4 @@
+// @stories VS08  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { expect, it } from 'vitest'
 import { bookingConflictHighlights } from './bookingConflictHighlights'
 

@@ -42,6 +42,8 @@ import jakarta.persistence.EntityManager;
  * the overlap boundaries. Every test rolls back.
  */
 @Tag("integration")
+@Tag("EC03")
+@Tag("EC-C2")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

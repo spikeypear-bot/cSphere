@@ -12,6 +12,8 @@ import type { ActivityDto } from '../../types/activity'
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
+import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
+import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
@@ -34,6 +36,8 @@ export function EventDetailsPage() {
   const flash = location.state as { justApproved?: boolean; bookingRequested?: string } | null
   const [event, setEvent] = useState<EventDto | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // ECL-C7: a coordinator opening an event that is not (or no longer) theirs.
+  const [notAssigned, setNotAssigned] = useState(false)
   const readinessState = useSafetyData<ReadinessDto>(
     eventId && role === 'coordinator' ? `/events/${eventId}/readiness` : null,
   )
@@ -54,13 +58,15 @@ export function EventDetailsPage() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
+        if (role === 'coordinator' && isNotAssigned(err)) setNotAssigned(true)
         setError(err instanceof ApiClientError ? err.message : 'Could not load this event.')
       })
     return () => {
       cancelled = true
     }
-  }, [eventId, reloadToken])
+  }, [eventId, reloadToken, role])
 
+  if (notAssigned) return <NotAssignedNotice what="event" />
   if (error) return <p role="alert">{error}</p>
   if (!event) return <p>Loading…</p>
 
@@ -136,7 +142,7 @@ export function EventDetailsPage() {
       {role === 'coordinator' ? (
         <EventReadinessPanel eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
-      {role === 'organiser' ? <OrganiserArrangements key={reloadToken} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
 
       {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning} /> : null}
       {role === 'coordinator' && planning ? (
@@ -173,7 +179,7 @@ export function EventDetailsPage() {
           ) : readinessState.loading ? <p role="status">Loading readiness checklist…</p> : null
       ) : null}
 
-      <EventHistoryCard key={reloadToken} eventId={event.eventId} />
+      <EventHistoryCard key={`history-${reloadToken}`} eventId={event.eventId} />
     </div>
   )
 }
@@ -188,8 +194,11 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
     apiClient.get<unknown>(path)
       .then((value) => {
         if (cancelled) return
-        if (isValid(value)) setData(value as T)
-        else setFailed(true)
+        // A retry that succeeds clears an earlier failure (EC-NEW5 Try again).
+        if (isValid(value)) {
+          setData(value as T)
+          setFailed(false)
+        } else setFailed(true)
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -292,15 +301,25 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
   )
 }
 
-/** The event's whole journey from request to now (EC01/EC02/EO26/EC03),
- * filtered by the server to what this role may see. */
+/** EC-NEW5: the event's change log, its whole journey from request to now,
+ * filtered by the server to what this role may see. If it cannot load, the
+ * rest of the event page still works and the log can be retried. */
 function EventHistoryCard({ eventId }: { eventId: string }) {
-  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray)
-  if (failed || !entries) return null
+  const [attempt, setAttempt] = useState(0)
+  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray, attempt)
   return (
-    <Card className="event-details__history">
-      <h2>History</h2>
-      <ActivityTimeline entries={entries} emptyText="No history has been recorded for this event." />
+    <Card className="event-details__history" role="region" aria-labelledby="change-log-heading">
+      <h2 id="change-log-heading">Change log</h2>
+      {failed ? (
+        <div role="alert" className="event-details__log-error">
+          <p>The change log could not be loaded.</p>
+          <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+        </div>
+      ) : !entries ? (
+        <p role="status" className="field-hint">Loading the change log…</p>
+      ) : (
+        <ActivityTimeline entries={entries} emptyText="No changes recorded yet." controls />
+      )}
     </Card>
   )
 }

@@ -24,6 +24,7 @@ import jakarta.persistence.EntityManager;
 @Tag("integration")
 @SpringBootTest
 @Transactional
+@Tag("VS07")
 class VenuePersistenceTest {
     @Autowired VenueService service;
     @Autowired VenueRepository repository;

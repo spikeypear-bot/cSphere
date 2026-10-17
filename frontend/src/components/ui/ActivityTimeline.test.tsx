@@ -1,3 +1,4 @@
+// @stories EC01 EC02 EO26 EC-NEW2 EC-NEW5  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { ActivityTimeline } from './ActivityTimeline'
@@ -98,7 +99,7 @@ describe('ActivityTimeline (V14 details)', () => {
     expect(screen.queryByRole('list', { name: 'Fields that need attention' })).not.toBeInTheDocument()
   })
 
-  it("shows what the organiser changed in their response, ignoring values that didn't change", () => {
+  it("EC-NEW5 AC21, AC22 (happy): shows what the organiser changed in their response, ignoring values that didn't change", () => {
     const asked = { ...entries[1], fieldValues: { expectedAttendance: 150, purpose: 'Update',
       startDatetime: '2027-03-10T01:00:00Z' } }
     const answered: ActivityDto = { activityId: 'a3', type: 'clarification_responded', actorName: 'eo1', actorRole: 'eo',

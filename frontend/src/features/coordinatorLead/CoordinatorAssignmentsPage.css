@@ -21,3 +21,11 @@
   font-weight: 400;
   color: var(--ink-soft);
 }
+
+/* ECL-C7: the events each coordinator holds. */
+.lead-event-card { padding: 1rem 1.1rem; display: grid; gap: 0.5rem; }
+.lead-event-card__head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
+.lead-event-card__head h3 { margin: 0; font-size: 1rem; }
+.lead-event-card p { margin: 0; }
+.lead-event-card__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+.coordinator-assignments__events-count { margin: 0.75rem 0 0.4rem; font-weight: 600; color: var(--ink-soft); }

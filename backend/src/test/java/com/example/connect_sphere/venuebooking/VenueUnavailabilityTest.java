@@ -10,6 +10,7 @@ import java.util.UUID;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,9 +29,11 @@ import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.service.*;
 
 /** Committed, uniquely identified fixtures exercise transactions and locking on PostgreSQL. */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
-@Tag("integration")
+@Tag("VS01")
+@Tag("VS-C1")
 class VenueUnavailabilityTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;

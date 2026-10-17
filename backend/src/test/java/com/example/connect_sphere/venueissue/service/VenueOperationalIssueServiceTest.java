@@ -23,6 +23,7 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
 @Tag("unit")
+@Tag("VS13")
 class VenueOperationalIssueServiceTest {
 
     @Mock private VenueOperationalIssueRepository issues;

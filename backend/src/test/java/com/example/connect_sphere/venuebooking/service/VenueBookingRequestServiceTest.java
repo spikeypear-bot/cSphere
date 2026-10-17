@@ -45,6 +45,7 @@ import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
  * sent after commit), plus the suitability boundaries in isolation.
  */
 @Tag("unit")
+@Tag("EC03")
 class VenueBookingRequestServiceTest {
 
     @Mock private EventRepository events;

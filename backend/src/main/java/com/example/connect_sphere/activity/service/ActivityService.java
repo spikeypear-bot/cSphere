@@ -18,6 +18,8 @@ import com.example.connect_sphere.activity.repository.RequestActivityRepository;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
+import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.event.entity.EventStatus;
 
 /**
  * Writes and reads the request timeline.
@@ -36,11 +38,19 @@ public class ActivityService {
 
     private final RequestActivityRepository repository;
     private final UserRepository userRepository;
+    private final EventRepository events;
 
-    public ActivityService(RequestActivityRepository repository, UserRepository userRepository) {
+    public ActivityService(RequestActivityRepository repository, UserRepository userRepository,
+            EventRepository events) {
         this.repository = repository;
         this.userRepository = userRepository;
+        this.events = events;
     }
+
+    /** Week 4 (Event Change Requests): the information whose change "may require
+     * existing arrangements to be reconsidered". A change to any of these is Major. */
+    static final List<String> IMPORTANT_FIELDS = List.of(
+            "startDatetime", "endDatetime", "expectedAttendance", "venueRequirements", "equipmentRequirements");
 
     /** What a caller says happened. {@code message}/{@code flaggedFields}/
      * statuses are optional per type; {@code eventId} is set once an Event
@@ -92,12 +102,80 @@ public class ActivityService {
      * all; this only narrows which entries. */
     @Transactional(readOnly = true)
     public List<ActivityDto> timeline(UUID requestId, UserRole viewerRole) {
-        return repository.findVisible(requestId, viewerRole.name()).stream()
-                .map(a -> new ActivityDto(
-                        a.getActivityId(), a.getActivityType().name(), a.getActorName(), a.getActorRole(),
-                        a.getMessage(), List.copyOf(a.getFlaggedFields()), a.getFromStatus(), a.getToStatus(),
-                        a.getOccurredAt(), a.getFieldQuestions(), a.getFieldValues()))
-                .toList();
+        List<RequestActivity> rows = repository.findVisible(requestId, viewerRole.name());
+        List<ActivityDto> entries = new java.util.ArrayList<>();
+        Map<String, Object> lastCaptured = null;
+        UUID eventId = null;
+        for (RequestActivity a : rows) {
+            boolean major = a.getActivityType().major()
+                    || (a.getActivityType() == ActivityType.clarification_responded
+                            && changesImportantField(lastCaptured, a.getFieldValues()));
+            if (a.getFieldValues() != null) {
+                lastCaptured = a.getFieldValues();
+            }
+            if (a.getEventId() != null) {
+                eventId = a.getEventId();
+            }
+            entries.add(new ActivityDto(
+                    a.getActivityId(), a.getActivityType().name(), a.getActorName(), a.getActorRole(),
+                    a.getMessage(), List.copyOf(a.getFlaggedFields()), a.getFromStatus(), a.getToStatus(),
+                    a.getOccurredAt(), a.getFieldQuestions(), a.getFieldValues(), major ? "major" : "normal"));
+        }
+        completedEntry(eventId, viewerRole).ifPresent(entries::add);
+        return entries;
+    }
+
+    /** EC-NEW5/EC-NEW2: a confirmed event whose end has passed is Completed. No
+     * one does that, so it is not stored; it is shown at the end time. */
+    private java.util.Optional<ActivityDto> completedEntry(UUID eventId, UserRole viewerRole) {
+        if (eventId == null || !ActivityType.event_completed.audience().contains(viewerRole)) {
+            return java.util.Optional.empty();
+        }
+        return events.findById(eventId)
+                .filter(e -> (e.getStatus() == EventStatus.confirmed || e.getStatus() == EventStatus.completed)
+                        && e.getEndDatetime() != null && e.getEndDatetime().isBefore(OffsetDateTime.now()))
+                .map(e -> new ActivityDto(null, ActivityType.event_completed.name(), "ConnectSphere", null,
+                        "The event took place and is now Completed.", List.of(), "CONFIRMED", "COMPLETED",
+                        e.getEndDatetime(), null, null, "normal"));
+    }
+
+    /** Compared by meaning, not spelling (EC-NEW5): the same instant written
+     * with another offset, or the same list in another order, is no change. */
+    static boolean changesImportantField(Map<String, Object> before, Map<String, Object> after) {
+        if (before == null || after == null) {
+            return false;
+        }
+        for (String field : IMPORTANT_FIELDS) {
+            if (!sameValue(before.get(field), after.get(field))) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    static boolean sameValue(Object a, Object b) {
+        if (isEmpty(a) && isEmpty(b)) {
+            return true;
+        }
+        if (a instanceof String sa && b instanceof String sb) {
+            try {
+                return OffsetDateTime.parse(sa).toInstant().equals(OffsetDateTime.parse(sb).toInstant());
+            } catch (java.time.format.DateTimeParseException notADate) {
+                return sa.strip().equals(sb.strip());
+            }
+        }
+        if (a instanceof Number na && b instanceof Number nb) {
+            return new java.math.BigDecimal(na.toString()).compareTo(new java.math.BigDecimal(nb.toString())) == 0;
+        }
+        if (a instanceof Collection<?> ca && b instanceof Collection<?> cb) {
+            return ca.stream().map(String::valueOf).sorted().toList()
+                    .equals(cb.stream().map(String::valueOf).sorted().toList());
+        }
+        return java.util.Objects.equals(a, b);
+    }
+
+    private static boolean isEmpty(Object v) {
+        return v == null || (v instanceof String s && s.isBlank()) || (v instanceof Collection<?> c && c.isEmpty());
     }
 
     /** ECL-C2: when each of these requests was submitted, by request id. A

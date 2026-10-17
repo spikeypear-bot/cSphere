@@ -31,6 +31,12 @@ Share scripts, not database dumps. Development seeds are separate from Flyway mi
 
 ### Tests
 
+How we test, and how every test traces to a user story and AC: [docs/testing-strategy.md](docs/testing-strategy.md).
+Story → test matrix (generated): [docs/test-traceability.md](docs/test-traceability.md).
+
+Browser end-to-end journeys (Playwright) against a running backend: see [frontend/e2e/README.md](frontend/e2e/README.md)
+(`npm run test:e2e` from `frontend/`).
+
 Frontend (Vitest + React Testing Library):
 ```
 npm run test          # from frontend/, or npm --prefix frontend run test from root

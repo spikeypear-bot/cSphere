@@ -41,6 +41,10 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 @Tag("unit")
 @WebMvcTest(SafetyOfficerController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
+@Tag("SO-C1")
+@Tag("SO-C4")
+@Tag("EC08")
+@Tag("AU04")
 class SafetyOfficerAccessTest {
 
     private static final UUID EVENT_ID = UUID.randomUUID();

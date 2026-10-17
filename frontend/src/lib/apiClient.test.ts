@@ -1,3 +1,4 @@
+// @stories DEV05  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient, ApiClientError, UNAUTHORISED_EVENT } from './apiClient'
 import { AUTH_STORAGE_KEY } from './authTokens'
