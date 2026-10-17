@@ -5,6 +5,7 @@ import type { VenueBookingDto, VenueBookingConflict, VenueUnavailabilityConflict
 import type { VenueDto } from '../../types/venue'
 import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
 import { BookingConflictCard, UnavailabilityConflictCard } from './BookingConflictCard'
+import { BookingDecisionPanel } from './BookingDecisionPanel'
 
 const MAX_ALTERNATIVE_ARRANGEMENT_LENGTH = 2000
 
@@ -146,7 +147,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
         }}>Reject Booking</Button>
       </div>}
     </div>
-    {rejecting && booking.status === 'pending' && <form className="booking-approval__confirmation" aria-labelledby="reject-booking-heading"
+    {rejecting && booking.status === 'pending' && <BookingDecisionPanel as="form" aria-labelledby="reject-booking-heading"
       onSubmit={event => { event.preventDefault(); void decide('reject') }}>
       <h3 id="reject-booking-heading">Confirm booking rejection</h3>
       <div className={reasonError ? 'field field--invalid' : 'field'}>
@@ -187,7 +188,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
           setAlternativeArrangement('')
         }}>Cancel</Button>
       </div>
-    </form>}
+    </BookingDecisionPanel>}
     {error && <div>
       <div role="alert" className="booking-approval__error">
         <p>{error}</p>
@@ -201,7 +202,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
       </div>
       <Button variant="secondary" disabled={busy} onClick={() => { void refresh() }}>Refresh booking details</Button>
     </div>}
-    {confirming && booking.status === 'pending' && <div className="booking-approval__confirmation" aria-labelledby="approve-booking-heading">
+    {confirming && booking.status === 'pending' && <BookingDecisionPanel aria-labelledby="approve-booking-heading">
       <h3 id="approve-booking-heading">Confirm booking approval</h3>
       <p>Approve this request and commit the venue to this event?</p>
       <dl>
@@ -218,7 +219,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
         <Button disabled={busy || approvalBlocked} onClick={() => { void decide('approve') }}>{busy ? 'Approving…' : 'Confirm approval'}</Button>
         <Button variant="secondary" disabled={busy} onClick={() => setConfirming(false)}>Cancel</Button>
       </div>
-    </div>}
+    </BookingDecisionPanel>}
   </section>
 }
 

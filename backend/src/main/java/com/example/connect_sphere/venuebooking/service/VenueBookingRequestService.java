@@ -75,6 +75,7 @@ public class VenueBookingRequestService {
     private final NotificationService notificationService;
     private final VenueOperationalIssueRepository operationalIssues;
     private final VenueOperatingHourRepository operatingHours;
+    private final com.example.connect_sphere.event.service.EventLifecycleService lifecycle;
 
     @Autowired
     public VenueBookingRequestService(
@@ -88,7 +89,9 @@ public class VenueBookingRequestService {
             NotificationService notificationService,
             VenueOperationalIssueRepository operationalIssues,
             VenueOperatingHourRepository operatingHours,
-            com.example.connect_sphere.venueavailability.AvailabilityService availability) {
+            com.example.connect_sphere.venueavailability.AvailabilityService availability,
+            com.example.connect_sphere.event.service.EventLifecycleService lifecycle) {
+        this.lifecycle = lifecycle;
         this.availability = availability;
         this.events = events;
         this.venues = venues;
@@ -158,6 +161,15 @@ public class VenueBookingRequestService {
 
     @Transactional
     public EventVenueBookingDto submit(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest request) {
+        return submit(coordinatorId, eventId, request, null);
+    }
+
+    /** {@code addsToExisting}: whether the event already held an active booking
+     * before this submission began (EC-NEW5 "additional venue added"); null to
+     * work it out here. A multi-venue batch passes what was true before the
+     * batch, so its own bookings are not "additional" to each other. */
+    private EventVenueBookingDto submit(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest request,
+            Boolean addsToExisting) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
         boolean replacement = request != null && request.replacesBookingId() != null;
@@ -227,9 +239,10 @@ public class VenueBookingRequestService {
                     + unavailable.get(0).description() + ".");
         }
         if (!conflicts.isEmpty()) {
+            // ECL-C7: never another event's name, only that it is taken and when.
             throw new InvalidVenueBookingException("Venue '" + venue.getVenueAddress()
-                    + "' already has an approved booking that overlaps the "
-                    + "event's time (" + conflicts.get(0).eventName() + "). Choose another venue.");
+                    + "' is not free at this event's time: " + conflicts.get(0).sentence()
+                    + ". Choose another venue.");
         }
         if (suitability.needsJustification() && justification == null) {
             throw new InvalidVenueBookingException("This venue does not offer "
@@ -258,8 +271,12 @@ public class VenueBookingRequestService {
 
         // The event's originating request carries the timeline; an event
         // created outside the request flow simply has none to extend.
+        // EC-NEW5: a replacement, an additional venue (Major) or a first request.
+        ActivityType logged = request.replacesBookingId() != null ? ActivityType.venue_booking_replaced
+                : (addsToExisting != null ? addsToExisting : hasActiveBooking(eventId, saved.getBookingId()))
+                        ? ActivityType.venue_added : ActivityType.venue_booking_requested;
         eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
-                new ActivityService.Entry(origin.getRequestId(), eventId, ActivityType.venue_booking_requested,
+                new ActivityService.Entry(origin.getRequestId(), eventId, logged,
                         coordinatorId, requestedMessage(venue.getVenueAddress(), notes),
                         null, null, VenueBookingStatus.pending.name())));
 
@@ -273,11 +290,13 @@ public class VenueBookingRequestService {
 
     @Transactional
     public List<EventVenueBookingDto> submitBatch(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest.Batch batch) {
+        // ECL-C7: who is asking is checked before anything about the input, so
+        // a coordinator who is not assigned learns nothing about the event.
+        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        requireAssigned(coordinatorId, event);
         if (batch == null || batch.bookings() == null || batch.bookings().isEmpty()) {
             throw new InvalidVenueBookingException("Add at least one venue before submitting.");
         }
-        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        requireAssigned(coordinatorId, event);
         List<SubmitVenueBookingRequest> requests = batch.bookings();
         for (var request : requests) {
             if (request == null || request.venueId() == null)
@@ -298,7 +317,15 @@ public class VenueBookingRequestService {
                 throw new InvalidVenueBookingException("This venue has already been added to this event. Choose another venue.");
             }
         }
-        return requests.stream().map(request -> submit(coordinatorId, eventId, request)).toList();
+        boolean hadActiveBooking = hasActiveBooking(eventId, null);
+        return requests.stream().map(request -> submit(coordinatorId, eventId, request, hadActiveBooking)).toList();
+    }
+
+    /** Another booking of this event that is pending or approved. */
+    private boolean hasActiveBooking(UUID eventId, UUID except) {
+        return bookings.findForEvent(eventId).stream()
+                .filter(b -> except == null || !except.equals(b.getBookingId()))
+                .anyMatch(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved);
     }
 
     private static com.example.connect_sphere.venueavailability.EffectivePeriod requestedPeriod(
@@ -310,10 +337,8 @@ public class VenueBookingRequestService {
     }
 
     /**
-     * EC03: the coordinator withdraws their own pending request (e.g. they
-     * picked the wrong venue), which frees the event to request another.
-     * An approved booking cannot be withdrawn here: undoing a commitment Venue
-     * Staff have made is a change request (EO03/EC-NEW3), not a cancellation.
+     * VS25: the assigned coordinator cancels an active booking. Status is the
+     * reservation: retaining the cancelled row releases its entire occupied period.
      */
     @Transactional
     public EventVenueBookingDto cancel(UUID coordinatorId, UUID eventId, UUID bookingId, String reason) {
@@ -323,21 +348,27 @@ public class VenueBookingRequestService {
                 .filter(b -> eventId.equals(b.getEventId()))
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         venues.findForUpdate(booking.getVenueId()).orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
-        if (booking.getStatus() != VenueBookingStatus.pending) {
-            throw new VenueBookingStateException("Only a pending booking request can be cancelled (this one is "
+        if (!ACTIVE.contains(booking.getStatus())) {
+            throw new VenueBookingStateException("Only a pending or approved booking can be cancelled (this one is "
                     + booking.getStatus().name() + ").");
         }
+        if (event.getStatus() == EventStatus.completed || event.getStatus() == EventStatus.cancelled)
+            throw new VenueBookingStateException("Bookings for completed or cancelled events cannot be changed.");
         if (bookings.existsByReplacesBookingIdAndStatus(bookingId, VenueBookingStatus.pending))
             throw new VenueBookingStateException("Resolve the pending replacement request before cancelling the original booking.");
         String why = optionalText(reason, "The reason");
+        VenueBookingStatus previous = booking.getStatus();
         booking.setStatus(VenueBookingStatus.cancelled);
         VenueBookingRecord saved = bookings.save(booking);
+        if (previous == VenueBookingStatus.approved)
+            lifecycle.returnToPlanning(eventId, coordinatorId, "An approved venue booking was cancelled."
+                    + (why == null ? "" : " " + why));
 
         String venueName = venues.findById(saved.getVenueId()).map(Venue::getVenueAddress).orElse("the venue");
         eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
                 new ActivityService.Entry(origin.getRequestId(), eventId, ActivityType.venue_booking_cancelled,
                         coordinatorId, "Cancelled the request for " + venueName + (why == null ? "" : ". " + why),
-                        null, VenueBookingStatus.pending.name(), VenueBookingStatus.cancelled.name())));
+                        null, previous.name(), VenueBookingStatus.cancelled.name())));
 
         List<UUID> venueStaff = users.findByRole(UserRole.vs).stream().map(User::getUserId).toList();
         if (!venueStaff.isEmpty()) {
@@ -362,7 +393,7 @@ public class VenueBookingRequestService {
                     + suitability.expectedAttendance() + ".");
         }
         for (VenueOptionDto.ConflictDto conflict : conflicts) {
-            reasons.add("Already approved for " + conflict.eventName() + " at an overlapping time.");
+            reasons.add(conflict.sentence() + ".");
         }
         for (VenueOptionDto.UnavailablePeriodDto period : unavailable) {
             reasons.add("Venue unavailable: " + period.description() + ".");
@@ -388,7 +419,8 @@ public class VenueBookingRequestService {
     private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue, OffsetDateTime start, OffsetDateTime end,
             com.example.connect_sphere.venueavailability.AvailabilityModels.Settings durations) {
         return availability.conflicts(venue.getVenueId(), event.getEventId(), start, end, durations)
-                .stream().map(c -> new VenueOptionDto.ConflictDto(c.eventName(), c.effectiveStart(), c.effectiveEnd())).toList();
+                .stream().map(c -> new VenueOptionDto.ConflictDto(VenueOptionDto.ConflictDto.ANOTHER_EVENT,
+                        c.effectiveStart(), c.effectiveEnd())).toList();
     }
 
     private static com.example.connect_sphere.venueavailability.AvailabilityModels.Settings requestedDurations(

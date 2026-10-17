@@ -30,6 +30,23 @@ public class VenueBookingService {
     private final VenueBookingRecordRepository records;
     private final EventRepository events;
 
+    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
+     * Setter-injected so this service does not depend on the log; absent in
+     * plain unit tests, where nothing is announced. */
+    private org.springframework.context.ApplicationEventPublisher changeLog;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setChangeLog(org.springframework.context.ApplicationEventPublisher changeLog) {
+        this.changeLog = changeLog;
+    }
+
+    private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
+            String message) {
+        if (changeLog != null) {
+            changeLog.publishEvent(new com.example.connect_sphere.activity.service.EventChange(eventId, type, actor, message));
+        }
+    }
+
     public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper,
             VenueBookingRecordRepository records,
             EventRepository events, com.example.connect_sphere.venueavailability.AvailabilityService availability,
@@ -66,6 +83,13 @@ public class VenueBookingService {
             venueIds.add(original.getVenueId());
         }
         for (UUID venueId : venueIds) venues.findForUpdate(venueId).orElseThrow(() -> new VenueNotFoundException(venueId));
+        // Validate before excluding the original from conflict checks. Both rows remain
+        // active until approval succeeds; the event and venue locks cover the swap.
+        if (booking.getReplacesBookingId() != null) {
+            var original = records.findById(booking.getReplacesBookingId()).orElseThrow();
+            if (!original.getEventId().equals(eventId) || !availability.affected(original.getBookingId()))
+                throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
+        }
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
         var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
         var conflicts = records.findApprovalConflicts(booking.getVenueId(), bookingId,
@@ -81,6 +105,7 @@ public class VenueBookingService {
                 conflict.getBookingId(), conflict.getEventName(), conflict.getStartDatetime(), conflict.getEndDatetime(),
                 conflict.getSetupDurationMinutes(), conflict.getTurnaroundDurationMinutes())));
         bufferConflicts.forEach(conflict -> blockingBookings.putIfAbsent(conflict.bookingId(), VenueBookingConflictDto.from(conflict)));
+        if (booking.getReplacesBookingId() != null) blockingBookings.remove(booking.getReplacesBookingId());
         if (!blockingBookings.isEmpty() || !unavailablePeriods.isEmpty()) {
             String message = !unavailablePeriods.isEmpty()
                     ? blockingBookings.isEmpty()
@@ -110,7 +135,10 @@ public class VenueBookingService {
         if (records.approvePending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.approved) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
-        return get(bookingId);
+        VenueBookingDto approved = get(bookingId);
+        announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_booking_approved, null,
+                "Approved " + approved.venue().venueAddress());
+        return approved;
     }
 
     /** VS04: use the same event lock as approval, submission and cancellation. */
@@ -145,7 +173,17 @@ public class VenueBookingService {
                 alternativeVenueId, trimmedArrangement) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
-        return get(bookingId);
+        VenueBookingDto rejected = get(bookingId);
+        announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_booking_rejected, null,
+                "Rejected " + rejected.venue().venueAddress() + ": " + trimmedReason);
+        if (rejected.alternativeVenueAddress() != null || trimmedArrangement != null) {
+            announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_alternative_suggested, null,
+                    rejected.alternativeVenueAddress() != null
+                            ? "Suggested " + rejected.alternativeVenueAddress() + " instead"
+                                    + (trimmedArrangement != null ? ". " + trimmedArrangement : "")
+                            : "Suggested an alternative arrangement: " + trimmedArrangement);
+        }
+        return rejected;
     }
 
     public List<VenueBookingDto> listPending() {

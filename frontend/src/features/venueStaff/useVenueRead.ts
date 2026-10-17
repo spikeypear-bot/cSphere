@@ -6,6 +6,11 @@ export function useVenueRead<T>(path: string, retainPreviousData = false) {
   const [result, setResult] = useState<{ path: string; attempt: number; data?: T; error?: string } | null>(null)
   const [attempt, setAttempt] = useState(0)
   useEffect(() => {
+    const refresh = () => setAttempt(value => value + 1)
+    window.addEventListener('focus', refresh)
+    return () => window.removeEventListener('focus', refresh)
+  }, [])
+  useEffect(() => {
     let active = true
     apiClient.get<T>(path, { cache: 'no-store' }).then(data => { if (active) setResult({ path, attempt, data }) })
       .catch((error: unknown) => {

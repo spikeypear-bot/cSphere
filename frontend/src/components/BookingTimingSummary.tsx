@@ -7,10 +7,10 @@ export function BookingTimingSummary({ timing, headingLevel = 3 }: { timing?: Bo
   return <section aria-label="Booking timings">
     <Heading>Booking Timings (SGT)</Heading>
     <dl className="venue-card-preview__information">
-      <div><dt><strong>Booking Window</strong></dt><dd>{range(timing.startDatetime, timing.endDatetime)}</dd></div>
-      <div><dt><strong>Setup / Turnaround</strong></dt><dd>{timing.setupDurationMinutes} / {timing.turnaroundDurationMinutes} minutes</dd></div>
-      <div><dt><strong>Venue Occupied</strong></dt><dd>{range(timing.effectiveStart, timing.effectiveEnd)}</dd></div>
-      {timing.timingNote && <div><dt><strong>Timing Reason</strong></dt><dd>{timing.timingNote}</dd></div>}
+      <div><dt>Booking Window</dt><dd>{range(timing.startDatetime, timing.endDatetime)}</dd></div>
+      <div><dt>Setup / Turnaround</dt><dd>{timing.setupDurationMinutes} / {timing.turnaroundDurationMinutes} minutes</dd></div>
+      <div><dt>Venue Occupied</dt><dd>{range(timing.effectiveStart, timing.effectiveEnd)}</dd></div>
+      {timing.timingNote && <div><dt>Timing Reason</dt><dd>{timing.timingNote}</dd></div>}
     </dl>
     {(timing.conflicts ?? []).length > 0 && <div role="status" className="unavailability-warning">
       <p>Occupied time overlaps approved bookings. Review these arrangements with Venue Staff; no booking has been cancelled.</p>

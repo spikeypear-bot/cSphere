@@ -47,6 +47,9 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
+@Tag("ECL-C3")
+@Tag("ELC-C6")
+@Tag("AU04")
 class LeadRequestReviewAccessTest {
 
     private static final UUID REQUEST = UUID.randomUUID();

@@ -189,7 +189,9 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r1')
     // Anchored: the Refresh button's own label contains "assignments".
     expect(screen.queryByRole('button', { name: /^(re)?assign/i })).not.toBeInTheDocument()
-    expect(calls.map((call) => call.method)).toEqual(['GET'])
+    // Reads only (the page also reads each coordinator's events since ECL-C7).
+    expect(calls.length).toBeGreaterThan(0)
+    expect(calls.every((call) => call.method === 'GET')).toBe(true)
   })
 
   it.each([
@@ -213,7 +215,9 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(screen.queryByText(/returns to the unassigned list/)).not.toBeInTheDocument()
     expect(screen.queryAllByRole('button', { name: /clarification|reject|approve|assign/i })
       .map((button) => button.textContent)).toEqual(['Reassign'])
-    expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
+    // Reads only (the page also reads each coordinator's events since ECL-C7).
+    expect(calls.length).toBeGreaterThan(0)
+    expect(calls.every((call) => call.method === 'GET')).toBe(true)
   })
 
   it('after a reassignment, confirms it and shows the request under its new coordinator with both counts updated', async () => {

@@ -1,0 +1,24 @@
+import { defineConfig, devices } from '@playwright/test'
+
+/**
+ * IS212 Week 9: browser end-to-end tests for the few journeys that matter
+ * most. They drive the built app (vite preview, which proxies /api to the
+ * backend) against a real backend and database, so they need both running:
+ * see e2e/README.md. CI starts them in the `e2e` job.
+ */
+export default defineConfig({
+  testDir: './e2e',
+  // A real browser and a real backend are slower than unit tests; fail fast
+  // rather than hang, and never retry a failure into a pass (Week 9: retrying
+  // until green hides flakiness instead of fixing it).
+  timeout: 30_000,
+  retries: 0,
+  workers: 1,
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
+  use: {
+    baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4173',
+    // On failure, keep a step-by-step trace to replay in the trace viewer.
+    trace: 'retain-on-failure',
+  },
+  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+})

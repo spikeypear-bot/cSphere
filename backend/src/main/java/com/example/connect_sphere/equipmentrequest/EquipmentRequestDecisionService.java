@@ -22,6 +22,23 @@ public class EquipmentRequestDecisionService {
     private final EventRepository events;
     private final EquipmentLogRepository reservations;
 
+    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
+     * Setter-injected so this service does not depend on the log; absent in
+     * plain unit tests, where nothing is announced. */
+    private org.springframework.context.ApplicationEventPublisher changeLog;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setChangeLog(org.springframework.context.ApplicationEventPublisher changeLog) {
+        this.changeLog = changeLog;
+    }
+
+    private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
+            String message) {
+        if (changeLog != null) {
+            changeLog.publishEvent(new com.example.connect_sphere.activity.service.EventChange(eventId, type, actor, message));
+        }
+    }
+
     public EquipmentRequestDecisionService(
             EquipmentRequestRepository requests,
             EquipmentRequestLineRepository lines,
@@ -83,6 +100,12 @@ public class EquipmentRequestDecisionService {
         }
 
         request.decide(requestedStatus, rejectReason);
+        announce(request.getEventId(), requestedStatus == EquipmentRequestStatus.approved
+                        ? com.example.connect_sphere.activity.entity.ActivityType.equipment_approved
+                        : com.example.connect_sphere.activity.entity.ActivityType.equipment_rejected, null,
+                requestedStatus == EquipmentRequestStatus.approved
+                        ? "Approved the equipment request"
+                        : "Rejected the equipment request: " + rejectReason);
         return EquipmentRequestDetailsResponse.from(request, lines.findByIdRequestId(requestId));
     }
 

@@ -210,6 +210,9 @@ public class EventRequestService {
             if (organisation == null || !organisation.equals(origin.getOrganisation())) {
                 throw new EventRequestNotFoundException(eventId);
             }
+        } else if (viewerRole == UserRole.ecl) {
+            // ECL-C7: the Lead oversees every event and sees the internal view.
+            return activityService.timeline(origin.getRequestId(), UserRole.ec);
         } else {
             requireAssigned(viewerId, origin);
         }
@@ -516,6 +519,16 @@ public class EventRequestService {
         entity.setCoordinatorId(coordinatorUserId);
         entity.setUpdatedAt(OffsetDateTime.now());
         EventRequest saved = repository.save(entity);
+        // ECL-C7: an approved request's event moves with it, in the same
+        // transaction and under the event's row lock, so the previous
+        // coordinator loses access at the moment the new one gains it, and
+        // any action they started but submit afterwards is refused.
+        if (saved.getEventId() != null) {
+            eventRepository.findForUpdate(saved.getEventId()).ifPresent(event -> {
+                event.setCoordinatorId(coordinatorUserId);
+                eventRepository.save(event);
+            });
+        }
         activityService.record(new ActivityService.Entry(saved.getRequestId(), saved.getEventId(),
                 reassignment ? ActivityType.coordinator_reassigned : ActivityType.coordinator_assigned,
                 leadId, note, null, null, null));
@@ -557,6 +570,16 @@ public class EventRequestService {
                 .map(coordinator -> new CoordinatorAssignmentsDto(coordinator.getUserId(), coordinator.getUsername(),
                         byCoordinator.getOrDefault(coordinator.getUserId(), List.of())))
                 .toList();
+    }
+
+    /** Not cancelled, and not finished (a confirmed event whose end has passed is Completed). */
+    private static boolean stillActive(Event event) {
+        EventStatus status = event.getStatus();
+        if (status == EventStatus.cancelled || status == EventStatus.completed) {
+            return false;
+        }
+        return !(status == EventStatus.confirmed && event.getEndDatetime() != null
+                && event.getEndDatetime().isBefore(OffsetDateTime.now()));
     }
 
     /** ECL-C3: the Lead filters out a request before anyone is assigned. */
@@ -602,14 +625,19 @@ public class EventRequestService {
         return entity;
     }
 
-    /** A request the Lead may reassign (ELC-C5): it has a coordinator and
-     * is still under review. Once decided it stays with whoever decided it. */
+    /** A request the Lead may reassign (ELC-C5): it has a coordinator and is
+     * still under review, or (ECL-C7) it was approved and its event has not
+     * finished or been cancelled. A rejected or cancelled request, or a
+     * finished event, stays with whoever handled it. */
     private EventRequest findReassignable(UUID requestId) {
         EventRequest entity = repository.findForUpdate(requestId)
                 .filter(request -> request.getStatus() != EventRequestStatus.draft)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
-        if (entity.getStatus() != EventRequestStatus.pending
-                && entity.getStatus() != EventRequestStatus.clarification_required) {
+        boolean underReview = entity.getStatus() == EventRequestStatus.pending
+                || entity.getStatus() == EventRequestStatus.clarification_required;
+        boolean activeEvent = entity.getStatus() == EventRequestStatus.approved && entity.getEventId() != null
+                && eventRepository.findById(entity.getEventId()).map(EventRequestService::stillActive).orElse(false);
+        if (!underReview && !activeEvent) {
             throw new EventRequestStateException(
                     "This request can no longer be reassigned (current status: "
                             + label(entity.getStatus()) + ").");

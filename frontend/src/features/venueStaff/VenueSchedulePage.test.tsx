@@ -1,3 +1,4 @@
+// @stories VS15 VS-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { apiClient } from '../../lib/apiClient'
@@ -20,6 +21,17 @@ async function mount() {
   fireEvent.change(await screen.findByLabelText('Venue'), { target: { value: 'v1' } })
   await screen.findByRole('table')
 }
+it('refreshes on window focus and removes released occupancy while retaining other entries', async () => {
+  await mount()
+  vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
+    ? [{ venueId: 'v1', venueAddress: 'Main Hall' }]
+    : { ...schedule, bookings: schedule.bookings.filter(b => b.bookingId !== 'b1') })
+  fireEvent(window, new Event('focus'))
+  const table = await screen.findByRole('table')
+  expect(within(table).queryByRole('button', { name: /Confirmed booking/ })).not.toBeInTheDocument()
+  expect(within(table).getAllByRole('button', { name: /Tentative hold/ })).toHaveLength(3)
+  expect(within(table).getByRole('button', { name: /Unavailable.*Maintenance/ })).toBeInTheDocument()
+})
 it('shows overlapping bookings, holds and separate buffers, with read-only details', async () => {
   await mount()
   const table = screen.getByRole('table')

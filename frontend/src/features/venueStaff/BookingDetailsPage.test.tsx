@@ -1,3 +1,4 @@
+// @stories VS02 VS03 VS04 VS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -76,9 +77,11 @@ it('rejects with an alternative venue and arrangement and displays both suggesti
 
   await screen.findByLabelText('Status: rejected')
   const requirements = screen.getByRole('region', { name: 'Event Requirements' })
-  expect(requirements).toHaveTextContent('Unavailable on that date')
-  expect(requirements).toHaveTextContent('Suggested alternative venue: Garden Hall')
-  expect(requirements).toHaveTextContent('Move to the afternoon')
+  const rejection = screen.getByRole('status', { name: 'Rejection reason' })
+  expect(requirements).not.toContainElement(rejection)
+  expect(rejection).toHaveTextContent('Unavailable on that date')
+  expect(rejection).toHaveTextContent(/Suggested Alternative Venue:\s*Garden Hall/)
+  expect(rejection).toHaveTextContent('Move to the afternoon')
   const patch = fetch.mock.calls.find(call => call[1]?.method === 'PATCH')
   expect(JSON.parse(String(patch?.[1].body))).toEqual({
     reason: 'Unavailable on that date',
@@ -104,7 +107,7 @@ it('allows rejection without an alternative when the venue list cannot be loaded
   await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
   await screen.findByLabelText('Status: rejected')
-  expect(screen.getByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Unavailable')
+  expect(screen.getByRole('status', { name: 'Rejection reason' })).toHaveTextContent('Unavailable')
   const patch = fetch.mock.calls.find(call => call[1]?.method === 'PATCH')
   expect(JSON.parse(String(patch?.[1].body))).toEqual({
     reason: 'Unavailable',
@@ -573,8 +576,9 @@ it('requires a reason, cancels without writing, and displays the saved rejection
   await user.type(screen.getByRole('textbox', { name: 'Rejection reason' }), 'Maintenance  ')
   await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
   const requirements = await screen.findByRole('region', { name: 'Event Requirements' })
-  const rejectionBanner = within(requirements).getByRole('status', { name: 'Rejection reason' })
-  expect(rejectionBanner).toHaveClass('booking-rejection-banner')
+  const rejectionBanner = screen.getByRole('status', { name: 'Rejection reason' })
+  expect(requirements).not.toContainElement(rejectionBanner)
+  expect(rejectionBanner).toHaveClass('booking-approval__confirmation')
   expect(within(rejectionBanner).getByText('Rejection Reason')).toBeInTheDocument()
   expect(within(rejectionBanner).getByText('Maintenance')).toBeInTheDocument()
   expect(within(requirements).getByLabelText('Status: rejected')).toBeInTheDocument()

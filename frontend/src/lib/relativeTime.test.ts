@@ -1,3 +1,4 @@
+// @stories EO15  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { describe, expect, it } from 'vitest'
 import { formatRelativeTime } from './relativeTime'
 

@@ -15,11 +15,14 @@ import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.EnumSource;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 import com.example.connect_sphere.activity.service.ActivityService;
+import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 import com.example.connect_sphere.event.entity.Event;
@@ -36,6 +39,8 @@ import com.example.connect_sphere.venueavailability.AvailabilityModels;
 import com.example.connect_sphere.venueavailability.AvailabilityService;
 import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
+import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
+import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRepository;
 
 /**
@@ -65,28 +70,44 @@ class VenueBookingWordingTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
-                activityService, notificationService, operationalIssues, null, availability);
+                activityService, notificationService, operationalIssues, null, availability, null);
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(availability.settings(any())).thenReturn(new AvailabilityModels.Settings(0, 0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());
         when(operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any())).thenReturn(List.of());
     }
 
-    @Test
-    void notesOfExactlyTheMaximumLengthAreAcceptedAndTheTimelineEntryStillFits() {
+    @ParameterizedTest
+    @EnumSource(value = ActivityType.class, names = {"venue_booking_requested", "venue_added", "venue_booking_replaced"})
+    void notesOfExactlyTheMaximumLengthAreAcceptedAndTheTimelineEntryStillFits(ActivityType type) {
         Event event = event(EventStatus.pending, List.of("none"), List.of());
         Venue venue = venue(List.of(), List.of());
         EventRequest origin = new EventRequest();
         origin.setRequestId(UUID.randomUUID());
         when(eventRequests.findByEventId(event.getEventId())).thenReturn(Optional.of(origin));
         String notes = "x".repeat(VenueBookingRequestService.MAX_TEXT_LENGTH);
+        UUID replaces = null;
+        if (type != ActivityType.venue_booking_requested) {
+            VenueBookingRecord existing = new VenueBookingRecord();
+            existing.setBookingId(UUID.randomUUID());
+            existing.setEventId(event.getEventId());
+            existing.setVenueId(UUID.randomUUID());
+            existing.setStatus(VenueBookingStatus.approved);
+            when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(existing));
+            if (type == ActivityType.venue_booking_replaced) {
+                replaces = existing.getBookingId();
+                when(bookings.findById(replaces)).thenReturn(Optional.of(existing));
+                when(availability.affected(replaces)).thenReturn(true);
+            }
+        }
 
         var booking = service.submit(COORDINATOR, event.getEventId(),
-                new SubmitVenueBookingRequest(venue.getVenueId(), notes, null));
+                new SubmitVenueBookingRequest(venue.getVenueId(), notes, null, replaces));
 
-        assertThat(booking.bookingNotes()).hasSize(2000);
+        assertThat(booking.bookingNotes()).isEqualTo(notes);
         ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
         verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(type);
         assertThat(entry.getValue().message()).hasSizeLessThanOrEqualTo(2000)
                 .startsWith("Requested 1 Harbour Road. xxx").endsWith("…");
     }

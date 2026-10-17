@@ -51,13 +51,16 @@ public class EventVenueBookingController {
     @GetMapping("/venue-bookings")
     public List<EventVenueBookingDto> bookings(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
         // The token's role claim is the UserRole name (TokenService).
-        if ("safety_officer".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+        // Read-only views that need no assignment: the Safety Officer's
+        // review and the Event Coordinator Lead's oversight (ECL-C7).
+        String role = jwt.getClaimAsString("role");
+        if ("safety_officer".equalsIgnoreCase(role) || "ecl".equalsIgnoreCase(role)) {
             return service.bookingsForSafetyOfficer(eventId);
         }
         return service.bookingsForEvent(userIdOf(jwt), eventId);
     }
 
-    /** EC03: withdraw a pending request. Body: {"reason": "..."} (optional). */
+    /** VS25: cancel a pending or approved booking. Body: {"reason": "..."} (optional). */
     @PostMapping("/venue-bookings/{bookingId}/cancel")
     public EventVenueBookingDto cancel(
             @AuthenticationPrincipal Jwt jwt,

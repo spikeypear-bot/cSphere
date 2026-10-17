@@ -31,6 +31,12 @@ Share scripts, not database dumps. Development seeds are separate from Flyway mi
 
 ### Tests
 
+How we test, and how every test traces to a user story and AC: [docs/testing-strategy.md](docs/testing-strategy.md).
+Story → test matrix (generated): [docs/test-traceability.md](docs/test-traceability.md).
+
+Browser end-to-end journeys (Playwright) against a running backend: see [frontend/e2e/README.md](frontend/e2e/README.md)
+(`npm run test:e2e` from `frontend/`).
+
 Frontend (Vitest + React Testing Library):
 ```
 npm run test          # from frontend/, or npm --prefix frontend run test from root
@@ -119,6 +125,9 @@ xdg-open frontend/coverage/index.html
 ## Venue unavailability (VS01)
 
 Venue Staff can record unavailable periods from Venue Details, review affected bookings, and notify coordinators without cancelling events. Availability includes setup/turnaround buffers. Coordinators can request a replacement; approval preserves the original as a changed booking. See [VS01 API, workflow, and manual testing](docs/venue-unavailability-api.md).
+
+For cancellation, rejection and superseded-reservation behavior, see the
+[VS25 acceptance review and remaining limitations](docs/venue-reservation-release.md).
 
 ## Venue booking timing (VS-C2 / EC-C2)
 

@@ -42,11 +42,11 @@ import jakarta.persistence.EntityManager;
  * the overlap boundaries. Every test rolls back.
  */
 @Tag("integration")
+@Tag("EC03")
+@Tag("EC-C2")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
-@Tag("EC03")
-@Tag("EC-C2")
 class VenueBookingRequestFlowTest {
     private static final List<VenueOperatingHourDto> FULL_DAY_HOURS = List.of(
             new VenueOperatingHourDto(1, LocalTime.of(0, 0), LocalTime.of(23, 59)),
@@ -128,6 +128,23 @@ class VenueBookingRequestFlowTest {
         sync();
         jdbc.update("UPDATE events SET status = ?::event_status WHERE event_id = ?", status, eventId);
         sync();
+    }
+
+    @Test
+    void maximumLengthNotesArePersistedWithoutOverflowingTheActivityTimeline() throws Exception {
+        UUID eventId = event(150, "none");
+        UUID venueId = venue(150, List.of());
+        String notes = "x".repeat(2000);
+        String id = bookingIdOf(submit(eventId, "ec1",
+                "{\"venueId\":\"" + venueId + "\",\"bookingNotes\":\"" + notes + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingNotes").value(notes)));
+        sync();
+        assertThat(jdbc.queryForObject("SELECT booking_notes FROM venue_bookings WHERE booking_id = ?::uuid",
+                String.class, id)).isEqualTo(notes);
+        assertThat(jdbc.queryForObject("SELECT message FROM event_request_activity WHERE event_id = ? "
+                + "AND activity_type = 'venue_booking_requested'", String.class, eventId))
+                .hasSize(2000).startsWith("Requested ").endsWith("…");
     }
 
     @Test
@@ -351,14 +368,14 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
-    void anApprovedBookingCannotBeCancelledHere() throws Exception {
+    void anApprovedBookingCanBeCancelledByItsAssignedCoordinator() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
         sync();
         jdbc.update("UPDATE venue_bookings SET status = 'approved' WHERE booking_id = ?::uuid", id);
         sync();
 
-        cancel(eventId, id, "ec1").andExpect(status().isConflict());
+        cancel(eventId, id, "ec1").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("cancelled"));
     }
 
     @Test
