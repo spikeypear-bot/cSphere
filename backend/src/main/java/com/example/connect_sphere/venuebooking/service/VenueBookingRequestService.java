@@ -224,9 +224,10 @@ public class VenueBookingRequestService {
                     + unavailable.get(0).description() + ".");
         }
         if (!conflicts.isEmpty()) {
+            // ECL-C7: never another event's name, only that it is taken and when.
             throw new InvalidVenueBookingException("Venue '" + venue.getVenueAddress()
-                    + "' already has an approved booking that overlaps the "
-                    + "event's time (" + conflicts.get(0).eventName() + "). Choose another venue.");
+                    + "' is not free at this event's time: " + conflicts.get(0).sentence()
+                    + ". Choose another venue.");
         }
         if (suitability.needsJustification() && justification == null) {
             throw new InvalidVenueBookingException("This venue does not offer "
@@ -270,11 +271,13 @@ public class VenueBookingRequestService {
 
     @Transactional
     public List<EventVenueBookingDto> submitBatch(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest.Batch batch) {
+        // ECL-C7: who is asking is checked before anything about the input, so
+        // a coordinator who is not assigned learns nothing about the event.
+        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        requireAssigned(coordinatorId, event);
         if (batch == null || batch.bookings() == null || batch.bookings().isEmpty()) {
             throw new InvalidVenueBookingException("Add at least one venue before submitting.");
         }
-        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        requireAssigned(coordinatorId, event);
         List<SubmitVenueBookingRequest> requests = batch.bookings();
         for (var request : requests) {
             if (request == null || request.venueId() == null)
@@ -357,7 +360,7 @@ public class VenueBookingRequestService {
                     + suitability.expectedAttendance() + ".");
         }
         for (VenueOptionDto.ConflictDto conflict : conflicts) {
-            reasons.add("Already approved for " + conflict.eventName() + " at an overlapping time.");
+            reasons.add(conflict.sentence() + ".");
         }
         for (VenueOptionDto.UnavailablePeriodDto period : unavailable) {
             reasons.add("Venue unavailable: " + period.description() + ".");
@@ -383,7 +386,8 @@ public class VenueBookingRequestService {
     private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue, OffsetDateTime start, OffsetDateTime end,
             com.example.connect_sphere.venueavailability.AvailabilityModels.Settings durations) {
         return availability.conflicts(venue.getVenueId(), event.getEventId(), start, end, durations)
-                .stream().map(c -> new VenueOptionDto.ConflictDto(c.eventName(), c.effectiveStart(), c.effectiveEnd())).toList();
+                .stream().map(c -> new VenueOptionDto.ConflictDto(VenueOptionDto.ConflictDto.ANOTHER_EVENT,
+                        c.effectiveStart(), c.effectiveEnd())).toList();
     }
 
     private static com.example.connect_sphere.venueavailability.AvailabilityModels.Settings requestedDurations(

@@ -255,6 +255,20 @@ client can forge — this was a live cross-organisation leak on 2026-09-22.
 clause in the repository. For a list there is no yes/no to make at all — the
 answer is a smaller result set, and no annotation can express that.
 
+**5a. Coordinator endpoints are scoped by assignment (ECL-C7, D25).** An Event
+Coordinator may open or act on a request or event **only while it is assigned
+to them**. The event's own `coordinator_id` is the source of truth once the event
+exists, and reassignment moves both the request and the event in one transaction.
+- **Check assignment first**, before any validation of the input, so a stranger
+  learns nothing (403 `NotAssignedCoordinatorException`, the same plain
+  message for everyone).
+- **The Lead reads any request or event** (oversight) but never takes coordinator
+  actions.
+- **Never put another event's name or organiser in a coordinator response:**
+  conflicts say "Booked by another event" and the period.
+- **Every new coordinator endpoint gets a row** in
+  `CoordinatorAssignmentScopeTest.coordinatorEndpoints()`.
+
 **6. `@PreAuthorize` only where the rule needs a method argument or the
 principal.** A plain role check belongs in the filter chain, which rejects
 earlier and keeps every rule in one readable list. Never write the same rule in

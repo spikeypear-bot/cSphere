@@ -13,6 +13,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,6 +45,7 @@ import tools.jackson.databind.JsonNode;
 @Transactional
 @Tag("ECL-C2")
 @Tag("ELC-C5")
+@Tag("ECL-C7")
 class AssignedRequestsFlowTest {
 
     private static final String ASSIGNED = "/api/event-requests/assigned";
@@ -396,19 +398,36 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    void aRequestItsCoordinatorHasAlreadyApprovedOrRejectedCannotBeReassigned() throws Exception {
-        UUID approved = assignedTo("ec1", "eo1");
+    void aRequestItsCoordinatorHasAlreadyRejectedCannotBeReassigned() throws Exception {
         UUID rejected = assignedTo("ec1", "eo1");
-        act("ec1", approved + "/approve", "{}", 200);
         act("ec1", rejected + "/reject", "{\"reason\":\"No capacity\"}", 200);
-        int approvedEntries = timelineEntries(approved);
         int rejectedEntries = timelineEntries(rejected);
 
-        reassign(approved, "ec2", 409);
         reassign(rejected, "ec2", 409);
 
-        assertStillWithEc1(approved, "approved", approvedEntries);
         assertStillWithEc1(rejected, "rejected", rejectedEntries);
+    }
+
+    /**
+     * ECL-C5 story text ("reassign an in-progress or already-assigned event")
+     * and ECL-C7 AC14, agreed 17 Oct 2026 (decision-log D25): an approved
+     * request whose event is still active moves to the new coordinator with
+     * its event. This replaces AC5's earlier "an approved request is refused".
+     */
+    @Test
+    @DisplayName("ECL-C7 AC14, AC15 (happy): an approved request moves to the new coordinator together with its event")
+    void anApprovedRequestMovesWithItsEvent() throws Exception {
+        UUID approved = assignedTo("ec1", "eo1");
+        act("ec1", approved + "/approve", "{}", 200);
+
+        reassign(approved, "ec2", 200);
+
+        assertThat(statusOf(approved)).isEqualTo("approved");
+        assertThat(coordinatorOf(approved)).isEqualTo(flow.idOf("ec2").toString());
+        assertThat(jdbc.queryForObject("""
+                SELECT e.coordinator_id::text FROM events e
+                JOIN event_requests r ON r.event_id = e.event_id WHERE r.request_id = ?
+                """, String.class, approved)).isEqualTo(flow.idOf("ec2").toString());
     }
 
     @Test

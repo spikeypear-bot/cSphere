@@ -62,6 +62,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("unit")
 @Tag("EC08")
 @Tag("EC-NEW2")
+@Tag("ECL-C7")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
@@ -733,6 +734,20 @@ class EventLifecycleServiceTest {
         ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
         verify(activity).record(entry.capture());
         assertThat(entry.getValue().message()).isNull();
+    }
+
+    @Test
+    @DisplayName("ECL-C7 AC17, AC19 (conflict): after a reassignment, notifications go to the new coordinator and never the previous one")
+    void notificationsFollowTheEventsCurrentCoordinator() {
+        Event event = readyEvent(EventStatus.awaiting_safety_review);
+        // The Lead reassigned the event: the event row now names the new coordinator.
+        event.setCoordinatorId(OTHER_COORDINATOR);
+
+        service.returnToPlanning(event.getEventId(), VS_USER, "A venue for this event became unavailable: flooding");
+
+        verify(notifications).createReturnedToPlanningNotification(eq(OTHER_COORDINATOR), eq(event.getEventId()),
+                any(), any());
+        verify(notifications, never()).createReturnedToPlanningNotification(eq(COORDINATOR), any(), any(), any());
     }
 
     // ---- helpers ----------------------------------------------------------

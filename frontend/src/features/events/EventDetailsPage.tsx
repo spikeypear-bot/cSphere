@@ -12,6 +12,8 @@ import type { ActivityDto } from '../../types/activity'
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
+import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
+import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
@@ -34,6 +36,8 @@ export function EventDetailsPage() {
   const flash = location.state as { justApproved?: boolean; bookingRequested?: string } | null
   const [event, setEvent] = useState<EventDto | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // ECL-C7: a coordinator opening an event that is not (or no longer) theirs.
+  const [notAssigned, setNotAssigned] = useState(false)
   const readinessState = useSafetyData<ReadinessDto>(
     eventId && role === 'coordinator' ? `/events/${eventId}/readiness` : null,
   )
@@ -54,13 +58,15 @@ export function EventDetailsPage() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
+        if (role === 'coordinator' && isNotAssigned(err)) setNotAssigned(true)
         setError(err instanceof ApiClientError ? err.message : 'Could not load this event.')
       })
     return () => {
       cancelled = true
     }
-  }, [eventId, reloadToken])
+  }, [eventId, reloadToken, role])
 
+  if (notAssigned) return <NotAssignedNotice what="event" />
   if (error) return <p role="alert">{error}</p>
   if (!event) return <p>Loading…</p>
 

@@ -5,32 +5,33 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**102 test files, 1023 tests, 45 stories traced, 0 files untraced.**
+**105 test files, 1043 tests, 46 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
-| AU04 | 6 | 3 | 3 |  | 71 | — | — |
+| AU04 | 6 | 4 | 3 |  | 79 | — | happy, negative, boundary, conflict, cross-cutting |
 | DEV05 |  | 3 | 4 |  | 53 | — | — |
-| EC01 | 2 | 2 | 2 |  | 71 | — | — |
-| EC02 | 1 | 3 | 5 | 2 | 88 | — | — |
-| EC03 | 2 | 2 | 3 | 2 | 70 | — | happy, negative, failure, cross-cutting |
+| EC01 | 2 | 2 | 2 |  | 71 | — | negative |
+| EC02 | 1 | 3 | 5 | 3 | 89 | — | negative |
+| EC03 | 2 | 2 | 3 | 2 | 71 | — | happy, negative, failure, cross-cutting |
 | EC04 | 1 |  | 1 |  | 7 | — | — |
 | EC05 | 1 |  |  |  | 2 | — | — |
 | EC07 | 1 | 1 | 1 |  | 24 | — | — |
-| EC08 | 4 | 2 | 3 | 2 | 140 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC09 | 2 | 1 | 1 |  | 27 | — | — |
-| EC-C2 |  | 1 | 2 |  | 49 | — | — |
-| EC-NEW2 | 2 | 1 | 7 | 2 | 154 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC08 | 4 | 2 | 3 | 2 | 144 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC09 | 2 | 1 | 1 | 1 | 31 | — | happy, boundary, cross-cutting |
+| EC-C2 |  | 1 | 2 |  | 50 | — | negative |
+| EC-NEW2 | 2 | 1 | 7 | 2 | 155 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 1 |  |  |  | 47 | — | — |
 | ECL-C1 | 1 |  | 2 |  | 18 | — | — |
-| ECL-C2 | 2 | 2 | 1 |  | 55 | — | — |
+| ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
 | ECL-C3 | 2 | 1 | 4 | 2 | 135 | — | — |
-| ELC-C5 | 2 | 1 | 3 |  | 119 | — | — |
+| ECL-C7 | 2 | 2 | 3 | 1 | 127 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ELC-C5 | 2 | 2 | 3 | 1 | 129 | — | happy, negative, boundary, conflict, cross-cutting |
 | ELC-C6 | 3 | 2 | 4 | 2 | 170 | — | — |
-| EO01 | 2 | 1 | 4 | 2 | 86 | — | happy |
-| EO02 | 2 | 1 | 4 | 3 | 88 | — | happy |
+| EO01 | 2 | 1 | 4 | 3 | 87 | — | happy |
+| EO02 | 2 | 1 | 4 | 4 | 89 | — | happy |
 | EO04 | 1 | 1 | 3 | 1 | 69 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO09 | 3 | 2 | 1 | 1 | 80 | — | — |
+| EO09 | 3 | 2 | 1 | 1 | 83 | — | happy, boundary, cross-cutting |
 | EO15 | 1 | 1 | 4 | 2 | 43 | — | happy |
 | EO19 | 3 | 2 | 1 |  | 74 | — | — |
 | EO26 | 2 | 2 | 5 |  | 82 | — | — |
@@ -90,6 +91,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestScopingTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`
 - frontend component/unit: `frontend/src/App.test.tsx`
@@ -129,6 +131,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinator/RequestReviewPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/ReviewQueuePage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
@@ -185,6 +188,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
 
 </details>
 <details><summary>EC-C2</summary>
@@ -229,6 +233,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`
 - frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
 
 </details>
 <details><summary>ECL-C3</summary>
@@ -244,14 +249,28 @@ Some of these are not built yet; a story that is built and still listed here nee
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
+<details><summary>ECL-C7</summary>
+
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
+- frontend component/unit: `frontend/src/features/coordinator/RequestReviewPage.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorAccessScope.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
+
+</details>
 <details><summary>ELC-C5</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
 
 </details>
 <details><summary>ELC-C6</summary>
@@ -278,6 +297,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
@@ -291,6 +311,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`

@@ -269,6 +269,37 @@ Built on `feature/ec08-eo04-ecnew2-event_lifecycle` (2026-10-11, merged with SO-
 
 **For the team:** add `traceability` (with `audit`, `smoke`, `e2e`) to `main`'s required checks once green. Fill your Sheet test-case lanes in the same format, naming your automated tests in Remarks. Turn any `// @stories` header into AC-level names when you next work on that story.
 
+### D25 — ECL-C7: the Lead's assignment is the single source of truth for coordinator access
+
+2026-10-17, branch `feature/eclc7-coordinator_access_scoping`. An audit of every endpoint an Event Coordinator can call found most were already scoped by assignment (review queue, request decisions, venue options/bookings/cancel, equipment requests, lifecycle, readiness, timelines, My events). It also found five gaps, now closed:
+
+1. **`GET /api/events/{id}` let any coordinator open any event.** It now requires the assigned coordinator; the Lead may view any event (`getForLead`, read-only).
+2. **Two event-specific Technical Support reads were open to every coordinator**, unscoped: an event's reservations and an equipment request's availability. Coordinators never use them, so the rule now excludes them (the Safety Officer keeps reservations). Inventory reads such as unit status (TS03) stay open to coordinators; they describe equipment, not anyone's event.
+3. **Venue options showed other events' names.** In the conflict list ("Occupied: …"), the reasons ("Already approved for …") and the refusal message ("… overlaps the event's time (Gala Dinner)"), they now read "Booked by another event, 10 Mar 2027, 9:00 AM – 12:00 PM (Singapore time)". Venue Staff's approval conflicts keep names: they are responsible for the venue.
+4. **Reassignment could not move an approved event.** It was limited to requests under review and never updated `events.coordinator_id`, so after approval the previous coordinator kept the event. Reassignment now also works for an approved request whose event is not cancelled or finished. It updates the request and the event in **one transaction under the event's row lock**, so access moves at once and an action the previous coordinator submits afterwards is refused. The Lead's *Coordinator assignments* page lists each coordinator's active events (`GET /api/events/by-coordinator`, Lead only, kept separate from ECL-C2's request list so that query stays unchanged) with *View event* and *Reassign*.
+5. **A refused coordinator saw raw text with an id.** The 403 message is now plain and identical for everyone ("This is not assigned to you. If you were working on it, the Event Coordinator Lead may have reassigned it…"), and coordinator pages show a "This event isn't assigned to you" panel with a way back.
+
+**Checked against the customer documents (Week 7 > Week 4 > Week 1).**
+- **Week 7:** *"The Lead can … assign a suitable Event Coordinator, and reassign events where necessary. Event Coordinators should only be able to manage events assigned to them, while the Event Coordinator Lead should be able to view all coordinator assignments and active events under their supervision. Relevant users should be notified when assignments or reassignments occur."*
+- **Week 4** (Coordinator Assignment): *"Events may subsequently be reassigned when staff responsibilities or availability change"*; access depends on the user's *"role and relationship to an event"*.
+
+Therefore:
+- **ECL-C5 AC5 was wrong.** It said an approved request cannot be reassigned, which contradicts both documents and ECL-C5's own story text ("reassign an in-progress … event"). Agreed with Jillian on 17 Oct 2026: approved requests whose event is still active can be reassigned. ECL-C5's test is updated accordingly, and **the Sheet's ECL-C5 AC5 needs rewording by its owner**.
+- **Backlog gap:** Week 7's "relevant users should be notified" includes the coordinators. Only the organiser is told today; ECL-C5 AC11 defers coordinators to **EC-NEW4**, which is High priority but unbuilt and has no ACs yet. This needs ACs and a sprint slot before Release 1.
+
+**Also fixed (found by the new endpoint matrix):** EC-C2's batch booking validated its input before checking assignment, so a stranger got "Add at least one venue" instead of 403. Assignment is now checked first.
+
+**Notifications** already follow `events.coordinator_id` at send time, so reassigning stops them going to the previous coordinator and sends them to the new one.
+
+**Evidence:**
+- `CoordinatorAssignmentScopeTest` (integration): every coordinator endpoint, as a coordinator who is not assigned, must answer 403 with no event data and change nothing (statuses, timeline, notifications, bookings, equipment). It also covers Lead view-but-not-act, unassigned requests, reassignment, totals and conflict privacy.
+- Unit tests for scoped lookups and notification routing.
+- Component tests for the notice, the Lead overview and reassignment.
+- E2E `access-scope.spec.ts`.
+- All 23 ACs traced in `docs/test-cases/sprint3-eclc7.md`.
+
+**No database migration.**
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
