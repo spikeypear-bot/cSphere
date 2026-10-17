@@ -37,3 +37,11 @@ As of V27, historical and current buffers are derived from each booking's saved 
 VS-C2 also lists overlaps between approved bookings in the loaded range, comparing their occupied periods and allowing touching boundaries. Booking entries link to the existing details screen for timing review. The calendar remains read-only; overlap notification scans are available on Venue Details and run at application startup for active bookings.
 
 Each booking uses its own stored start/end window, falling back to event times only for nullable legacy rows from V26. Setup and turnaround expand that booking window independently of other venues on the event.
+
+VS-C4 adds `activeConflicts` to schedule responses, covering all active approved
+overlaps for the venue, including partners outside the requested calendar range.
+The calendar reuses that response for conflict cards and warning indicators,
+while retaining its existing historical entries and local historical overlaps.
+Selected dialogs resolve their entry from fresh schedule data. See
+[existing booking conflicts](venue-booking-conflicts.md) for the agreed scope,
+read-only API and notification-scan distinction.

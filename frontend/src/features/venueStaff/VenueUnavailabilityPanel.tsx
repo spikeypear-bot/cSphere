@@ -14,11 +14,14 @@ export interface UnavailablePeriod {
 export interface ScheduleBooking {
   bookingId: string; eventName: string; status: string; startDateTime: string; endDateTime: string
   effectiveStart: string; effectiveEnd: string
+  eventId?: string; venueId?: string; venueName?: string; eventStartDateTime?: string; eventEndDateTime?: string
+  setupDurationMinutes?: number; turnaroundDurationMinutes?: number
 }
 interface Preview { affectedBookings: ScheduleBooking[]; previewToken: string }
 export interface OccupancySettings { setupMinutes: number; turnaroundMinutes: number }
 export interface VenueSchedule {
   settings: OccupancySettings; bookings: ScheduleBooking[]; unavailablePeriods: UnavailablePeriod[]
+  activeConflicts?: import('./BookingConflictList').BookingOverlap[]
 }
 const message = (error: unknown, fallback: string) => error instanceof ApiClientError ? error.message : fallback
 
