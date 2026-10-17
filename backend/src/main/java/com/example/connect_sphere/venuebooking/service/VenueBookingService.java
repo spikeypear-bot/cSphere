@@ -100,10 +100,16 @@ public class VenueBookingService {
             throw new VenueBookingStateException("The full occupied period, including setup and turnaround, must fit within configured venue opening hours.");
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow(() -> new VenueBookingStateException("Original booking no longer exists."));
-            if (!original.getEventId().equals(eventId) || !availability.affected(original.getBookingId()))
-                throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
-            original.setStatus(VenueBookingStatus.changed);
-            records.saveAndFlush(original);
+            if (!original.getEventId().equals(eventId)
+                    || !isEligibleReplacementSource(original)
+                    || records.existsByReplacesBookingIdAndStatusIn(original.getBookingId(),
+                            List.of(VenueBookingStatus.approved))) {
+                throw new VenueBookingStateException("The original booking is no longer eligible for replacement. Refresh this event.");
+            }
+            if (original.getStatus() == VenueBookingStatus.pending || original.getStatus() == VenueBookingStatus.approved) {
+                original.setStatus(VenueBookingStatus.changed);
+                records.saveAndFlush(original);
+            }
             event.setVenueId(booking.getVenueId());
             events.saveAndFlush(event);
         }
@@ -111,6 +117,14 @@ public class VenueBookingService {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
         return get(bookingId);
+    }
+
+    private boolean isEligibleReplacementSource(com.example.connect_sphere.venuebooking.entity.VenueBookingRecord booking) {
+        if (booking.getStatus() == VenueBookingStatus.rejected || booking.getStatus() == VenueBookingStatus.cancelled) {
+            return true;
+        }
+        return (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved)
+                && availability.affected(booking.getBookingId());
     }
 
     /** VS04: use the same event lock as approval, submission and cancellation. */
