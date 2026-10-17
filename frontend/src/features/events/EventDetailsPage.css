@@ -30,6 +30,52 @@
 .event-details__venue, .event-details__history { padding: 1.25rem; }
 .event-details__venue h2, .event-details__history h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
 .event-details__venue p { margin: 0 0 0.75rem; }
+.event-details__earlier-requests { display: grid; gap: 0.75rem; margin-top: 1.25rem; }
+.event-details__earlier-requests h3 { font-size: 1rem; }
+.event-details__booking-list, .event-details__replacement-list { list-style: none; margin: 0; padding: 0; }
+.event-details__booking-list { display: grid; gap: 0.75rem; }
+.event-details__booking-list > li, .event-details__booking-item {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 2%, var(--panel));
+}
+.event-details__booking-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.event-details__booking-heading p { margin: 0; font-weight: 600; }
+.event-details__booking-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+.event-details__booking-status[data-booking-status='approved'] { background: var(--success-soft); color: var(--success); }
+.event-details__booking-status[data-booking-status='rejected'] { background: var(--danger-soft); color: var(--danger); }
+.event-details__booking-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.55rem;
+  margin-top: 0.35rem;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+.event-details__booking-note { margin: 0.65rem 0 0; color: var(--ink-soft); font-size: 0.9rem; line-height: 1.5; }
+.event-details__replacement-list { display: grid; gap: 0.5rem; margin-top: 0.75rem; }
+.event-details__replacement-item {
+  padding: 0.75rem;
+  border-inline-start: 3px solid var(--hairline-strong);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--panel);
+}
+.event-details__rebook-button { margin-top: 0.85rem; font-size: 0.84rem; padding: 0.45rem 0.8rem; }
+.event-details__venue .booking-timing-summary { margin-top: 0.75rem; }
 
 .event-details__cancel { display: flex; flex-direction: column; gap: 0.4rem; margin-top: 0.5rem; }
 .event-details__cancel-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }

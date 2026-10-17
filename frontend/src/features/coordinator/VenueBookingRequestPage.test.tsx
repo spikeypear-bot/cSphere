@@ -9,6 +9,12 @@ import { VenueBookingRequestPage } from './VenueBookingRequestPage'
 
 const EVENT = 'ev-1'
 
+afterEach(() => {
+  cleanup()
+  vi.unstubAllGlobals()
+  window.localStorage.clear()
+})
+
 it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('marks %s history labels for booking-only colour styling', async status => {
   seedSession('coordinator')
   stubApi(routes([{ bookingId: 'colour-booking', status, venueAddress: 'Colour test venue' }]))
@@ -19,6 +25,56 @@ it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('marks %s h
   expect(label).toHaveTextContent(new RegExp(status, 'i'))
   cleanup()
   vi.unstubAllGlobals()
+})
+
+it('submits one linked replacement for a rejected booking while preserving other active bookings', async () => {
+  seedSession('coordinator')
+  const source = {
+    bookingId: 'old-booking', status: 'rejected', venueId: 'old-venue', venueAddress: 'Old Hall',
+    venueCapacity: 200, bookingNotes: 'Original request notes', rejectReason: 'Venue unavailable',
+    submittedAt: null, submittedBy: 'ec1',
+  }
+  const otherActive = {
+    bookingId: 'other-booking', status: 'approved', venueId: 'other-venue', venueAddress: 'Other Hall',
+    venueCapacity: 200, bookingNotes: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1',
+  }
+  const calls = stubApi(routes([source, otherActive], () => jsonResponse(201, {
+    bookingId: 'new-booking', status: 'pending', replacesBookingId: 'old-booking',
+  })))
+  renderPage(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=old-booking`)
+
+  expect(await screen.findByRole('heading', { name: 'Find a replacement venue' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: /1 Harbour Road/ }))
+  await userEvent.click(screen.getByRole('button', { name: 'Request replacement 1 Harbour Road' }))
+
+  expect(await screen.findByText('Event page')).toBeInTheDocument()
+  expect(calls.find(call => call.method === 'POST')?.body).toMatchObject({
+    venueId: 'v1',
+    replacesBookingId: 'old-booking',
+  })
+})
+
+it('does not offer the original or another active event venue as a replacement', async () => {
+  seedSession('coordinator')
+  const source = {
+    bookingId: 'old-booking', status: 'rejected', venueId: 'v1', venueAddress: '1 Harbour Road',
+    venueCapacity: 160, bookingNotes: null, rejectReason: 'Venue unavailable', submittedAt: null, submittedBy: 'ec1',
+  }
+  const otherActive = {
+    bookingId: 'other-booking', status: 'approved', venueId: 'v2', venueAddress: '2 Garden Lane',
+    venueCapacity: 200, bookingNotes: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1',
+  }
+  const available = [...OPTIONS, option('v5', '5 Marina Place', 220, 'suitable')]
+  stubApi({
+    ...routes([source, otherActive]),
+    [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, available),
+  })
+  renderPage(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=old-booking`)
+
+  expect(await screen.findByRole('heading', { name: 'Find a replacement venue' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /1 Harbour Road/ })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: /2 Garden Lane/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /5 Marina Place/ })).toBeInTheDocument()
 })
 
 const event = {
@@ -70,9 +126,9 @@ function routes(bookings: unknown[] = [], post?: (body: unknown) => Response) {
   }
 }
 
-function renderPage() {
+function renderPage(initialEntry = `/coordinator/events/${EVENT}/venue-booking`) {
   return render(
-    <MemoryRouter initialEntries={[`/coordinator/events/${EVENT}/venue-booking`]}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <SessionProvider>
         <Routes>
           <Route path="/coordinator/events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
@@ -102,15 +158,17 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const a = within(screen.getByRole('group', { name: 'Timings for 1 Harbour Road' }))
     const b = within(screen.getByRole('group', { name: 'Timings for 2 Garden Lane' }))
     expect(a.getByLabelText('Start')).toHaveValue('2027-03-10T09:00')
+    expect(b.getByText(/Venue preparation before the event/)).toBeInTheDocument()
+    expect(b.getByText(/Reset or clean the venue after the event/)).toBeInTheDocument()
     fireEvent.change(a.getByLabelText('Start'), { target: { value: '2027-03-10T10:00' } })
     fireEvent.change(b.getByLabelText('Start'), { target: { value: '2027-03-10T14:00' } })
     fireEvent.change(b.getByLabelText('End'), { target: { value: '2027-03-10T16:00' } })
-    fireEvent.change(b.getByLabelText('Setup (minutes)'), { target: { value: '45' } })
-    fireEvent.change(b.getByLabelText('Turnaround (minutes)'), { target: { value: '30' } })
+    fireEvent.change(b.getByLabelText(/^Setup \(minutes\)/), { target: { value: '45' } })
+    fireEvent.change(b.getByLabelText(/^Turnaround \(minutes\)/), { target: { value: '30' } })
     expect(screen.getByRole('button', { name: 'Request 2 venues' })).toBeDisabled()
     fireEvent.change(b.getByLabelText('Reason for different timings (required)'), { target: { value: 'Stage crew' } })
     await waitFor(() => expect(screen.getByRole('button', { name: 'Request 2 venues' })).toBeEnabled())
-    expect(a.getByLabelText('Setup (minutes)')).toHaveValue(30)
+    expect(a.getByLabelText(/^Setup \(minutes\)/)).toHaveValue(30)
     expect(b.getByText(/01:15 pm/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Request 2 venues' }))
     expect(await screen.findByText('Event page')).toBeInTheDocument()
@@ -144,10 +202,10 @@ describe('VenueBookingRequestPage (EC03)', () => {
     })
     renderPage()
     await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
-    expect(screen.getByLabelText('Setup (minutes)')).toHaveValue(30)
-    expect(screen.getByLabelText('Turnaround (minutes)')).toHaveValue(45)
-    await userEvent.clear(screen.getByLabelText('Setup (minutes)'))
-    await userEvent.type(screen.getByLabelText('Setup (minutes)'), '60')
+    expect(screen.getByLabelText(/^Setup \(minutes\)/)).toHaveValue(30)
+    expect(screen.getByLabelText(/^Turnaround \(minutes\)/)).toHaveValue(45)
+    await userEvent.clear(screen.getByLabelText(/^Setup \(minutes\)/))
+    await userEvent.type(screen.getByLabelText(/^Setup \(minutes\)/), '60')
     expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
     await userEvent.type(screen.getByLabelText('Reason for different timings (required)'), 'Organiser needs early crew access')
     await waitFor(() => expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeEnabled())
@@ -164,7 +222,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     renderPage()
     expect(await screen.findByText(/Alternative arrangements required for Closed Hall/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /1 Harbour Road/ }))
-    await userEvent.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Request replacement 1 Harbour Road' }))
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(submitted).toMatchObject({ venueId: 'v1', replacesBookingId: 'original' })
   })
@@ -179,12 +237,6 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.queryByRole('list', { name: 'Venues ranked for this event' })).not.toBeInTheDocument()
   })
   beforeEach(() => seedSession('coordinator'))
-  afterEach(() => {
-    cleanup()
-    vi.unstubAllGlobals()
-    window.localStorage.clear()
-  })
-
   it('lists bookable venues in the server ranking and hides unavailable ones until asked', async () => {
     stubApi(routes())
     const user = userEvent.setup()

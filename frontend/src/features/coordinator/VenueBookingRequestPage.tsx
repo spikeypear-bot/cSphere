@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -63,6 +63,7 @@ function timeRange(start: string, end: string) {
 export function VenueBookingRequestPage() {
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const [event, setEvent] = useState<EventDto | null>(null)
   const [options, setOptions] = useState<VenueOptionDto[] | null>(null)
   const [bookings, setBookings] = useState<EventVenueBookingDto[] | null>(null)
@@ -122,18 +123,45 @@ export function VenueBookingRequestPage() {
     }
   }, [eventId])
 
+  const activeBookings = (bookings ?? []).filter(b => b.status === 'pending' || b.status === 'approved')
+  const requestedSourceId = searchParams.get('replacesBookingId')
+  const unavailableSources = activeBookings.filter(booking => booking.requiresAlternative)
+  const implicitUnavailableSource = unavailableSources.length === 1 ? unavailableSources[0] : null
+  const replacementSource = requestedSourceId
+    ? (bookings ?? []).find(booking => booking.bookingId === requestedSourceId) ?? null
+    : implicitUnavailableSource
+  const replacementPending = !!replacementSource && (bookings ?? []).some(booking =>
+    booking.replacesBookingId === replacementSource.bookingId && booking.status === 'pending')
+  const replacementApproved = !!replacementSource && (bookings ?? []).some(booking =>
+    booking.replacesBookingId === replacementSource.bookingId && booking.status === 'approved')
+  const sourceCanBeReplaced = !!replacementSource && (
+    ((replacementSource.status === 'pending' || replacementSource.status === 'approved') && replacementSource.requiresAlternative)
+    || replacementSource.status === 'rejected' || replacementSource.status === 'cancelled'
+  ) && !replacementApproved
+  const replacing = sourceCanBeReplaced ? replacementSource : null
+
+  const requestableOptions = useMemo(() => {
+    if (!replacing) return options ?? []
+    const unavailableVenueIds = new Set((bookings ?? [])
+      .filter(booking => (booking.status === 'pending' || booking.status === 'approved')
+        && booking.bookingId !== replacing.bookingId)
+      .map(booking => booking.venueId))
+    unavailableVenueIds.add(replacing.venueId)
+    return (options ?? []).filter(option => !unavailableVenueIds.has(option.venue.venueId))
+  }, [options, bookings, replacing])
+
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase()
-    return (options ?? []).filter((o) => (showBlocked || o.verdict !== 'blocked')
+    return requestableOptions.filter((o) => (showBlocked || o.verdict !== 'blocked')
       && (!term || `${o.venue.venueAddress} ${o.venue.operatingInformation} ${o.venue.additionalInformation ?? ''}`
         .toLowerCase().includes(term)))
-  }, [options, search, showBlocked])
+  }, [requestableOptions, search, showBlocked])
 
   const counts = useMemo(() => {
     const c: Record<VenueVerdict, number> = { suitable: 0, needs_justification: 0, blocked: 0 }
-    options?.forEach((o) => { c[o.verdict] += 1 })
+    requestableOptions.forEach((o) => { c[o.verdict] += 1 })
     return c
-  }, [options])
+  }, [requestableOptions])
 
   if (loadError) {
     return (
@@ -145,9 +173,6 @@ export function VenueBookingRequestPage() {
   }
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
-  const activeBookings = bookings.filter(b => b.status === 'pending' || b.status === 'approved')
-  const replacing = activeBookings.length === 1 && activeBookings[0].requiresAlternative ? activeBookings[0] : null
-  const replacementPending = activeBookings.some((booking) => booking.replacesBookingId)
   const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
   const reviewed = (option: VenueOptionDto) => {
     const input = bookingTimes[option.venue.venueId]
@@ -198,19 +223,31 @@ export function VenueBookingRequestPage() {
     }
   }
 
-  const blockedReason = event.status !== 'pending' && event.status !== 'safety_changes_requested' && !(event.status === 'confirmed' && replacing)
-    ? 'Venue booking requests can only be made while the event is in Planning.'
-    : replacementPending && !replacing
-      ? 'This event already has a replacement request. Resolve it before requesting another replacement.'
-      : null
+  const blockedReason = requestedSourceId && !sourceCanBeReplaced
+    ? 'This booking is no longer eligible for a replacement. Refresh the event details.'
+    : replacementPending
+      ? 'This booking already has a replacement request pending. Wait for Venue Staff to review it.'
+      : event.status !== 'pending' && event.status !== 'safety_changes_requested' && !(event.status === 'confirmed' && replacing)
+        ? 'Venue booking requests can only be made while the event is in Planning, except for an eligible replacement.'
+        : null
 
   return (
     <div className="page page--compact venue-request">
       <Link to={`/coordinator/events/${event.eventId}`}>Back to event</Link>
-      <PageHeader title="Request a venue"
+      <PageHeader title={replacing ? 'Find a replacement venue' : 'Request a venue'}
         description={<p className="field-hint">for <strong>{event.eventName}</strong></p>} />
-      {replacing && <p role="status" className="unavailability-warning">Alternative arrangements required for {replacing.venueAddress}.
-        The original booking remains intact until a replacement is approved.</p>}
+      {replacing && <section role="status" className="venue-request__replacement-callout">
+        <span className="venue-request__replacement-icon" aria-hidden="true">↻</span>
+        <div>
+          <h2>Replacing {replacing.venueAddress}</h2>
+          <p className="venue-request__replacement-reason">
+            {replacing.requiresAlternative
+              ? `Alternative arrangements required for ${replacing.venueAddress}.`
+              : `Rebooking ${replacing.venueAddress}${replacing.rejectReason ? `: ${replacing.rejectReason}` : '.'}`}
+          </p>
+          <p>The original booking stays unchanged until Venue Staff approves a replacement.</p>
+        </div>
+      </section>}
 
       <div className="split-layout split-layout--aside-first">
         <Card className="venue-request__needs split-layout__sticky" aria-labelledby="needs-heading">
@@ -248,6 +285,15 @@ export function VenueBookingRequestPage() {
                   Show unavailable venues
                 </label>
               </div>
+              <div className="venue-request__results-heading">
+                <div>
+                  <h2>{replacing ? 'Choose a replacement venue' : 'Choose venues'}</h2>
+                  <p>{replacing
+                    ? 'Select one venue to replace this booking.'
+                    : 'Select one or more venues to send to Venue Staff.'}</p>
+                </div>
+                <span className="venue-request__result-count">{visible.length} {visible.length === 1 ? 'venue' : 'venues'}</span>
+              </div>
 
               {visible.length === 0 ? (
                 <Card><p>No venues match. {counts.blocked > 0 && !showBlocked ? 'Try showing unavailable venues to see why.' : ''}</p></Card>
@@ -258,9 +304,11 @@ export function VenueBookingRequestPage() {
                       <VenueOptionCard option={option} attendance={event.expectedAttendance}
                         selected={selectedIds.includes(option.venue.venueId)}
                         onSelect={() => {
-                          setSelectedIds((current) => current.includes(option.venue.venueId)
-                            ? current.filter((id) => id !== option.venue.venueId)
-                            : [...current, option.venue.venueId])
+                          setSelectedIds((current) => replacing
+                            ? current.includes(option.venue.venueId) ? [] : [option.venue.venueId]
+                            : current.includes(option.venue.venueId)
+                              ? current.filter((id) => id !== option.venue.venueId)
+                              : [...current, option.venue.venueId])
                           setBookingTimes((current) => current[option.venue.venueId] ? current : {
                             ...current,
                             [option.venue.venueId]: {
@@ -278,7 +326,9 @@ export function VenueBookingRequestPage() {
 
               {selected.length > 0 ? (
                 <Card className="venue-request__review" aria-labelledby="compare-heading">
-                  <h2 id="compare-heading">Review and submit {selected.length} venue{selected.length === 1 ? '' : 's'}</h2>
+                  <h2 id="compare-heading">{replacing
+                    ? 'Review replacement venue'
+                    : `Review and submit ${selected.length} venue${selected.length === 1 ? '' : 's'}`}</h2>
                   <ul aria-label="Selected venues">
                     {selected.map((option) => (
                       <li key={option.venue.venueId}>
@@ -293,8 +343,9 @@ export function VenueBookingRequestPage() {
                         {reviewed(option) && <SuitabilitySummary option={reviewed(option)!} />}
                         {reviewed(option) && changedTiming(bookingTimes[option.venue.venueId], option, event) &&
                           <ul>{reviewed(option)!.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
-                        <Button onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
-                          Remove
+                        <Button variant="secondary" className="venue-request__remove-button"
+                          onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
+                          Remove selection
                         </Button>
                       </li>
                     ))}
@@ -322,12 +373,13 @@ export function VenueBookingRequestPage() {
                     <span className={notesTooLong ? 'field-error' : 'field-hint'}>{notes.trim().length}/{MAX_TEXT}</span>
                   </div>
 
-                  <p className="field-hint">This sends a <strong>pending</strong> request to Venue Staff. The venue is not
-                    reserved until they approve it.</p>
+                  <p className="venue-request__submit-note">
+                    This sends a <strong>pending</strong> request to Venue Staff. The venue is not reserved until they approve it.
+                  </p>
                   {submitError ? <p role="alert" className="error-text">{submitError}</p> : null}
-                  <Button disabled={!canSubmit || submitting} onClick={() => void submit()}>
+                  <Button className="venue-request__submit-button" disabled={!canSubmit || submitting} onClick={() => void submit()}>
                     {submitting ? 'Submitting…' : selected.length === 1
-                      ? `Request ${selected[0].venue.venueAddress}`
+                      ? `${replacing ? 'Request replacement' : 'Request'} ${selected[0].venue.venueAddress}`
                       : `Request ${selected.length} venues`}
                   </Button>
                 </Card>
@@ -337,17 +389,35 @@ export function VenueBookingRequestPage() {
 
           {bookings.length > 0 ? (
             <Card className="venue-request__history">
-              <h2>Earlier requests for this event</h2>
-              <ul>
-                {bookings.map((b) => (
-                  <li key={b.bookingId}>
-                    <strong>{b.venueAddress ?? 'Unknown venue'}</strong>: <span data-booking-status={b.status}>{BOOKING_STATUS_LABELS[b.status]}</span>
-                    {b.requiresAlternative && <p>Alternative arrangements required</p>}
-                    {b.replacesBookingId && <p>Replacement request</p>}
-                    {b.rejectReason ? <> · Reason: {b.rejectReason}</> : null}
-                    {b.alternativeVenueAddress ? <> · Suggested venue: {b.alternativeVenueAddress}</> : null}
-                    {b.alternativeArrangement ? <> · Alternative arrangement: {b.alternativeArrangement}</> : null}
-                    <BookingTimingSummary timing={b.timing} />
+            <div className="venue-request__history-heading">
+              <div>
+                <h2>Earlier requests for this event</h2>
+                <p>Previous requests for this event, including their review outcomes.</p>
+              </div>
+              <span className="venue-request__result-count">{bookings.length} {bookings.length === 1 ? 'request' : 'requests'}</span>
+            </div>
+            <ul className="venue-request__history-list">
+              {bookings.map((b) => (
+                <li className="venue-request__history-item" key={b.bookingId}>
+                  <div className="venue-request__history-item-heading">
+                    <strong>{b.venueAddress ?? 'Unknown venue'}</strong>
+                    <span className="venue-request__history-status" data-booking-status={b.status}>
+                      {BOOKING_STATUS_LABELS[b.status]}
+                    </span>
+                  </div>
+                  {b.requiresAlternative && <p className="venue-request__history-note">Alternative arrangements required</p>}
+                  {b.replacesBookingId && <p className="venue-request__history-note">
+                    Replacement for {bookings.find(source => source.bookingId === b.replacesBookingId)?.venueAddress ?? 'earlier booking'}
+                  </p>}
+                  {bookings.some(replacement => replacement.replacesBookingId === b.bookingId) && (
+                    <p className="venue-request__history-note">Replacement request status: {bookings
+                      .filter(replacement => replacement.replacesBookingId === b.bookingId)
+                      .map(replacement => BOOKING_STATUS_LABELS[replacement.status]).join(', ')}</p>
+                  )}
+                  {b.rejectReason ? <p className="venue-request__history-note"><strong>Reason:</strong> {b.rejectReason}</p> : null}
+                  {b.alternativeVenueAddress ? <p className="venue-request__history-note"><strong>Suggested venue:</strong> {b.alternativeVenueAddress}</p> : null}
+                  {b.alternativeArrangement ? <p className="venue-request__history-note"><strong>Alternative arrangement:</strong> {b.alternativeArrangement}</p> : null}
+                  <BookingTimingSummary timing={b.timing} />
                   </li>
                 ))}
               </ul>
@@ -362,19 +432,37 @@ export function VenueBookingRequestPage() {
 function BookingTimingInputs({ option, input, disabled, onChange }: {
   option: VenueOptionDto; input: BookingInput; disabled: boolean; onChange: (input: BookingInput) => void
 }) {
+  const defaultSetup = option.venue.setupMinutes ?? 0
+  const defaultTurnaround = option.venue.turnaroundMinutes ?? 0
   const custom = Number(input.setup) !== (option.venue.setupMinutes ?? 0)
     || Number(input.turnaround) !== (option.venue.turnaroundMinutes ?? 0)
-  return <fieldset disabled={disabled} aria-label={'Timings for ' + option.venue.venueAddress}>
-    <legend>Booking times (Singapore time)</legend>
-    <label>Start<input type="datetime-local" value={input.start} onChange={e => onChange({ ...input, start: e.target.value })} /></label>
-    <label>End<input type="datetime-local" value={input.end} onChange={e => onChange({ ...input, end: e.target.value })} /></label>
-    <p>Venue defaults: {option.venue.setupMinutes ?? 0} minutes setup / {option.venue.turnaroundMinutes ?? 0} minutes turnaround.</p>
-    <label>Setup (minutes)<input type="number" min="0" max="10080" step="1" value={input.setup}
-      onChange={e => onChange({ ...input, setup: e.target.value })} /></label>
-    <label>Turnaround (minutes)<input type="number" min="0" max="10080" step="1" value={input.turnaround}
-      onChange={e => onChange({ ...input, turnaround: e.target.value })} /></label>
-    {custom && <label>Reason for different timings (required)<textarea maxLength={MAX_TEXT} value={input.reason}
-      onChange={e => onChange({ ...input, reason: e.target.value })} /></label>}
+  return <fieldset className="venue-request__timings" disabled={disabled} aria-label={'Timings for ' + option.venue.venueAddress}>
+    <legend>Booking times <span>(Singapore time)</span></legend>
+    <p className="venue-request__timings-intro">
+      Event start and end stay unchanged. Setup reserves time before the event; turnaround reserves time after it.
+      Together, these buffers extend the time the venue is occupied.
+    </p>
+    <div className="venue-request__window-fields">
+      <label>Start<input type="datetime-local" value={input.start} onChange={e => onChange({ ...input, start: e.target.value })} /></label>
+      <label>End<input type="datetime-local" value={input.end} onChange={e => onChange({ ...input, end: e.target.value })} /></label>
+    </div>
+    <div className="venue-request__buffer-fields">
+      <label>
+        Setup (minutes)
+        <input type="number" min="0" max="10080" step="1" value={input.setup}
+          onChange={e => onChange({ ...input, setup: e.target.value })} />
+        <span>Venue preparation before the event. Venue default: {defaultSetup} minutes.</span>
+      </label>
+      <label>
+        Turnaround (minutes)
+        <input type="number" min="0" max="10080" step="1" value={input.turnaround}
+          onChange={e => onChange({ ...input, turnaround: e.target.value })} />
+        <span>Reset or clean the venue after the event. Venue default: {defaultTurnaround} minutes.</span>
+      </label>
+    </div>
+    {custom && <label className="venue-request__timing-note">Reason for different timings (required)
+      <textarea maxLength={MAX_TEXT} value={input.reason} onChange={e => onChange({ ...input, reason: e.target.value })} />
+    </label>}
     {!validInput(input) && <p role="alert">Enter an end after the start and whole durations from 0 to 10,080 minutes.</p>}
     {validInput(input) && <BookingTimingSummary timing={{ startDatetime: instant(input.start), endDatetime: instant(input.end),
       setupDurationMinutes: Number(input.setup), turnaroundDurationMinutes: Number(input.turnaround),
