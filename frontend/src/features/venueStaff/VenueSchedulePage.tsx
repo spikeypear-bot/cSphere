@@ -4,6 +4,8 @@ import { Button } from '../../components/ui/Button'
 import { useVenueRead } from './useVenueRead'
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 import { formatEventTimeRange as range } from './formatEventDateTime'
+import { NO_HOLDS, useHoldDeadline } from './useHoldDeadline'
+import { formatEventDateTime } from './formatEventDateTime'
 import { calendarDays, calendarEntries, dayTime, entriesOnDay, entryLabels, midnight, shiftMonth, singaporeDate } from './venueCalendar'
 import type { CalendarEntry } from './venueCalendar'
 import './VenueSchedulePage.css'
@@ -26,7 +28,7 @@ export function VenueSchedulePage() {
   const title = new Intl.DateTimeFormat('en-SG', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
   return <div className="feature-skeleton venue-calendar">
     <h1>Venue availability calendar</h1>
-    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Tentative holds are pending requests and do not reserve the venue.</p>
+    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Active tentative holds reserve the full occupied period until their expiry. Pending requests do not reserve the venue.</p>
     {venues.error ? <p role="alert">{venues.error} <Button onClick={venues.retry}>Retry venues</Button></p>
       : !venues.data ? <p role="status">Loading venues…</p> : !venues.data.length ? <p>No venues available.</p> : <div className="field venue-calendar__venue">
         <label htmlFor="calendar-venue">Venue</label>
@@ -118,6 +120,7 @@ function EntryDetails({ entry, venueName, conflicts, onClose }: { entry: Calenda
       <dt>Venue</dt><dd>{venueName}</dd>
       <dt>Type</dt><dd>{entryLabels[entry.type]}</dd>
       <dt>Entry</dt><dd>{entry.phase}</dd>
+      {entry.expiresAt && <><dt>Hold expiry (SGT)</dt><dd>{formatEventDateTime(entry.expiresAt)}</dd><dt>Hold status</dt><dd>Active</dd></>}
       <dt>Start / end (SGT)</dt><dd>{range(entry.start, entry.end)}</dd>
       {entry.eventStart && entry.eventEnd && entry.phase !== 'Event' && <><dt>Event timing (SGT)</dt><dd>{range(entry.eventStart, entry.eventEnd)}</dd></>}
       {entry.type === 'unavailable' && <><dt>Reason</dt><dd>{entry.title}</dd></>}

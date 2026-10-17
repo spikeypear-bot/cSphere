@@ -520,3 +520,21 @@ V24 widens `event_safety_reviews.review_status` from `VARCHAR(16)` to `VARCHAR(3
 `venue_bookings` adds `timing_note`, `timing_updated_at` and `timing_updated_by` (nullable users foreign key) for the latest timing review. `venue_timing_conflicts` stores ordered booking pairs with cascading foreign keys and a fingerprint for deduplicating coordinator alerts. Resolved pairs are removed only from this tracking table. Notification types `venue_timing_changed` and `venue_timing_conflict` require a booking reference. No booking is cancelled by migration or overlap detection.
 
 Booking occupied periods use `COALESCE(venue_bookings.start_datetime, events.start_datetime)` and the equivalent end time, expanded by each booking's saved durations. Event times are a fallback only for legacy nullable windows from V26. V28 retains V23's event-lifecycle notification constraint branches alongside the timing notification types.
+
+## V29 update — tentative venue hold attempts (VS-C3)
+
+`venue_booking_holds` retains each hold attempt against an existing booking. Columns:
+`hold_id` (UUID PK), `booking_id` (required booking FK), `reserved_start` and
+`reserved_end` (required complete occupied interval), `expires_at`, `status`
+(`active`, `expired`, `released`, `converted`), `created_by` (required user FK),
+`created_at` and nullable `ended_at`. All timestamps use `timestamptz`.
+Checks enforce positive intervals, expiry after creation, and an end timestamp
+for terminal states only. A partial unique index permits one persisted active
+attempt per booking; expiry and history queries are indexed.
+
+Hold status is independent of booking status. Logical blocking requires an active
+unexpired attempt on a pending booking for an active event. No existing pending
+booking is automatically made into a hold. Conversion updates the same booking,
+and re-holding retains older attempts. `venue_hold_expired` notifications require
+a booking reference; prior notification-shape branches remain intact. See
+[workflow, APIs and verification](../../../../../../docs/tentative-venue-holds.md).

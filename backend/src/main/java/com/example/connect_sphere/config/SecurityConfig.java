@@ -75,6 +75,7 @@ public class SecurityConfig{
 		    // product endpoint (D20 open question 4). denyAll rather than
 		    // deleting the package, which is a separate call.
 		    .requestMatchers("/api/mock", "/api/mock/**").denyAll()
+                .requestMatchers("/api/venue-bookings/*/holds", "/api/venue-holds/**").hasRole("VS")
                 .requestMatchers(HttpMethod.PATCH, "/api/venue-bookings/*/approve", "/api/venue-bookings/*/reject").hasRole("VS")
                 .requestMatchers(HttpMethod.PUT, "/api/venue-bookings/*/timing").hasRole("VS")
                 .requestMatchers("/api/venues/*/timing-conflicts", "/api/venues/*/timing-conflicts/scan").hasRole("VS")

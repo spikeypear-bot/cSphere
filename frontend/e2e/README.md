@@ -5,6 +5,21 @@ browser against the real backend and database. They are deliberately few:
 E2E tests are slow and the most prone to flakiness, so the unit and
 integration tests do the detailed checking (Week 9's test pyramid).
 
+`tentative-holds.spec.ts` covers VS-C3 create → calendar display → release →
+re-hold → conversion, retaining one booking and the event's Planning status.
+Run it alongside `golden-path.spec.ts` when changing hold/booking integration.
+For optional local demo fixtures and manual expiry/notification checks, see
+[the VS-C3 guide](../../docs/vsc3-manual-testing.md).
+
+`booking-scroll.spec.ts` uses mocked booking responses and a controlled browser
+clock to check that hold expiry and focus refresh preserve scroll position,
+the expanded timing editor and unsaved input on desktop and mobile. It needs
+the built frontend preview, but no backend or database:
+
+```powershell
+npm run test:e2e -- e2e/booking-scroll.spec.ts
+```
+
 CI runs them in the `e2e` job against the **packaged** jar and the **built**
 frontend. Locally:
 

@@ -5,7 +5,6 @@ import { Button } from '../../components/ui/Button'
 import { TextField } from '../../components/ui/fields'
 import { Notice } from '../../components/ui/Notice'
 import { Card } from '../../components/ui/Card'
-import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { formatEventTimeRange as range } from './formatEventDateTime'
 
@@ -20,10 +19,12 @@ export function BookingTimingEditor({ booking, onSaved, disabled }: {
   const [busy, setBusy] = useState(false)
   const [success, setSuccess] = useState('')
   const [error, setError] = useState<Error | null>(null)
-  const [loadedTiming, setLoadedTiming] = useState(timing)
-  // A refreshed booking must refresh the editable values as well as the summary.
-  if (loadedTiming !== timing) {
-    setLoadedTiming(timing)
+  const timingVersion = JSON.stringify([booking.bookingId, timing?.startDatetime, timing?.endDatetime,
+    timing?.setupDurationMinutes, timing?.turnaroundDurationMinutes, timing?.timingNote])
+  const [loadedTiming, setLoadedTiming] = useState(timingVersion)
+  // Background polling must not replace unsaved edits with identical server values.
+  if (loadedTiming !== timingVersion) {
+    setLoadedTiming(timingVersion)
     setSetup(String(timing?.setupDurationMinutes ?? 0))
     setTurnaround(String(timing?.turnaroundDurationMinutes ?? 0))
     setNote(timing?.timingNote ?? '')
@@ -49,7 +50,7 @@ export function BookingTimingEditor({ booking, onSaved, disabled }: {
     } catch (cause) { setError(cause instanceof Error ? cause : new Error('Could not save booking timings.')) }
     finally { setBusy(false) }
   }
-  if (!timing) return null
+  if (!timing || timing.editable === false || (booking.status !== 'pending' && booking.status !== 'approved')) return null
   return <Card className="feature-skeleton__body booking-timings-panel">
     <BookingTimingSummary timing={timing} headingLevel={2} bookingLinks />
     {timing.editable !== false && (booking.status === 'pending' || booking.status === 'approved') && <details>
@@ -77,7 +78,7 @@ export function BookingTimingEditor({ booking, onSaved, disabled }: {
           <Button type="submit" disabled={!valid}>{busy ? 'Saving…' : 'Save booking timings'}</Button>
         </fieldset>
       </form>
-    </details>}
+    </details>
     {success && <p role="status">{success}</p>}
     {error && <Notice tone="danger" as="div"><p>{error.message}</p>
       {error instanceof ApiClientError && <ul>

@@ -19,6 +19,18 @@ import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
 @Service
 @Transactional(readOnly = true)
 public class AvailabilityService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
+    private List<Booking> blocking(UUID venueId) {
+        return holds == null ? repository.bookings(venueId).stream().filter(b -> b.status().equals("approved")).toList()
+                : repository.blocking(venueId, holds.now());
+    }
+    private List<com.example.connect_sphere.venuebooking.hold.VenueHold> scheduleHolds(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
+        if (holds == null) return List.of();
+        return repository.bookings(venueId).stream().flatMap(b -> holds.history(b.bookingId()).stream())
+            .filter(h -> h.status().equals("active"))
+            .filter(h -> start == null || overlaps(h.reservedStart(), h.reservedEnd(), start, end)).toList();
+    }
     private final AvailabilityRepository repository;
     private final VenueRepository venues;
     private final ApplicationEventPublisher publisher;
@@ -118,15 +130,15 @@ public class AvailabilityService {
     /** Existing bookings supply their snapshot; prospective requests use venue defaults above. */
     public List<Booking> conflicts(UUID venueId, UUID eventId, OffsetDateTime start, OffsetDateTime end, Settings durations) {
         EffectivePeriod period = EffectivePeriod.of(start, end, durations);
-        return repository.bookings(venueId).stream().filter(b -> b.status().equals("approved") && !b.eventId().equals(eventId))
+        return blocking(venueId).stream().filter(b -> b.status().equals("hold") || !b.eventId().equals(eventId))
                 .filter(b -> overlaps(b.effectiveStart(), b.effectiveEnd(), period.start(), period.end()))
                 .toList();
     }
     /** Editing/approving an existing booking excludes only itself, including legacy same-event bookings. */
     public List<Booking> conflictsForBooking(UUID venueId, UUID bookingId, OffsetDateTime start, OffsetDateTime end, Settings durations) {
         EffectivePeriod period = EffectivePeriod.of(start, end, durations);
-        return repository.bookings(venueId).stream()
-                .filter(b -> b.status().equals("approved") && !b.bookingId().equals(bookingId))
+        return blocking(venueId).stream()
+                .filter(b -> !b.bookingId().equals(bookingId))
                 .filter(b -> overlaps(b.effectiveStart(), b.effectiveEnd(), period.start(), period.end())).toList();
     }
 

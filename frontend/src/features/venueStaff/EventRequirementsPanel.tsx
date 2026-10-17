@@ -2,12 +2,15 @@ import { Card } from '../../components/ui/Card'
 import { venueAccessibilityLabels } from '../../types/venue'
 import type { AccessibilityFeature } from '../../types/eventRequest'
 import type { VenueBookingDto } from '../../types/venueBooking'
+import type { VenueBookingDisplayStatus } from '../../types/venueBookingStatus'
+import { BookingTimingConflicts } from '../../components/BookingTimingSummary'
 
 import { formatEventDateTime } from './formatEventDateTime'
 
-export function EventRequirementsPanel({ event, status, highlightStart, highlightEnd }: {
+export function EventRequirementsPanel({ event, timing, status, highlightStart, highlightEnd }: {
   event: VenueBookingDto['event']
-  status: VenueBookingDto['status']
+  timing?: VenueBookingDto['timing']
+  status: VenueBookingDisplayStatus
   highlightStart?: boolean
   highlightEnd?: boolean
 }) {
@@ -16,20 +19,22 @@ export function EventRequirementsPanel({ event, status, highlightStart, highligh
   return <Card className="feature-skeleton__body event-requirements-panel">
     <div className="event-requirements-panel__header">
       <h2 id="event-requirements-heading">Event Requirements</h2>
-      <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status} aria-label={'Status: ' + status} aria-live="polite">{status}</span>
+      <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status} aria-label={'Status: ' + status} aria-live="polite">{status === 'tentative' ? 'Tentative Hold' : status}</span>
     </div>
     <h3>{event.eventName}</h3>
     <dl className="venue-card-preview__information">
-      <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{highlightStart
-        ? <strong className="booking-time-conflict">{formatEventDateTime(event.startDatetime)} (overlap)</strong>
-        : formatEventDateTime(event.startDatetime)}</dd></div>
-      <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{highlightEnd
-        ? <strong className="booking-time-conflict">{formatEventDateTime(event.endDatetime)} (overlap)</strong>
-        : formatEventDateTime(event.endDatetime)}</dd></div>
-      <div><dt>Expected attendance</dt><dd>{event.expectedAttendance.toLocaleString()} people</dd></div>
-      <div><dt>Venue requirements</dt><dd>{event.venueRequirements?.trim() || 'Not specified'}</dd></div>
-      <div><dt>Accessibility requirements</dt><dd>{accessibility || 'Not specified'}</dd></div>
-      <div><dt>Equipment requirements</dt><dd>{event.equipmentRequirements?.trim() || 'Not specified'}</dd></div>
+      <div><dt>Venue Occupied</dt><dd>{formatEventDateTime(timing?.effectiveStart ?? event.startDatetime)} – {formatEventDateTime(timing?.effectiveEnd ?? event.endDatetime)}</dd></div>
+      <div><dt>Setup / Turnaround</dt><dd>{timing?.setupDurationMinutes ?? 0} / {timing?.turnaroundDurationMinutes ?? 0} minutes</dd></div>
+      <div><dt>Booking Window</dt><dd>{highlightStart
+        ? <strong className="booking-time-conflict">{formatEventDateTime(timing?.startDatetime ?? event.startDatetime)} (overlap)</strong>
+        : formatEventDateTime(timing?.startDatetime ?? event.startDatetime)} – {highlightEnd
+        ? <strong className="booking-time-conflict">{formatEventDateTime(timing?.endDatetime ?? event.endDatetime)} (overlap)</strong>
+        : formatEventDateTime(timing?.endDatetime ?? event.endDatetime)}</dd></div>
+      <div><dt>Expected Attendance</dt><dd>{event.expectedAttendance.toLocaleString()} people</dd></div>
+      <div><dt>Venue Requirements</dt><dd>{event.venueRequirements?.trim() || 'Not specified'}</dd></div>
+      <div><dt>Accessibility Requirements</dt><dd>{accessibility || 'Not specified'}</dd></div>
+      <div><dt>Equipment Requirements</dt><dd>{event.equipmentRequirements?.trim() || 'Not specified'}</dd></div>
     </dl>
+    <BookingTimingConflicts timing={timing} />
   </Card>
 }

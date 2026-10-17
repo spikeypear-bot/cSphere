@@ -28,6 +28,10 @@ import com.example.connect_sphere.user.entity.UserRole;
  * {@code ActivityService} decides it per entry.
  */
 public enum ActivityType {
+    venue_hold_created(Set.of(UserRole.ec, UserRole.vs)),
+    venue_hold_released(Set.of(UserRole.ec, UserRole.vs)),
+    venue_hold_expired(Set.of(UserRole.ec, UserRole.vs)),
+    venue_hold_converted(Set.of(UserRole.ec, UserRole.vs)),
     /** EO02: the organiser submitted the request for review. */
     submitted(Set.of(UserRole.eo, UserRole.ec)),
     /** ELC-C6: the Lead assigned an Event Coordinator, named in the message. */
