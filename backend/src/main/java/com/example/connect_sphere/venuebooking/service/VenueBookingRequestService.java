@@ -17,6 +17,7 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.event.entity.Event;
+import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.event.service.EventNotFoundException;
@@ -174,7 +175,7 @@ public class VenueBookingRequestService {
         boolean replacement = request != null && request.replacesBookingId() != null;
         if (!event.getStatus().isPlanningEditable() && !(replacement && event.getStatus() == EventStatus.confirmed)) {
             throw new VenueBookingStateException("Venue booking requests can only be made while an event is in "
-                    + "Planning (this event is " + event.getStatus().name() + ").");
+                    + "Planning (this event is " + stageLabel(event.getStatus()) + ").");
         }
         List<VenueBookingRecord> active = bookings.findForEvent(eventId).stream().filter(b -> ACTIVE.contains(b.getStatus())).toList();
         if (replacement) {
@@ -214,12 +215,14 @@ public class VenueBookingRequestService {
             throw new InvalidVenueBookingException("Expected attendance (" + suitability.expectedAttendance()
                     + ") exceeds this venue's capacity (" + suitability.capacity() + ").");
         }
-        if (!availability.unavailablePeriods(venue.getVenueId(), start, end, durations).isEmpty())
-            throw new InvalidVenueBookingException("This venue is unavailable during the event, setup or turnaround period. Choose another venue.");
+        var recorded = availability.unavailablePeriods(venue.getVenueId(), start, end, durations);
+        if (!recorded.isEmpty())
+            throw new InvalidVenueBookingException("This venue is unavailable during the event, setup or turnaround period ("
+                    + describe(recorded.get(0)) + "). Choose another venue.");
         List<VenueOptionDto.ConflictDto> conflicts = conflicts(event, venue, start, end, durations);
         if (!suitability.facilitiesOk()) {
             throw new InvalidVenueBookingException("This venue does not offer the required facilities: "
-                    + String.join(", ", suitability.missingFacilities()) + ".");
+                    + suitability.missingFacilityLabels() + ".");
         }
         List<VenueOptionDto.UnavailablePeriodDto> unavailable =
                 unavailableByVenue(start, end, java.math.BigDecimal.valueOf(durations.setupMinutes()),
@@ -243,7 +246,7 @@ public class VenueBookingRequestService {
         }
         if (suitability.needsJustification() && justification == null) {
             throw new InvalidVenueBookingException("This venue does not offer "
-                    + String.join(", ", suitability.missingAccessibility())
+                    + suitability.missingAccessibilityLabels()
                     + ". Explain why it should still be considered, for Venue Staff to judge.");
         }
 
@@ -274,7 +277,7 @@ public class VenueBookingRequestService {
                         ? ActivityType.venue_added : ActivityType.venue_booking_requested;
         eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
                 new ActivityService.Entry(origin.getRequestId(), eventId, logged,
-                        coordinatorId, "Requested " + venue.getVenueAddress() + (notes == null ? "" : ". " + notes),
+                        coordinatorId, requestedMessage(venue.getVenueAddress(), notes),
                         null, null, VenueBookingStatus.pending.name())));
 
         List<UUID> venueStaff = users.findByRole(UserRole.vs).stream().map(User::getUserId).toList();
@@ -381,8 +384,10 @@ public class VenueBookingRequestService {
             OffsetDateTime start, OffsetDateTime end, com.example.connect_sphere.venueavailability.AvailabilityModels.Settings durations) {
         VenueSuitability suitability = VenueSuitability.of(event, venue);
         List<String> reasons = new ArrayList<>();
-        boolean recordedUnavailable = !availability.unavailablePeriods(venue.getVenueId(), start, end, durations).isEmpty();
-        if (recordedUnavailable) reasons.add("Recorded venue unavailability overlaps the event, setup or turnaround period.");
+        var recorded = availability.unavailablePeriods(venue.getVenueId(), start, end, durations);
+        boolean recordedUnavailable = !recorded.isEmpty();
+        // Say when and why, as booking conflicts already do (EC03).
+        recorded.forEach(period -> reasons.add("Venue unavailable " + describe(period) + "."));
         if (!suitability.capacityOk()) {
             reasons.add("Capacity " + suitability.capacity() + " is below the expected attendance of "
                     + suitability.expectedAttendance() + ".");
@@ -395,10 +400,10 @@ public class VenueBookingRequestService {
         }
         reasons.addAll(hoursUnavailable.stream().map(p -> "Operating hours: " + p.description() + ".").toList());
         if (suitability.needsJustification()) {
-            reasons.add("Missing accessibility: " + String.join(", ", suitability.missingAccessibility()) + ".");
+            reasons.add("Missing accessibility: " + suitability.missingAccessibilityLabels() + ".");
         }
         if (!suitability.facilitiesOk()) {
-            reasons.add("Missing facilities: " + String.join(", ", suitability.missingFacilities()) + ".");
+            reasons.add("Missing facilities: " + suitability.missingFacilityLabels() + ".");
         }
         String verdict = recordedUnavailable || !suitability.capacityOk() || !suitability.facilitiesOk()
                 || !conflicts.isEmpty() || !unavailable.isEmpty() || !hoursUnavailable.isEmpty() ? "blocked"
@@ -481,6 +486,40 @@ public class VenueBookingRequestService {
     }
 
     /** Trimmed; blank becomes null; over the limit is refused. */
+    private static final java.time.format.DateTimeFormatter SGT = java.time.format.DateTimeFormatter
+            .ofPattern("d MMM yyyy, hh:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+
+    /** "15 Feb 2027, 08:00 am – 15 Feb 2027, 06:00 pm (Singapore time): Carpet replacement", as the screens write times. */
+    private static String describe(com.example.connect_sphere.venueavailability.AvailabilityModels.Period period) {
+        String when = sgt(period.startDateTime()) + " – " + sgt(period.endDateTime()) + " (Singapore time)";
+        return period.reason() == null || period.reason().isBlank() ? when : when + ": " + period.reason();
+    }
+
+    private static String sgt(OffsetDateTime time) {
+        return SGT.format(time).replace(" AM", " am").replace(" PM", " pm");
+    }
+
+    /** The status people see (EC-NEW2), not the stored code. */
+    private static String stageLabel(EventStatus status) {
+        return status == EventStatus.pending ? JourneyStatus.PLANNING.label()
+                : JourneyStatus.valueOf(status.name().toUpperCase(java.util.Locale.ROOT)).label();
+    }
+
+    /**
+     * The timeline entry for a new request. The full notes stay on the
+     * booking; here they are shortened if needed so the entry fits the
+     * timeline's 2000-character limit (a long note used to fail the whole
+     * submission).
+     */
+    static String requestedMessage(String venueAddress, String notes) {
+        String head = "Requested " + venueAddress;
+        if (notes == null) {
+            return head;
+        }
+        String message = head + ". " + notes;
+        return message.length() <= MAX_TEXT_LENGTH ? message : message.substring(0, MAX_TEXT_LENGTH - 1) + "…";
+    }
+
     private static String optionalText(String raw, String what) {
         if (raw == null || raw.isBlank()) {
             return null;

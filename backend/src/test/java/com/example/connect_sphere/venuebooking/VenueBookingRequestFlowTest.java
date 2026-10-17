@@ -131,6 +131,23 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    void maximumLengthNotesArePersistedWithoutOverflowingTheActivityTimeline() throws Exception {
+        UUID eventId = event(150, "none");
+        UUID venueId = venue(150, List.of());
+        String notes = "x".repeat(2000);
+        String id = bookingIdOf(submit(eventId, "ec1",
+                "{\"venueId\":\"" + venueId + "\",\"bookingNotes\":\"" + notes + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.bookingNotes").value(notes)));
+        sync();
+        assertThat(jdbc.queryForObject("SELECT booking_notes FROM venue_bookings WHERE booking_id = ?::uuid",
+                String.class, id)).isEqualTo(notes);
+        assertThat(jdbc.queryForObject("SELECT message FROM event_request_activity WHERE event_id = ? "
+                + "AND activity_type = 'venue_booking_requested'", String.class, eventId))
+                .hasSize(2000).startsWith("Requested ").endsWith("…");
+    }
+
+    @Test
     void attendanceEqualToCapacityCanBeBookedAndCreatesAPendingRequest() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(150, List.of());
@@ -203,7 +220,7 @@ class VenueBookingRequestFlowTest {
 
         submit(eventId, "ec1", bookingFor(venueId))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("step_free_access")));
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("Step-free access")));
         assertThat(bookingsFor(eventId)).isZero();
 
         submit(eventId, "ec1", "{\"venueId\":\"" + venueId + "\",\"suitabilityNote\":\"Ramp hire arranged\"}")
