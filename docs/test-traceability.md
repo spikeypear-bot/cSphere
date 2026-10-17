@@ -5,36 +5,37 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**105 test files, 1043 tests, 46 stories traced, 0 files untraced.**
+**109 test files, 1080 tests, 47 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
 | AU04 | 6 | 4 | 3 |  | 79 | — | happy, negative, boundary, conflict, cross-cutting |
 | DEV05 |  | 3 | 4 |  | 53 | — | — |
-| EC01 | 2 | 2 | 2 |  | 71 | — | negative |
-| EC02 | 1 | 3 | 5 | 3 | 89 | — | negative |
-| EC03 | 2 | 2 | 3 | 2 | 71 | — | happy, negative, failure, cross-cutting |
+| EC01 | 2 | 2 | 2 |  | 71 | — | happy, negative |
+| EC02 | 1 | 3 | 5 | 3 | 89 | — | happy, negative |
+| EC03 | 2 | 3 | 3 | 2 | 81 | — | happy, negative, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 1 |  | 7 | — | — |
 | EC05 | 1 |  |  |  | 2 | — | — |
-| EC07 | 1 | 1 | 1 |  | 24 | — | — |
+| EC07 | 1 | 2 | 1 |  | 34 | — | happy, negative, conflict, failure, cross-cutting |
 | EC08 | 4 | 2 | 3 | 2 | 144 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 2 | 1 | 1 | 1 | 31 | — | happy, boundary, cross-cutting |
 | EC-C2 |  | 1 | 2 |  | 50 | — | negative |
 | EC-NEW2 | 2 | 1 | 7 | 2 | 155 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 1 |  |  |  | 47 | — | — |
+| EC-NEW5 | 2 | 1 | 2 | 1 | 47 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C1 | 1 |  | 2 |  | 18 | — | — |
 | ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
-| ECL-C3 | 2 | 1 | 4 | 2 | 135 | — | — |
+| ECL-C3 | 2 | 1 | 4 | 2 | 135 | — | happy |
 | ECL-C7 | 2 | 2 | 3 | 1 | 127 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ELC-C5 | 2 | 2 | 3 | 1 | 129 | — | happy, negative, boundary, conflict, cross-cutting |
-| ELC-C6 | 3 | 2 | 4 | 2 | 170 | — | — |
+| ELC-C6 | 3 | 2 | 4 | 2 | 170 | — | happy |
 | EO01 | 2 | 1 | 4 | 3 | 87 | — | happy |
 | EO02 | 2 | 1 | 4 | 4 | 89 | — | happy |
 | EO04 | 1 | 1 | 3 | 1 | 69 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO09 | 3 | 2 | 1 | 1 | 83 | — | happy, boundary, cross-cutting |
 | EO15 | 1 | 1 | 4 | 2 | 43 | — | happy |
 | EO19 | 3 | 2 | 1 |  | 74 | — | — |
-| EO26 | 2 | 2 | 5 |  | 82 | — | — |
+| EO26 | 2 | 2 | 5 |  | 82 | — | happy |
 | SO-C1 | 1 |  | 1 |  | 10 | — | — |
 | SO-C3 | 1 |  | 1 | 1 | 14 | — | happy, negative, failure, cross-cutting |
 | SO-C4 | 2 | 2 | 1 | 2 | 46 | — | happy, negative, conflict, failure, cross-cutting |
@@ -43,7 +44,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | TS03 | 1 | 1 | 1 |  | 26 | — | — |
 | TS06 | 1 | 1 | 1 |  | 34 | — | — |
 | VS01 | 1 | 1 | 2 |  | 40 | — | — |
-| VS02 |  |  | 3 | 1 | 40 | — | — |
+| VS02 |  | 1 | 3 | 1 | 50 | — | happy, negative, conflict, failure, cross-cutting |
 | VS03 |  | 1 | 1 | 2 | 48 | — | conflict |
 | VS04 |  | 1 | 1 |  | 37 | — | — |
 | VS07 | 2 | 2 | 1 |  | 51 | — | — |
@@ -53,7 +54,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | VS15 |  |  | 2 |  | 7 | — | — |
 | VS16 |  | 1 | 1 |  | 15 | — | — |
 | VS18 |  | 1 | 1 |  | 27 | — | — |
-| VS-C1 |  | 2 | 1 |  | 44 | — | happy, negative, conflict, failure, cross-cutting |
+| VS-C1 |  | 3 | 1 |  | 54 | — | happy, negative, conflict, failure, cross-cutting |
 | VS-C2 | 1 | 2 | 3 |  | 34 | — | — |
 
 ## High-priority stories with no automated test yet
@@ -140,6 +141,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
@@ -163,6 +165,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>EC07</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`
 
@@ -217,6 +220,16 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>EC-NEW4</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
+
+</details>
+<details><summary>EC-NEW5</summary>
+
+- backend unit: `backend/src/test/java/com/example/connect_sphere/activity/service/ActivityServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/activity/service/ChangeLogRecorderTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
+- frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
+- frontend component/unit: `frontend/src/features/events/ChangeLog.test.tsx`
+- e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
 <details><summary>ECL-C1</summary>
@@ -434,6 +447,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>VS02</summary>
 
+- backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
@@ -503,6 +517,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>VS-C1</summary>
 
+- backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`

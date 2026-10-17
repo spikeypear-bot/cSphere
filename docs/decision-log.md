@@ -300,6 +300,50 @@ Therefore:
 
 **No database migration.**
 
+### D26 — EC-NEW5: one change log per event, recorded where the change happens
+
+2026-10-17, branch `feature/ecnew5-change_log`. EC-NEW5 extends the D21 request timeline (append-only, audience per entry) into the event's full change log. It does not add a second log.
+
+**Design**
+- **Services announce, one listener records.** Venue Staff, Technical Support and Venue Availability services publish an `EventChange(eventId, type, actor, message)`. `ChangeLogRecorder` turns it into an entry on the event's originating request, with the signed-in user as actor when none is named.
+  - The listener is synchronous, so the entry is written **in the caller's transaction** (`ActivityService.record` is `MANDATORY`). A refused or rolled-back action leaves no entry.
+  - The publisher is optional (setter-injected), so plain unit tests of those services need nothing extra.
+  - `VenueBecameUnavailable` (VS-C1) is logged on every affected event by the same recorder.
+- **New entry kinds** (no migration; `activity_type` is text):
+  - venue: booking approved, rejected, alternative suggested, replaced, another venue added, venue unavailable;
+  - equipment: requested, approved, rejected;
+  - a virtual **Completed** entry, computed at read time at the event's end once a confirmed event has ended. Nobody performs it, so it has no actor or role and is never stored.
+- **Normal or Major is decided on the server** and sent as `significance`. A kind is always Major when the story lists it: reassignment, venue unavailable, booking rejected or cancelled, additional venue, safety rejection or changes requested, returned to Planning. An organiser's resubmission is Major when it changes one of Week 4's important fields (date, time, attendance, venue or equipment requirements). The comparison ignores time-zone notation, number format and list order.
+- **UI.** The change log on the event page and the coordinator and Lead review pages gains:
+  - "All changes" and "Major only" chips with counts, and a way back from an empty filter;
+  - "Jump to latest";
+  - a text "Major" badge (not colour alone);
+  - "(Singapore time)" next to each exact time;
+  - a note for requests that predate the log;
+  - "No changes recorded yet.";
+  - on the event page, an error with Try again that leaves the rest of the page working.
+
+  The log stays read-only: no edit, delete or revert.
+
+**Checked against the customer documents (Week 7 > Week 4 > Week 1).**
+- Week 4 (Event Information Management): *"distinguish between information that may be edited normally and important changes that may affect arrangements already made"*.
+- Week 4 (Event Change Requests): *"date, time, expected attendance, venue requirements, or equipment requirements"*.
+- Week 1: auditability of who changed what and when.
+
+Therefore:
+- **EC-NEW5 AC18's Major list should include Week 4's important fields.** The implementation does; the owner should reword AC18 in the Sheet.
+- **Two ACs depend on unbuilt features:** AC11's tentative holds (VS-C3) and AC14's event cancellation. Their types will be added when those stories land; reassignment, unavailability, confirmation and completion are logged today.
+- **AC7 "detail edits"** are captured where they can happen. An organiser can edit only while a clarification is open, and those edits appear on the resubmission entry as previous → new values (V14), not as separate entries.
+
+**Evidence:**
+- `ActivityServiceTest` and `ChangeLogRecorderTest` (unit).
+- `ChangeLogFlowTest` (integration, real PostgreSQL): each kind, who and role, order, failure leaves nothing, the trigger refuses UPDATE and DELETE, audiences, and full history after reassignment.
+- `ChangeLog.test.tsx` (component).
+- Golden-path E2E steps.
+- All 35 ACs traced in `docs/test-cases/sprint3-ecnew5.md`.
+
+**No database migration.**
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?

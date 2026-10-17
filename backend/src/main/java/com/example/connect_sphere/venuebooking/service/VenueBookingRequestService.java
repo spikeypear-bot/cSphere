@@ -157,6 +157,15 @@ public class VenueBookingRequestService {
 
     @Transactional
     public EventVenueBookingDto submit(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest request) {
+        return submit(coordinatorId, eventId, request, null);
+    }
+
+    /** {@code addsToExisting}: whether the event already held an active booking
+     * before this submission began (EC-NEW5 "additional venue added"); null to
+     * work it out here. A multi-venue batch passes what was true before the
+     * batch, so its own bookings are not "additional" to each other. */
+    private EventVenueBookingDto submit(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest request,
+            Boolean addsToExisting) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
         boolean replacement = request != null && request.replacesBookingId() != null;
@@ -256,8 +265,12 @@ public class VenueBookingRequestService {
 
         // The event's originating request carries the timeline; an event
         // created outside the request flow simply has none to extend.
+        // EC-NEW5: a replacement, an additional venue (Major) or a first request.
+        ActivityType logged = request.replacesBookingId() != null ? ActivityType.venue_booking_replaced
+                : (addsToExisting != null ? addsToExisting : hasActiveBooking(eventId, saved.getBookingId()))
+                        ? ActivityType.venue_added : ActivityType.venue_booking_requested;
         eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
-                new ActivityService.Entry(origin.getRequestId(), eventId, ActivityType.venue_booking_requested,
+                new ActivityService.Entry(origin.getRequestId(), eventId, logged,
                         coordinatorId, "Requested " + venue.getVenueAddress() + (notes == null ? "" : ". " + notes),
                         null, null, VenueBookingStatus.pending.name())));
 
@@ -298,7 +311,15 @@ public class VenueBookingRequestService {
                 throw new InvalidVenueBookingException("This venue has already been added to this event. Choose another venue.");
             }
         }
-        return requests.stream().map(request -> submit(coordinatorId, eventId, request)).toList();
+        boolean hadActiveBooking = hasActiveBooking(eventId, null);
+        return requests.stream().map(request -> submit(coordinatorId, eventId, request, hadActiveBooking)).toList();
+    }
+
+    /** Another booking of this event that is pending or approved. */
+    private boolean hasActiveBooking(UUID eventId, UUID except) {
+        return bookings.findForEvent(eventId).stream()
+                .filter(b -> except == null || !except.equals(b.getBookingId()))
+                .anyMatch(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved);
     }
 
     private static com.example.connect_sphere.venueavailability.EffectivePeriod requestedPeriod(

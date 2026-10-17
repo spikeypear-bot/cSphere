@@ -390,7 +390,7 @@ export function RequestReviewPage() {
 
         <aside className="request-review__history split-layout__sticky" aria-labelledby="history-heading">
           <h2 id="history-heading">History</h2>
-          <ActivityTimeline entries={timeline} />
+          <ActivityTimeline entries={timeline} emptyText="No changes recorded yet." controls />
         </aside>
       </div>
     </div>

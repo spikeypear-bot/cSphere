@@ -194,8 +194,11 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
     apiClient.get<unknown>(path)
       .then((value) => {
         if (cancelled) return
-        if (isValid(value)) setData(value as T)
-        else setFailed(true)
+        // A retry that succeeds clears an earlier failure (EC-NEW5 Try again).
+        if (isValid(value)) {
+          setData(value as T)
+          setFailed(false)
+        } else setFailed(true)
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -298,15 +301,25 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
   )
 }
 
-/** The event's whole journey from request to now (EC01/EC02/EO26/EC03),
- * filtered by the server to what this role may see. */
+/** EC-NEW5: the event's change log, its whole journey from request to now,
+ * filtered by the server to what this role may see. If it cannot load, the
+ * rest of the event page still works and the log can be retried. */
 function EventHistoryCard({ eventId }: { eventId: string }) {
-  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray)
-  if (failed || !entries) return null
+  const [attempt, setAttempt] = useState(0)
+  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray, attempt)
   return (
-    <Card className="event-details__history">
-      <h2>History</h2>
-      <ActivityTimeline entries={entries} emptyText="No history has been recorded for this event." />
+    <Card className="event-details__history" role="region" aria-labelledby="change-log-heading">
+      <h2 id="change-log-heading">Change log</h2>
+      {failed ? (
+        <div role="alert" className="event-details__log-error">
+          <p>The change log could not be loaded.</p>
+          <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+        </div>
+      ) : !entries ? (
+        <p role="status" className="field-hint">Loading the change log…</p>
+      ) : (
+        <ActivityTimeline entries={entries} emptyText="No changes recorded yet." controls />
+      )}
     </Card>
   )
 }

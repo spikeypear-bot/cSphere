@@ -1,4 +1,4 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C3 SO-C4 EC-NEW2 EO04 EO09
+// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
 
@@ -107,6 +107,16 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
     await expect(coordinator.getByText('Confirmed').first()).toBeVisible()
   })
 
+  await test.step('EC-NEW5 AC1–AC6: the change log records who did what, oldest first, across the roles', async () => {
+    await coordinator.reload()
+    const log = coordinator.getByRole('region', { name: 'Change log' }).getByRole('list', { name: 'Request timeline' })
+    const entries = log.locator('.activity-timeline__entry')
+    await expect(entries.first()).toContainText('eo1 (Event Organiser) submitted the request')
+    await expect(log).toContainText('vs1 (Venue Staff) approved a venue booking')
+    await expect(log).toContainText(venueName)
+    await expect(entries.last()).toContainText('ec1 (Event Coordinator) confirmed the event')
+  })
+
   await test.step('EC08 AC31, EO04 AC5: the organiser is notified, and the notification opens their arrangements', async () => {
     await organiser.goto('/organiser')
     await organiser.getByRole('button', { name: /Notifications, \d+ unread/ }).click()
@@ -121,6 +131,12 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
     await expect(card).toContainText('150 expected')
     await expect(card.getByText('Safety check approved')).toBeVisible()
     await expect(card.getByRole('link', { name: 'Contact ec1' })).toBeVisible()
+  })
+
+  await test.step('EC-NEW5 AC31: the organiser\'s change log leaves out internal venue decisions', async () => {
+    const log = organiser.getByRole('region', { name: 'Change log' })
+    await expect(log).toContainText('confirmed the event')
+    await expect(log).not.toContainText('approved a venue booking')
   })
 
   await test.step('EO04 AC26: printing gives a clean summary without navigation or buttons', async () => {

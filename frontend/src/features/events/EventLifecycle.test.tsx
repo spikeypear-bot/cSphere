@@ -267,7 +267,9 @@ describe('EO04 organiser views confirmed arrangements', () => {
     renderEvent('/organiser')
 
     expect(await screen.findByText(/could not load your event arrangements/i)).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    // The change log has its own Try again (EC-NEW5); this one belongs to the arrangements.
+    const card = screen.getByRole('region', { name: 'Event arrangements' })
+    await user.click(within(card).getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('region', { name: 'Confirmed arrangements' })).toBeInTheDocument()
   })
 
