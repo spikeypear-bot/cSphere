@@ -1,4 +1,4 @@
-// @stories VS15 VS-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS15 VS-C2 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { apiClient } from '../../lib/apiClient'
@@ -32,6 +32,28 @@ it('refreshes on window focus and removes released occupancy while retaining oth
   expect(within(table).getAllByRole('button', { name: /Pending request/ })).toHaveLength(3)
   expect(within(table).getByRole('button', { name: /Unavailable.*Maintenance/ })).toBeInTheDocument()
 })
+it('VS-C4 AC7, AC8, AC9, AC10 (conflict): highlights buffers, links both bookings and removes resolved indicators on refresh', async () => {
+  const second = { ...booking, bookingId: 'b3', eventName: 'Next event', startDateTime: at('13:00'), endDateTime: at('14:00'), effectiveStart: at('12:30'), effectiveEnd: at('14:00') }
+  vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
+    ? [{ venueId: 'v1', venueAddress: 'Main Hall' }] : { ...schedule, bookings: [...schedule.bookings, second] })
+  await mount()
+  const list = screen.getByRole('region', { name: 'Booking Conflicts' })
+  expect(within(list).getByRole('link', { name: 'Next event' })).toHaveAttribute('href', '/venue-staff/bookings/b3')
+  expect(within(list).getByText('30 / 45 minutes')).toBeInTheDocument()
+  expect(within(list).getByText('Conflict period (SGT):')).toBeInTheDocument()
+  const table = screen.getByRole('table')
+  const entries = within(table).getAllByRole('button', { name: /Confirmed booking/ })
+  expect(entries).toHaveLength(5)
+  entries.forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'true'))
+  within(table).getAllByRole('button', { name: /Tentative hold|Unavailable/ }).forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'false'))
+  fireEvent.click(entries[0])
+  expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Next event' })).toBeInTheDocument()
+  fireEvent.click(screen.getByRole('button', { name: 'Close' }))
+  vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{ venueId: 'v1', venueAddress: 'Main Hall' }] : schedule)
+  fireEvent(window, new Event('focus'))
+  await screen.findByText('No booking conflicts detected for this venue in this view.')
+  expect(screen.getByRole('table').querySelector('[data-conflict="true"]')).toBeNull()
+})
 it('shows overlapping bookings, holds and separate buffers, with read-only details', async () => {
   await mount()
   const table = screen.getByRole('table')
@@ -44,6 +66,17 @@ it('shows overlapping bookings, holds and separate buffers, with read-only detai
   fireEvent.click(within(dialog).getByRole('button', { name: 'Close' }))
   fireEvent.click(within(table).getByRole('button', { name: /Unavailable.*Maintenance/ }))
   expect(within(screen.getByRole('dialog')).getByText('Maintenance')).toBeInTheDocument()
+})
+it('VS-C4 AC8 (boundary): highlights a visible booking with an off-screen conflict partner', async () => {
+  const partner = { ...booking, bookingId: 'outside', eventName: 'Off-screen event', startDateTime: at('12:30'), effectiveStart: at('12:30'), endDateTime: at('13:30'), effectiveEnd: at('13:30') }
+  vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
+    ? [{ venueId: 'v1', venueAddress: 'Main Hall' }]
+    : { ...schedule, activeConflicts: [{ first: booking, second: partner }] })
+  await mount()
+  expect(screen.getByRole('link', { name: 'Off-screen event' })).toHaveAttribute('href', '/venue-staff/bookings/outside')
+  const table = screen.getByRole('table')
+  expect(within(table).queryByRole('button', { name: /Off-screen event/ })).not.toBeInTheDocument()
+  within(table).getAllByRole('button', { name: /Confirmed booking/ }).forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'true'))
 })
 it('requests displayed dates, navigates periods and returns to today', async () => {
   await mount()

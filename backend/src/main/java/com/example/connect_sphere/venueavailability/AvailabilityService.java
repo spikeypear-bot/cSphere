@@ -44,7 +44,8 @@ public class AvailabilityService {
     public List<Period> list(UUID id) { requireVenue(id); return repository.periods(id); }
     public Schedule schedule(UUID id) {
         requireVenue(id);
-        return new Schedule(repository.settings(id), repository.bookings(id), repository.periods(id), scheduleHolds(id, null, null));
+        var bookings = repository.bookings(id);
+        return new Schedule(repository.settings(id), bookings, repository.periods(id), TimingConflictService.overlaps(bookings));
     }
     public Schedule schedule(UUID id, OffsetDateTime start, OffsetDateTime end) {
         if (start == null && end == null) return schedule(id);
@@ -52,7 +53,8 @@ public class AvailabilityService {
                 || java.time.Duration.between(start, end).compareTo(java.time.Duration.ofDays(93)) > 0)
             throw new InvalidVenueBookingException("Provide both start and end, with a positive schedule range of at most 93 days.");
         requireVenue(id);
-        return new Schedule(repository.settings(id), repository.bookings(id, start, end), repository.periods(id, start, end), scheduleHolds(id, start, end));
+        return new Schedule(repository.settings(id), repository.bookings(id, start, end), repository.periods(id, start, end),
+                TimingConflictService.overlaps(repository.bookings(id)));
     }
     public Settings settings(UUID id) { requireVenue(id); return repository.settings(id); }
 

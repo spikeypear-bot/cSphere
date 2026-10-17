@@ -52,7 +52,8 @@ export function BookingTimingEditor({ booking, onSaved, disabled }: {
   }
   if (!timing || timing.editable === false || (booking.status !== 'pending' && booking.status !== 'approved')) return null
   return <Card className="feature-skeleton__body booking-timings-panel">
-    <details>
+    <BookingTimingSummary timing={timing} headingLevel={2} bookingLinks />
+    {timing.editable !== false && (booking.status === 'pending' || booking.status === 'approved') && <details>
       <summary>Edit booking timings</summary>
       <form onSubmit={save} noValidate>
         <fieldset disabled={busy || disabled}>
