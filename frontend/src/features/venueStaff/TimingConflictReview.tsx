@@ -1,12 +1,10 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { apiClient } from '../../lib/apiClient'
 import { useVenueRead } from './useVenueRead'
-import { formatEventTimeRange as range } from './formatEventDateTime'
-import type { ScheduleBooking } from './VenueUnavailabilityPanel'
+import { BookingConflictList, type BookingOverlap } from './BookingConflictList'
 
-interface Overlap { first: ScheduleBooking; second: ScheduleBooking }
+type Overlap = BookingOverlap
 export function TimingConflictReview({ venueId }: { venueId: string }) {
   const read = useVenueRead<Overlap[]>(`/venues/${venueId}/timing-conflicts`)
   const [busy, setBusy] = useState(false)
@@ -26,10 +24,8 @@ export function TimingConflictReview({ venueId }: { venueId: string }) {
     <p>Review overlapping approved bookings with the assigned coordinators. Checking preserves every booking.</p>
     {read.error && <p role="alert">{read.error} <Button onClick={read.retry}>Retry conflicts</Button></p>}
     {!read.data && !read.error && <p role="status">Loading timing conflicts…</p>}
-    {Array.isArray(read.data) && (read.data.length ? <ul>{read.data.map(pair => <li key={`${pair.first.bookingId}:${pair.second.bookingId}`}>
-      {[pair.first, pair.second].map(b => <p key={b.bookingId}><Link to={`/venue-staff/bookings/${b.bookingId}`}>{b.eventName}</Link>
-        {' — occupied '}{range(b.effectiveStart, b.effectiveEnd)}</p>)}
-    </li>)}</ul> : <p>No overlaps between active approved bookings.</p>)}
+    {Array.isArray(read.data) && <BookingConflictList pairs={read.data} />}
+    <Button disabled={read.loading || busy} onClick={() => { setMessage(''); read.retry() }}>Refresh conflicts</Button>
     <Button disabled={busy} onClick={() => void scan()}>{busy ? 'Checking…' : 'Check conflicts and notify coordinators'}</Button>
     {message && <p role="status">{message}</p>}{error && <p role="alert">{error}</p>}
   </section>
