@@ -1,8 +1,7 @@
 import type { BookingTiming } from '../types/bookingTiming'
-import { Link } from 'react-router-dom'
 import { formatEventTimeRange as range } from '../features/venueStaff/formatEventDateTime'
 
-export function BookingTimingSummary({ timing, headingLevel = 3, bookingLinks = false }: { timing?: BookingTiming | null; headingLevel?: 2 | 3; bookingLinks?: boolean }) {
+export function BookingTimingSummary({ timing, headingLevel = 3 }: { timing?: BookingTiming | null; headingLevel?: 2 | 3 }) {
   const Heading = headingLevel === 2 ? 'h2' : 'h3'
   if (!timing) return null
   return <section aria-label="Booking timings">
@@ -16,7 +15,7 @@ export function BookingTimingSummary({ timing, headingLevel = 3, bookingLinks = 
     {(timing.conflicts ?? []).length > 0 && <div role="status" className="unavailability-warning">
       <p>Occupied time overlaps approved bookings. Review these arrangements with Venue Staff; no booking has been cancelled.</p>
       <ul>{timing.conflicts.map(conflict => <li key={conflict.bookingId}>
-        {bookingLinks ? <Link to={`/venue-staff/bookings/${conflict.bookingId}`}>{conflict.eventName}</Link> : conflict.eventName}: {range(conflict.effectiveStart ?? conflict.startDatetime, conflict.effectiveEnd ?? conflict.endDatetime)}
+        {conflict.eventName}: {range(conflict.effectiveStart ?? conflict.startDatetime, conflict.effectiveEnd ?? conflict.endDatetime)}
       </li>)}</ul>
     </div>}
   </section>

@@ -10,18 +10,7 @@ public final class AvailabilityModels {
             OffsetDateTime endDateTime, String reason, OffsetDateTime createdAt) {}
     public record Booking(UUID bookingId, UUID eventId, UUID coordinatorId, String eventName,
             String status, OffsetDateTime startDateTime, OffsetDateTime endDateTime,
-            OffsetDateTime effectiveStart, OffsetDateTime effectiveEnd,
-            UUID venueId, String venueName, OffsetDateTime eventStartDateTime, OffsetDateTime eventEndDateTime) {
-        public Booking(UUID bookingId, UUID eventId, UUID coordinatorId, String eventName, String status,
-                OffsetDateTime startDateTime, OffsetDateTime endDateTime, OffsetDateTime effectiveStart, OffsetDateTime effectiveEnd) {
-            this(bookingId, eventId, coordinatorId, eventName, status, startDateTime, endDateTime,
-                    effectiveStart, effectiveEnd, null, null, startDateTime, endDateTime);
-        }
-        @com.fasterxml.jackson.annotation.JsonProperty
-        public long setupDurationMinutes() { return java.time.Duration.between(effectiveStart, startDateTime).toMinutes(); }
-        @com.fasterxml.jackson.annotation.JsonProperty
-        public long turnaroundDurationMinutes() { return java.time.Duration.between(endDateTime, effectiveEnd).toMinutes(); }
-    }
+            OffsetDateTime effectiveStart, OffsetDateTime effectiveEnd) {}
     public record Request(OffsetDateTime startDateTime, OffsetDateTime endDateTime, String reason,
             List<UUID> acknowledgedBookingIds, String previewToken) {
         // Explicit strict ISO parsing rejects impossible dates instead of normalising them.
@@ -49,6 +38,5 @@ public final class AvailabilityModels {
             }
         }
     }
-    public record Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods,
-            List<TimingConflictService.Overlap> activeConflicts) {}
+    public record Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods) {}
 }

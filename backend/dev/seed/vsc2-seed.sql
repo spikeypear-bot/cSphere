@@ -37,7 +37,7 @@ BEGIN
         (3,1,'Touching occupied boundary','12:00','13:00',0,0,15,'approved'),
         (4,1,'Pending request','14:00','15:00',0,10,20,'pending'),
         (5,1,'Rejected request','16:00','17:00',0,45,0,'rejected'),
-        (6,1,'Early setup within opening hours','00:45','01:30',1,30,0,'pending'),
+        (6,1,'Setup crosses midnight','00:15','01:00',1,30,0,'pending'),
         (7,2,'Zero buffer first','10:00','11:00',0,0,0,'approved'),
         (8,2,'Zero buffer adjacent','11:00','12:00',0,0,0,'approved'),
         (9,3,'Studio preparation','10:00','12:00',0,60,30,'pending')
@@ -45,8 +45,7 @@ BEGIN
         v := md5('vsc2-venue-' || r.venue_n)::uuid;
         e := md5('vsc2-event-' || r.n)::uuid;
         b := md5('vsc2-booking-' || r.n)::uuid;
-        IF EXISTS(SELECT 1 FROM events WHERE event_id=e AND event_name<>('[DEMO VS-C2] ' || r.label)
-                AND NOT (r.n=6 AND event_name='[DEMO VS-C2] Setup crosses midnight'))
+        IF EXISTS(SELECT 1 FROM events WHERE event_id=e AND event_name<>('[DEMO VS-C2] ' || r.label))
             OR EXISTS(SELECT 1 FROM venue_bookings WHERE booking_id=b AND (venue_id<>v OR event_id<>e)) THEN
             RAISE EXCEPTION 'VS-C2 event/booking ID collision';
         END IF;
@@ -64,24 +63,6 @@ BEGIN
                 'Demonstration of booking-specific crew access.',ec,CURRENT_TIMESTAMP,
                 CASE WHEN r.status='rejected' THEN 'Demo rejection' ELSE NULL END)
         ON CONFLICT(booking_id) DO NOTHING;
-
-        -- Correct the original fixture whose setup began on the previous day.
-        -- Only touch the known seed-owned row; preserve other fixture edits.
-        IF r.n=6 THEN
-            UPDATE events SET event_name='[DEMO VS-C2] Early setup within opening hours',
-                    start_datetime=(base_day+r.day_offset+'00:45'::time) AT TIME ZONE 'Asia/Singapore',
-                    end_datetime=(base_day+r.day_offset+'01:30'::time) AT TIME ZONE 'Asia/Singapore'
-            WHERE event_id=e AND event_name='[DEMO VS-C2] Setup crosses midnight'
-              AND purpose='Timing demonstration' AND organisation='Acme Pte Ltd' AND venue_id=v;
-            UPDATE venue_bookings SET setup_duration_minutes=30, turnaround_duration_minutes=0
-            WHERE booking_id=b AND venue_id=v AND event_id=e
-              AND booking_notes='Review organiser setup notes.';
-            UPDATE event_requests SET event_name='[DEMO VS-C2] Early setup within opening hours',
-                    start_datetime=(base_day+r.day_offset+'00:45'::time) AT TIME ZONE 'Asia/Singapore',
-                    end_datetime=(base_day+r.day_offset+'01:30'::time) AT TIME ZONE 'Asia/Singapore'
-            WHERE request_id=md5('vsc2-request')::uuid AND event_id=e
-              AND event_name='[DEMO VS-C2] Setup crosses midnight';
-        END IF;
     END LOOP;
     -- Existing free-text EO requirements, linked to the first event for EC review.
     IF EXISTS(SELECT 1 FROM event_requests WHERE request_id=md5('vsc2-request')::uuid

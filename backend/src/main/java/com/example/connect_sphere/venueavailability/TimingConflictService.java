@@ -20,26 +20,12 @@ public class TimingConflictService {
     public TimingConflictService(AvailabilityRepository availability, VenueRepository venues, JdbcTemplate jdbc) {
         this.availability = availability; this.venues = venues; this.jdbc = jdbc;
     }
-    public record Overlap(Booking first, Booking second) {
-        @com.fasterxml.jackson.annotation.JsonProperty
-        public java.time.OffsetDateTime overlapStart() {
-            return first.effectiveStart().isAfter(second.effectiveStart()) ? first.effectiveStart() : second.effectiveStart();
-        }
-        @com.fasterxml.jackson.annotation.JsonProperty
-        public java.time.OffsetDateTime overlapEnd() {
-            return first.effectiveEnd().isBefore(second.effectiveEnd()) ? first.effectiveEnd() : second.effectiveEnd();
-        }
-    }
+    public record Overlap(Booking first, Booking second) {}
 
     @Transactional(readOnly = true)
     public List<Overlap> list(UUID venueId) {
         if (!venues.existsById(venueId)) throw new VenueNotFoundException(venueId);
-        return overlaps(availability.bookings(venueId));
-    }
-
-    /** Reused by schedule reads so off-screen partners still mark visible bookings. */
-    static List<Overlap> overlaps(List<Booking> bookings) {
-        var approved = bookings.stream().filter(b -> b.status().equals("approved"))
+        var approved = availability.bookings(venueId).stream().filter(b -> b.status().equals("approved"))
                 .sorted(java.util.Comparator.comparing(b -> b.bookingId().toString())).toList();
         List<Overlap> result = new ArrayList<>();
         for (int i = 0; i < approved.size(); i++) {

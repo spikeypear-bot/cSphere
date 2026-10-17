@@ -136,6 +136,5 @@ Coordinators can request multiple venues, each with its own booking window, setu
 - [Booking API and request examples](docs/venue-booking-api.md)
 - [Timing workflow, V27/V28 migrations and verification](docs/venue-booking-duration-snapshots.md)
 - [Calendar behavior](docs/venue-calendar-api.md)
-- [Existing booking conflict review, scope and API](docs/venue-booking-conflicts.md)
 
 Incoming migrations through V26 are retained. Databases that used the superseded unpublished local V23/V24 timing migrations need separate migration-history reconciliation before running this branch; do not rewrite applied migrations or blindly repair checksums.
