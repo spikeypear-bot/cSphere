@@ -45,6 +45,8 @@ export function EventDetailsPage() {
   // same inline-fetch-effect shape as useEventRequestDraft.ts, rather than
   // calling a setState-ish function directly from inside the effect.
   const [reloadToken, setReloadToken] = useState(0)
+  // Only external booking changes reset the panel; its own actions retain feedback.
+  const [bookingReloadToken, setBookingReloadToken] = useState(0)
 
   useEffect(() => {
     if (!eventId) return
@@ -140,11 +142,13 @@ export function EventDetailsPage() {
       ) : null}
 
       {role === 'coordinator' ? (
-        <EventReadinessPanel eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
+        <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
 
-      {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning} /> : null}
+      {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning}
+        active={event.status !== 'completed' && event.status !== 'cancelled'}
+        onCancelled={() => { setBookingReloadToken(n => n + 1); setReloadToken(n => n + 1); readinessState.reload() }} /> : null}
       {role === 'coordinator' && planning ? (
         <Card className="event-details__venue">
           <h2>Equipment</h2>
@@ -213,11 +217,13 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
 }
 
 /** EC03 from the event page: the current booking request, or the way to make one. */
-function VenueBookingCard({ eventId, planning }: { eventId: string; planning: boolean }) {
+function VenueBookingCard({ eventId, planning, active, onCancelled }: {
+  eventId: string; planning: boolean; active: boolean; onCancelled: () => void
+}) {
   const [reload, setReload] = useState(0)
   const { data: bookings, failed } = useSideData<EventVenueBookingDto[]>(
     `/events/${eventId}/venue-bookings`, Array.isArray, reload)
-  const [cancelling, setCancelling] = useState(false)
+  const [cancelling, setCancelling] = useState<string | null>(null)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -231,9 +237,10 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
     setError(null)
     try {
       await apiClient.post(`/events/${eventId}/venue-bookings/${bookingId}/cancel`, { reason: reason.trim() || null })
-      setCancelling(false)
+      setCancelling(null)
       setReason('')
       setReload((n) => n + 1)
+      onCancelled()
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'The request could not be cancelled.')
     } finally {
@@ -260,15 +267,18 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
                   {booking.submittedAt ? <span className="field-hint"> · requested {new Date(booking.submittedAt).toLocaleString()}</span> : null}
                 </p>
                 <BookingTimingSummary timing={booking.timing} />
-                {booking.status === 'pending' && !cancelling ? (
-                  <Button variant="secondary" onClick={() => setCancelling(true)}>Cancel this request</Button>
+                {active && !cancelling && !bookings.some(b => b.status === 'pending' && b.replacesBookingId === booking.bookingId) ? (
+                  <Button variant="secondary" onClick={() => setCancelling(booking.bookingId)}>
+                    {booking.status === 'approved' ? 'Cancel this booking' : 'Cancel this request'}
+                  </Button>
                 ) : null}
-                {booking.status === 'pending' && cancelling ? (
+                {cancelling === booking.bookingId ? (
                   <div className="event-details__cancel">
+                    {booking.status === 'approved' && <p>Cancelling releases this venue and its setup and turnaround time. The event may return to Planning for review.</p>}
                     <label htmlFor={`cancel-reason-${booking.bookingId}`}>Reason for Venue Staff (optional)</label>
                     <textarea id={`cancel-reason-${booking.bookingId}`} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
                     <div className="event-details__cancel-actions">
-                      <Button variant="secondary" onClick={() => { setCancelling(false); setReason('') }}>Keep request</Button>
+                      <Button variant="secondary" disabled={busy} onClick={() => { setCancelling(null); setReason('') }}>Keep request</Button>
                       <Button disabled={busy} onClick={() => void cancelRequest(booking.bookingId)}>
                         {busy ? 'Cancelling…' : 'Confirm cancellation'}
                       </Button>
@@ -282,7 +292,7 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
         </>
       ) : (
         <>
-          <p>No venue has been requested yet.</p>
+          <p>{bookings.length ? 'No active venue bookings.' : 'No venue has been requested yet.'}</p>
           {latestRejected ? (
             <div className="field-hint">
               <p>{latestRejected.venueAddress} was rejected{latestRejected.rejectReason ? `: ${latestRejected.rejectReason}` : '.'}</p>
@@ -297,6 +307,11 @@ function VenueBookingCard({ eventId, planning }: { eventId: string; planning: bo
           ) : null}
         </>
       )}
+      {bookings.some(b => b.status === 'cancelled' || b.status === 'changed') && <div>
+        <h3>Released bookings</h3>
+        <ul>{bookings.filter(b => b.status === 'cancelled' || b.status === 'changed').map(b =>
+          <li key={b.bookingId}>{b.venueAddress}: {BOOKING_STATUS_LABELS[b.status]}</li>)}</ul>
+      </div>}
     </Card>
   )
 }

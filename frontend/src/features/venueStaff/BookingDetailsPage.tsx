@@ -9,6 +9,7 @@ import { useVenueRead } from './useVenueRead'
 import './BookingDetailsPage.css'
 import { BookingApproval, BookingInformationHeading } from './BookingApproval'
 import { BookingTimingEditor } from './BookingTimingEditor'
+import { BookingDecisionPanel } from './BookingDecisionPanel'
 
 /** Shared booking details for Catalogue and the VS02 pending queue. */
 export function BookingDetailsPage() {
@@ -34,6 +35,15 @@ export function BookingDetailsPage() {
     {error && <div><p role="alert">{error}{data && " Showing the previously loaded booking; the requested booking could not be loaded."}</p><Button onClick={retry}>Try again</Button></div>}
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>
+        {data.status === 'rejected' && (data.rejectReason?.trim() || data.alternativeVenueAddress?.trim() || data.alternativeArrangement?.trim()) &&
+          <BookingDecisionPanel className="booking-rejection-details" role="status" aria-label="Rejection reason">
+            <h3>Rejection Reason</h3>
+            {data.rejectReason?.trim() && <p>{data.rejectReason}</p>}
+            {(data.alternativeVenueAddress?.trim() || data.alternativeArrangement?.trim()) && <dl>
+              {data.alternativeVenueAddress?.trim() && <><dt>Suggested Alternative Venue:</dt><dd>{data.alternativeVenueAddress}</dd></>}
+              {data.alternativeArrangement?.trim() && <><dt>Alternative Arrangement:</dt><dd>{data.alternativeArrangement}</dd></>}
+            </dl>}
+          </BookingDecisionPanel>}
         {!loading && !error && data.bookingId === bookingId
           ? <BookingApproval key={`${bookingId}:${timingRevision}`} booking={data} onApproved={replaceData} onUnavailable={failRead}
               conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts} />
@@ -45,9 +55,8 @@ export function BookingDetailsPage() {
           <div className="booking-requirements-column" aria-busy={loading}>
             {loading && <span className="booking-loading-notice" role="status">Loading next booking…</span>}
             <section aria-labelledby="event-requirements-heading">
-              <EventRequirementsPanel event={data.event} status={data.status} rejectReason={data.rejectReason}
-                highlightStart={highlights.some(h => h.requestStart)} highlightEnd={highlights.some(h => h.requestEnd)}
-                alternativeVenueAddress={data.alternativeVenueAddress} alternativeArrangement={data.alternativeArrangement} />
+              <EventRequirementsPanel event={data.event} status={data.status}
+                highlightStart={highlights.some(h => h.requestStart)} highlightEnd={highlights.some(h => h.requestEnd)} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
             <BookingTimingEditor key={data.bookingId} booking={data} onSaved={saved => {

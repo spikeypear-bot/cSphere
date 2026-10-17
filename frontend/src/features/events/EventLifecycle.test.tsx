@@ -76,6 +76,42 @@ describe('EC-NEW2 one consistent status on the event page', () => {
 })
 
 describe('EC08 readiness, send for safety review, withdraw and confirm', () => {
+  it('refreshes lifecycle readiness after cancelling an approved venue booking', async () => {
+    seedSession('coordinator')
+    let cancelled = false
+    const calls = stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event(status('PLANNING', 'Planning'))),
+      [`GET /api/events/${EVENT}/lifecycle`]: () => jsonResponse(200, readiness({
+        canSendForReview: !cancelled,
+        blockers: cancelled ? ['Request a replacement venue.'] : [],
+      })),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { bookingId: 'b1', venueAddress: 'Main Hall', status: cancelled ? 'cancelled' : 'approved' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+      [`GET /api/events/${EVENT}/readiness`]: () => jsonResponse(200, {
+        eventId: EVENT, approvalStatus: 'not_reviewed', items: [], completedItems: 0, totalItems: 0,
+        approvalNote: null, reviewedBy: null, reviewedAt: null,
+      }),
+      [`POST /api/events/${EVENT}/venue-bookings/b1/cancel`]: () => {
+        cancelled = true
+        return jsonResponse(200, {})
+      },
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    expect(await screen.findByRole('button', { name: 'Send for safety review' })).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Cancel this booking' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
+
+    expect(await screen.findByText('Request a replacement venue.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Send for safety review' })).not.toBeInTheDocument()
+    for (const path of ['', '/lifecycle', '/readiness', '/venue-bookings', '/timeline']) {
+      expect(calls.filter(c => c.method === 'GET' && c.url === `/api/events/${EVENT}${path}`).length).toBeGreaterThan(1)
+    }
+  })
+
   it('EC08 AC3, AC16, EC-NEW2 AC21 (happy): lists each prerequisite with its state and sends the event for review', async () => {
     seedSession('coordinator')
     let sent = false
@@ -570,4 +606,3 @@ describe('EC08 / EO04 / EC-NEW2 edge cases (boundary, failure)', () => {
     error.mockRestore()
   })
 })
-

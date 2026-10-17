@@ -351,14 +351,14 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
-    void anApprovedBookingCannotBeCancelledHere() throws Exception {
+    void anApprovedBookingCanBeCancelledByItsAssignedCoordinator() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
         sync();
         jdbc.update("UPDATE venue_bookings SET status = 'approved' WHERE booking_id = ?::uuid", id);
         sync();
 
-        cancel(eventId, id, "ec1").andExpect(status().isConflict());
+        cancel(eventId, id, "ec1").andExpect(status().isOk()).andExpect(jsonPath("$.status").value("cancelled"));
     }
 
     @Test
