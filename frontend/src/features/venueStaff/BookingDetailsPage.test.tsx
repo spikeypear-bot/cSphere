@@ -1,3 +1,4 @@
+// @stories VS02 VS03 VS04 VS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

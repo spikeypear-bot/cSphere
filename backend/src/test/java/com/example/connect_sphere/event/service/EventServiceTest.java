@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -37,6 +38,10 @@ import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorExc
 import com.example.connect_sphere.notification.service.NotificationService;
 
 @Tag("unit")
+@Tag("EC09")
+@Tag("EC08")
+@Tag("EO09")
+@Tag("ECL-C7")
 class EventServiceTest {
 
     @Mock
@@ -127,10 +132,50 @@ class EventServiceTest {
         coordinator.setHashedPassword("irrelevant");
         when(userRepository.findById(COORDINATOR_ID)).thenReturn(Optional.of(coordinator));
 
-        EventDto dto = service.getForCoordinator(event.getEventId());
+        EventDto dto = service.getForCoordinator(COORDINATOR_ID, event.getEventId());
 
         assertThat(dto.coordinatorName()).isEqualTo("ec1");
         assertThat(dto.coordinatorEmail()).isEqualTo("ec1@connectsphere.test");
+    }
+
+    // ---- ECL-C7: only the assigned coordinator; the Lead may view any ------
+
+    @Test
+    @DisplayName("ECL-C7 AC1, AC2 (cross-cutting): a coordinator who is not assigned cannot open the event, and sees no data")
+    void aCoordinatorWhoIsNotAssignedCannotOpenTheEvent() {
+        Event event = pendingEvent(ORG);
+        event.setCoordinatorId(COORDINATOR_ID);
+        when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
+
+        assertThatThrownBy(() -> service.getForCoordinator(OTHER_COORDINATOR_ID, event.getEventId()))
+                .isInstanceOf(NotAssignedCoordinatorException.class)
+                .hasMessage(NotAssignedCoordinatorException.MESSAGE)
+                // The refusal names no event, organiser or other coordinator.
+                .hasMessageNotContaining(event.getEventName())
+                .hasMessageNotContaining(ORG);
+    }
+
+    @Test
+    @DisplayName("ECL-C7 AC2 (boundary): a caller with no identity, or an event with no coordinator yet, is refused")
+    void noIdentityOrNoCoordinatorIsRefused() {
+        Event unassigned = pendingEvent(ORG);
+        unassigned.setCoordinatorId(null);
+        when(repository.findById(unassigned.getEventId())).thenReturn(Optional.of(unassigned));
+
+        assertThatThrownBy(() -> service.getForCoordinator(null, unassigned.getEventId()))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThatThrownBy(() -> service.getForCoordinator(COORDINATOR_ID, unassigned.getEventId()))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+    }
+
+    @Test
+    @DisplayName("ECL-C7 AC20 (happy): the Event Coordinator Lead can view any event for oversight")
+    void theLeadCanViewAnyEvent() {
+        Event event = pendingEvent(ORG);
+        event.setCoordinatorId(COORDINATOR_ID);
+        when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
+
+        assertThat(service.getForLead(event.getEventId()).eventId()).isEqualTo(event.getEventId());
     }
 
     // ---- EC09: events assigned to me --------------------------------------

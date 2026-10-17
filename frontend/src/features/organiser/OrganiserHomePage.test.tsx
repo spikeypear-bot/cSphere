@@ -133,3 +133,23 @@ describe('OrganiserHomePage — EO01/EO15 UX enhancements (docs/decision-log.md 
     expect(within(timeline).getByText('Submitted').closest('li')).toHaveAttribute('data-state', 'current')
   })
 })
+
+describe('OrganiserHomePage — EO04 opening the arrangements', () => {
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EO04 AC4 (happy): an approved request offers View event, opening that event\'s arrangements page', async () => {
+    seedSession()
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [{
+      requestId: 'req-9', status: 'approved', eventId: 'ev-9', eventName: 'Town Hall',
+      accessibilityNeeds: [], organisation: 'Acme Conferences',
+      createdAt: '2026-10-01T00:00:00Z', updatedAt: '2026-10-02T00:00:00Z',
+    }])))
+    renderHome()
+
+    expect(await screen.findByRole('link', { name: 'View event' })).toHaveAttribute('href', '/organiser/events/ev-9')
+  })
+})

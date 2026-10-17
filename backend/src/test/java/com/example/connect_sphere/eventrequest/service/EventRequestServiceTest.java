@@ -49,6 +49,11 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * docs/decision-log.md).
  */
 @Tag("unit")
+@Tag("EO01")
+@Tag("EO02")
+@Tag("EO09")
+@Tag("EO19")
+@Tag("ELC-C6")
 class EventRequestServiceTest {
 
     @Mock

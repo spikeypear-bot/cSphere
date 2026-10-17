@@ -1,3 +1,4 @@
+// @stories VS02 VS15  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 /// <reference types="node" />
 import { afterEach, expect, it } from 'vitest'
 import { readFileSync } from 'node:fs'

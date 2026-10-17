@@ -30,6 +30,23 @@ public class VenueBookingService {
     private final VenueBookingRecordRepository records;
     private final EventRepository events;
 
+    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
+     * Setter-injected so this service does not depend on the log; absent in
+     * plain unit tests, where nothing is announced. */
+    private org.springframework.context.ApplicationEventPublisher changeLog;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setChangeLog(org.springframework.context.ApplicationEventPublisher changeLog) {
+        this.changeLog = changeLog;
+    }
+
+    private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
+            String message) {
+        if (changeLog != null) {
+            changeLog.publishEvent(new com.example.connect_sphere.activity.service.EventChange(eventId, type, actor, message));
+        }
+    }
+
     public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper,
             VenueBookingRecordRepository records,
             EventRepository events, com.example.connect_sphere.venueavailability.AvailabilityService availability,
@@ -118,7 +135,10 @@ public class VenueBookingService {
         if (records.approvePending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.approved) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
-        return get(bookingId);
+        VenueBookingDto approved = get(bookingId);
+        announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_booking_approved, null,
+                "Approved " + approved.venue().venueAddress());
+        return approved;
     }
 
     /** VS04: use the same event lock as approval, submission and cancellation. */
@@ -153,7 +173,17 @@ public class VenueBookingService {
                 alternativeVenueId, trimmedArrangement) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
-        return get(bookingId);
+        VenueBookingDto rejected = get(bookingId);
+        announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_booking_rejected, null,
+                "Rejected " + rejected.venue().venueAddress() + ": " + trimmedReason);
+        if (rejected.alternativeVenueAddress() != null || trimmedArrangement != null) {
+            announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_alternative_suggested, null,
+                    rejected.alternativeVenueAddress() != null
+                            ? "Suggested " + rejected.alternativeVenueAddress() + " instead"
+                                    + (trimmedArrangement != null ? ". " + trimmedArrangement : "")
+                            : "Suggested an alternative arrangement: " + trimmedArrangement);
+        }
+        return rejected;
     }
 
     public List<VenueBookingDto> listPending() {

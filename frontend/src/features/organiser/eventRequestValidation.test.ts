@@ -1,3 +1,4 @@
+// @stories EO02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { expect, it } from 'vitest'
 import { dateRangeError } from './eventRequestValidation'
 

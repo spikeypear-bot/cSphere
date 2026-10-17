@@ -11,7 +11,9 @@ import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.event.dto.CoordinatorEventsDto;
 import com.example.connect_sphere.user.entity.User;
+import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
@@ -35,6 +37,7 @@ public class EventService {
 
     private final EventRepository repository;
     private final UserRepository userRepository;
+    private final EventRequestRepository eventRequestRepository;
     private final NotificationService notificationService;
     private final JourneyStatusResolver statuses;
     private final EventLifecycleService lifecycle;
@@ -48,6 +51,7 @@ public class EventService {
             EventLifecycleService lifecycle) {
         this.repository = repository;
         this.userRepository = userRepository;
+        this.eventRequestRepository = eventRequestRepository;
         this.notificationService = notificationService;
         this.statuses = statuses;
         this.lifecycle = lifecycle;
@@ -69,10 +73,42 @@ public class EventService {
     /** Coordinator-side read of the same event, no organisation scoping —
      * mirrors the review queue's own reasoning (Coordinators are internal). */
     @Transactional(readOnly = true)
-    public EventDto getForCoordinator(UUID eventId) {
+    public EventDto getForCoordinator(UUID coordinatorId, UUID eventId) {
         Event event = repository.findById(eventId)
                 .orElseThrow(() -> new EventNotFoundException(eventId));
+        // ECL-C7: only the coordinator the Lead assigned may open it.
+        if (coordinatorId == null || !coordinatorId.equals(event.getCoordinatorId())) {
+            throw new NotAssignedCoordinatorException(eventId);
+        }
         return toDto(event);
+    }
+
+    /**
+     * ECL-C7: every Event Coordinator with the active events they hold (not
+     * cancelled or finished), soonest first, for the Lead's oversight and
+     * reassignment. Each event comes with its originating request, which is
+     * what the Lead reassigns (ELC-C5). Read-only.
+     */
+    @Transactional(readOnly = true)
+    public List<CoordinatorEventsDto> activeEventsByCoordinator() {
+        return userRepository.findByRole(UserRole.ec).stream()
+                .sorted(java.util.Comparator.comparing(User::getUsername))
+                .map(coordinator -> new CoordinatorEventsDto(coordinator.getUserId(), coordinator.getUsername(),
+                        repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(coordinator.getUserId(),
+                                        ACTIVE_STATUSES).stream()
+                                .filter(event -> !statuses.forEvent(event).isFinal())
+                                .map(event -> new CoordinatorEventsDto.HeldEvent(
+                                        eventRequestRepository.findByEventId(event.getEventId())
+                                                .map(EventRequest::getRequestId).orElse(null),
+                                        toDto(event)))
+                                .toList()))
+                .toList();
+    }
+
+    /** ECL-C7: the Event Coordinator Lead may view any event, read-only. */
+    @Transactional(readOnly = true)
+    public EventDto getForLead(UUID eventId) {
+        return toDto(repository.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId)));
     }
 
     /** EC09: the caller's own active (pending or confirmed) events, across

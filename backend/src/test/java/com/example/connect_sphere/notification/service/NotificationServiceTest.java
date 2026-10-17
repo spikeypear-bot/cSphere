@@ -24,6 +24,8 @@ import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
 
 @Tag("unit")
+@Tag("EO09")
+@Tag("EO19")
 class NotificationServiceTest {
 
     @Mock
