@@ -18,6 +18,7 @@ export interface ScheduleBooking {
 interface Preview { affectedBookings: ScheduleBooking[]; previewToken: string }
 export interface OccupancySettings { setupMinutes: number; turnaroundMinutes: number }
 export interface VenueSchedule {
+  holds?: import('../../types/venueHold').VenueHold[]
   settings: OccupancySettings; bookings: ScheduleBooking[]; unavailablePeriods: UnavailablePeriod[]
 }
 const message = (error: unknown, fallback: string) => error instanceof ApiClientError ? error.message : fallback

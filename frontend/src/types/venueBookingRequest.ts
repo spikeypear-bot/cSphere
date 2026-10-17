@@ -17,9 +17,11 @@ export interface VenueOptionDto {
   reasons: string[]
 }
 
-export type VenueBookingStatus = 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
+import type { VenueBookingStatus } from './venueBookingStatus'
+export type { VenueBookingStatus } from './venueBookingStatus'
 
 export interface EventVenueBookingDto {
+  holds?: import('./venueHold').VenueHold[]
   timing?: import('./bookingTiming').BookingTiming
   bookingId: string
   requiresAlternative?: boolean

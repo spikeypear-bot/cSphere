@@ -1,3 +1,4 @@
+import { HoldStatus } from '../venueStaff/HoldStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
@@ -353,6 +354,7 @@ export function VenueBookingRequestPage() {
                     {b.alternativeVenueAddress ? <> · Suggested venue: {b.alternativeVenueAddress}</> : null}
                     {b.alternativeArrangement ? <> · Alternative arrangement: {b.alternativeArrangement}</> : null}
                     <BookingTimingSummary timing={b.timing} />
+                    <HoldStatus holds={b.holds} />
                   </li>
                 ))}
               </ul>

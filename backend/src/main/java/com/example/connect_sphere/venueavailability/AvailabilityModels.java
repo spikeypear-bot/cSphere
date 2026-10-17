@@ -38,5 +38,10 @@ public final class AvailabilityModels {
             }
         }
     }
-    public record Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods) {}
+    public record Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods,
+            List<com.example.connect_sphere.venuebooking.hold.VenueHold> holds) {
+        public Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods) {
+            this(settings, bookings, unavailablePeriods, List.of());
+        }
+    }
 }

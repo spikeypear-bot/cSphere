@@ -56,6 +56,29 @@ export async function createVenue(request: APIRequestContext, name: string): Pro
   return (await response.json()).venueId as string
 }
 
+/** A competing pending request is fixture data; the hold decisions remain browser actions. */
+export async function createCompetingBooking(request: APIRequestContext, venueId: string, eventName: string,
+  startDatetime: string, endDatetime: string): Promise<string> {
+  const organiser = await apiToken(request, 'eo1')
+  const lead = await apiToken(request, 'ecl1')
+  const coordinator = await apiToken(request, 'ec1')
+  const post = async (path: string, token: string, data?: object) => {
+    const result = await request.post(path, { headers: { Authorization: `Bearer ${token}` }, data })
+    expect(result.ok(), `${path}: ${result.status()} ${await result.text()}`).toBeTruthy()
+    return result.json()
+  }
+  const draft = await post('/api/event-requests', organiser, { eventName, purpose: 'Competing request fixture',
+    startDatetime, endDatetime, expectedAttendance: 80, venueRequirements: 'Theatre seating',
+    accessibilityNeeds: ['none'], requiredFacilities: [], registrationNeeds: false })
+  await post(`/api/event-requests/${draft.requestId}/submit`, organiser)
+  const people = await apiGet<{ userId: string; username: string }[]>(request, lead, '/api/event-requests/unassigned/coordinators')
+  const assigned = people.find(person => person.username === 'ec1')!
+  await post(`/api/event-requests/unassigned/${draft.requestId}/assign`, lead, { coordinatorUserId: assigned.userId })
+  const event = await post(`/api/event-requests/${draft.requestId}/approve`, coordinator)
+  const booking = await post(`/api/events/${event.eventId}/venue-bookings`, coordinator, { venueId, startDatetime, endDatetime })
+  return booking.bookingId
+}
+
 /** EO01/EO02: the organiser fills in and submits a complete request in the wizard.
  *
  * "Next" saves the draft to the server before it moves on, so after each one

@@ -6,8 +6,6 @@
 .venue-calendar__status-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; align-items: center; }
 .venue-calendar__status-row > .button { justify-self: end; }
 .venue-calendar__legend { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 0; }
-.venue-calendar [data-kind="confirmed"] { --entry-color: #245d99; --entry-bg: #eaf2fc; }
-.venue-calendar [data-kind="tentative"] { --entry-color: #80510a; --entry-bg: #fff4dc; }
 .venue-calendar [data-kind="unavailable"] { --entry-color: #9d354b; --entry-bg: #fdeef1; }
 .venue-calendar__legend li { border-left: 4px solid var(--entry-color); background: var(--entry-bg); color: var(--entry-color); padding: .4rem .7rem; }
 .venue-calendar__scroll { overflow-x: auto; margin-top: 1rem; }
@@ -29,3 +27,6 @@
 .venue-calendar__details::backdrop { background: #0006; }
 .venue-calendar__details dt { font-weight: 600; margin-top: 1rem; }
 .venue-calendar__details dd { margin: .3rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+
+.venue-calendar [data-booking-status] { --entry-color: var(--booking-status-color); --entry-bg: var(--booking-status-bg); }

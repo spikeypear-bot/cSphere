@@ -86,6 +86,11 @@ public class ActivityService {
         row.setActorUserId(actor.getUserId());
         row.setActorRole(actor.getRole().name());
         row.setActorName(actor.getUsername());
+        if (entry.type() == ActivityType.venue_hold_expired) {
+            // Keep the initiating user FK for traceability, but identify the automated actor accurately.
+            row.setActorRole("system");
+            row.setActorName("ConnectSphere");
+        }
         row.setMessage(entry.message());
         row.setFlaggedFields(entry.flaggedFields() == null ? List.of() : List.copyOf(entry.flaggedFields()));
         row.setFromStatus(entry.fromStatus());

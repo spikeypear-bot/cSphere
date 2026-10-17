@@ -47,6 +47,29 @@ public class AvailabilityRepository {
         return bookings(venueId, null, null);
     }
 
+    /** One database snapshot prevents a read spanning conversion from missing both
+     * the old hold and its newly approved booking. Writers still take venue locks. */
+    public List<Booking> blocking(UUID venueId, OffsetDateTime now) {
+        return jdbc.query("""
+                SELECT b.booking_id, e.event_id, e.coordinator_id, e.event_name, 'approved' AS status,
+                    COALESCE(b.start_datetime,e.start_datetime) AS start_datetime,
+                    COALESCE(b.end_datetime,e.end_datetime) AS end_datetime,
+                    COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' AS effective_start,
+                    COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' AS effective_end
+                FROM venue_bookings b JOIN events e USING(event_id)
+                WHERE b.venue_id=? AND b.status='approved' AND e.status NOT IN ('cancelled','completed')
+                UNION ALL
+                SELECT b.booking_id, e.event_id, e.coordinator_id, 'Tentative hold: ' || e.event_name, 'hold',
+                    h.reserved_start, h.reserved_end, h.reserved_start, h.reserved_end
+                FROM venue_booking_holds h JOIN venue_bookings b USING(booking_id) JOIN events e USING(event_id)
+                WHERE b.venue_id=? AND b.status='pending' AND e.status NOT IN ('cancelled','completed')
+                    AND h.status='active' AND h.expires_at>?
+                """, (r,n) -> new Booking(r.getObject("booking_id",UUID.class),r.getObject("event_id",UUID.class),
+                    r.getObject("coordinator_id",UUID.class),r.getString("event_name"),r.getString("status"),
+                    r.getObject("start_datetime",OffsetDateTime.class),r.getObject("end_datetime",OffsetDateTime.class),
+                    r.getObject("effective_start",OffsetDateTime.class),r.getObject("effective_end",OffsetDateTime.class)),venueId,venueId,now);
+    }
+
     /** Calendar history includes completed events; operational availability keeps its existing rules. */
     public List<Booking> bookings(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
         boolean calendar = start != null && end != null;

@@ -4,6 +4,8 @@ import { Button } from '../../components/ui/Button'
 import { useVenueRead } from './useVenueRead'
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 import { formatEventTimeRange as range } from './formatEventDateTime'
+import { NO_HOLDS, useHoldDeadline } from './useHoldDeadline'
+import { formatEventDateTime } from './formatEventDateTime'
 import { calendarDays, calendarEntries, dayTime, entriesOnDay, entryLabels, midnight, shiftMonth, singaporeDate } from './venueCalendar'
 import type { CalendarEntry } from './venueCalendar'
 import './VenueSchedulePage.css'
@@ -25,7 +27,7 @@ export function VenueSchedulePage() {
   const title = new Intl.DateTimeFormat('en-SG', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
   return <div className="feature-skeleton venue-calendar">
     <h1>Venue availability calendar</h1>
-    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Tentative holds are pending requests and do not reserve the venue.</p>
+    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Active tentative holds reserve the full occupied period until their expiry. Pending requests do not reserve the venue.</p>
     {venues.error ? <p role="alert">{venues.error} <Button onClick={venues.retry}>Retry venues</Button></p>
       : !venues.data ? <p role="status">Loading venues…</p> : !venues.data.length ? <p>No venues available.</p> : <div className="field venue-calendar__venue">
         <label htmlFor="calendar-venue">Venue</label>
@@ -52,7 +54,7 @@ export function VenueSchedulePage() {
 function CalendarLegend({ onRefresh, loading = false }: { onRefresh?: () => void; loading?: boolean }) {
   return <div className="venue-calendar__status-row">
     <ul className="venue-calendar__legend" aria-label="Calendar legend">
-      {Object.entries(entryLabels).map(([type, label]) => <li key={type} data-kind={type}>{label}</li>)}
+      {Object.entries(entryLabels).map(([type, label]) => <li key={type} data-kind={type} data-booking-status={type === 'unavailable' ? undefined : type}>{label}</li>)}
     </ul>
     {onRefresh && <Button type="button" className="venue-calendar__control" disabled={loading} onClick={onRefresh}>Refresh schedule</Button>}
   </div>
@@ -62,13 +64,15 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
   const days = calendarDays(month)
   const end = new Date(Date.parse(`${days.at(-1)}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
   const query = new URLSearchParams({ start: midnight(days[0]), end: midnight(end) })
-  const read = useVenueRead<VenueSchedule>(`/venues/${venueId}/schedule?${query}`)
+  const read = useVenueRead<VenueSchedule>(`/venues/${venueId}/schedule?${query}`, false, 5000)
   const [selected, setSelected] = useState<CalendarEntry | null>(null)
+  const expired = useHoldDeadline(read.data?.holds ?? NO_HOLDS, read.retry)
   const refresh = () => { onRefreshStart(); setSelected(null); read.retry() }
   if (read.error) return <section aria-label="Venue schedule"><CalendarLegend onRefresh={refresh} /><p role="alert">{read.error} <Button type="button" onClick={refresh}>Retry schedule</Button></p></section>
   if (!read.data) return <section aria-label="Venue schedule" aria-busy="true"><CalendarLegend onRefresh={refresh} loading /><p role="status">Loading schedule…</p></section>
-  const entries = calendarEntries(read.data)
+  const entries = calendarEntries(read.data, expired)
   const overlaps = approvedOverlaps(read.data)
+  const selectedEntry = selected ? entries.find(entry => entry.id === selected.id) : undefined
   return <section aria-label="Venue schedule">
     <CalendarLegend onRefresh={refresh} />
     {overlaps.length > 0 && <div role="status" className="unavailability-warning">
@@ -89,7 +93,7 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
           {days.slice(week * 7, week * 7 + 7).map(day => <td key={day} data-outside={!day.startsWith(month)}>
             <time dateTime={day} aria-current={day === singaporeDate() ? 'date' : undefined}>{Number(day.slice(-2))}</time>
             <ul>{entriesOnDay(entries, day).map(entry => <li key={entry.id}>
-              <button className="venue-calendar__entry" data-kind={entry.type}
+              <button className="venue-calendar__entry" data-kind={entry.type} data-booking-status={entry.type === 'unavailable' ? undefined : entry.type}
                 aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}`}
                 onClick={() => setSelected(entry)}>
                 <span>{entryLabels[entry.type]}{entry.phase !== 'Unavailable' ? ` · ${entry.phase}` : ''}</span>
@@ -100,7 +104,7 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
         </tr>)}</tbody>
       </table>
     </div>
-    {selected && <EntryDetails entry={selected} venueName={venueName} onClose={() => setSelected(null)} />}
+    {selectedEntry && <EntryDetails entry={selectedEntry} venueName={venueName} onClose={() => setSelected(null)} />}
   </section>
 }
 
@@ -113,6 +117,7 @@ function EntryDetails({ entry, venueName, onClose }: { entry: CalendarEntry; ven
       <dt>Venue</dt><dd>{venueName}</dd>
       <dt>Type</dt><dd>{entryLabels[entry.type]}</dd>
       <dt>Entry</dt><dd>{entry.phase}</dd>
+      {entry.expiresAt && <><dt>Hold expiry (SGT)</dt><dd>{formatEventDateTime(entry.expiresAt)}</dd><dt>Hold status</dt><dd>Active</dd></>}
       <dt>Start / end (SGT)</dt><dd>{range(entry.start, entry.end)}</dd>
       {entry.eventStart && entry.eventEnd && entry.phase !== 'Event' && <><dt>Event timing (SGT)</dt><dd>{range(entry.eventStart, entry.eventEnd)}</dd></>}
       {entry.type === 'unavailable' && <><dt>Reason</dt><dd>{entry.title}</dd></>}
