@@ -307,3 +307,10 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - **Validation:** Check full occupied intervals during selection, submission, approval and staff timing edits, including opening hours, unavailable periods and operational issues. Batch submission is transactional.
 - **Database:** Keep incoming V1–V26 unchanged. V27 backfills duration snapshots without changing booking windows; V28 adds timing review, overlap notification tracking and timing notification types while retaining lifecycle notification constraint branches. Legacy nullable windows fall back to event times. Old unpublished local V23/V24 timing histories require separate reconciliation.
 - **Consequence:** Screens distinguish booking windows from advertised event times. Timing edits affect only the selected booking's buffers. Existing overlaps are reported without automatic cancellation. See [implementation and verification](venue-booking-duration-snapshots.md).
+
+## EC10 — Replacement venue rebooking (17 October 2026)
+
+- **Decision:** Coordinators may replace a booking that is affected by venue unavailability or has been rejected/cancelled. A replacement is a new pending booking linked to its source and must use a different venue.
+- **Consistency:** Replacement is scoped to its source booking, so other active venue bookings for the same event remain unchanged and do not prevent rebooking. At most one replacement per source may be pending or approved. A rejected/cancelled replacement attempt leaves the source eligible for another try.
+- **Approval:** Approval changes an unavailable pending/approved source to `changed`; rejected/cancelled source statuses remain as historical outcomes. Approval updates the event's current venue reference only; it does not change other event details or bypass safety confirmation.
+- **Validation:** The existing suitability, occupancy, venue availability, operating-hours and operational-issue checks apply to every replacement request and approval.

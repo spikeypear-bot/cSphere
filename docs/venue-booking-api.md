@@ -14,7 +14,7 @@ Each booking has its own start/end window and saved setup/turnaround durations. 
 | GET | `/api/venues/{venueId}/timing-conflicts` | Venue Staff; lists overlaps between approved occupied periods |
 | POST | `/api/venues/{venueId}/timing-conflicts/scan` | Venue Staff; detects overlaps and sends deduplicated coordinator notifications |
 
-New requests are allowed in Planning (`pending` or `safety_changes_requested`), with the existing confirmed-event replacement exception. Multiple venues are supported; another active booking for the same venue on the same event remains disallowed. Existing replacement restrictions are unchanged.
+New requests are allowed in Planning (`pending` or `safety_changes_requested`), with the confirmed-event exception for an eligible replacement. Replacements can be linked to a venue booking that is affected by unavailability or has been rejected/cancelled. Other active venue bookings for the same event do not block a replacement, but booking the same venue again while it is active remains disallowed. A source booking may have one pending or approved replacement; rejected/cancelled replacement attempts leave the source available for another attempt.
 
 See [timing request/response examples, editing rules and migration policy](venue-booking-duration-snapshots.md). The sections below retain the individual slices' historical implementation and verification notes; the current contract above and VS08 conflict fields below describe the integrated behavior.
 
