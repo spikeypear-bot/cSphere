@@ -52,6 +52,13 @@ function timeRange(start: string, end: string) {
   return `${formatEventDateTime(start)} – ${formatEventDateTime(end)}`
 }
 
+function unavailablePeriodLabel(period: NonNullable<VenueOptionDto['unavailablePeriods']>[number]) {
+  const range = period.affectedFrom && period.affectedUntil
+    ? ` · ${timeRange(period.affectedFrom, period.affectedUntil)}`
+    : ''
+  return `${period.description}${range}`
+}
+
 /**
  * EC03: request a venue for an event in Planning. Every catalogue venue is
  * judged against the event on the server and ranked: bookable first, then
@@ -530,7 +537,7 @@ function VenueOptionCard({ option, attendance, selected, onSelect }: {
       ))}
       {(option.unavailablePeriods ?? []).map((period) => (
         <span key={period.description + period.affectedFrom} className="venue-option__conflict">
-          Unavailable: {period.description}
+          Unavailable: {unavailablePeriodLabel(period)}
         </span>
       ))}
     </button>
@@ -588,7 +595,7 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
           <th scope="row">Availability</th>
           <td>{period ? timeRange(period.effectiveStart, period.effectiveEnd) : 'Enter valid booking times'}</td>
           <td>{(option.unavailablePeriods ?? []).length
-            ? `Unavailable: ${(option.unavailablePeriods ?? []).map((p) => p.description).join(', ')} ✗`
+            ? `Unavailable: ${(option.unavailablePeriods ?? []).map(unavailablePeriodLabel).join(', ')} ✗`
             : option.conflicts.length
               ? 'Overlaps an approved booking ✗'
               : 'Available ✓'}</td>

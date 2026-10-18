@@ -281,6 +281,25 @@ class VenueUnavailabilityTest {
         assertThat(availability.affected(b)).isTrue();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=? AND recipient_user_id=? AND type='venue_unavailable'",Integer.class,b,coordinator)).isEqualTo(1);
     }
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"pending", "approved"})
+    @Tag("EC-C4")
+    void EC_C4_notifiesCoordinatorWithTheAffectedBookingForPlannedAndConfirmedBookings(String status) throws Exception {
+        UUID v = venue(), b = booking(v, status);
+        record(v, period("10:00", "11:00"));
+
+        String venueAddress = jdbc.queryForObject(
+                "SELECT venue_address FROM venues WHERE venue_id=?", String.class, v);
+        mvc.perform(get("/api/notifications").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.type == 'venue_unavailable' && @.eventId == '" + event(b)
+                        + "')].message").value(org.hamcrest.Matchers.hasItem(
+                                org.hamcrest.Matchers.allOf(
+                                        org.hamcrest.Matchers.containsString("Affected booking at " + venueAddress),
+                                        org.hamcrest.Matchers.containsString("2027-04-01"),
+                                        org.hamcrest.Matchers.containsString("10:00"),
+                                        org.hamcrest.Matchers.containsString("12:00")))));
+    }
     @Test void stalePreviewRequiresAnotherConfirmation() {
         UUID v = venue(); booking(v,"approved"); Request r=period("10:00","11:00");
         Preview p=availability.preview(v,r); booking(v,"pending");
@@ -298,8 +317,16 @@ class VenueUnavailabilityTest {
     }
     @Test void unavailablePeriodBlocksShortlistSubmissionAndApproval() {
         UUID v=venue(); availability.updateSettings(v,new Settings(30,45)); UUID b=booking(v,"pending");
-        record(v,period("09:20","09:40"));
-        assertThat(requests.venueOptions(coordinator,event(b)).stream().filter(o -> o.venue().venueId().equals(v)).findFirst().orElseThrow().verdict()).isEqualTo("blocked");
+        Request unavailable = period("09:20","09:40");
+        record(v, unavailable);
+        var option = requests.venueOptions(coordinator,event(b)).stream()
+                .filter(o -> o.venue().venueId().equals(v)).findFirst().orElseThrow();
+        assertThat(option.verdict()).isEqualTo("blocked");
+        assertThat(option.unavailablePeriods()).anySatisfy(period -> {
+            assertThat(period.description()).isEqualTo("Maintenance");
+            assertThat(period.affectedFrom()).isEqualTo(unavailable.startDateTime());
+            assertThat(period.affectedUntil()).isEqualTo(unavailable.endDateTime());
+        });
         assertThatThrownBy(() -> bookings.approve(b)).isInstanceOf(VenueBookingStateException.class);
         UUID other=booking(venue(),"rejected");
         assertThatThrownBy(() -> requests.submit(coordinator,event(other),new SubmitVenueBookingRequest(v,null,null)))
