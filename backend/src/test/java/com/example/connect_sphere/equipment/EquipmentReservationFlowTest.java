@@ -33,6 +33,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("TS06")
 class EquipmentReservationFlowTest {
 
     private static final String START = "2027-03-10T01:00:00Z";

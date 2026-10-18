@@ -1,3 +1,4 @@
+// @stories EC02 EO26  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { SessionProvider } from '../../lib/session'

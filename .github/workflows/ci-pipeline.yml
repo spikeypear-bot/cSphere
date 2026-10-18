@@ -1,5 +1,25 @@
 name: cSphere CI pipeline
 
+# IS212 Week 6 (CI as the gate on a pull request) extended with Week 9's
+# "front half" of a delivery pipeline, which the lab says transfers directly
+# to the project: lint, tests, a dependency audit, a package built once, a
+# smoke test of that running package, and a browser test of key journeys.
+# Deployment (staging/production, human approval) is Week 9 learning only:
+# out of scope for the project, so there are no deploy jobs here.
+#
+#   traceability ─┐
+#   frontend-build ┤
+#   backend-build ─┼─> package ─┬─> smoke   (the packaged jar, over HTTP)
+#   audit ─────────┘            └─> e2e     (jar + built frontend, real browser)
+#
+# Every run also publishes, on its summary page, backend and frontend coverage
+# and the story -> test traceability summary (IS212 rubric: "testing and
+# traceability"; "100% coverage unless not possible and stated why").
+#
+# Job names are what branch protection's required checks match on: keep
+# frontend-build and backend-build as they are, and add traceability, audit,
+# smoke and e2e to the required checks once they have run green on main.
+
 on:
   push:
     branches:
@@ -7,8 +27,24 @@ on:
   pull_request:
     branches:
       - 'main'
+  # Week 9: scheduled runs repeat the slow checks on an unchanged main, which
+  # is where a flaky test shows itself (same code, different result).
+  schedule:
+    - cron: '0 18 * * 0'   # Mondays 02:00 Singapore time
+  workflow_dispatch:
 
 jobs:
+  # Every test file must trace to at least one user story (a story @Tag in
+  # Java, a "// @stories" header or story ID in the title in TypeScript), so
+  # the matrix in docs/test-traceability.md can never silently fall behind.
+  traceability:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Every test traces to a user story
+        run: python3 .github/scripts/traceability.py --check
+
   frontend-build:
     runs-on: ubuntu-latest
     defaults:
@@ -24,8 +60,20 @@ jobs:
           package-manager-cache: false
       - name: Clean install
         run: npm ci
-      - name: Run test
-        run: npm test
+      # Week 9: static analysis first, without running anything.
+      - name: Lint
+        run: npm run lint
+      - name: Run tests with coverage
+        run: npm run test:coverage
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: python3 ../.github/scripts/coverage-summary.py frontend coverage/coverage-summary.json
+      - name: Keep the coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-coverage
+          path: frontend/coverage
       - name: Build
         run: npm run build
 
@@ -83,3 +131,201 @@ jobs:
             git diff --stat -- ../docs/class-diagrams
             exit 1
           fi
+      # JaCoCo appends both phases to one report during verify.
+      - name: Coverage summary
+        if: ${{ !cancelled() }}
+        run: python3 ../.github/scripts/coverage-summary.py backend target/site/jacoco/jacoco.csv
+      - name: Keep the coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/target/site/jacoco
+
+  # Week 9 "other evidence a release gate can require": dependencies with
+  # known vulnerabilities. npm audit gates the frontend (everything installed,
+  # build tools included). The backend's Maven dependencies are covered by the
+  # SBOM scan in `package`.
+  audit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Audit npm dependencies (fails on high or critical)
+        run: npm audit --audit-level=high
+
+  # Build each deliverable exactly once; smoke and e2e test these bytes, not
+  # the source (Week 9: "test the source, then test what you will deploy").
+  package:
+    needs: [traceability, frontend-build, backend-build, audit]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      - name: Set up node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - name: Package the backend jar (tests already ran in backend-build)
+        working-directory: backend
+        run: |
+          ./mvnw -B -ntp -DskipTests package
+          mkdir -p ../dist && cp target/connect-sphere-*.jar ../dist/connect-sphere.jar
+      - name: Build the frontend bundle
+        working-directory: frontend
+        run: npm ci && npm run build
+      - name: Generate an SBOM of the backend jar
+        uses: anchore/sbom-action@v0
+        with:
+          file: dist/connect-sphere.jar
+          format: spdx-json
+          artifact-name: connect-sphere-backend.sbom.spdx.json
+          output-file: connect-sphere-backend.sbom.spdx.json
+      # Reported, not yet blocking: promote to fail-build once the first
+      # report on main has been reviewed (some findings may need a Spring Boot
+      # bump the team should plan, not a surprise red build).
+      - name: Scan the SBOM for known vulnerabilities
+        uses: anchore/scan-action@v6
+        with:
+          sbom: connect-sphere-backend.sbom.spdx.json
+          fail-build: false
+          severity-cutoff: high
+          output-format: table
+      - name: Upload the backend package
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-package
+          path: dist/connect-sphere.jar
+      - name: Upload the frontend bundle
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-bundle
+          path: frontend/dist
+
+  # A handful of fast checks that the packaged backend starts against a real
+  # database and answers roughly right. See .github/scripts/smoke.sh.
+  smoke:
+    needs: package
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: csphere
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d csphere"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/csphere
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+    steps:
+      - name: Checkout code (for smoke.sh only)
+        uses: actions/checkout@v7
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-package
+      - name: Run the package (not the source) and smoke-test it
+        run: |
+          java -jar connect-sphere.jar > app.log 2>&1 &
+          bash .github/scripts/smoke.sh http://localhost:8080 || { tail -n 80 app.log; exit 1; }
+
+  # Week 9: a few browser tests for the journeys that matter most, against
+  # the packaged backend and the built frontend. See frontend/e2e/.
+  e2e:
+    needs: package
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:latest
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: root
+          POSTGRES_DB: csphere
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d csphere"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/csphere
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: root
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - name: Set up JDK 25
+        uses: actions/setup-java@v6
+        with:
+          distribution: temurin
+          java-version: '25'
+      - name: Set up node
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+      - uses: actions/download-artifact@v4
+        with:
+          name: backend-package
+      - uses: actions/download-artifact@v4
+        with:
+          name: frontend-bundle
+          path: frontend/dist
+      - name: Install Playwright and Chromium
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Start the packaged backend and the built frontend
+        run: |
+          java -jar connect-sphere.jar > app.log 2>&1 &
+          for i in $(seq 1 90); do
+            curl -fs http://localhost:8080/actuator/health > /dev/null && break
+            [ "$i" = 90 ] && { tail -n 80 app.log; exit 1; }
+            sleep 1
+          done
+          (cd frontend && npx vite preview --port 4173 --strictPort > ../preview.log 2>&1 &)
+          for i in $(seq 1 30); do
+            curl -fs http://localhost:4173/ > /dev/null && break
+            [ "$i" = 30 ] && { cat preview.log; exit 1; }
+            sleep 1
+          done
+      - name: Run the browser tests
+        working-directory: frontend
+        run: npx playwright test || { tail -n 80 ../app.log; exit 1; }
+      - name: Keep the report and traces of a failed run
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: |
+            frontend/playwright-report
+            frontend/test-results

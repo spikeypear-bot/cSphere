@@ -1,3 +1,4 @@
+// @stories EC08 EO04 SO-C3 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -81,7 +82,7 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     window.localStorage.clear()
   })
 
-  it('shows event details to an Organiser without a Confirm button', async () => {
+  it('EC-NEW2 AC24 (cross-cutting): shows event details to an Organiser without a Confirm button', async () => {
     seedSession('organiser')
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, pendingEvent())))
 
@@ -93,7 +94,7 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
   })
 
-  it('shows coordinator planning actions while the event is in Planning', async () => {
+  it('EC08 AC4 (happy): shows coordinator planning actions while the event is in Planning', async () => {
     seedSession('coordinator')
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
@@ -114,7 +115,7 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     expect(screen.getByText(/Reviewed by so1/)).toBeInTheDocument()
   })
 
-  it('does not let an Event Coordinator confirm an event directly', async () => {
+  it('EC08 AC25, EC-NEW2 AC24 (negative): does not let an Event Coordinator confirm an event directly', async () => {
     seedSession('coordinator')
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
@@ -128,7 +129,7 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     expect(screen.queryByRole('button', { name: 'Confirm event' })).not.toBeInTheDocument()
   })
 
-  it('shows a clear error, not a crash, when the event cannot be loaded', async () => {
+  it('EC08 AC36 (failure): shows a clear error, not a crash, when the event cannot be loaded', async () => {
     seedSession('organiser')
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(404, { message: 'Event not found: event-1' })))
 

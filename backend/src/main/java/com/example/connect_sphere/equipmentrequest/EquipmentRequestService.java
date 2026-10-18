@@ -26,6 +26,23 @@ public class EquipmentRequestService {
     private final EquipmentRequestLineRepository lines;
     private final EquipmentRepository equipment;
 
+    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
+     * Setter-injected so this service does not depend on the log; absent in
+     * plain unit tests, where nothing is announced. */
+    private org.springframework.context.ApplicationEventPublisher changeLog;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setChangeLog(org.springframework.context.ApplicationEventPublisher changeLog) {
+        this.changeLog = changeLog;
+    }
+
+    private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
+            String message) {
+        if (changeLog != null) {
+            changeLog.publishEvent(new com.example.connect_sphere.activity.service.EventChange(eventId, type, actor, message));
+        }
+    }
+
     public EquipmentRequestService(
             EventRepository events,
             EquipmentRequestRepository requests,
@@ -115,6 +132,10 @@ public class EquipmentRequestService {
             lines.save(new EquipmentRequestLine(
                     new EquipmentRequestLineId(requestId, item.equipmentId()), item.quantity()));
         }
+        int units = requestedItems.stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
+        announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_requested, coordinatorId,
+                "Requested " + units + (units == 1 ? " item" : " items") + " of equipment"
+                        + (requirement == null || requirement.isBlank() ? "" : ": " + requirement));
         return new EquipmentRequestDetailsResponse(
                 saved.getId(),
                 saved.getEventId(),

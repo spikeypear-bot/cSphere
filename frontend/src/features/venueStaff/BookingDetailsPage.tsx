@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { apiClient } from '../../lib/apiClient'
 import { Button } from '../../components/ui/Button'
 import type { VenueBookingDto, VenueBookingConflict, VenueUnavailabilityConflict } from '../../types/venueBooking'
 import { bookingConflictHighlights } from './bookingConflictHighlights'
@@ -8,12 +9,17 @@ import { EventRequirementsPanel } from './EventRequirementsPanel'
 import { useVenueRead } from './useVenueRead'
 import './BookingDetailsPage.css'
 import { BookingApproval, BookingInformationHeading } from './BookingApproval'
+import { VenueHoldPanel } from './VenueHoldPanel'
 import { BookingTimingEditor } from './BookingTimingEditor'
+import { BookingDecisionPanel } from './BookingDecisionPanel'
+import { bookingDisplayStatus } from '../../types/venueBookingStatus'
+import { NO_HOLDS, useHoldDeadline } from './useHoldDeadline'
 
 /** Shared booking details for Catalogue and the VS02 pending queue. */
 export function BookingDetailsPage() {
   const { bookingId } = useParams()
   const [timingRevision, setTimingRevision] = useState(0)
+  const [holdFormFor, setHoldFormFor] = useState<string | null>(null)
   const [conflictState, setConflictState] = useState<{ bookingId?: string; items: VenueBookingConflict[]; periods: VenueUnavailabilityConflict[] }>({ bookingId, items: [], periods: [] })
   if (conflictState.bookingId !== bookingId) setConflictState({ bookingId, items: [], periods: [] })
   const conflicts = conflictState.bookingId === bookingId ? conflictState.items : []
@@ -21,12 +27,13 @@ export function BookingDetailsPage() {
   const setConflicts = (items: VenueBookingConflict[], periods: VenueUnavailabilityConflict[]) => setConflictState({ bookingId, items, periods })
   const [searchParams] = useSearchParams()
   const fromApprovals = searchParams.get('from') === 'booking-approvals'
-  const { data: booking, error, retry, loading, replaceData, failRead } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, !fromApprovals)
+  const { data: booking, error, retry, loading, replaceData, failRead } = useVenueRead<VenueBookingDto>(`/venue-bookings/${bookingId}`, !fromApprovals, 5000, true)
+  const expiredHolds = useHoldDeadline(booking?.holds ?? NO_HOLDS, retry)
   const data = booking ? { ...booking, status: booking.status ?? 'pending' } : undefined
-  const highlights = data?.status === 'pending' ? [...conflicts, ...unavailablePeriods].map(conflict => bookingConflictHighlights(data.event, conflict)) : []
+  const highlights = data?.status === 'pending' ? [...conflicts, ...unavailablePeriods].map(conflict => bookingConflictHighlights(data.timing ?? data.event, conflict)) : []
   return <div className="feature-skeleton booking-details-page">
     <Link to={fromApprovals ? '/venue-staff/booking-approvals' : data ? `/venue-staff/catalogue/${data.venue.venueId}` : '/venue-staff/catalogue'}>
-      {fromApprovals ? 'Back to Pending Booking Requests' : data ? 'Back to venue details' : 'Back to venue catalogue'}
+      {fromApprovals ? 'Back to Booking Approvals' : data ? 'Back to venue details' : 'Back to venue catalogue'}
     </Link>
     <h1>Booking details</h1>
     {data?.requiresAlternative && <p role="status" className="unavailability-warning">Alternative arrangements required. This booking is affected by venue unavailability; the event has not been cancelled.</p>}
@@ -34,10 +41,28 @@ export function BookingDetailsPage() {
     {error && <div><p role="alert">{error}{data && " Showing the previously loaded booking; the requested booking could not be loaded."}</p><Button onClick={retry}>Try again</Button></div>}
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
       : <>
+        {data.status === 'rejected' && (data.rejectReason?.trim() || data.alternativeVenueAddress?.trim() || data.alternativeArrangement?.trim()) &&
+          <BookingDecisionPanel className="booking-rejection-details" role="status" aria-label="Rejection reason">
+            <h3>Rejection Reason</h3>
+            {data.rejectReason?.trim() && <p>{data.rejectReason}</p>}
+            {(data.alternativeVenueAddress?.trim() || data.alternativeArrangement?.trim()) && <dl>
+              {data.alternativeVenueAddress?.trim() && <><dt>Suggested Alternative Venue:</dt><dd>{data.alternativeVenueAddress}</dd></>}
+              {data.alternativeArrangement?.trim() && <><dt>Alternative Arrangement:</dt><dd>{data.alternativeArrangement}</dd></>}
+            </dl>}
+          </BookingDecisionPanel>}
         {!loading && !error && data.bookingId === bookingId
           ? <BookingApproval key={`${bookingId}:${timingRevision}`} booking={data} onApproved={replaceData} onUnavailable={failRead}
-              conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts} />
+              conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts}
+              onHoldRequested={() => setHoldFormFor(data.bookingId)} />
           : <div className="booking-details-page__section-header"><BookingInformationHeading /></div>}
+        {!loading && !error && <VenueHoldPanel key={data.bookingId} bookingId={data.bookingId} booking={data}
+          pending={data.status === 'pending'} initialHolds={data.holds ?? NO_HOLDS} creationOpen={holdFormFor === data.bookingId}
+          onCancel={() => setHoldFormFor(null)} onCreated={() => setHoldFormFor(null)} onConflicts={setConflicts}
+          onChanged={async updated => {
+            if (updated) replaceData(updated)
+            const current = await apiClient.get<VenueBookingDto>(`/venue-bookings/${data.bookingId}`, { cache: 'no-store' })
+            replaceData(current)
+          }} />}
         <div className="booking-detail-layout">
           <section aria-labelledby="venue-information-heading">
             <VenueDetailsPanel venue={data.venue} />
@@ -45,14 +70,13 @@ export function BookingDetailsPage() {
           <div className="booking-requirements-column" aria-busy={loading}>
             {loading && <span className="booking-loading-notice" role="status">Loading next booking…</span>}
             <section aria-labelledby="event-requirements-heading">
-              <EventRequirementsPanel event={data.event} status={data.status} rejectReason={data.rejectReason}
-                highlightStart={highlights.some(h => h.requestStart)} highlightEnd={highlights.some(h => h.requestEnd)}
-                alternativeVenueAddress={data.alternativeVenueAddress} alternativeArrangement={data.alternativeArrangement} />
+              <EventRequirementsPanel event={data.event} timing={data.timing} status={bookingDisplayStatus(data.status, data.holds, expiredHolds)}
+                highlightStart={highlights.some(h => h.requestStart)} highlightEnd={highlights.some(h => h.requestEnd)} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}
             <BookingTimingEditor key={data.bookingId} booking={data} onSaved={saved => {
               replaceData(saved); setConflicts([], []); setTimingRevision(value => value + 1)
-            }} disabled={loading || !!error} />
+            }} disabled={loading || !!error || bookingDisplayStatus(data.status, data.holds, expiredHolds) === 'tentative'} />
             {!fromApprovals && <BookingPagination venueId={data.venue.venueId} bookingId={data.bookingId} busy={loading || !!error} />}
           </div>
         </div>

@@ -43,6 +43,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("ECL-C2")
 class AssignedRequestsQueryTest {
 
     @Autowired MockMvc mvc;

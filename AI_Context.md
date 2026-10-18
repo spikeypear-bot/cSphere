@@ -4,6 +4,8 @@
 
 ConnectSphere is an Event Planning and Venue Booking System for ConnectSphere Event Services, a regional Southeast-Asian event-planning and venue-services organisation. It replaces fragmented coordination across email, spreadsheets, calendars, messaging apps, and manual documents with a single platform for planning and managing events, venues, equipment, and the people involved — Event Organisers, Event Coordinators, Venue Staff, Technical Support Staff, and Attendees. This is an SMU IS212 Software Project Management team deliverable: build a working, demonstrable, testable Release 1 that implements a customer-approved set of core features end-to-end, run under a real scrum process — not the broadest possible interpretation of the customer briefing.
 
+> **Before writing or changing any test**, follow "Writing or changing a test — every time" under *Testing rules (IS212 Week 9)* below. CI fails the PR if a test file names no user story.
+
 ## Sources of Truth (read in this order)
 
 1. `docs/product-context.md` — detailed requirements, roles, workflows, business rules, data model, NFRs, traceability.
@@ -134,7 +136,7 @@ Entities include `users`, `venues`, `events`, `event_requests`, equipment/bookin
   **What exists now (stages 0–7 of D19 + D20, all live-verified):** stateless filter chain (`config/SecurityConfig` — no `HttpSession`, CSRF disabled for the token API, `/actuator/**` and `/api/auth/**` permitAll, role rules per D20); `config/AuthenticationConfig` (a `ProviderManager` over a `DaoAuthenticationProvider`); `config/JwtConfig` (HS256 encoder/decoder + a `JwtAuthenticationConverter`); `user/` slice (`User`, `UserRole`, `UserRepository`, `UserPrincipal`, `AppUserDetailsService`, `DevUserSeeder`, `TokenService`, `RefreshTokenService`); `POST /api/auth/login|refresh|logout`. Access tokens are 15-minute HS256 JWTs claiming `sub` (user UUID), `iss`, `iat`, `exp`, `username`, `role`, `organisation`; refresh tokens are opaque 256-bit values, SHA-256-hashed in `refresh_tokens`, single-use, rotating, family-revoked on reuse. **HTTP Basic has been removed** — log in and send a Bearer token; `curl -u` no longer works. `@EnableMethodSecurity` is on. `common/web/RestAuthenticationEntryPoint` (401) and `RestAccessDeniedHandler` (403) put filter-chain rejections into the `ApiError` shape, and an `AccessDeniedException` handler on `ApiExceptionHandler` does the same for `@PreAuthorize` denials. Role rules for every endpoint live in `authorizeHttpRequests` (D20); `/api/event-requests/**` is additionally scoped by the token's `organisation` claim, **not** by the old `X-Organisation` header, which is no longer read. **Still missing:** the frontend — `apiClient` sends no `Authorization` header, so the React app is 401 against its own backend until a login page replaces D6a's role selector.
 - **Database**: PostgreSQL **18**, run via `docker-compose.yml` (`db` service, `csphere` database). Migrations live at `backend/src/main/resources/db/migration/V{n}__description.sql`; **never** hand-edit an already-applied migration — Flyway checksums it and the next boot fails. Add `V3__*.sql` instead, or reset dev DB with `docker compose down -v`.
 - **Frontend**: React **19.2**, Vite **8**, TypeScript **~6.0**, ESLint **10** + typescript-eslint. Vitest + React Testing Library are installed (see Commands). The 2026-09-12 note that `App.tsx` was the untouched starter is stale — real screens now exist; inspect `frontend/src` rather than trusting this line.
-- **CI exists** (verified 2026-09-26): `.github/workflows/ci-pipeline.yml` runs on push to `main` and on PRs into `main`, with two jobs — `frontend-build` (`npm ci` → `npm test` → `npm run build` in `frontend/`) and `backend-build` (`./mvnw -B -ntp clean verify` in `backend/` against a Postgres service container). Per IS212 Week 6, CI is only a *gate* if `main`'s branch protection/ruleset marks these jobs as required status checks — whether the team has ticked that box is not verifiable from the repo; ask before assuming a red check blocks merging.
+- **CI** (`.github/workflows/ci-pipeline.yml`, extended for IS212 Week 9; see D23/D24) runs on PRs into `main`, on pushes to `main`, weekly on a schedule and on demand. Jobs: `traceability` (every test file names a story); `frontend-build` (`npm ci` → lint → tests with coverage → build); `backend-build` (unit, then `@Tag("integration")` tests on a Postgres service container, JaCoCo coverage); `audit` (`npm audit --audit-level=high`). Then `package` (jar + frontend bundle built **once**, SBOM + vulnerability report), then `smoke` (`.github/scripts/smoke.sh` against the packaged jar) and `e2e` (Playwright against the packaged jar + built frontend). Each run's summary page shows coverage and traceability. No deploy jobs: deployment is out of project scope. Per IS212 Week 6, CI is only a *gate* if `main`'s branch protection marks these jobs as required status checks. Whether `traceability`/`audit`/`smoke`/`e2e` have been added is not verifiable from the repo; ask before assuming a red check blocks merging.
 - Git: `main` is the default branch; a `feature/event_request` branch exists but currently has zero commits ahead of `main`.
 
 ## Development Conventions (inferred from the codebase — confirm before deviating)
@@ -149,6 +151,7 @@ Entities include `users`, `venues`, `events`, `event_requests`, equipment/bookin
 - **Seed/fixture data belongs in a profile-guarded `CommandLineRunner`, never in a Flyway migration** (see `DevUserSeeder`). Migrations own *schema* and reference data the app cannot run without; environment-specific fixtures are neither, and migrations are immutable once applied — seeding accounts in a `V{n}` file means a new migration every time a password or user changes. A runner can also inject the real `PasswordEncoder` bean, so seeded hashes and login verification are guaranteed to use the same encoder (the classic "correct password always rejected" bug is encoding and verifying with different ones). `V1__mock_data.sql` is *not* precedent for the opposite — it is scaffolding slated for deletion.
 - **Granted authorities are a bare string match.** Since HTTP Basic was removed, `JwtConfig`'s `JwtAuthenticationConverter` is the only thing that grants authorities to a request; it produces `"ROLE_" + role.toUpperCase()`. (`UserPrincipal.getAuthorities()` still produces the same shape, but it is now only reached during login, where the authorities are not used for any authorisation decision — keep the two in step anyway, since a future non-token path would depend on it.) `hasRole("VS")` compiles to an exact `String.equals` against `"ROLE_VS"`, and a `GrantedAuthority` is just a wrapped string with no registry or validation — so `ROLE_vs` and `ROLE_VS` are unrelated, and a mismatch surfaces only as a 403 that reads like a broken rule. Worse, `@WithMockUser(roles = "VS")` tests would still pass while real Bearer requests 403, because that annotation builds the authority itself rather than going through the converter. Change the two together or not at all. The `role` claim itself stays lowercase — that is the domain value the frontend reads; the `ROLE_`/uppercase shape is Spring Security convention and translating into it belongs in the converter.
 - **Request timeline (D21, V13).** Any action that changes an event request or its event's planning records one entry via `ActivityService.record(...)` **inside the same transaction** (it is `MANDATORY`, so it fails loudly without one); a failed action must leave no entry. A new kind of entry is one `ActivityType` constant with its audience, not a migration. `event_request_activity` is append-only by trigger. **Notifications are sent after commit** (`afterThisTransactionCommits`), never inline: a `REQUIRES_NEW` insert that fails at commit escapes its try/catch and fails the request. State-changing loads use `findForUpdate` (row lock) so double submits are serialised.
+- **Event change log (EC-NEW5, D26).** Services outside `eventrequest` do not call `ActivityService` directly: they publish an `EventChange` and `ChangeLogRecorder` records it in the same transaction. A new kind of change is an `ActivityType` constant with its audience and a `major` flag. Normal/Major is computed on the server (`significance`), never in the UI. The log is read-only everywhere.
 - **Statuses (D22, V23).** Never add a status label map on a screen: show the `journeyStatus` (`StatusView`) the server sends, via `JourneyStatusBadge`/`JourneyStepper`. A new status is one `JourneyStatus` constant (backend) plus its tone in `frontend/src/types/status.ts`. Event lifecycle moves go through `EventLifecycleService` only; Safety Officer decisions (SO-C4, `ReadinessService.review`) go through `recordSafetyDecision(...)`; never set `events.status` directly. Incoming migrations through **V26** are preserved. **V27** captures per-booking setup/turnaround durations; **V28** adds timing review and conflict notifications while preserving lifecycle notification support. Check the migration directory and other branches before assigning another version.
 - **Check every branch before claiming a migration version.** `git ls-tree -r --name-only <branch> | grep V[0-9]` across all branches, not just your own — `origin/main` and five feature branches already carry a `V7`. The team has hit a version collision once (D15) and `feat/auth` deliberately claimed a colliding `V7` a second time, to be renumbered on merge.
 - **Object-oriented modelling rules (IS212 Week 5, "Communicating Design & Collaborating on Code"):** use inheritance only for a real "is-a" relationship that *also* needs polymorphism (a subclass overriding a method so the same call site behaves differently per type at runtime) — not for data-only variation (e.g. a role label), which belongs on one flat class as a field/enum instead. When an association between two classes carries its own meaningful data (dates, quantities, a status), give it its own class rather than bolting fields onto either side. Prefer a plain association over aggregation, and aggregation over composition, unless the stronger relationship is genuinely true — composition only when the child has no independent existence. Model only classes an actual story/AC needs. Keep class/sequence diagrams as versioned PlantUML/Mermaid text committed to the repo, updated in the same PR as the code they describe, not a one-off exported image — see `docs/decision-log.md` D16 for how this was applied to the current domain model. **Class diagrams are generated, not hand-drawn (DEV15):** the tests in `backend/src/test/java/com/example/connect_sphere/uml/` write `docs/class-diagrams/{domain,full,auth}.generated.puml` on every backend test run (`DomainClassDiagramTest` needs the database). After changing a class, run the backend tests and commit the regenerated `.puml` files in the same PR — CI's "Class diagrams up to date" step fails the PR otherwise. Never edit them by hand; change the filters or the clean-up rules in `ClassDiagrams.java` instead. `docs/class-diagram.stale.puml` is the old hand-drawn diagram, kept for reference only.
@@ -164,8 +167,92 @@ The course grades whether tests are *evidence*, not whether they exist. Apply th
 - **Coverage is a diagnostic, not a target.** Low coverage proves a gap; 100% proves nothing about correctness.
 - **FIRST**: Fast, Isolated (any order — fresh fixture per test), Repeatable (no flaky time/order dependence), Self-validating (assertions, no eyeballing), Timely (written with the code, TDD red→green→refactor where practical).
 - **Structure**: one behaviour per test, Arrange-Act-Assert, named after the requirement (`rejectsBookingWhenAttendanceExceedsCapacity`), not the method (`testSubmit2`).
-- **Pyramid**: most tests are unit tests (service logic in isolation); fewer integration tests (real DB/filter chain, Week 9); fewest end-to-end.
+- **Pyramid**: most tests are unit tests (service logic in isolation); fewer integration tests (real DB/filter chain); fewest end-to-end (see the Week 9 rules below).
 - **An agent (including Claude) reporting "all tests pass" is not evidence** — the required CI status check on the PR is. Never suggest merging, disabling, or bypassing a failing required check.
+
+## Testing rules (IS212 Week 9 — Automated Testing #2 & Continuous Delivery)
+
+Week 6 asked "is the evidence from one unit trustworthy?"; Week 9 asks "does it stay trustworthy across boundaries?" (`Materials/Week9/`, including the lab "From a Green Build to a Gated Release" and its reference pipeline). The full team-facing version, with examples, is **`docs/testing-strategy.md`**; decision-log D23 (CI) and D24 (testing and traceability) record why.
+
+**The prof grades testing and its links to user stories and ACs.** Week 4 Project Instructions: *"test evidence should make it possible to trace important user stories or acceptance criteria to the relevant tests"*. Instructors may ask us to *"trace a requirement to its implementation and tests"*. The rubric's top band reads *"normal, boundary, conflict, and failure scenarios … 100% coverage unless not possible and stated why"*. So:
+
+- **Every test traces to a story, mechanically.**
+  - Backend classes carry `@Tag("<StoryID>")` for each story covered, next to `@Tag("unit")`/`@Tag("integration")`.
+  - Frontend files name story IDs in `describe`/`it` titles or a `// @stories …` header.
+  - CI's `traceability` job (`.github/scripts/traceability.py --check`) fails if a test file names no story. It regenerates `docs/test-traceability.md`, which also lists High-priority stories with no tests.
+- **Test names say which AC and which kind of case**, e.g. `@DisplayName("EC08 AC26, AC27 (conflict): …")` or `it('EO04 AC14 (boundary): …')`. Case types: happy / negative / boundary / conflict / failure / cross-cutting (Week 4's 5 steps, plus the rubric's conflict and failure).
+- **Unit vs integration traceability.** A unit test usually proves one story's AC. Integration and E2E tests often cut across several stories, so tag all of them.
+- **Week 4 test cases go in the Sheet** (*Test Cases – Sprint N*: ID, scenario, pre-conditions, steps, data, expected, plus an execution record). **Remarks name the automated tests that execute each case**, so Sheet, ACs and code point at each other. Repository copies are in `docs/test-cases/` (e.g. `sprint3-jillian.md`, which maps all 95 ACs of EC-NEW2/EC08/EO04).
+
+**Writing or changing a test — every time (all agents, no prompt needed).** CI's `traceability` job fails the PR if any test file names no story. Follow these steps for every test you create or edit, without being asked:
+
+1. **Find the story ID** from the branch name (`git branch --show-current`).
+   - Examples: `feat/vs-c3-tentative-venue-holds` → `VS-C3`; `feature/ecnew5-change_log` → `EC-NEW5`; `feat/ec08-…` → `EC08`.
+   - Use the canonical form: uppercase, a hyphen before `C` or `NEW`, and two digits for plain numbers (`EO04`, `EC08`, `VS-C3`, `EC-NEW5`, `ECL-C7`, `TS01`, `SO-C4`, `AU04`, `DEV15`).
+   - If the branch names no clear story, **stop and ask the user**. Never guess or invent an ID.
+2. **Tag every test file you create or edit.**
+   - **Backend** (`backend/src/test/**/*Test.java`): on the class, add `@Tag("<StoryID>")` next to exactly one layer tag. Use `@Tag("integration")` for tests that use a real database or Spring context (`@SpringBootTest`), and `@Tag("unit")` otherwise.
+   - **Frontend** (`frontend/src/**/*.test.ts(x)`): make line 1 `// @stories <StoryID>`, and start the top-level `describe` title with the story ID.
+   - **E2E** (`frontend/e2e/*.spec.ts`): make line 1 `// @stories <IDs>`, and start each test title with a story ID.
+   - **Tests that cover several stories** (usually integration or E2E): tag **all** of them.
+   - **Existing tags:** keep them and add yours. Never remove or rename another story's tag.
+3. **Name each test after the AC it checks:** `"<StoryID> AC<n> (<case>): <what the user experiences>"`.
+   - Backend example: `@DisplayName("VS-C3 AC7 (conflict): a hold that overlaps a confirmed booking is refused and nothing is saved")`.
+   - Frontend example: `it('VS-C3 AC3 (negative): shows a validation error when the expiry is missing', …)`.
+   - `<case>` is exactly one of: happy, negative, boundary, conflict, failure, cross-cutting.
+   - **AC numbers come only from the acceptance criteria the user gives you**, numbered 1, 2, 3… in the order given. If you don't have them, ask. If the user can't give them, write just the story and case (`"VS-C3 (boundary): …"`). **Never make up AC numbers.**
+   - Expected values come from the AC text, not from what the code currently returns.
+4. **Cover more than the happy path.** For each AC, consider happy, negative (wrong role, missing or invalid input), boundary (limits, empty, exactly at the edge), conflict (overlaps, concurrent changes) and failure (the action fails and nothing is saved) cases. A test that checks something is refused also checks that nothing changed.
+5. **Verify before saying you're done.**
+   - Run `python .github/scripts/traceability.py --check` from the repo root. It must not list "Untraced test files".
+   - Run the tests you touched, and report both results to the user.
+   - Don't commit changes to `docs/test-traceability.md` unless asked.
+6. **Never:**
+   - weaken, skip or delete an existing test to make the check or build pass;
+   - change another story's tests or tags, except to add your own story's tag;
+   - edit or disable `.github/scripts/traceability.py` or the CI workflow to get past the check.
+
+   If something blocks you, stop and tell the user.
+
+**Test doubles: pick by what the AC requires.** These corrections to the team's Week 9 notes are deliberate; use this vocabulary in Q&A.
+
+| Double | Meaning | ConnectSphere example |
+|---|---|---|
+| Dummy | Must be passed, never used on this path | Repositories in `withdrawingNeedsAReason`: a blank reason is refused before any is touched |
+| Stub | Canned answers from **any** collaborator (not only external APIs). Assert on **state**. | `availability.affected(booking)` → `true` shows readiness lists the unavailable venue. **Still a unit test**: integration means the real components run together (e.g. `EventLifecycleFlowTest` on real Postgres). |
+| Mock | Checks the interaction happened, with the right arguments. Assert on **behaviour**. | Notifications: right recipient, `times(1)`, `never()` on failure; confirming never writes bookings |
+| Fake | Working simplified implementation | Not used: we run **real PostgreSQL** (Week 9's "disposable real infrastructure") rather than a fake DB. Frontend `stubApi` is a stub plus spy, not a fake. |
+
+- **Mock vs stub (Q&A):** mock when the requirement *is* the interaction; stub when you only control an input and check the result. **Never mock the unit under test.**
+- **Doubles can agree with each other and still be wrong about reality** (dollars vs cents). Component tests stub `fetch` with hand-written JSON, so integration and E2E tests guard the real contract.
+- **Expected values come from ACs, never from what the app shows.** This applies to codegen, generated and "healed" tests (Week 9 lab step 24: *"check its expected value against the brief"*). A healer that makes a test pass by changing what it checks has broken the test.
+- **Test data:** fresh state per test (rolled-back `@Transactional`, or unique names plus cleanup); small helpers (`FlowSupport`, `readyEvent()`, `frontend/e2e/support.ts`); only the values that matter visible; never real personal data.
+- **Flaky tests are fixed, never retried green.**
+  - Causes: timing, order and shared state, time and date, randomness, external services, concurrency.
+  - Fixes: wait for a condition (`expect(...)`, `findBy…`, health polls); inject the clock (`Clock`, `vi.useFakeTimers()`); fresh state; double the network boundary.
+  - Anti-fixes: sleeps, `waitForTimeout`, retries (`playwright.config.ts` has `retries: 0`), weakened assertions, skips.
+  - Real examples: the organiser wizard's **Next** saves first, so E2E waits for each step's field (`support.ts`); after another role's action, wait until the server shows it saved before the next role acts.
+- **E2E (Playwright, `frontend/e2e/`)** covers only critical journeys, chosen from **High-priority stories**:
+  - `golden-path.spec.ts`: EO01/02 → ECL assign → EC02 approve → EC03 venue → VS03 approve → EC08 send → SO-C4 approve → EC08 confirm → EO04/EO09;
+  - `failure-paths.spec.ts`: rejection; safety changes requested;
+  - `critical-journeys.spec.ts`: sign-in, wrong password, draft persists.
+
+  Decisions happen in the browser; the API is used only for test data that isn't the journey (a venue) and to look up IDs. Locators by role/label/text. Run per `frontend/e2e/README.md`.
+- **Smoke vs E2E:** smoke (`.github/scripts/smoke.sh`) is a few fast HTTP checks that the **packaged** jar is alive and roughly right, chosen from High-priority stories. E2E is browser journeys. Both run against the artifact built once in `package`, not the source.
+- **Prove the gate** (lab steps 27–28): a change only a user would notice must fail E2E while unit tests stay green. Done: removing the print rule (EO04 AC26) left all 43 component tests green and failed only the E2E print step.
+- **Coverage** is published on every CI run (`.github/scripts/coverage-summary.py`). It's a diagnostic, not a gate. Bring a story's classes to 100%, or list the exclusion with its reason in `docs/testing-strategy.md`. Uncovered branches are usually a missing boundary/failure test or dead code to delete.
+- **Where tests run:** your machine (unit + fast integration) → CI on the PR (the required gate) → CI after packaging (smoke + E2E against the built artifact) → a weekly scheduled run (spots flaky tests).
+- **Continuous delivery vs deployment** (examinable, *not* a project deliverable): delivery keeps every change releasable and a person approves the release; deployment releases every green build automatically. The lecture says CD "doesn't score extra marks", so the pipeline stops before deployment.
+
+### Q&A readiness (testing)
+
+Be ready to answer, for any test:
+1. Which user story and which AC does it test? (Read its name or tags; `docs/test-traceability.md`; `docs/test-cases/`.)
+2. What plausible wrong implementation would make it fail?
+3. Why this double? Why a mock and not a stub?
+4. Why is this a unit, integration or E2E test?
+5. Where did the expected value come from? (The AC, not the output.)
+6. Is it deterministic? (Clock, data, waits.)
 
 ## Adding a new API endpoint — checklist (D19/D20)
 
@@ -200,6 +287,20 @@ client can forge — this was a live cross-organisation leak on 2026-09-22.
 *whether* a caller may reach the endpoint. *Which rows* they get is a `WHERE`
 clause in the repository. For a list there is no yes/no to make at all — the
 answer is a smaller result set, and no annotation can express that.
+
+**5a. Coordinator endpoints are scoped by assignment (ECL-C7, D25).** An Event
+Coordinator may open or act on a request or event **only while it is assigned
+to them**. The event's own `coordinator_id` is the source of truth once the event
+exists, and reassignment moves both the request and the event in one transaction.
+- **Check assignment first**, before any validation of the input, so a stranger
+  learns nothing (403 `NotAssignedCoordinatorException`, the same plain
+  message for everyone).
+- **The Lead reads any request or event** (oversight) but never takes coordinator
+  actions.
+- **Never put another event's name or organiser in a coordinator response:**
+  conflicts say "Booked by another event" and the period.
+- **Every new coordinator endpoint gets a row** in
+  `CoordinatorAssignmentScopeTest.coordinatorEndpoints()`.
 
 **6. `@PreAuthorize` only where the rule needs a method argument or the
 principal.** A plain role check belongs in the filter chain, which rejects
@@ -260,8 +361,8 @@ been edited or renumbered, not for a new one.
 - Backend tests: `./mvnw test` from `backend/` (needs a JDK — see README for running it inside a container against the `db` service if you don't have Java locally). **Verified 2026-09-12**: 13/13 tests pass (`EventRequestServiceTest`, `EventRequestControllerTest`, `ConnectSphereApplicationTests`) against a real Postgres 18 instance, including the V3 migration. `@WebMvcTest` lives at `org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest` in this Spring Boot 4.1.1 project (not the pre-4.x package) — needs `spring-boot-starter-webmvc-test` on the test classpath, added alongside the other per-feature test starters already in `pom.xml`.
 - Frontend tests: `npm run test` (Vitest + React Testing Library, both added — none existed before). **Verified 2026-09-12**: 10/10 pass. `npm run build` (`tsc -b && vite build`) and `npm run lint` (ESLint) also verified clean.
 - No lint/static-analysis tool is configured for the backend (no Checkstyle/Spotless in `pom.xml`).
-- No seed-data command exists — `V1__mock_data.sql` is scaffolding only, not domain seed data.
-- CI runs exactly `npm ci && npm test && npm run build` (frontend) and `./mvnw -B -ntp clean verify` (backend) — run the same locally before opening a PR; a local "all tests pass" is Week 6's layer 1 feedback, the CI check on the PR is the authoritative one.
+- Optional manual demo scripts live in `backend/dev/seed/`, separate from Flyway and startup seeding. VS-C3 uses `./backend/dev/seed/vsc3-seed.ps1 -LocalDev -ExpiryMinutes 3` against a local backend: it creates a fresh labelled batch through the real APIs, retains prior attempts, and writes IDs/links under ignored `logs/vsc3/`. See `docs/vsc3-manual-testing.md` for scenarios and safeguards. `V1__mock_data.sql` remains scaffolding only.
+- Before opening a PR run what CI runs: `npm ci && npm run lint && npm test && npm run build` (frontend) and `./mvnw -B -ntp clean verify` (backend), plus `npm run test:e2e` if you changed a journey it covers. A local "all tests pass" is Week 6's layer 1 feedback; the CI check on the PR is the authoritative one.
 - **A mystery empty 401 is often a masked 404/500.** Spring Boot forwards unhandled errors to `/error`, which is a path like any other — under `.anyRequest().authenticated()` the forward is rejected and the real status is overwritten with a bodiless 401 carrying `WWW-Authenticate`. Re-send the request with `-u ec1:123456`: if the status changes, the 401 was never about authentication. Consider adding `/error` to `permitAll`.
 - **Known environment gotcha, fixed 2026-09-12**: `backend/mvnw` had CRLF line endings from a Windows checkout, which breaks it inside any Linux container (`docker compose up --build` included) with `/bin/sh^M: bad interpreter`. Fixed in the working tree and a root `.gitattributes` added to prevent recurrence — **this fix is not committed yet**; commit `backend/mvnw` and `.gitattributes` together so teammates on Windows don't hit the same failure.
 
@@ -292,7 +393,11 @@ Do not assume the backlog's current numbers (310 total points, 4×2-week sprints
 A story/feature is Done only when, per the Week 4 course material and this project's own DoD stories (DEV24/25/26 threaded-comment ACs):
 - It traces to a Within-Scope backlog item and satisfies its stated acceptance criteria.
 - Role access and server-side data-scoping have been considered and enforced (not just hidden in the UI).
-- Relevant automated tests exist and pass (unit and/or integration, per the feature's risk).
+- Relevant automated tests exist and pass (unit and/or integration, per the feature's risk), covering its normal, boundary, conflict and failure cases.
+- Every test traces to the story (story tag or ID) and names the AC and case type it checks; `python .github/scripts/traceability.py --check` passes.
+- The story's Week 4 test cases are recorded on its *Test Cases – Sprint N* lane in the Sheet, with an execution record and the automated tests named in Remarks.
+- The classes behind the story are fully covered, or each exclusion is stated with its reason in `docs/testing-strategy.md`.
+- A change to a critical journey keeps the E2E suite (`npm run test:e2e`) green.
 - The code has been reviewed (by a teammate, or explainable line-by-line by whoever generated it with AI assistance).
 - It works with existing repository conventions (layering, Flyway-owned schema, DTO/mapper pattern).
 - Documentation/README/architecture diagrams are updated when the change affects them.

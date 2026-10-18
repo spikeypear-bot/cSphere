@@ -166,6 +166,18 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** Hold expiry and its notification commit together; failure is retried by the expiry job. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createHoldExpiredNotification(UUID coordinatorId, UUID eventId, UUID bookingId, String name,
+            OffsetDateTime expiry) {
+        if (coordinatorId == null) return;
+        var notification = base(coordinatorId, NotificationType.venue_hold_expired, name);
+        notification.setEventId(eventId);
+        notification.setVenueBookingId(bookingId);
+        notification.setMessage("The tentative venue hold expired at " + expiry + ". The pending request is no longer reserved.");
+        repository.saveAndFlush(notification);
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -246,7 +258,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
-            case venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case venue_hold_expired, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
             // Sent to Venue Staff and Technical Support alike; neither has an
             // event page of its own yet, so the notification itself carries

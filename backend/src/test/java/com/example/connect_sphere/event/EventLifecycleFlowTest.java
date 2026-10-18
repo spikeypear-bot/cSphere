@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.IntStream;
 
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,9 +44,15 @@ import jakarta.persistence.EntityManager;
  * <p>Safety Officer decisions are recorded through the lifecycle service
  * directly: the Safety Officer's own screens and endpoints are SO-C4/C5/C6.
  */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("EC08")
+@Tag("EO04")
+@Tag("EC-NEW2")
+@Tag("SO-C4")
+@Tag("VS-C1")
 class EventLifecycleFlowTest {
 
     private static final List<VenueOperatingHourDto> ALL_WEEK = IntStream.rangeClosed(1, 7)
@@ -90,6 +98,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC08 AC16, AC25, AC29, EC-NEW2 AC2, AC18, EO04 AC6, AC8, AC12 (happy): the whole journey from Planning to Confirmed shows the same status everywhere")
     void theWholeJourneyFromPlanningToConfirmedShowsTheSameStatusEverywhere() throws Exception {
         UUID eventId = readyEvent();
 
@@ -126,6 +135,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC08 AC25 (negative): an event cannot be confirmed without the safety check")
     void anEventCannotBeConfirmedWithoutTheSafetyCheck() throws Exception {
         UUID eventId = readyEvent();
 
@@ -136,6 +146,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC08 AC10, AC15 (failure): an event without an approved venue cannot be sent, and every blocker is listed")
     void anEventWithoutAnApprovedVenueCannotBeSentAndEveryBlockerIsListed() throws Exception {
         UUID eventId = flow.approvedEvent("eo1", "ec1", FlowSupport.requestBody("Town Hall", 150, "none"));
 
@@ -146,6 +157,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC08 AC19, AC20 (happy): withdrawing needs a reason and returns the event to Planning")
     void withdrawingNeedsAReasonAndReturnsTheEventToPlanning() throws Exception {
         UUID eventId = readyEvent();
         mvc.perform(post("/api/events/" + eventId + "/safety-review").with(flow.as("ec1"))).andExpect(status().isOk());
@@ -160,6 +172,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC08 AC21, EO04 AC21, AC22, EC-NEW2 AC15 (conflict): a venue becoming unavailable after confirmation sends the event back for re-confirmation")
     void aVenueBecomingUnavailableAfterConfirmationSendsTheEventBackForReConfirmation() throws Exception {
         UUID eventId = readyEvent();
         mvc.perform(post("/api/events/" + eventId + "/safety-review").with(flow.as("ec1"))).andExpect(status().isOk());
@@ -187,6 +200,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EO04 AC2, AC3 (cross-cutting): organisers of another organisation see nothing, and other roles are refused")
     void organisersOfAnotherOrganisationSeeNothingAndOtherRolesAreRefused() throws Exception {
         UUID eventId = readyEvent();
 
@@ -199,6 +213,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC08 AC1, AC2, EC-NEW2 AC25 (cross-cutting): only the assigned coordinator can see readiness or move the event, including by direct API call")
     void onlyTheAssignedCoordinatorCanSeeReadinessOrMoveTheEvent() throws Exception {
         UUID eventId = readyEvent();
 
@@ -210,6 +225,7 @@ class EventLifecycleFlowTest {
     }
 
     @Test
+    @DisplayName("EC-NEW2 AC18, AC22 (happy): the organiser's request list shows the same status as the coordinator")
     void theOrganisersRequestListShowsTheSameJourneyStatusAsTheCoordinator() throws Exception {
         UUID eventId = readyEvent();
         mvc.perform(post("/api/events/" + eventId + "/safety-review").with(flow.as("ec1"))).andExpect(status().isOk());

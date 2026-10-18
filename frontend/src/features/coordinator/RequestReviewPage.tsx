@@ -10,6 +10,8 @@ import { JourneyStepper } from '../../components/ui/JourneyStatus'
 import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { RequestByline } from '../../components/ui/RequestByline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
+import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
+import { isNotAssigned } from '../../lib/notAssigned'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import { changedFields } from '../../lib/fieldChanges'
 import type { ActivityDto } from '../../types/activity'
@@ -68,6 +70,7 @@ export function RequestReviewPage() {
   const navigate = useNavigate()
   const [review, setReview] = useState<EventRequestReview | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [notAssigned, setNotAssigned] = useState(false)
   const [flags, setFlags] = useState<string[]>([])
   const [decision, setDecision] = useState<Decision | null>(null)
   // Used only when no field is flagged: a single general question.
@@ -95,6 +98,7 @@ export function RequestReviewPage() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
+        if (isNotAssigned(err)) setNotAssigned(true)
         setLoadError(err instanceof ApiClientError
           ? err.isForbidden ? 'This request is not assigned to you, so you cannot review it.' : err.message
           : 'Could not load this request.')
@@ -104,6 +108,7 @@ export function RequestReviewPage() {
     }
   }, [requestId, reloadToken])
 
+  if (notAssigned) return <NotAssignedNotice what="request" />
   if (loadError) {
     return (
       <div className="page page--compact">
@@ -385,7 +390,7 @@ export function RequestReviewPage() {
 
         <aside className="request-review__history split-layout__sticky" aria-labelledby="history-heading">
           <h2 id="history-heading">History</h2>
-          <ActivityTimeline entries={timeline} />
+          <ActivityTimeline entries={timeline} emptyText="No changes recorded yet." controls />
         </aside>
       </div>
     </div>

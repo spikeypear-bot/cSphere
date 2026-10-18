@@ -46,6 +46,9 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
+@Tag("ECL-C2")
+@Tag("ELC-C5")
+@Tag("AU04")
 class AssignedRequestsAccessTest {
 
     private static final String ASSIGNED = "/api/event-requests/assigned";

@@ -146,8 +146,12 @@ export function IncomingRequestReviewPage() {
     coordinators?.find((c) => c.userId === request.coordinatorId)?.username
       ?? (from && from.id === request.coordinatorId ? from.name : 'an Event Coordinator'))
   const waiting = request.status === 'clarification_required'
-  // ELC-C5: an assigned request still under review can move to another coordinator.
-  const reassignable = Boolean(request.coordinatorId) && (request.status === 'pending' || waiting)
+  // ELC-C5: an assigned request still under review can move to another
+  // coordinator; ECL-C7: so can an approved request whose event is still
+  // active (not cancelled or finished).
+  const activeEvent = request.status === 'approved' && Boolean(request.eventId)
+    && !(request.journeyStatus?.isFinal ?? false)
+  const reassignable = Boolean(request.coordinatorId) && (request.status === 'pending' || waiting || activeEvent)
   const name = request.eventName?.trim() || 'Untitled request'
 
   function choose(next: Decision) {
@@ -257,7 +261,9 @@ export function IncomingRequestReviewPage() {
             <Card className="lead-review__decision">
               <h2>{reassignable ? 'Reassign' : 'Decision'}</h2>
               <p className="field-hint">
-                {reassignable
+                {activeEvent
+                  ? 'Move this event to a different Event Coordinator. They take over its planning at once, and the current coordinator loses access straight away.'
+                  : reassignable
                   ? 'Move this request to a different Event Coordinator when it should not stay with the current one.'
                   : waiting
                     ? 'Waiting for the organiser to answer a clarification. It can still be assigned: the coordinator gets it when the organiser resubmits.'
@@ -350,7 +356,7 @@ export function IncomingRequestReviewPage() {
 
         <aside className="lead-review__history split-layout__sticky" aria-labelledby="lead-review-history">
           <h2 id="lead-review-history">History</h2>
-          <ActivityTimeline entries={timeline} />
+          <ActivityTimeline entries={timeline} emptyText="No changes recorded yet." controls />
         </aside>
       </div>
     </div>

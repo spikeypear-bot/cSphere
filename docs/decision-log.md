@@ -223,6 +223,127 @@ Built on `feature/ec08-eo04-ecnew2-event_lifecycle` (2026-10-11, merged with SO-
 - **EO04 organiser arrangements** (`GET /api/events/{id}/arrangements`). The response is built field by field, so internal notes, holds, buffers and rejected requests cannot leak. Nothing is shown before confirmation. After confirmation the organiser sees approved venues (with capacity, supported layouts, facilities and operating information), how their accessibility needs are met, equipment merged by item, the safety-approval and confirmation dates, and an "updated since first confirmed" or "being updated" marker (`first_confirmed_at` vs `confirmed_at`). Another organisation's event returns 404.
 - **Timeline entries** for event-stage actions store journey codes (e.g. `PLANNING` → `AWAITING_SAFETY_REVIEW`) in from/to status, anchored on the originating request.
 
+### D23 — IS212 Week 9: CI extended with lint, audit, package-once, smoke and browser E2E (no deployment)
+
+2026-10-13. Week 9's lab: "the front half of this pipeline transfers directly: lint, tests, a dependency audit, a smoke test of the running app, and a browser test of a key user journey are all worth adding to your project's workflow". The lecture puts continuous *delivery/deployment* in scope for the exam but not the project ("doesn't score extra marks"), so there are no staging/production jobs.
+
+- **Lint** runs inside `frontend-build`, so it is gated by the existing required check without a settings change. It surfaced one long-standing error (a redundant triple-slash reference in `vite.config.ts`), now fixed.
+- **Audit:** `npm audit --audit-level=high` blocks. It found 2 high-severity issues in build tools (`brace-expansion`, `source-map-js`), fixed with a lockfile-only `npm audit fix`. The backend jar gets an SBOM and a Grype scan that **reports but does not yet block**; make it blocking once the first report on `main` is reviewed, so a Spring upgrade is planned, not forced by a red build.
+- **Package once, test the package:** `package` builds the jar and the frontend bundle once; `smoke` and `e2e` run those artifacts, not the source (the lab's "tidy-packaging" lesson: checks on source cannot notice that what ships differs from what was tested).
+- **Smoke** (`.github/scripts/smoke.sh`): health UP, a bad password gets 401, `eo1` signs in, a signed-in call reaches the database, and an organiser gets 403 from a coordinator endpoint.
+- **E2E** (`frontend/e2e/`, Playwright): sign-in, a refused password, and an organiser's draft persisting through a reload. Kept deliberately few. Verified locally against the packaged jar: 3/3, then 9/9 with `--repeat-each=3`.
+- **Test-suite fixes from the lecture's flakiness list:** the autosave test's real 1.7 s sleep is now fake timers that pin the exact 1500 ms debounce boundary (a mutation from 1500 to 1000 ms is now caught; the old sleep could not catch it). Four database-backed Spring tests that were missing `@Tag("integration")` now have it, so CI runs them in the integration phase.
+- **For the team:** add `audit`, `smoke` and `e2e` to `main`'s required status checks once they have run green there. The vite proxy target is overridable (`API_PROXY_TARGET`) so E2E can run beside a dev backend.
+
+### D24 — Testing and traceability conventions (IS212 Weeks 4, 6, 9)
+
+2026-10-16, branch `test/week9-testing-traceability`. **Why:** the rubric grades "testing and traceability". Its top band reads "comprehensive and traceable … normal, boundary, conflict, and failure scenarios. 100% coverage unless not possible and stated why", and the deliverables say test evidence must let a reader "trace important user stories or acceptance criteria to the relevant tests". Before this, 9 of 53 backend test classes named a story; the Sprint 3 test-case tab had IDs but no content; coverage was measured but never shown.
+
+**Decided:**
+- **Every test traces to a story.**
+  - Java: a class-level `@Tag("<StoryID>")` per story covered, next to its layer tag.
+  - TypeScript: story IDs in the `describe`/`it` title, or a `// @stories` header.
+  - CI's new `traceability` job fails if a test file names no story. `.github/scripts/traceability.py` writes `docs/test-traceability.md`, including High-priority stories with no test.
+  - The team's 100 test files now trace to 45 stories.
+- **Test names cite the AC and the case type**, e.g. `EC08 AC26, AC27 (conflict): …`. Done in depth for EC-NEW2, EC08 and EO04: all 95 ACs trace to automated tests (`docs/test-cases/sprint3-jillian.md`, which also holds their Week 4 test cases for the Sheet). Other owners adopt it for their stories as they touch them.
+- **Test-double vocabulary** (dummy, stub, mock, fake) as defined in `docs/testing-strategy.md`, with ConnectSphere examples. No fakes: integration tests use real PostgreSQL.
+- **E2E for the critical journeys only**, chosen from High-priority stories:
+  - the cross-role golden path (request → assignment → approval → venue → safety check → confirmation → organiser's arrangements);
+  - two failure paths: rejection, safety changes requested.
+
+  Decisions are made in the browser; the API is used only for test data outside the journey and for ID lookups.
+- **Coverage is published, not gated.** The story's classes are brought to 100% or the exclusion is stated.
+
+**Evidence recorded while doing it (Weeks 6/9: think in mutants; fix flakiness, don't retry):**
+- **A test caught a real bug.** EO04's new unmount test caught React's duplicate-key warning on the organiser's event page: two sibling panels both used `key={reloadToken}`. Fixed.
+- **Mutation checks:**
+  - removing EO04's approved-bookings filter → caught by exactly the AC19 test;
+  - removing the print rule → all 43 component tests stayed green and **only** the E2E print step failed (lab steps 27–28: the gate catches what only a user would notice).
+- **Two flaky E2E runs, both timing, both fixed by waiting for a condition (never retries):**
+  - the wizard's Next saves before moving on, and the test clicked it twice without waiting;
+  - a failure-path setup opened the coordinator's page before Venue Staff's approval was saved.
+
+  After both fixes, 18/18 runs passed on a fresh packaged build.
+- **Coverage removed dead code instead of testing the impossible:** `formatDate(null)`; a Confirmed check that could never be false; a "no approved venue" branch that confirmation already rules out.
+- **EO04 AC25** now marks a Completed event "kept as a record" inside the arrangements card.
+
+**For the team:** add `traceability` (with `audit`, `smoke`, `e2e`) to `main`'s required checks once green. Fill your Sheet test-case lanes in the same format, naming your automated tests in Remarks. Turn any `// @stories` header into AC-level names when you next work on that story.
+
+### D25 — ECL-C7: the Lead's assignment is the single source of truth for coordinator access
+
+2026-10-17, branch `feature/eclc7-coordinator_access_scoping`. An audit of every endpoint an Event Coordinator can call found most were already scoped by assignment (review queue, request decisions, venue options/bookings/cancel, equipment requests, lifecycle, readiness, timelines, My events). It also found five gaps, now closed:
+
+1. **`GET /api/events/{id}` let any coordinator open any event.** It now requires the assigned coordinator; the Lead may view any event (`getForLead`, read-only).
+2. **Two event-specific Technical Support reads were open to every coordinator**, unscoped: an event's reservations and an equipment request's availability. Coordinators never use them, so the rule now excludes them (the Safety Officer keeps reservations). Inventory reads such as unit status (TS03) stay open to coordinators; they describe equipment, not anyone's event.
+3. **Venue options showed other events' names.** In the conflict list ("Occupied: …"), the reasons ("Already approved for …") and the refusal message ("… overlaps the event's time (Gala Dinner)"), they now read "Booked by another event, 10 Mar 2027, 9:00 AM – 12:00 PM (Singapore time)". Venue Staff's approval conflicts keep names: they are responsible for the venue.
+4. **Reassignment could not move an approved event.** It was limited to requests under review and never updated `events.coordinator_id`, so after approval the previous coordinator kept the event. Reassignment now also works for an approved request whose event is not cancelled or finished. It updates the request and the event in **one transaction under the event's row lock**, so access moves at once and an action the previous coordinator submits afterwards is refused. The Lead's *Coordinator assignments* page lists each coordinator's active events (`GET /api/events/by-coordinator`, Lead only, kept separate from ECL-C2's request list so that query stays unchanged) with *View event* and *Reassign*.
+5. **A refused coordinator saw raw text with an id.** The 403 message is now plain and identical for everyone ("This is not assigned to you. If you were working on it, the Event Coordinator Lead may have reassigned it…"), and coordinator pages show a "This event isn't assigned to you" panel with a way back.
+
+**Checked against the customer documents (Week 7 > Week 4 > Week 1).**
+- **Week 7:** *"The Lead can … assign a suitable Event Coordinator, and reassign events where necessary. Event Coordinators should only be able to manage events assigned to them, while the Event Coordinator Lead should be able to view all coordinator assignments and active events under their supervision. Relevant users should be notified when assignments or reassignments occur."*
+- **Week 4** (Coordinator Assignment): *"Events may subsequently be reassigned when staff responsibilities or availability change"*; access depends on the user's *"role and relationship to an event"*.
+
+Therefore:
+- **ECL-C5 AC5 was wrong.** It said an approved request cannot be reassigned, which contradicts both documents and ECL-C5's own story text ("reassign an in-progress … event"). Agreed with Jillian on 17 Oct 2026: approved requests whose event is still active can be reassigned. ECL-C5's test is updated accordingly, and **the Sheet's ECL-C5 AC5 needs rewording by its owner**.
+- **Backlog gap:** Week 7's "relevant users should be notified" includes the coordinators. Only the organiser is told today; ECL-C5 AC11 defers coordinators to **EC-NEW4**, which is High priority but unbuilt and has no ACs yet. This needs ACs and a sprint slot before Release 1.
+
+**Also fixed (found by the new endpoint matrix):** EC-C2's batch booking validated its input before checking assignment, so a stranger got "Add at least one venue" instead of 403. Assignment is now checked first.
+
+**Notifications** already follow `events.coordinator_id` at send time, so reassigning stops them going to the previous coordinator and sends them to the new one.
+
+**Evidence:**
+- `CoordinatorAssignmentScopeTest` (integration): every coordinator endpoint, as a coordinator who is not assigned, must answer 403 with no event data and change nothing (statuses, timeline, notifications, bookings, equipment). It also covers Lead view-but-not-act, unassigned requests, reassignment, totals and conflict privacy.
+- Unit tests for scoped lookups and notification routing.
+- Component tests for the notice, the Lead overview and reassignment.
+- E2E `access-scope.spec.ts`.
+- All 23 ACs traced in `docs/test-cases/sprint3-eclc7.md`.
+
+**No database migration.**
+
+### D26 — EC-NEW5: one change log per event, recorded where the change happens
+
+2026-10-17, branch `feature/ecnew5-change_log`. EC-NEW5 extends the D21 request timeline (append-only, audience per entry) into the event's full change log. It does not add a second log.
+
+**Design**
+- **Services announce, one listener records.** Venue Staff, Technical Support and Venue Availability services publish an `EventChange(eventId, type, actor, message)`. `ChangeLogRecorder` turns it into an entry on the event's originating request, with the signed-in user as actor when none is named.
+  - The listener is synchronous, so the entry is written **in the caller's transaction** (`ActivityService.record` is `MANDATORY`). A refused or rolled-back action leaves no entry.
+  - The publisher is optional (setter-injected), so plain unit tests of those services need nothing extra.
+  - `VenueBecameUnavailable` (VS-C1) is logged on every affected event by the same recorder.
+- **New entry kinds** (no migration; `activity_type` is text):
+  - venue: booking approved, rejected, alternative suggested, replaced, another venue added, venue unavailable;
+  - equipment: requested, approved, rejected;
+  - a virtual **Completed** entry, computed at read time at the event's end once a confirmed event has ended. Nobody performs it, so it has no actor or role and is never stored.
+- **Normal or Major is decided on the server** and sent as `significance`. A kind is always Major when the story lists it: reassignment, venue unavailable, booking rejected or cancelled, additional venue, safety rejection or changes requested, returned to Planning. An organiser's resubmission is Major when it changes one of Week 4's important fields (date, time, attendance, venue or equipment requirements). The comparison ignores time-zone notation, number format and list order.
+- **UI.** The change log on the event page and the coordinator and Lead review pages gains:
+  - "All changes" and "Major only" chips with counts, and a way back from an empty filter;
+  - "Jump to latest";
+  - a text "Major" badge (not colour alone);
+  - "(Singapore time)" next to each exact time;
+  - a note for requests that predate the log;
+  - "No changes recorded yet.";
+  - on the event page, an error with Try again that leaves the rest of the page working.
+
+  The log stays read-only: no edit, delete or revert.
+
+**Checked against the customer documents (Week 7 > Week 4 > Week 1).**
+- Week 4 (Event Information Management): *"distinguish between information that may be edited normally and important changes that may affect arrangements already made"*.
+- Week 4 (Event Change Requests): *"date, time, expected attendance, venue requirements, or equipment requirements"*.
+- Week 1: auditability of who changed what and when.
+
+Therefore:
+- **EC-NEW5 AC18's Major list should include Week 4's important fields.** The implementation does; the owner should reword AC18 in the Sheet.
+- **Two ACs depend on unbuilt features:** AC11's tentative holds (VS-C3) and AC14's event cancellation. Their types will be added when those stories land; reassignment, unavailability, confirmation and completion are logged today.
+- **AC7 "detail edits"** are captured where they can happen. An organiser can edit only while a clarification is open, and those edits appear on the resubmission entry as previous → new values (V14), not as separate entries.
+
+**Evidence:**
+- `ActivityServiceTest` and `ChangeLogRecorderTest` (unit).
+- `ChangeLogFlowTest` (integration, real PostgreSQL): each kind, who and role, order, failure leaves nothing, the trigger refuses UPDATE and DELETE, audiences, and full history after reassignment.
+- `ChangeLog.test.tsx` (component).
+- Golden-path E2E steps.
+- All 35 ACs traced in `docs/test-cases/sprint3-ecnew5.md`.
+
+**No database migration.**
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
@@ -308,6 +429,25 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - **Database:** Keep incoming V1–V26 unchanged. V27 backfills duration snapshots without changing booking windows; V28 adds timing review, overlap notification tracking and timing notification types while retaining lifecycle notification constraint branches. Legacy nullable windows fall back to event times. Old unpublished local V23/V24 timing histories require separate reconciliation.
 - **Consequence:** Screens distinguish booking windows from advertised event times. Timing edits affect only the selected booking's buffers. Existing overlaps are reported without automatic cancellation. See [implementation and verification](venue-booking-duration-snapshots.md).
 
+## VS-C3 — Time-limited tentative holds (18 October 2026)
+
+- **Decision:** Venue Staff place holds on existing pending booking requests. A
+  child attempt-history table preserves re-holding without creating duplicate
+  bookings or changing ordinary pending-request semantics. The held interval is
+  the booking's complete occupied period using its saved duration snapshots.
+- **Lifecycle:** Immediate server-clock expiry controls availability; a 30-second
+  configurable worker persists expiry and coordinator notification together.
+  Release/expiry leaves the request pending. Conversion atomically approves that
+  same booking and consumes only its active, unexpired hold. Later ordinary
+  approval after expiry/release is a separate fresh availability decision.
+- **Scope:** No anonymous holds, new future-start restriction, expiry-before-start
+  restriction, or per-venue staff ownership model. Existing event safety and
+  confirmation workflows remain separate. All new `/api/venue-bookings/*/holds`
+  and `/api/venue-holds/**` endpoints require Venue Staff; coordinator hold details
+  travel only through existing assignment-scoped booking responses.
+- **Evidence:** [Design, API and acceptance mapping](tentative-venue-holds.md),
+  `VenueHoldFlowTest`, `VenueHoldPanel.test.tsx`, and the browser hold journey.
+
 ## DEV15 — Class diagrams generated from the code (18 October 2026)
 
 - **Decision:** Replace the hand-drawn `docs/class-diagram.puml` (D16) with diagrams generated by tests in `backend/src/test/java/com/example/connect_sphere/uml/`, using `plantuml-generator-util` (test scope only). Three levels are written to `docs/class-diagrams/`: `domain` (entities, enums, value types), `full` (every layer, minus mock scaffolding and MapStruct `*MapperImpl`) and `auth` (`user`, `config`, `common.web`, minus `DevUserSeeder` and `ApiExceptionHandler`).
@@ -319,4 +459,4 @@ The user approved implementing the supplied VS01 overview end to end, including 
   - **Domain scope.** `StatusView` (an API response shape) and `OperatingHours` (a static helper) are left out. The test fails when any other class that is neither an entity, an enum nor a listed value type reaches the domain diagram.
   - D16's flat, no-inheritance reasoning still applies; the generator draws whatever the code has.
 - **Consequences:** Every backend test run rewrites the `.puml` files, and CI's "Class diagrams up to date" step fails a PR whose committed diagrams differ from the regenerated ones, so commit them in the same PR as the class change. CI checks the PR merged into `main`, so a PR may need its diagrams regenerated after another class-changing PR merges first. The old file is kept as `docs/class-diagram.stale.puml` for reference and is no longer updated.
-- **Follow-ups (code, not diagram — need their own stories):** `Event`/`VenueEvent` and `VenueBooking`/`VenueBookingRecord` map the same tables; most links are UUID fields rather than object references; `Venue` and `Event` store layouts, facilities and accessibility needs as `List<String>` although `VenueLayout`, `Facility` and `AccessibilityFeature` enums exist (so those enums sit unconnected on the diagram), and `EventSafetyReview.reviewStatus` is a `String`; most entities have no behaviour beyond accessors. The DEV15 AC also asks for "tentative holds with expiry", which have no entity or migration yet.
+- **Follow-ups (code, not diagram — need their own stories):** `Event`/`VenueEvent` and `VenueBooking`/`VenueBookingRecord` map the same tables; most links are UUID fields rather than object references; `Venue` and `Event` store layouts, facilities and accessibility needs as `List<String>` although `VenueLayout`, `Facility` and `AccessibilityFeature` enums exist (so those enums sit unconnected on the diagram), and `EventSafetyReview.reviewStatus` is a `String`; most entities have no behaviour beyond accessors. VS-C3's tentative hold is a JDBC-read record (`VenueHold`, with `status` as a `String`), not an entity, so the domain diagram shows it as a value type with UUID attributes rather than relationship lines; `venue_booking_holds`'s foreign keys are in the schema itself.

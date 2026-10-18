@@ -32,6 +32,8 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingStateExceptio
 @Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
+@Tag("VS04")
+@Tag("VS09")
 class VenueBookingRejectionTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
