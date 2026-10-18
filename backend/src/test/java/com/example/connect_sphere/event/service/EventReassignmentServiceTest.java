@@ -39,6 +39,7 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 @Tag("unit")
+@Tag("EC-C1")
 class EventReassignmentServiceTest {
 
     private static final UUID EVENT_ID = UUID.randomUUID();

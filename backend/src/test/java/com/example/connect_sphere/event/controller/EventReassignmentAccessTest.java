@@ -29,6 +29,7 @@ import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.event.service.EventReassignmentService;
 
 @Tag("unit")
+@Tag("EC-C1")
 @WebMvcTest(EventReassignmentController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 class EventReassignmentAccessTest {

@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**116 test files, 1149 tests, 49 stories traced, 0 files untraced.**
+**121 test files, 1166 tests, 50 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -19,6 +19,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EC07 | 1 | 2 | 1 |  | 34 | — | happy, negative, conflict, failure, cross-cutting |
 | EC08 | 4 | 2 | 3 | 2 | 145 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 2 | 1 | 1 | 1 | 31 | — | happy, boundary, cross-cutting |
+| EC-C1 | 2 | 1 | 2 |  | 17 | — | — |
 | EC-C2 |  | 1 | 2 |  | 53 | — | negative |
 | EC-NEW2 | 2 | 1 | 7 | 2 | 156 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 1 |  |  |  | 47 | — | — |
@@ -197,6 +198,15 @@ Some of these are not built yet; a story that is built and still listed here nee
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 
 </details>
+<details><summary>EC-C1</summary>
+
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/EventReassignmentAccessTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventReassignmentFlowTest.java`
+- frontend component/unit: `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/EventReassignmentRequestsPage.test.tsx`
+
+</details>
 <details><summary>EC-C2</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
@@ -310,10 +320,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
@@ -324,10 +334,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
@@ -416,8 +426,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>TS01</summary>
 
-- frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
 
 </details>
 <details><summary>TS02</summary>
@@ -445,8 +455,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueavailability/UnavailabilityValidationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
-- frontend component/unit: `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`
 
 </details>
 <details><summary>VS02</summary>
@@ -507,9 +517,9 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>VS15</summary>
 
-- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>

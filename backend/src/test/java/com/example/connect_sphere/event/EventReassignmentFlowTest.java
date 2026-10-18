@@ -23,6 +23,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.notification.service.NotificationService;
 
 @Tag("integration")
+@Tag("EC-C1")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
