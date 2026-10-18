@@ -1,5 +1,5 @@
 // @stories EC02 EO26  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { SessionProvider } from '../../lib/session'
 import { seedSession } from '../../test/apiStubs'
@@ -25,7 +25,13 @@ function renderByline(updatedAt = '2026-09-21T01:00:00Z', timeline = TIMELINE, c
 }
 
 describe('RequestByline', () => {
+  // Fixtures are dated September 2026; pin the clock so relative times stay "… ago".
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-25T01:00:00Z'))
+  })
   afterEach(() => {
+    vi.useRealTimers()
     cleanup()
     window.localStorage.clear()
   })
