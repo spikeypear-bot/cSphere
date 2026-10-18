@@ -61,6 +61,10 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
 public class VenueBookingRequestService {
     private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
 
+    @Autowired(required = false)
+    private com.example.connect_sphere.venuebooking.hold.VenueHoldService holdService;
+    @Autowired(required = false)
+    private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
     static final int MAX_TEXT_LENGTH = 2000;
     private static final List<VenueBookingStatus> ACTIVE =
             List.of(VenueBookingStatus.pending, VenueBookingStatus.approved);
@@ -358,6 +362,7 @@ public class VenueBookingRequestService {
             throw new VenueBookingStateException("Resolve the pending replacement request before cancelling the original booking.");
         String why = optionalText(reason, "The reason");
         VenueBookingStatus previous = booking.getStatus();
+        if (holdService != null) holdService.endForBooking(bookingId, coordinatorId);
         booking.setStatus(VenueBookingStatus.cancelled);
         VenueBookingRecord saved = bookings.save(booking);
         if (previous == VenueBookingStatus.approved)
@@ -552,7 +557,7 @@ public class VenueBookingRequestService {
                         b.getEndDatetime() == null ? event.getEndDatetime() : b.getEndDatetime(),
                         b.getSetupDurationMinutes(), b.getTurnaroundDurationMinutes(), b.getTimingNote(),
                         ACTIVE.contains(b.getStatus()) && event.getStatus() != EventStatus.completed
-                        && event.getStatus() != EventStatus.cancelled));
+                        && event.getStatus() != EventStatus.cancelled), holds == null ? List.of() : holds.history(b.getBookingId()));
     }
 
     /** Same reason as EventRequestService.afterThisTransactionCommits: the

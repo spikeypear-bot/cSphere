@@ -29,6 +29,20 @@ workflow exists. Manual scripts under `backend/dev/seed/` create their own demo 
 event and pending booking and include guarded cleanup. They never run automatically.
 Share scripts, not database dumps. Development seeds are separate from Flyway migrations.
 
+### Optional VS-C3 demo data (time-limited venue holds)
+
+Use the [VS-C3 seed and manual testing guide](docs/vsc3-manual-testing.md) for
+create/release, live expiry, conversion, competing requests and retained history.
+After rebuilding the backend, run from PowerShell:
+
+```powershell
+./backend/dev/seed/vsc3-seed.ps1 -LocalDev -ExpiryMinutes 3
+```
+
+This manual API seeder creates a new labelled local batch with future booking
+dates and relative expiry deadlines. It prints staff/coordinator links and saves
+a local manifest under `logs/vsc3/`; it never runs at startup or resets old demos.
+
 ### Tests
 
 How we test, and how every test traces to a user story and AC: [docs/testing-strategy.md](docs/testing-strategy.md).

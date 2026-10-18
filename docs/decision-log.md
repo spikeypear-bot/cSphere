@@ -428,3 +428,22 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - **Validation:** Check full occupied intervals during selection, submission, approval and staff timing edits, including opening hours, unavailable periods and operational issues. Batch submission is transactional.
 - **Database:** Keep incoming V1–V26 unchanged. V27 backfills duration snapshots without changing booking windows; V28 adds timing review, overlap notification tracking and timing notification types while retaining lifecycle notification constraint branches. Legacy nullable windows fall back to event times. Old unpublished local V23/V24 timing histories require separate reconciliation.
 - **Consequence:** Screens distinguish booking windows from advertised event times. Timing edits affect only the selected booking's buffers. Existing overlaps are reported without automatic cancellation. See [implementation and verification](venue-booking-duration-snapshots.md).
+
+## VS-C3 — Time-limited tentative holds (18 October 2026)
+
+- **Decision:** Venue Staff place holds on existing pending booking requests. A
+  child attempt-history table preserves re-holding without creating duplicate
+  bookings or changing ordinary pending-request semantics. The held interval is
+  the booking's complete occupied period using its saved duration snapshots.
+- **Lifecycle:** Immediate server-clock expiry controls availability; a 30-second
+  configurable worker persists expiry and coordinator notification together.
+  Release/expiry leaves the request pending. Conversion atomically approves that
+  same booking and consumes only its active, unexpired hold. Later ordinary
+  approval after expiry/release is a separate fresh availability decision.
+- **Scope:** No anonymous holds, new future-start restriction, expiry-before-start
+  restriction, or per-venue staff ownership model. Existing event safety and
+  confirmation workflows remain separate. All new `/api/venue-bookings/*/holds`
+  and `/api/venue-holds/**` endpoints require Venue Staff; coordinator hold details
+  travel only through existing assignment-scoped booking responses.
+- **Evidence:** [Design, API and acceptance mapping](tentative-venue-holds.md),
+  `VenueHoldFlowTest`, `VenueHoldPanel.test.tsx`, and the browser hold journey.

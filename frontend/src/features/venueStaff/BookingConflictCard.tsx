@@ -8,6 +8,8 @@ export function BookingConflictCard({ conflict, request }: {
   request: VenueBookingDto['event']
 }) {
   const highlights = bookingConflictHighlights(request, conflict)
+  const occupiedConflict = conflict.effectiveStart && conflict.effectiveEnd &&
+    Date.parse(request.startDatetime) < Date.parse(conflict.effectiveEnd) && Date.parse(request.endDatetime) > Date.parse(conflict.effectiveStart)
   return <Card className="booking-conflict-card" role="group" aria-label={`Conflicting booking: ${conflict.eventName}`}>
     <dl className="booking-conflict-card__fields">
       <div className="booking-conflict-card__name"><dt>Booking Name</dt><dd>{conflict.eventName}</dd>
@@ -21,7 +23,7 @@ export function BookingConflictCard({ conflict, request }: {
         : conflict.turnaroundDurationMinutes === 0 ? '0 minutes (no turnaround period)'
         : `${conflict.turnaroundDurationMinutes} minutes · ${formatEventTimeRange(conflict.endDatetime, conflict.effectiveEnd)}`}</dd></div>
       {conflict.effectiveStart && conflict.effectiveEnd && <div className="booking-conflict-card__name"><dt>Venue Occupied</dt>
-        <dd>{formatEventTimeRange(conflict.effectiveStart, conflict.effectiveEnd)}</dd></div>}
+        <dd className={occupiedConflict ? 'booking-time-conflict' : undefined}>{formatEventTimeRange(conflict.effectiveStart, conflict.effectiveEnd)}</dd></div>}
     </dl>
   </Card>
 }

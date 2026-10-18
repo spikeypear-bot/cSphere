@@ -1,8 +1,11 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { StatusFilter } from '../../components/ui/JourneyStatus'
+import { BOOKING_STATUS_LABELS, bookingDisplayStatus } from '../../types/venueBookingStatus'
+import { useHoldDeadline } from './useHoldDeadline'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
@@ -17,14 +20,20 @@ function requirementsSummary(value: string | null | undefined) {
 }
 
 export function BookingApprovalsPage() {
-  const { data, error, loading, retry } = useVenueRead<VenueBookingDto[]>('/venue-staff/booking-requests')
+  const { data, error, loading, retry } = useVenueRead<VenueBookingDto[]>('/venue-staff/booking-requests', false, 5000)
   const [refreshRequested, setRefreshRequested] = useState(false)
-  const pending = data?.filter(booking => booking.status === 'pending')
+  const [filter, setFilter] = useState<string | null>(null)
+  const holds = useMemo(() => (data ?? []).flatMap(b => b.holds ?? []), [data])
+  const expired = useHoldDeadline(holds, retry)
+  const requests = (data ?? []).filter(b => b.status === 'pending')
+  const status = (b: VenueBookingDto) => bookingDisplayStatus(b.status, b.holds, expired)
+  const pending = requests.filter(b => status(b) === 'pending')
+  const tentative = requests.filter(b => status(b) === 'tentative')
   const refresh = () => { setRefreshRequested(true); retry() }
 
   return <div className="feature-skeleton booking-approvals-page">
     <PageHeader
-      title="Pending booking requests"
+      title="Booking approvals"
       description="Review the requested venue and event requirements before opening the full booking details."
       actions={
         <Button variant="ghost" onClick={refresh} disabled={loading} aria-label="Refresh pending booking requests">
@@ -37,23 +46,46 @@ export function BookingApprovalsPage() {
         <p role="alert">Could not load pending booking requests. {error}</p>
         <Button variant="secondary" onClick={retry}>Try again</Button>
       </Card>
-      : pending?.length === 0 ? <Card className="feature-skeleton__body"><p>No pending booking requests found.</p></Card>
-      : <ul className="booking-approvals-list">{pending?.map(booking => <li key={booking.bookingId}>
-        <Card className="feature-skeleton__body booking-approvals-card">
-          <div className="booking-approvals-card__header">
-            <h2>{booking.event.eventName?.trim() || 'Unnamed event'}</h2>
-            <span className="feature-skeleton__badge">Status: Pending</span>
-          </div>
-          <dl>
-            <div><dt>Requested venue</dt><dd>{booking.venue.venueAddress?.trim() || 'Not specified'}</dd></div>
-            <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd></div>
-            <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd></div>
-            {booking.timing && <div><dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd></div>}
-            <div><dt>Expected attendance</dt><dd>{booking.event.expectedAttendance.toLocaleString()} people</dd></div>
-            <div><dt>Venue requirements summary</dt><dd>{requirementsSummary(booking.event.venueRequirements)}</dd></div>
-          </dl>
-          <Link to={`/venue-staff/bookings/${booking.bookingId}?from=booking-approvals`}>View booking details</Link>
-        </Card>
-      </li>)}</ul>}
+      : <>
+        <StatusFilter statuses={requests.map(b => ({ code: status(b), label: BOOKING_STATUS_LABELS[status(b)] }))}
+          selected={filter} onChange={setFilter} label="Filter booking approvals by status" showSingle />
+        {(filter === null || filter === 'pending') && <section className="booking-approvals-section" aria-labelledby="pending-bookings-heading">
+          <h2 id="pending-bookings-heading">Pending booking requests</h2>
+          <p>Requests awaiting a decision. Approve, reject, or put a request on tentative hold.</p>
+          {!pending.length ? <Card className="feature-skeleton__body"><p>No pending booking requests found.</p></Card>
+            : <BookingRequestList bookings={pending} />}
+        </section>}
+        {(filter === null || filter === 'tentative') && <section className="booking-approvals-section" aria-labelledby="tentative-bookings-heading">
+          <h2 id="tentative-bookings-heading">Tentative venue holds</h2>
+          <p>Reserved temporarily while arrangements are finalised. Open a booking to release or convert its hold.</p>
+          {!tentative.length ? <Card className="feature-skeleton__body"><p>No active tentative venue holds.</p></Card>
+            : <BookingRequestList bookings={tentative} held />}
+        </section>}
+      </>}
   </div>
+}
+
+function BookingRequestList({ bookings, held = false }: { bookings: VenueBookingDto[]; held?: boolean }) {
+  return <ul className="booking-approvals-list">{bookings.map(booking => {
+    const status = held ? 'tentative' : 'pending'
+    const hold = held ? booking.holds?.find(h => h.status === 'active') : undefined
+    return <li key={booking.bookingId}>
+      <Card className="feature-skeleton__body booking-approvals-card">
+        <div className="booking-approvals-card__header">
+          <h3>{booking.event.eventName?.trim() || 'Unnamed event'}</h3>
+          <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status}>Status: {BOOKING_STATUS_LABELS[status]}</span>
+        </div>
+        <dl>
+          <div><dt>Requested venue</dt><dd>{booking.venue.venueAddress?.trim() || 'Not specified'}</dd></div>
+          <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd></div>
+          <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd></div>
+          {booking.timing && <div><dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd></div>}
+          {hold && <div><dt>Hold expiry (SGT)</dt><dd>{formatEventDateTime(hold.expiresAt)}</dd></div>}
+          <div><dt>Expected attendance</dt><dd>{booking.event.expectedAttendance.toLocaleString()} people</dd></div>
+          <div><dt>Venue requirements summary</dt><dd>{requirementsSummary(booking.event.venueRequirements)}</dd></div>
+        </dl>
+        <Link to={`/venue-staff/bookings/${booking.bookingId}?from=booking-approvals`}>View booking details</Link>
+      </Card>
+    </li>
+  })}</ul>
 }

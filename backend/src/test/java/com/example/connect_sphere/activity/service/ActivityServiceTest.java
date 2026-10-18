@@ -42,6 +42,28 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("EC-NEW5")
 class ActivityServiceTest {
 
+    @Test
+    @Tag("VS-C3")
+    @DisplayName("VS-C3 audit (happy): automatic expiry is attributed to the system while retaining the initiating staff reference")
+    void expiryHasSystemActor() {
+        var actors = mock(UserRepository.class);
+        var actor = new com.example.connect_sphere.user.entity.User();
+        UUID actorId = UUID.randomUUID();
+        actor.setUserId(actorId);
+        actor.setUsername("vs1");
+        actor.setRole(UserRole.vs);
+        when(actors.findById(actorId)).thenReturn(Optional.of(actor));
+        var recording = new ActivityService(repository, actors, events);
+        recording.record(new ActivityService.Entry(requestId, eventId, ActivityType.venue_hold_expired,
+                actorId, "System: hold expired.", null, "active", "expired"));
+        var saved = org.mockito.ArgumentCaptor.forClass(RequestActivity.class);
+        org.mockito.Mockito.verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getActorName()).isEqualTo("ConnectSphere");
+        assertThat(saved.getValue().getActorRole()).isEqualTo("system");
+        assertThat(saved.getValue().getActorUserId()).isEqualTo(actorId);
+        assertThat(saved.getValue().getAudienceRoles()).containsExactlyInAnyOrder("ec", "vs");
+    }
+
     private final RequestActivityRepository repository = mock(RequestActivityRepository.class);
     private final EventRepository events = mock(EventRepository.class);
     private final ActivityService service = new ActivityService(repository, mock(UserRepository.class), events);

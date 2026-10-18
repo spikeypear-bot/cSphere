@@ -13,11 +13,15 @@ export function BookingTimingSummary({ timing, headingLevel = 3, bookingLinks = 
       <div><dt>Venue Occupied</dt><dd>{range(timing.effectiveStart, timing.effectiveEnd)}</dd></div>
       {timing.timingNote && <div><dt>Timing Reason</dt><dd>{timing.timingNote}</dd></div>}
     </dl>
-    {(timing.conflicts ?? []).length > 0 && <div role="status" className="unavailability-warning">
-      <p>Occupied time overlaps approved bookings. Review these arrangements with Venue Staff; no booking has been cancelled.</p>
+    <BookingTimingConflicts timing={timing} bookingLinks={bookingLinks} />
+  </section>
+}
+
+export function BookingTimingConflicts({ timing, bookingLinks = false }: { timing?: BookingTiming | null; bookingLinks?: boolean }) {
+  return !!timing?.conflicts?.length && <div role="status" className="unavailability-warning">
+      <p>Occupied time overlaps approved bookings or tentative holds. Review these arrangements with Venue Staff; no booking has been cancelled.</p>
       <ul>{timing.conflicts.map(conflict => <li key={conflict.bookingId}>
         {bookingLinks ? <Link to={`/venue-staff/bookings/${conflict.bookingId}`}>{conflict.eventName}</Link> : conflict.eventName}: {range(conflict.effectiveStart ?? conflict.startDatetime, conflict.effectiveEnd ?? conflict.endDatetime)}
       </li>)}</ul>
-    </div>}
-  </section>
+    </div>
 }

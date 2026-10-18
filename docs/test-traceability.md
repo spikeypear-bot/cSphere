@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**111 test files, 1101 tests, 48 stories traced, 0 files untraced.**
+**116 test files, 1149 tests, 49 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -13,16 +13,16 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | DEV05 |  | 3 | 4 |  | 53 | — | — |
 | EC01 | 2 | 2 | 2 |  | 71 | — | happy, negative |
 | EC02 | 1 | 3 | 5 | 3 | 91 | — | happy, negative |
-| EC03 | 2 | 3 | 3 | 2 | 83 | — | happy, negative, conflict, failure, cross-cutting |
+| EC03 | 3 | 3 | 3 | 3 | 92 | — | happy, negative, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 1 |  | 7 | — | — |
 | EC05 | 1 |  |  |  | 2 | — | — |
 | EC07 | 1 | 2 | 1 |  | 34 | — | happy, negative, conflict, failure, cross-cutting |
 | EC08 | 4 | 2 | 3 | 2 | 145 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 2 | 1 | 1 | 1 | 31 | — | happy, boundary, cross-cutting |
-| EC-C2 |  | 1 | 2 |  | 52 | — | negative |
+| EC-C2 |  | 1 | 2 |  | 53 | — | negative |
 | EC-NEW2 | 2 | 1 | 7 | 2 | 156 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 1 |  |  |  | 47 | — | — |
-| EC-NEW5 | 2 | 1 | 2 | 1 | 47 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW5 | 2 | 1 | 2 | 2 | 49 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C1 | 1 |  | 2 |  | 18 | — | — |
 | ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
 | ECL-C3 | 2 | 1 | 4 | 2 | 135 | — | happy |
@@ -44,19 +44,20 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | TS03 | 1 | 1 | 1 |  | 26 | — | — |
 | TS06 | 1 | 1 | 1 |  | 34 | — | — |
 | VS01 | 1 | 1 | 2 |  | 45 | — | — |
-| VS02 |  | 1 | 3 | 1 | 50 | — | happy, negative, conflict, failure, cross-cutting |
-| VS03 |  | 1 | 1 | 2 | 48 | — | conflict |
-| VS04 |  | 1 | 1 |  | 37 | — | — |
+| VS02 |  | 1 | 3 | 1 | 56 | — | happy, negative, conflict, failure, cross-cutting |
+| VS03 |  | 1 | 2 | 3 | 60 | — | conflict |
+| VS04 |  | 1 | 1 |  | 41 | — | — |
 | VS07 | 2 | 2 | 1 |  | 51 | — | — |
-| VS08 |  | 1 | 1 |  | 20 | — | conflict |
-| VS09 |  | 1 | 1 |  | 37 | — | — |
+| VS08 |  | 2 | 1 | 1 | 41 | — | negative, boundary, conflict, failure, cross-cutting |
+| VS09 |  | 1 | 1 |  | 41 | — | — |
 | VS13 | 2 | 1 | 1 |  | 29 | — | — |
-| VS15 |  |  | 2 |  | 10 | — | boundary, conflict |
+| VS15 |  |  | 3 | 1 | 20 | — | boundary, conflict |
 | VS16 |  | 1 | 1 |  | 15 | — | — |
 | VS18 |  | 1 | 1 |  | 27 | — | — |
 | VS-C1 |  | 3 | 1 |  | 59 | — | happy, negative, conflict, failure, cross-cutting |
-| VS-C2 | 1 | 2 | 3 |  | 39 | — | negative, boundary, conflict |
-| VS-C4 | 1 | 1 | 2 |  | 35 | AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure |
+| VS-C2 | 1 | 2 | 3 | 1 | 43 | — | negative, boundary, conflict |
+| VS-C3 | 1 | 1 | 3 | 2 | 81 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C4 | 1 | 2 | 3 |  | 89 | AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 
 ## High-priority stories with no automated test yet
 
@@ -70,7 +71,6 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 - EC-C4
 - VS06A
 - VS06B
-- VS-C3
 - AT01
 - AT02
 - AT03
@@ -142,6 +142,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
@@ -150,6 +151,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
 <details><summary>EC04</summary>
@@ -231,6 +233,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/features/events/ChangeLog.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
 <details><summary>ECL-C1</summary>
@@ -459,8 +462,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
 <details><summary>VS04</summary>
@@ -481,7 +486,9 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>VS08</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/bookingConflictHighlights.test.ts`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
 <details><summary>VS09</summary>
@@ -501,7 +508,9 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>VS15</summary>
 
 - frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
 <details><summary>VS16</summary>
@@ -532,12 +541,26 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 - frontend component/unit: `frontend/src/lib/bookingTiming.test.ts`
+- e2e (browser): `frontend/e2e/booking-scroll.spec.ts`
+
+</details>
+<details><summary>VS-C3</summary>
+
+- backend unit: `backend/src/test/java/com/example/connect_sphere/activity/service/ActivityServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
+- e2e (browser): `frontend/e2e/booking-scroll.spec.ts`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
 <details><summary>VS-C4</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/TimingConflictServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/TimingConflictReview.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 

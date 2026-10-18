@@ -1,6 +1,6 @@
-// @stories VS02 VS03 VS04 VS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS02 VS03 VS04 VS09 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
-import { act, cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { VenueCataloguePage } from './VenueCataloguePage'
@@ -25,6 +25,121 @@ function page(path = '/venue-staff/catalogue') {
   </Routes></MemoryRouter>)
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+it('VS-C4 AC9 (regression): staff requirements link conflicts without duplicating the timing summary or editor', async () => {
+  const current = { ...booking, status: 'approved', timing: { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,
+    startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime,
+    effectiveStart: booking.event.startDatetime, effectiveEnd: booking.event.endDatetime,
+    timingNote: 'Crew access', editable: true, conflicts: [{ bookingId: 'b2', eventName: 'Conflicting workshop',
+      startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime }] } }
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(current)))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const requirements = await screen.findByRole('region', { name: 'Event Requirements' })
+  expect(within(requirements).getByRole('link', { name: 'Conflicting workshop' })).toHaveAttribute('href', '/venue-staff/bookings/b2')
+  expect(screen.getAllByText('Edit booking timings')).toHaveLength(1)
+  expect(screen.getAllByText('Setup / Turnaround')).toHaveLength(1)
+})
+
+it.each(['?from=booking-approvals', ''])('keeps the page, open editor and unsaved input mounted during focus refresh (%s)', async suffix => {
+  let finish!: (value: Response) => void
+  let refreshing = false
+  const pending = new Promise<Response>(resolve => { finish = resolve })
+  const current = { ...booking, timing: { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,
+    startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime,
+    effectiveStart: booking.event.startDatetime, effectiveEnd: booking.event.endDatetime,
+    timingNote: 'Crew access', conflicts: [], editable: true } }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) =>
+    url.endsWith('/bookings') ? response([current]) : refreshing ? pending : response(current)))
+  page('/venue-staff/bookings/b1' + suffix)
+  const requirements = await screen.findByRole('region', { name: 'Event Requirements' })
+  const editor = screen.getByText('Edit booking timings').closest('details')!
+  fireEvent.click(screen.getByText('Edit booking timings'))
+  const setup = screen.getByLabelText('Setup (minutes)')
+  fireEvent.change(setup, { target: { value: '75' } })
+  setup.focus()
+  refreshing = true
+  act(() => window.dispatchEvent(new Event('focus')))
+  expect(screen.getByRole('region', { name: 'Event Requirements' })).toBe(requirements)
+  expect(editor).toHaveAttribute('open')
+  expect(setup).toHaveFocus()
+  expect(setup).toHaveValue(75)
+  await act(async () => { finish(response(current)) })
+  expect(screen.getByRole('region', { name: 'Event Requirements' })).toBe(requirements)
+  expect(screen.getByLabelText('Setup (minutes)')).toBe(setup)
+  expect(editor).toHaveAttribute('open')
+  expect(setup).toHaveValue(75)
+})
+
+it('shows the ordered requirements using booking timings and updates them after saving', async () => {
+  const timing = { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,
+    startDatetime: '2026-10-19T10:00:00+08:00', endDatetime: '2026-10-19T12:00:00+08:00',
+    effectiveStart: '2026-10-19T09:30:00+08:00', effectiveEnd: '2026-10-19T12:45:00+08:00',
+    timingNote: 'Crew access', conflicts: [], editable: true }
+  vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => response({
+    ...booking, timing: init.method === 'PUT' ? { ...timing, setupDurationMinutes: 60,
+      effectiveStart: '2026-10-19T09:00:00+08:00' } : timing,
+  })))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const requirements = await screen.findByRole('region', { name: 'Event Requirements' })
+  expect(Array.from(requirements.querySelectorAll('dt'), term => term.textContent)).toEqual([
+    'Venue Occupied', 'Setup / Turnaround', 'Booking Window', 'Expected Attendance',
+    'Venue Requirements', 'Accessibility Requirements', 'Equipment Requirements',
+  ])
+  const value = (label: string) => within(requirements).getByText(label).nextElementSibling
+  expect(value('Venue Occupied')).toHaveTextContent('19 Oct 2026, 09:30 am – 19 Oct 2026, 12:45 pm')
+  expect(value('Setup / Turnaround')).toHaveTextContent('30 / 45 minutes')
+  expect(value('Booking Window')).toHaveTextContent('19 Oct 2026, 10:00 am – 19 Oct 2026, 12:00 pm')
+  const user = userEvent.setup()
+  await user.click(screen.getByText('Edit booking timings'))
+  fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '60' } })
+  await user.click(screen.getByRole('button', { name: 'Save booking timings' }))
+  await screen.findByText(/Booking timings saved/)
+  expect(value('Venue Occupied')).toHaveTextContent('19 Oct 2026, 09:00 am')
+  expect(value('Setup / Turnaround')).toHaveTextContent('60 / 45 minutes')
+})
+
+it('offers a hold beside approval/rejection and updates release/conversion actions immediately without refreshing', async () => {
+  let holds: import('../../types/venueHold').VenueHold[] = []
+  let status: VenueBookingDto['status'] = 'pending'
+  const fetch = vi.fn(async (url: string, init: RequestInit) => {
+    if (init.method === 'POST' && url.endsWith('/holds')) {
+      const hold: import('../../types/venueHold').VenueHold = { holdId: 'h' + (holds.length + 1), bookingId: 'b1',
+        venueId: 'v1', eventId: 'e1', eventName: 'Workshop', reservedStart: booking.event.startDatetime,
+        reservedEnd: booking.event.endDatetime, status: 'active', expiresAt: '2099-03-01T10:00:00+08:00',
+        serverTime: '2099-03-01T09:00:00+08:00', createdBy: 'vs1', createdAt: '2099-03-01T09:00:00+08:00', endedAt: null }
+      holds = [hold, ...holds]
+      return response(hold)
+    }
+    if (init.method === 'PATCH' && url.endsWith('/release')) {
+      holds = holds.map(h => h.status === 'active' ? { ...h, status: 'released' as const } : h)
+      return response(holds[0])
+    }
+    if (init.method === 'PATCH' && url.endsWith('/convert')) {
+      status = 'approved'
+      holds = holds.map(h => h.status === 'active' ? { ...h, status: 'converted' as const } : h)
+    }
+    return response({ ...booking, status, holds })
+  })
+  vi.stubGlobal('fetch', fetch)
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const user = userEvent.setup()
+  await user.click(await screen.findByRole('button', { name: 'Put on Tentative Hold' }))
+  const panel = screen.getByRole('region', { name: 'Tentative venue hold' })
+  fireEvent.change(within(panel).getByLabelText('Hold expiry (Singapore time)'), { target: { value: '2099-03-01T10:00' } })
+  await user.click(within(panel).getByRole('button', { name: 'Place tentative hold' }))
+  expect(await within(panel).findByRole('button', { name: 'Release Hold' })).toBeInTheDocument()
+  expect(screen.getByLabelText('Status: tentative')).toHaveTextContent('Tentative Hold')
+  expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
+  await user.click(within(panel).getByRole('button', { name: 'Release Hold' }))
+  expect(await within(panel).findByText('Released', { exact: true })).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeEnabled()
+  await user.click(screen.getByRole('button', { name: 'Put on Tentative Hold' }))
+  fireEvent.change(within(panel).getByLabelText('Hold expiry (Singapore time)'), { target: { value: '2099-03-01T10:00' } })
+  await user.click(within(panel).getByRole('button', { name: 'Place tentative hold' }))
+  await user.click(await within(panel).findByRole('button', { name: 'Convert Hold to Approved Booking' }))
+  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(within(panel).queryByRole('button', { name: 'Convert Hold to Approved Booking' })).not.toBeInTheDocument()
+})
 
 it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'] as const)('exposes the %s booking status for colour styling on details and venue lists', async status => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
@@ -134,8 +249,8 @@ it('navigates catalogue to venue to booking, displays requirements and refetches
   expect(within(requirements).getByText('120 people')).toBeInTheDocument()
   expect(within(requirements).getByText('Classroom seating')).toBeInTheDocument()
   expect(within(requirements).getAllByText('Not specified')).toHaveLength(2)
-  expect(within(requirements).getByText(/24 Sept? 2026/)).toBeInTheDocument()
-  expect(within(requirements).getByText(/25 Sept? 2026/)).toBeInTheDocument()
+  expect(within(requirements).getAllByText(/24 Sept? 2026/).length).toBeGreaterThan(0)
+  expect(within(requirements).getAllByText(/25 Sept? 2026/).length).toBeGreaterThan(0)
   expect(within(requirements).queryByRole('textbox')).not.toBeInTheDocument()
   expect(within(requirements).queryByRole('button')).not.toBeInTheDocument()
   expect(screen.getByRole('region', { name: 'Venue Information' })).toHaveTextContent('200 people')
@@ -399,7 +514,8 @@ it('shows a buffer-only restriction without falsely highlighting the event times
   expect(card).toHaveTextContent('Venue Occupied')
   expect(card).toHaveTextContent('24 Sept 2026, 05:30 pm')
   expect(card).toHaveTextContent('24 Sept 2026, 11:30 pm')
-  expect(card.querySelector('.booking-time-conflict')).toBeNull()
+  expect(card.querySelector('strong.booking-time-conflict')).toBeNull()
+  expect(card.querySelector('dd.booking-time-conflict')).toHaveTextContent('11:30 pm')
   expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
 })
 

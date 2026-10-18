@@ -437,8 +437,19 @@ On `/venue-staff/bookings/{id}`, saved rejection details occupy a full-width red
 panel above the Venue / Event Requirements columns. Rejection Reason, Suggested
 Alternative Venue and Alternative Arrangement use stacked labels and values;
 optional suggestions are omitted when absent. The panel shares its component
-with approval/rejection confirmations. Booking Timings uses the same definition
-list styling as Event Requirements, without additional strong markup on labels.
+with approval/rejection confirmations. Event Requirements uses the existing
+definition-list styling and displays Venue Occupied, Setup / Turnaround, Booking
+Window, Expected Attendance, Venue Requirements, Accessibility Requirements and
+Equipment Requirements, in that order. Time ranges use the saved booking timings
+and Singapore-time formatting; separate start/end rows are omitted. Legacy
+responses without timings fall back to the event window and zero durations.
+
+The separate **Edit booking timings** card contains only the expandable editor:
+Booking-specific durations, Setup (minutes), Turnaround (minutes), the proposed
+occupied time in SGT, Reason for booking timings, the conflict guidance and Save
+booking timings. Saving refreshes the values in Event Requirements immediately.
+Historical bookings retain their timing summary in Event Requirements without an
+empty editor card. Existing overlap warnings remain visible there.
 
 ## VS08 approval conflicts
 

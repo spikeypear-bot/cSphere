@@ -9,13 +9,14 @@ import { BookingDecisionPanel } from './BookingDecisionPanel'
 
 const MAX_ALTERNATIVE_ARRANGEMENT_LENGTH = 2000
 
-export function BookingApproval({ booking, onApproved, onUnavailable, conflicts, unavailablePeriods, onConflicts }: {
+export function BookingApproval({ booking, onApproved, onUnavailable, conflicts, unavailablePeriods, onConflicts, onHoldRequested }: {
   booking: VenueBookingDto
   onApproved: (booking: VenueBookingDto) => void
   onUnavailable: (message: string) => void
   conflicts: VenueBookingConflict[]
   unavailablePeriods: VenueUnavailabilityConflict[]
   onConflicts: (conflicts: VenueBookingConflict[], unavailablePeriods: VenueUnavailabilityConflict[]) => void
+  onHoldRequested?: () => void
 }) {
   const [confirming, setConfirming] = useState(false)
   const [rejecting, setRejecting] = useState(false)
@@ -136,7 +137,9 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
     <div className="booking-details-page__section-header">
       <BookingInformationHeading />
       {booking.status === 'pending' && !confirming && !rejecting && <div className="booking-approval__actions">
-        <Button disabled={busy || needsRefresh || approvalBlocked} onClick={() => setConfirming(true)}>Approve Booking</Button>
+        <Button disabled={busy || needsRefresh || approvalBlocked || booking.holds?.some(h => h.status === 'active')} onClick={() => setConfirming(true)}>Approve Booking</Button>
+        {onHoldRequested && !booking.holds?.some(h => h.status === 'active') && <Button variant="secondary" disabled={busy || needsRefresh}
+          onClick={onHoldRequested}>Put on Tentative Hold</Button>}
         <Button variant="secondary" disabled={busy || needsRefresh} onClick={() => {
           setRejecting(true)
           setReason('')
@@ -193,7 +196,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
       <div role="alert" className="booking-approval__error">
         <p>{error}</p>
         {conflicts.length > 0 && <>
-          {unavailablePeriods.length === 0 && <p>The following approved bookings conflict with this request. All times are Singapore time, UTC+08:00.</p>}
+          {unavailablePeriods.length === 0 && <p>The following bookings or tentative holds conflict with this request. All times are Singapore time, UTC+08:00.</p>}
           {conflicts.map(conflict => <BookingConflictCard key={conflict.bookingId} conflict={conflict} request={booking.event} />)}
         </>}
         {unavailablePeriods.length > 0 && <>
@@ -202,7 +205,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
       </div>
       <Button variant="secondary" disabled={busy} onClick={() => { void refresh() }}>Refresh booking details</Button>
     </div>}
-    {confirming && booking.status === 'pending' && <BookingDecisionPanel aria-labelledby="approve-booking-heading">
+    {confirming && booking.status === 'pending' && !booking.holds?.some(h => h.status === 'active') && <BookingDecisionPanel aria-labelledby="approve-booking-heading">
       <h3 id="approve-booking-heading">Confirm booking approval</h3>
       <p>Approve this request and commit the venue to this event?</p>
       <dl>

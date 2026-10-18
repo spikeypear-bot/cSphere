@@ -1,4 +1,5 @@
 import type { VenueDto } from './venue'
+import type { VenueBookingStatus } from './venueBookingStatus'
 
 export interface VenueBookingConflict {
   bookingId: string
@@ -19,11 +20,12 @@ export interface VenueUnavailabilityConflict {
 }
 
 export interface VenueBookingDto {
+  holds?: import('./venueHold').VenueHold[]
   timing?: import('./bookingTiming').BookingTiming
   bookingId: string
   requiresAlternative?: boolean
   replacesBookingId?: string | null
-  status: 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
+  status: VenueBookingStatus
   venue: VenueDto
   event: {
     eventId: string

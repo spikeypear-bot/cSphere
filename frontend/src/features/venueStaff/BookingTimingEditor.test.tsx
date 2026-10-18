@@ -26,12 +26,20 @@ it('refreshes the editable durations when the server booking is refreshed', () =
   expect(screen.getByLabelText('Turnaround (minutes)')).toHaveValue(20)
   expect(screen.getByLabelText('Reason for booking timings')).toHaveValue('Updated crew access')
 })
-it('shows saved snapshots and sends edited durations with a stale-write guard', async () => {
+it('preserves unsaved duration edits when background refresh returns the same saved timings', () => {
+  const props = { onSaved: vi.fn(), disabled: false }
+  const { rerender } = render(<BookingTimingEditor booking={booking} {...props} />)
+  fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '75' } })
+  rerender(<BookingTimingEditor booking={JSON.parse(JSON.stringify(booking))} {...props} />)
+  expect(screen.getByLabelText('Setup (minutes)')).toHaveValue(75)
+})
+it('shows only the timing editor and sends edited durations with a stale-write guard', async () => {
   seedSession('venue-staff')
   const onSaved = vi.fn()
   const calls = stubApi({ 'PUT /api/venue-bookings/b1/timing': () => jsonResponse(200, booking) })
   render(<BookingTimingEditor booking={booking} onSaved={onSaved} disabled={false} />)
-  expect(screen.getByText('30 / 15 minutes')).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Booking Timings (SGT)' })).not.toBeInTheDocument()
+  expect(screen.queryByText('30 / 15 minutes')).not.toBeInTheDocument()
   fireEvent.click(screen.getByText('Edit booking timings'))
   fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '45' } })
   fireEvent.click(screen.getByRole('button', { name: 'Save booking timings' }))

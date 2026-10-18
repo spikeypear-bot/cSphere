@@ -81,11 +81,12 @@ export function JourneyStepper({ status }: { status: StatusView }) {
  * EC-NEW2: filter a list by status, with a count per status. Only statuses
  * present in the list are offered, so there is never an empty choice.
  */
-export function StatusFilter({ statuses, selected, onChange, label = 'Filter by status' }: {
-  statuses: StatusView[]
+export function StatusFilter({ statuses, selected, onChange, label = 'Filter by status', showSingle = false }: {
+  statuses: { code: string; label: string }[]
   selected: string | null
   onChange: (code: string | null) => void
   label?: string
+  showSingle?: boolean
 }) {
   const counts = new Map<string, { label: string; count: number }>()
   statuses.forEach((s) => {
@@ -93,7 +94,7 @@ export function StatusFilter({ statuses, selected, onChange, label = 'Filter by 
     entry.count += 1
     counts.set(s.code, entry)
   })
-  if (counts.size < 2) return null
+  if (counts.size < 2 && !showSingle) return null
   return (
     <div className="status-filter" role="group" aria-label={label}>
       <button type="button" className="chip" aria-pressed={selected === null} onClick={() => onChange(null)}>

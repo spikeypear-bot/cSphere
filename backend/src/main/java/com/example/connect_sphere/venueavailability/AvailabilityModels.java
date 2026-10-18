@@ -50,5 +50,6 @@ public final class AvailabilityModels {
         }
     }
     public record Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods,
+            List<com.example.connect_sphere.venuebooking.hold.VenueHold> holds,
             List<TimingConflictService.Overlap> activeConflicts) {}
 }
