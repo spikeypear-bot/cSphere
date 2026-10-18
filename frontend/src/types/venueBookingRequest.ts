@@ -12,13 +12,16 @@ export interface VenueOptionDto {
   missingAccessibility: string[]
   missingFacilities?: string[]
   unavailablePeriods?: { description: string; affectedFrom: string | null; affectedUntil: string | null }[]
-  conflicts: { eventName: string; startDatetime: string; endDatetime: string }[]
+  /** ECL-C7: another event's booking, as "Booked by another event" and its period only. */
+  conflicts: { description: string; startDatetime: string; endDatetime: string }[]
   reasons: string[]
 }
 
-export type VenueBookingStatus = 'pending' | 'approved' | 'changed' | 'rejected' | 'cancelled'
+import type { VenueBookingStatus } from './venueBookingStatus'
+export type { VenueBookingStatus } from './venueBookingStatus'
 
 export interface EventVenueBookingDto {
+  holds?: import('./venueHold').VenueHold[]
   timing?: import('./bookingTiming').BookingTiming
   bookingId: string
   requiresAlternative?: boolean

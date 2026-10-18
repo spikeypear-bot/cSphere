@@ -26,6 +26,8 @@ import org.mockito.MockitoAnnotations;
 import org.springframework.web.server.ResponseStatusException;
 
 @Tag("unit")
+@Tag("TS02")
+@Tag("TS03")
 class EquipmentTechnicalSupportServiceTest {
 
     private static final UUID EQUIPMENT_ID = UUID.randomUUID();

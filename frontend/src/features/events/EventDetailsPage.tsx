@@ -12,6 +12,8 @@ import type { ActivityDto } from '../../types/activity'
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
+import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
+import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
@@ -34,6 +36,8 @@ export function EventDetailsPage() {
   const flash = location.state as { justApproved?: boolean; bookingRequested?: string } | null
   const [event, setEvent] = useState<EventDto | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // ECL-C7: a coordinator opening an event that is not (or no longer) theirs.
+  const [notAssigned, setNotAssigned] = useState(false)
   const readinessState = useSafetyData<ReadinessDto>(
     eventId && role === 'coordinator' ? `/events/${eventId}/readiness` : null,
   )
@@ -41,6 +45,8 @@ export function EventDetailsPage() {
   // same inline-fetch-effect shape as useEventRequestDraft.ts, rather than
   // calling a setState-ish function directly from inside the effect.
   const [reloadToken, setReloadToken] = useState(0)
+  // Only external booking changes reset the panel; its own actions retain feedback.
+  const [bookingReloadToken, setBookingReloadToken] = useState(0)
 
   useEffect(() => {
     if (!eventId) return
@@ -54,13 +60,15 @@ export function EventDetailsPage() {
       })
       .catch((err: unknown) => {
         if (cancelled) return
+        if (role === 'coordinator' && isNotAssigned(err)) setNotAssigned(true)
         setError(err instanceof ApiClientError ? err.message : 'Could not load this event.')
       })
     return () => {
       cancelled = true
     }
-  }, [eventId, reloadToken])
+  }, [eventId, reloadToken, role])
 
+  if (notAssigned) return <NotAssignedNotice what="event" />
   if (error) return <p role="alert">{error}</p>
   if (!event) return <p>Loading…</p>
 
@@ -134,13 +142,23 @@ export function EventDetailsPage() {
       ) : null}
 
       {role === 'coordinator' ? (
-        <EventReadinessPanel eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
+        <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
-      {role === 'organiser' ? <OrganiserArrangements key={reloadToken} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
 
-      {role === 'coordinator' ? (
-        <VenueBookingCard eventId={event.eventId} planning={planning} canRebook={planning || event.status === 'confirmed'} />
-      ) : null}
+{role === 'coordinator' ? (
+  <VenueBookingCard
+    eventId={event.eventId}
+    planning={planning}
+    canRebook={planning || event.status === 'confirmed'}
+    active={event.status !== 'completed' && event.status !== 'cancelled'}
+    onCancelled={() => {
+      setBookingReloadToken(n => n + 1)
+      setReloadToken(n => n + 1)
+      readinessState.reload()
+    }}
+  />
+) : null}
       {role === 'coordinator' && planning ? (
         <Card className="event-details__venue">
           <h2>Equipment</h2>
@@ -175,7 +193,7 @@ export function EventDetailsPage() {
           ) : readinessState.loading ? <p role="status">Loading readiness checklist…</p> : null
       ) : null}
 
-      <EventHistoryCard key={reloadToken} eventId={event.eventId} />
+      <EventHistoryCard key={`history-${reloadToken}`} eventId={event.eventId} />
     </div>
   )
 }
@@ -190,8 +208,11 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
     apiClient.get<unknown>(path)
       .then((value) => {
         if (cancelled) return
-        if (isValid(value)) setData(value as T)
-        else setFailed(true)
+        // A retry that succeeds clears an earlier failure (EC-NEW5 Try again).
+        if (isValid(value)) {
+          setData(value as T)
+          setFailed(false)
+        } else setFailed(true)
       })
       .catch(() => {
         if (!cancelled) setFailed(true)
@@ -206,11 +227,13 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
 }
 
 /** EC03 from the event page: the current booking request, or the way to make one. */
-function VenueBookingCard({ eventId, planning, canRebook }: { eventId: string; planning: boolean; canRebook: boolean }) {
+function VenueBookingCard({ eventId, planning, canRebook, active, onCancelled }: {
+  eventId: string; planning: boolean; canRebook: boolean; active: boolean; onCancelled: () => void
+}) {
   const [reload, setReload] = useState(0)
   const { data: bookings, failed } = useSideData<EventVenueBookingDto[]>(
     `/events/${eventId}/venue-bookings`, Array.isArray, reload)
-  const [cancelling, setCancelling] = useState(false)
+  const [cancelling, setCancelling] = useState<string | null>(null)
   const [reason, setReason] = useState('')
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -228,9 +251,10 @@ function VenueBookingCard({ eventId, planning, canRebook }: { eventId: string; p
     setError(null)
     try {
       await apiClient.post(`/events/${eventId}/venue-bookings/${bookingId}/cancel`, { reason: reason.trim() || null })
-      setCancelling(false)
+      setCancelling(null)
       setReason('')
       setReload((n) => n + 1)
+      onCancelled()
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'The request could not be cancelled.')
     } finally {
@@ -253,18 +277,21 @@ function VenueBookingCard({ eventId, planning, canRebook }: { eventId: string; p
                   <BookingRequestMeta booking={booking} />
                 </p>
                 <BookingTimingSummary timing={booking.timing} />
-                {booking.requiresAlternative && canRebook && !hasResolvedReplacement(booking.bookingId) ? (
-                  <Link className="button button--secondary" to={replacementLink(booking)}>Find replacement venue</Link>
+{booking.requiresAlternative && canRebook && !hasResolvedReplacement(booking.bookingId) ? (
+  <Link className="button button--secondary" to={replacementLink(booking)}>Find replacement venue</Link>
+) : null}
+{active && !cancelling && !bookings.some(b => b.status === 'pending' && b.replacesBookingId === booking.bookingId) ? (
+  <Button variant="secondary" onClick={() => setCancelling(booking.bookingId)}>
+    {booking.status === 'approved' ? 'Cancel this booking' : 'Cancel this request'}
+  </Button>
                 ) : null}
-                {booking.status === 'pending' && !cancelling ? (
-                  <Button variant="secondary" onClick={() => setCancelling(true)}>Cancel this request</Button>
-                ) : null}
-                {booking.status === 'pending' && cancelling ? (
+                {cancelling === booking.bookingId ? (
                   <div className="event-details__cancel">
+                    {booking.status === 'approved' && <p>Cancelling releases this venue and its setup and turnaround time. The event may return to Planning for review.</p>}
                     <label htmlFor={`cancel-reason-${booking.bookingId}`}>Reason for Venue Staff (optional)</label>
                     <textarea id={`cancel-reason-${booking.bookingId}`} rows={2} value={reason} onChange={(e) => setReason(e.target.value)} />
                     <div className="event-details__cancel-actions">
-                      <Button variant="secondary" onClick={() => { setCancelling(false); setReason('') }}>Keep request</Button>
+                      <Button variant="secondary" disabled={busy} onClick={() => { setCancelling(null); setReason('') }}>Keep request</Button>
                       <Button disabled={busy} onClick={() => void cancelRequest(booking.bookingId)}>
                         {busy ? 'Cancelling…' : 'Confirm cancellation'}
                       </Button>
@@ -322,7 +349,7 @@ function VenueBookingCard({ eventId, planning, canRebook }: { eventId: string; p
           </ul>
         </div>
       ) : null}
-      {planning && activeBookings.length === 0 && historicalBookings.length === 0 ? (
+   {planning && activeBookings.length === 0 ? (
         <Link className="button button--primary" to={`/coordinator/events/${eventId}/venue-booking`}>
           Request a venue
         </Link>
@@ -330,7 +357,6 @@ function VenueBookingCard({ eventId, planning, canRebook }: { eventId: string; p
     </Card>
   )
 }
-
 function BookingRequestMeta({ booking }: { booking: EventVenueBookingDto }) {
   if (!booking.startDatetime && !booking.endDatetime && !booking.submittedAt) return null
   return (
@@ -344,15 +370,25 @@ function BookingRequestMeta({ booking }: { booking: EventVenueBookingDto }) {
   )
 }
 
-/** The event's whole journey from request to now (EC01/EC02/EO26/EC03),
- * filtered by the server to what this role may see. */
+/** EC-NEW5: the event's change log, its whole journey from request to now,
+ * filtered by the server to what this role may see. If it cannot load, the
+ * rest of the event page still works and the log can be retried. */
 function EventHistoryCard({ eventId }: { eventId: string }) {
-  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray)
-  if (failed || !entries) return null
+  const [attempt, setAttempt] = useState(0)
+  const { data: entries, failed } = useSideData<ActivityDto[]>(`/events/${eventId}/timeline`, Array.isArray, attempt)
   return (
-    <Card className="event-details__history">
-      <h2>History</h2>
-      <ActivityTimeline entries={entries} emptyText="No history has been recorded for this event." />
+    <Card className="event-details__history" role="region" aria-labelledby="change-log-heading">
+      <h2 id="change-log-heading">Change log</h2>
+      {failed ? (
+        <div role="alert" className="event-details__log-error">
+          <p>The change log could not be loaded.</p>
+          <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+        </div>
+      ) : !entries ? (
+        <p role="status" className="field-hint">Loading the change log…</p>
+      ) : (
+        <ActivityTimeline entries={entries} emptyText="No changes recorded yet." controls />
+      )}
     </Card>
   )
 }

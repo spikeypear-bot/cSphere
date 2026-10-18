@@ -243,11 +243,13 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument()
   })
 
-  it('tells a coordinator who is not assigned that they cannot review it', async () => {
+  it('ECL-C7 AC2, AC18 (negative): tells a coordinator who is not assigned that they cannot review it, with a way back', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(403, { message: 'Forbidden' }) })
     renderPage()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('not assigned to you')
+    expect(await screen.findByRole('heading', { name: "This request isn't assigned to you" })).toBeInTheDocument()
+    expect(screen.getByText(/reassigned to another Event Coordinator/)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to the review queue' })).toHaveAttribute('href', '/coordinator/review-queue')
   })
 
   it('shows a server error from a failed clarification and keeps what was typed', async () => {

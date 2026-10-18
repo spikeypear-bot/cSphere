@@ -49,6 +49,10 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * expected values come from the criteria, not from the code.
  */
 @Tag("unit")
+@Tag("ECL-C3")
+@Tag("ELC-C6")
+@Tag("ELC-C5")
+@Tag("EC-NEW4")
 class EventRequestLeadReviewServiceTest {
 
     @Mock private EventRequestRepository repository;

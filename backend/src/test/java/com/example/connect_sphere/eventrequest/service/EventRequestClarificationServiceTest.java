@@ -51,6 +51,9 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * the real filter chain) are in EventRequestReviewFlowTest.
  */
 @Tag("unit")
+@Tag("EC01")
+@Tag("EC02")
+@Tag("EO26")
 class EventRequestClarificationServiceTest {
 
     @Mock private EventRequestRepository repository;

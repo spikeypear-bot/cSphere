@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -28,9 +29,16 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * the filter chain before any lookup, so even a made-up id gets 403, not 404.
  * The roles that do belong are covered by the flow tests.
  */
+@Tag("integration")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("AU04")
+@Tag("DEV05")
+@Tag("EC01")
+@Tag("EC02")
+@Tag("EC03")
+@Tag("EO26")
 class NewEndpointRoleAccessTest {
 
     @Autowired MockMvc mvc;

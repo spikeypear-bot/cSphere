@@ -29,6 +29,8 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc
 @Transactional
 @WithMockUser(roles = "VS")
+@Tag("VS07")
+@Tag("VS18")
 class VenueControllerTest {
     @Autowired MockMvc mvc;
     @Autowired EntityManager entityManager;

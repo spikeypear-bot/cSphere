@@ -75,6 +75,7 @@ public class SecurityConfig{
 		    // product endpoint (D20 open question 4). denyAll rather than
 		    // deleting the package, which is a separate call.
 		    .requestMatchers("/api/mock", "/api/mock/**").denyAll()
+                .requestMatchers("/api/venue-bookings/*/holds", "/api/venue-holds/**").hasRole("VS")
                 .requestMatchers(HttpMethod.PATCH, "/api/venue-bookings/*/approve", "/api/venue-bookings/*/reject").hasRole("VS")
                 .requestMatchers(HttpMethod.PUT, "/api/venue-bookings/*/timing").hasRole("VS")
                 .requestMatchers("/api/venues/*/timing-conflicts", "/api/venues/*/timing-conflicts/scan").hasRole("VS")
@@ -137,14 +138,21 @@ public class SecurityConfig{
 		    // Technical Support check availability (TS01); Coordinators need
 		    // to see equipment they request (EC07). Reserving and releasing
 		    // is TS02, so other equipment reads remain limited below.
+		    // ECL-C7: an event's reservations and an equipment request's
+		    // availability are about one event and are not scoped to an
+		    // assignment, so coordinators (who never use them) no longer reach
+		    // them; the Safety Officer reads reservations for the safety check.
+		    // Inventory reads (units and their status, TS03) stay open to
+		    // coordinators: they describe equipment, not anyone's event.
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/events/*/reservations")
-			    .hasAnyRole("TECHNICIAN", "EC", "SAFETY_OFFICER")
+			    .hasAnyRole("TECHNICIAN", "SAFETY_OFFICER")
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/requests/*/availability").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
 			    "/api/equipment-requests/*/lines").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
-		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
 		    // SO-C3/SO-C4: the Safety Officer's checklist and decision.
 		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
@@ -167,12 +175,16 @@ public class SecurityConfig{
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.
-		    .requestMatchers(HttpMethod.GET, "/api/events/*/venue-bookings").hasAnyRole("EC", "SAFETY_OFFICER")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/venue-bookings").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 		    .requestMatchers("/api/events/*/venue-options", "/api/events/*/venue-bookings/**").hasRole("EC")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/venue-bookings").hasRole("EC")
 		    // EC09: Coordinator only. Must sit above the GET /api/events/** rule below.
 		    .requestMatchers(HttpMethod.GET, "/api/events/assigned").hasRole("EC")
-		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC")
+		    // ECL-C7: the Lead's overview of every coordinator's active events.
+		    .requestMatchers(HttpMethod.GET, "/api/events/by-coordinator").hasRole("ECL")
+		    // ECL-C7: the Lead may read any event (details, timeline) for
+		    // oversight; every coordinator action above stays EC-only.
+		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC", "ECL")
 		    // EO09/EO19: any signed-in role may read/mark-read their own
 		    // notifications — scoping is always by the caller's own `sub`
 		    // claim (NotificationController), never anything role-specific.

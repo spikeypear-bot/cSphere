@@ -29,7 +29,27 @@ workflow exists. Manual scripts under `backend/dev/seed/` create their own demo 
 event and pending booking and include guarded cleanup. They never run automatically.
 Share scripts, not database dumps. Development seeds are separate from Flyway migrations.
 
+### Optional VS-C3 demo data (time-limited venue holds)
+
+Use the [VS-C3 seed and manual testing guide](docs/vsc3-manual-testing.md) for
+create/release, live expiry, conversion, competing requests and retained history.
+After rebuilding the backend, run from PowerShell:
+
+```powershell
+./backend/dev/seed/vsc3-seed.ps1 -LocalDev -ExpiryMinutes 3
+```
+
+This manual API seeder creates a new labelled local batch with future booking
+dates and relative expiry deadlines. It prints staff/coordinator links and saves
+a local manifest under `logs/vsc3/`; it never runs at startup or resets old demos.
+
 ### Tests
+
+How we test, and how every test traces to a user story and AC: [docs/testing-strategy.md](docs/testing-strategy.md).
+Story → test matrix (generated): [docs/test-traceability.md](docs/test-traceability.md).
+
+Browser end-to-end journeys (Playwright) against a running backend: see [frontend/e2e/README.md](frontend/e2e/README.md)
+(`npm run test:e2e` from `frontend/`).
 
 Frontend (Vitest + React Testing Library):
 ```
@@ -120,6 +140,9 @@ xdg-open frontend/coverage/index.html
 
 Venue Staff can record unavailable periods from Venue Details, review affected bookings, and notify coordinators without cancelling events. Availability includes setup/turnaround buffers. Coordinators can request a replacement; approval preserves the original as a changed booking. See [VS01 API, workflow, and manual testing](docs/venue-unavailability-api.md).
 
+For cancellation, rejection and superseded-reservation behavior, see the
+[VS25 acceptance review and remaining limitations](docs/venue-reservation-release.md).
+
 ## Venue booking timing (VS-C2 / EC-C2)
 
 Coordinators can request multiple venues, each with its own booking window, setup duration and turnaround duration. Occupied-time checks include both buffers; Venue Staff can review and edit saved durations. Advertised event times remain unchanged.
@@ -127,5 +150,6 @@ Coordinators can request multiple venues, each with its own booking window, setu
 - [Booking API and request examples](docs/venue-booking-api.md)
 - [Timing workflow, V27/V28 migrations and verification](docs/venue-booking-duration-snapshots.md)
 - [Calendar behavior](docs/venue-calendar-api.md)
+- [Existing booking conflict review, scope and API](docs/venue-booking-conflicts.md)
 
 Incoming migrations through V26 are retained. Databases that used the superseded unpublished local V23/V24 timing migrations need separate migration-history reconciliation before running this branch; do not rewrite applied migrations or blindly repair checksums.

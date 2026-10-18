@@ -42,6 +42,9 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("EC01")
+@Tag("EC02")
+@Tag("EO26")
 class EventRequestReviewFlowTest {
 
     @Autowired MockMvc mvc;

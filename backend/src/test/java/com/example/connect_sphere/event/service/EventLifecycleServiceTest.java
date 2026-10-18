@@ -21,6 +21,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -59,6 +60,9 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  * fixed. Each test is named after the acceptance criterion it checks.
  */
 @Tag("unit")
+@Tag("EC08")
+@Tag("EC-NEW2")
+@Tag("ECL-C7")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
@@ -103,6 +107,7 @@ class EventLifecycleServiceTest {
     // ---- readiness checklist ------------------------------------------
 
     @Test
+    @DisplayName("EC08 AC3, AC10 (negative): an event with no venue booking is not ready, and the checklist says no venue has been booked")
     void anEventWithNoVenueBookingIsNotReadyAndSaysSo() {
         Event event = stored(EventStatus.pending);
 
@@ -114,6 +119,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC8 (negative): a booking still pending with Venue Staff blocks sending")
     void aBookingStillPendingWithVenueStaffBlocksSending() {
         Event event = stored(EventStatus.pending);
         booking(VenueBookingStatus.approved);
@@ -126,6 +132,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC8 (conflict): a booking whose venue became unavailable blocks sending")
     void aBookingWhoseVenueBecameUnavailableBlocksSending() {
         Event event = stored(EventStatus.pending);
         VenueBookingRecord affected = booking(VenueBookingStatus.approved);
@@ -138,6 +145,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC14 (boundary): rejected or cancelled bookings do not block once another is approved")
     void rejectedOrCancelledBookingsDoNotBlockWhenAnotherIsApproved() {
         Event event = stored(EventStatus.pending);
         booking(VenueBookingStatus.rejected);
@@ -148,6 +156,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC13 (negative): every active booking of a multi-venue event must be approved")
     void everyBookingOfAMultiVenueEventMustBeApproved() {
         Event event = stored(EventStatus.pending);
         booking(VenueBookingStatus.approved);
@@ -160,6 +169,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC11 (negative): stated equipment needs with no equipment request block sending")
     void statedEquipmentRequirementsWithNoRequestBlockSending() {
         Event event = stored(EventStatus.pending);
         event.setEquipmentRequirements("Two projectors");
@@ -173,6 +183,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC9 (negative): an equipment request not yet approved blocks sending")
     void anEquipmentRequestStillProcessingBlocksSending() {
         Event event = stored(EventStatus.pending);
         booking(VenueBookingStatus.approved);
@@ -182,6 +193,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC12 (boundary): no stated equipment needs and no request need no equipment approval")
     void noEquipmentRequirementsAndNoRequestNeedsNoEquipmentApproval() {
         Event event = stored(EventStatus.pending);
         booking(VenueBookingStatus.approved);
@@ -193,6 +205,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC1, AC2 (cross-cutting): only the assigned coordinator can see the readiness checklist")
     void theReadinessChecklistIsOnlyForTheAssignedCoordinator() {
         Event event = stored(EventStatus.pending);
 
@@ -203,6 +216,7 @@ class EventLifecycleServiceTest {
     // ---- send for safety review ---------------------------------------
 
     @Test
+    @DisplayName("EC08 AC7, AC16, AC17 (happy): sending a ready event moves it to Awaiting Safety Review and records who and when")
     void sendingAReadyEventMovesItToAwaitingSafetyReviewAndRecordsIt() {
         Event event = readyEvent(EventStatus.pending);
 
@@ -219,6 +233,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC6, AC24 (happy): an event can be sent again after the Safety Officer asked for changes")
     void anEventCanBeSentAgainAfterTheSafetyOfficerAskedForChanges() {
         Event event = readyEvent(EventStatus.safety_changes_requested);
         event.setSafetyFeedback("Add a second exit.");
@@ -230,6 +245,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC15, AC37, EC-NEW2 AC17 (failure): sending an unready event lists every blocker and changes nothing")
     void sendingAnEventThatIsNotReadyListsEveryBlockerAndChangesNothing() {
         Event event = stored(EventStatus.pending);
         event.setEquipmentRequirements("Microphones");
@@ -237,12 +253,14 @@ class EventLifecycleServiceTest {
         assertThatThrownBy(() -> service.sendForSafetyReview(COORDINATOR, event.getEventId()))
                 .isInstanceOf(EventNotReadyException.class)
                 .satisfies(ex -> assertThat(((EventNotReadyException) ex).getBlockers()).hasSize(2));
+        // Status, timeline and notifications all unchanged (AC37).
         assertThat(event.getStatus()).isEqualTo(EventStatus.pending);
-        verifyNoInteractions(activity);
+        verifyNoInteractions(activity, notifications);
     }
 
     @ParameterizedTest
     @EnumSource(value = EventStatus.class, names = {"awaiting_safety_review", "safety_approved", "confirmed", "cancelled"})
+    @DisplayName("EC08 AC6, AC34 (negative): only an event in Planning or Safety Changes Requested can be sent")
     void onlyAnEventInPlanningCanBeSent(EventStatus status) {
         Event event = readyEvent(status);
 
@@ -253,6 +271,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC28 (boundary): an event whose end has passed cannot be sent, and says why")
     void anEventWhoseEndHasPassedCannotBeSent() {
         Event event = readyEvent(EventStatus.pending);
         event.setStartDatetime(OffsetDateTime.parse("2026-12-30T09:00:00Z"));
@@ -265,6 +284,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC1, AC2 (cross-cutting): a coordinator not assigned to the event cannot send it, and nothing changes")
     void aCoordinatorNotAssignedCannotSend() {
         Event event = readyEvent(EventStatus.pending);
 
@@ -276,6 +296,7 @@ class EventLifecycleServiceTest {
     // ---- withdraw ---------------------------------------------------------
 
     @Test
+    @DisplayName("EC08 AC19, AC20 (happy): withdrawing returns the event to Planning with the reason recorded")
     void withdrawingReturnsTheEventToPlanningWithTheReasonRecorded() {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
@@ -290,15 +311,22 @@ class EventLifecycleServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"", "   "})
+    @DisplayName("EC08 AC19 (negative): withdrawing needs a reason")
     void withdrawingNeedsAReason(String reason) {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
         assertThatThrownBy(() -> service.withdrawFromSafetyReview(COORDINATOR, event.getEventId(), reason))
                 .isInstanceOf(EventLifecycleValidationException.class);
         assertThat(event.getStatus()).isEqualTo(EventStatus.awaiting_safety_review);
+        // On this path the repositories are dummies (IS212 Week 9): the
+        // service needs them to exist, but a blank reason is refused before
+        // any of them is used, so nothing is even loaded, let alone changed.
+        verify(events, never()).findForUpdate(any());
+        verifyNoInteractions(activity, notifications);
     }
 
     @Test
+    @DisplayName("EC08 AC19 (boundary): a withdrawal reason of 2001 characters is refused")
     void aReasonOf2001CharactersIsRefused() {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
@@ -307,6 +335,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC34, EC-NEW2 AC23 (conflict): only an event awaiting review can be withdrawn")
     void onlyAnEventAwaitingReviewCanBeWithdrawn() {
         Event event = readyEvent(EventStatus.safety_approved);
 
@@ -317,6 +346,7 @@ class EventLifecycleServiceTest {
     // ---- confirm --------------------------------------------------------
 
     @Test
+    @DisplayName("EC08 AC25, AC29, AC30 (happy): confirming a Safety Approved event confirms it and records who and when")
     void confirmingASafetyApprovedEventConfirmsItAndRecordsWhoAndWhen() {
         Event event = readyEvent(EventStatus.safety_approved);
 
@@ -332,6 +362,28 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC33 (negative): confirming never changes, removes or re-approves a venue booking or equipment request")
+    void confirmingLeavesBookingsAndEquipmentRequestsUntouched() {
+        Event event = readyEvent(EventStatus.safety_approved);
+        VenueBookingRecord booking = eventBookings.get(0);
+
+        service.confirm(COORDINATOR, event.getEventId());
+
+        assertThat(event.getStatus()).isEqualTo(EventStatus.confirmed);
+        // State: the approved booking is exactly as it was.
+        assertThat(booking.getStatus()).isEqualTo(VenueBookingStatus.approved);
+        // Behaviour (mocks): confirming only reads bookings and equipment; it
+        // never writes or deletes them.
+        verify(bookings, never()).save(any());
+        verify(bookings, never()).saveAll(any());
+        verify(bookings, never()).delete(any());
+        verify(equipment, never()).save(any());
+        verify(equipment, never()).saveAll(any());
+        verify(equipment, never()).delete(any());
+    }
+
+    @Test
+    @DisplayName("EC08 AC29, EO04 AC23 (happy): re-confirming keeps the first confirmation date")
     void reConfirmingKeepsTheFirstConfirmationDate() {
         Event event = readyEvent(EventStatus.safety_approved);
         OffsetDateTime first = OffsetDateTime.parse("2026-11-01T09:00:00Z");
@@ -344,6 +396,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC31, AC32 (happy): confirming notifies the organiser and the venue and technical staff involved")
     void confirmingNotifiesTheOrganiserAndTheVenueAndTechnicalStaffInvolved() {
         Event event = readyEvent(EventStatus.safety_approved);
         equipmentRequest(EquipmentRequestStatus.approved);
@@ -357,6 +410,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC32 (boundary): Technical Support is not told when the event has no approved equipment")
     void technicalSupportIsNotToldWhenTheEventHasNoApprovedEquipment() {
         Event event = readyEvent(EventStatus.safety_approved);
 
@@ -366,6 +420,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC25 (negative): an event cannot be confirmed before the Safety Officer approves")
     void anEventCannotBeConfirmedBeforeTheSafetyOfficerApproves() {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
@@ -376,6 +431,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC34, AC35 (conflict): confirming twice says it is already confirmed and notifies no one again")
     void confirmingTwiceSaysItIsAlreadyConfirmedAndNotifiesNoOneAgain() {
         Event event = readyEvent(EventStatus.confirmed);
 
@@ -386,6 +442,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC28, EC-NEW2 AC29 (boundary): confirming an event that has taken place says it is Completed")
     void confirmingAnEventThatHasTakenPlaceSaysItIsCompletedNotConfirmed() {
         Event event = readyEvent(EventStatus.confirmed);
         event.setEndDatetime(OffsetDateTime.parse("2026-12-30T12:00:00Z"));
@@ -397,6 +454,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC26, AC27 (conflict): prerequisites are re-checked at the moment of confirming, and nothing changes if one no longer holds")
     void prerequisitesAreReCheckedAtTheMomentOfConfirming() {
         Event event = readyEvent(EventStatus.safety_approved);
         when(availability.affected(eventBookings.get(0).getBookingId())).thenReturn(true);
@@ -408,6 +466,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC1, AC2 (cross-cutting): a coordinator not assigned to the event cannot confirm it")
     void aCoordinatorNotAssignedCannotConfirm() {
         Event event = readyEvent(EventStatus.safety_approved);
 
@@ -419,6 +478,7 @@ class EventLifecycleServiceTest {
     // ---- Safety Officer decisions ---------------------------------------
 
     @Test
+    @DisplayName("EC-NEW2 AC11, EO04 AC17 (happy): the Safety Officer's approval moves the event to Safety Approved and records when")
     void approvalMovesTheEventToSafetyApprovedAndRecordsWhen() {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
@@ -429,6 +489,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC23, EC-NEW2 AC10 (happy): requesting changes needs feedback and shows it to the coordinator")
     void requestingChangesNeedsFeedbackAndShowsItToTheCoordinator() {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
@@ -443,6 +504,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 AC23 (failure): a safety rejection sends the event back to the coordinator rather than cancelling it")
     void aSafetyRejectionSendsTheEventBackToTheCoordinatorRatherThanCancellingIt() {
         Event event = readyEvent(EventStatus.awaiting_safety_review);
 
@@ -459,6 +521,7 @@ class EventLifecycleServiceTest {
 
     @ParameterizedTest
     @EnumSource(value = EventStatus.class, names = {"awaiting_safety_review", "safety_approved", "confirmed"})
+    @DisplayName("EC08 AC21, AC22, EC-NEW2 AC15 (conflict): a venue becoming unavailable returns the event to Planning and tells the coordinator why")
     void aVenueBecomingUnavailableReturnsTheEventToPlanningAndTellsTheCoordinator(EventStatus status) {
         Event event = readyEvent(status);
         event.setSafetyApprovedAt(OffsetDateTime.parse("2026-12-01T00:00:00Z"));
@@ -473,6 +536,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC-NEW2 AC16 (boundary): an event already in Planning is left as it is")
     void anEventAlreadyInPlanningIsLeftAsItIs() {
         Event event = readyEvent(EventStatus.pending);
 
@@ -481,6 +545,7 @@ class EventLifecycleServiceTest {
     }
 
     @Test
+    @DisplayName("EC-NEW2 AC29 (boundary): a completed event is never reopened")
     void aCompletedEventIsNeverReopened() {
         Event event = readyEvent(EventStatus.confirmed);
         event.setStartDatetime(OffsetDateTime.parse("2026-12-30T09:00:00Z"));
@@ -489,6 +554,200 @@ class EventLifecycleServiceTest {
         assertThat(service.returnToPlanning(event.getEventId(), VS_USER, "x")).isFalse();
         assertThat(event.getStatus()).isEqualTo(EventStatus.confirmed);
         verify(notifications, never()).createReturnedToPlanningNotification(any(), any(), any(), any());
+    }
+
+    // ---- edge cases (boundary, failure) ------------------------------------
+
+    @Test
+    @DisplayName("EC08 AC2 (negative): an event that does not exist is reported as not found by every action")
+    void anUnknownEventIsNotFoundEverywhere() {
+        UUID unknown = UUID.randomUUID();
+        when(events.findById(unknown)).thenReturn(Optional.empty());
+        when(events.findForUpdate(unknown)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.readiness(COORDINATOR, unknown)).isInstanceOf(EventNotFoundException.class);
+        assertThatThrownBy(() -> service.sendForSafetyReview(COORDINATOR, unknown)).isInstanceOf(EventNotFoundException.class);
+        assertThatThrownBy(() -> service.recordSafetyDecision(OFFICER, unknown, EventLifecycleService.SafetyDecision.APPROVE, null))
+                .isInstanceOf(EventNotFoundException.class);
+        assertThat(service.returnToPlanning(unknown, VS_USER, "x")).isFalse();
+        verifyNoInteractions(activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EC08 AC1, AC2 (cross-cutting): a caller with no identity is never treated as the assigned coordinator")
+    void aCallerWithNoIdentityIsRefused() {
+        Event event = readyEvent(EventStatus.pending);
+
+        assertThatThrownBy(() -> service.sendForSafetyReview(null, event.getEventId()))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThat(event.getStatus()).isEqualTo(EventStatus.pending);
+    }
+
+    @Test
+    @DisplayName("EC08 AC12 (boundary): equipment requirements that are only blank space count as none")
+    void blankEquipmentRequirementsNeedNoEquipment() {
+        Event event = readyEvent(EventStatus.pending);
+        event.setEquipmentRequirements("   ");
+
+        assertThat(item(service.readiness(COORDINATOR, event.getEventId()), "equipment").state()).isEqualTo("not_needed");
+    }
+
+    @Test
+    @DisplayName("EC08 AC9, AC11 (negative): stated equipment needs with only a rejected request ask for a new request")
+    void onlyARejectedEquipmentRequestStillBlocks() {
+        Event event = readyEvent(EventStatus.pending);
+        event.setEquipmentRequirements("Two wireless microphones");
+        equipmentRequest(EquipmentRequestStatus.rejected);
+
+        EventReadinessDto readiness = service.readiness(COORDINATOR, event.getEventId());
+
+        assertThat(readiness.canSendForReview()).isFalse();
+        assertThat(item(readiness, "equipment").detail())
+                .isEqualTo("No equipment request has been approved. Submit a new request.");
+    }
+
+    @Test
+    @DisplayName("EC08 AC31 (boundary): with no originating request there is no organiser to notify, and confirming still succeeds")
+    void confirmingWithNoOriginatingRequestNotifiesNoOrganiser() {
+        Event event = readyEvent(EventStatus.safety_approved);
+        when(eventRequests.findByEventId(event.getEventId())).thenReturn(Optional.empty());
+
+        service.confirm(COORDINATOR, event.getEventId());
+
+        assertThat(event.getStatus()).isEqualTo(EventStatus.confirmed);
+        verify(notifications, never()).createStatusChangeNotification(any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("EC08 AC32 (boundary): with no Venue Staff accounts at all, no staff notification is sent")
+    void noStaffAccountsMeansNoStaffNotification() {
+        Event event = readyEvent(EventStatus.safety_approved);
+        when(users.findByRole(UserRole.vs)).thenReturn(List.of());
+
+        service.confirm(COORDINATOR, event.getEventId());
+
+        verify(notifications, never()).createEventConfirmedNotifications(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("EC08 AC32 (boundary): rejected bookings and equipment do not decide who is told; approved ones do")
+    void onlyApprovedArrangementsDecideWhichStaffAreTold() {
+        Event event = readyEvent(EventStatus.safety_approved);
+        booking(VenueBookingStatus.rejected);
+        equipmentRequest(EquipmentRequestStatus.rejected);
+
+        service.confirm(COORDINATOR, event.getEventId());
+
+        // Venue Staff (an approved booking exists), not Technical Support (no approved equipment).
+        verify(notifications).createEventConfirmedNotifications(eq(List.of(VS_USER)), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("EC-NEW2 AC23 (conflict): a safety decision on an event no longer awaiting review is refused and changes nothing")
+    void aSafetyDecisionOnAnEventNotAwaitingReviewIsRefused() {
+        Event event = readyEvent(EventStatus.pending);
+
+        assertThatThrownBy(() -> service.recordSafetyDecision(OFFICER, event.getEventId(),
+                EventLifecycleService.SafetyDecision.APPROVE, null))
+                .isInstanceOf(EventLifecycleException.class)
+                .hasMessageContaining("this one is Planning");
+        assertThat(event.getStatus()).isEqualTo(EventStatus.pending);
+        verifyNoInteractions(activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EC08 AC23 (boundary): an approval note is kept, and one over 2000 characters is refused")
+    void anApprovalNoteIsKeptButNotIfTooLong() {
+        Event event = readyEvent(EventStatus.awaiting_safety_review);
+        assertThatThrownBy(() -> service.recordSafetyDecision(OFFICER, event.getEventId(),
+                EventLifecycleService.SafetyDecision.APPROVE, "x".repeat(2001)))
+                .isInstanceOf(EventLifecycleValidationException.class);
+        assertThat(event.getStatus()).isEqualTo(EventStatus.awaiting_safety_review);
+
+        service.recordSafetyDecision(OFFICER, event.getEventId(), EventLifecycleService.SafetyDecision.APPROVE,
+                "  Exits checked.  ");
+
+        assertThat(event.getStatus()).isEqualTo(EventStatus.safety_approved);
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activity).record(entry.capture());
+        assertThat(entry.getValue().message()).isEqualTo("Exits checked.");
+    }
+
+    @Test
+    @DisplayName("EC08 AC22 (boundary): an event with no coordinator returns to Planning without anyone to notify")
+    void anEventWithNoCoordinatorReturnsToPlanningQuietly() {
+        Event returned = readyEvent(EventStatus.awaiting_safety_review);
+        returned.setCoordinatorId(null);
+        Event approved = readyEvent(EventStatus.awaiting_safety_review);
+        approved.setCoordinatorId(null);
+
+        assertThat(service.returnToPlanning(returned.getEventId(), VS_USER, "Venue flooded")).isTrue();
+        service.recordSafetyDecision(OFFICER, approved.getEventId(), EventLifecycleService.SafetyDecision.APPROVE, null);
+
+        assertThat(returned.getStatus()).isEqualTo(EventStatus.pending);
+        assertThat(approved.getStatus()).isEqualTo(EventStatus.safety_approved);
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    @DisplayName("EC08 AC19 (negative): a missing reason (not just a blank one) is refused before anything is loaded")
+    void aMissingReasonIsRefused() {
+        Event event = readyEvent(EventStatus.awaiting_safety_review);
+
+        assertThatThrownBy(() -> service.withdrawFromSafetyReview(COORDINATOR, event.getEventId(), null))
+                .isInstanceOf(EventLifecycleValidationException.class);
+        verify(events, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC-NEW2 AC14 (boundary): an event with no end time is never flagged as Date passed")
+    void anEventWithNoEndIsNeverFlagged() {
+        Event event = readyEvent(EventStatus.pending);
+        event.setEndDatetime(null);
+
+        EventReadinessDto readiness = service.readiness(COORDINATOR, event.getEventId());
+
+        assertThat(readiness.datePassed()).isFalse();
+        assertThat(readiness.canSendForReview()).isTrue();
+    }
+
+    @Test
+    @DisplayName("EC08 AC9, AC11 (happy): stated equipment needs with an approved request are complete")
+    void statedEquipmentNeedsWithAnApprovedRequestAreComplete() {
+        Event event = readyEvent(EventStatus.pending);
+        event.setEquipmentRequirements("Two wireless microphones");
+        equipmentRequest(EquipmentRequestStatus.approved);
+
+        EventReadinessDto readiness = service.readiness(COORDINATOR, event.getEventId());
+
+        assertThat(item(readiness, "equipment").state()).isEqualTo("complete");
+        assertThat(readiness.canSendForReview()).isTrue();
+    }
+
+    @Test
+    @DisplayName("EC08 AC23 (boundary): a blank approval note is treated as no note")
+    void aBlankApprovalNoteIsNoNote() {
+        Event event = readyEvent(EventStatus.awaiting_safety_review);
+
+        service.recordSafetyDecision(OFFICER, event.getEventId(), EventLifecycleService.SafetyDecision.APPROVE, "   ");
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activity).record(entry.capture());
+        assertThat(entry.getValue().message()).isNull();
+    }
+
+    @Test
+    @DisplayName("ECL-C7 AC17, AC19 (conflict): after a reassignment, notifications go to the new coordinator and never the previous one")
+    void notificationsFollowTheEventsCurrentCoordinator() {
+        Event event = readyEvent(EventStatus.awaiting_safety_review);
+        // The Lead reassigned the event: the event row now names the new coordinator.
+        event.setCoordinatorId(OTHER_COORDINATOR);
+
+        service.returnToPlanning(event.getEventId(), VS_USER, "A venue for this event became unavailable: flooding");
+
+        verify(notifications).createReturnedToPlanningNotification(eq(OTHER_COORDINATOR), eq(event.getEventId()),
+                any(), any());
+        verify(notifications, never()).createReturnedToPlanningNotification(eq(COORDINATOR), any(), any(), any());
     }
 
     // ---- helpers ----------------------------------------------------------

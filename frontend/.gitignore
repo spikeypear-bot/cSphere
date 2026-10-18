@@ -23,3 +23,7 @@ coverage
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright (IS212 Week 9 E2E)
+playwright-report
+test-results

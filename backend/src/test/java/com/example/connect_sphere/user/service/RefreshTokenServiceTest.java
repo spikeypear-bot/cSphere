@@ -33,6 +33,7 @@ import jakarta.persistence.EntityManager;
 @Tag("integration")
 @SpringBootTest
 @Transactional
+@Tag("DEV05")
 class RefreshTokenServiceTest {
 
     @Autowired RefreshTokenService service;

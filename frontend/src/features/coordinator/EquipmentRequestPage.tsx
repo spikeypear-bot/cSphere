@@ -5,6 +5,8 @@ import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
+import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
+import { isNotAssigned } from '../../lib/notAssigned'
 import type { EventDto } from '../../types/event'
 import './EquipmentRequestPage.css'
 
@@ -45,6 +47,7 @@ export function EquipmentRequestPage() {
   const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [notAssigned, setNotAssigned] = useState(false)
   const [success, setSuccess] = useState<string | null>(null)
 
   useEffect(() => {
@@ -62,6 +65,7 @@ export function EquipmentRequestPage() {
       setTechnicalRequirement(loadedEvent.equipmentRequirements ?? '')
     }).catch((err: unknown) => {
       if (!cancelled) {
+        if (isNotAssigned(err)) setNotAssigned(true)
         setError(err instanceof ApiClientError ? err.message : 'Could not load equipment request details.')
       }
     }).finally(() => {
@@ -111,6 +115,7 @@ export function EquipmentRequestPage() {
   }
 
   if (loading) return <p role="status">Loading equipment request…</p>
+  if (notAssigned) return <NotAssignedNotice what="event" />
   if (error && !event) return <p role="alert">{error}</p>
   if (!event) return <p role="alert">Event not found.</p>
 

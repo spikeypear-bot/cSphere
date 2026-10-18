@@ -1,9 +1,12 @@
+import { HoldStatus } from '../venueStaff/HoldStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
+import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
+import { isNotAssigned } from '../../lib/notAssigned'
 import type { EventDto } from '../../types/event'
 import { ACCESSIBILITY_LABELS, type AccessibilityFeature } from '../../types/eventRequest'
 import { venueFacilityLabels, venueLayoutLabels, type Facility, type VenueLayout } from '../../types/venue'
@@ -75,6 +78,7 @@ export function VenueBookingRequestPage() {
   const [options, setOptions] = useState<VenueOptionDto[] | null>(null)
   const [bookings, setBookings] = useState<EventVenueBookingDto[] | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [notAssigned, setNotAssigned] = useState(false)
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -121,6 +125,7 @@ export function VenueBookingRequestPage() {
       setBookings(b)
     }).catch((err: unknown) => {
       if (cancelled) return
+      if (isNotAssigned(err)) setNotAssigned(true)
       setLoadError(err instanceof ApiClientError
         ? err.isForbidden ? 'Only the coordinator assigned to this event can request a venue for it.' : err.message
         : 'Could not load this event.')
@@ -170,6 +175,7 @@ export function VenueBookingRequestPage() {
     return c
   }, [requestableOptions])
 
+  if (notAssigned) return <NotAssignedNotice what="event" />
   if (loadError) {
     return (
       <div className="page page--compact venue-request">
@@ -425,6 +431,8 @@ export function VenueBookingRequestPage() {
                   {b.alternativeVenueAddress ? <p className="venue-request__history-note"><strong>Suggested venue:</strong> {b.alternativeVenueAddress}</p> : null}
                   {b.alternativeArrangement ? <p className="venue-request__history-note"><strong>Alternative arrangement:</strong> {b.alternativeArrangement}</p> : null}
                   <BookingTimingSummary timing={b.timing} />
+                  <HoldStatus holds={b.holds} />
+
                   </li>
                 ))}
               </ul>
@@ -531,8 +539,8 @@ function VenueOptionCard({ option, attendance, selected, onSelect }: {
         </span>
       ) : null}
       {option.conflicts.map((c) => (
-        <span key={c.startDatetime + c.eventName} className="venue-option__conflict">
-          Occupied: {c.eventName}, {timeRange(c.startDatetime, c.endDatetime)}
+        <span key={c.startDatetime + c.endDatetime} className="venue-option__conflict">
+          {c.description}, {timeRange(c.startDatetime, c.endDatetime)}
         </span>
       ))}
       {(option.unavailablePeriods ?? []).map((period) => (

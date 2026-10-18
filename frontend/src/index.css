@@ -9,6 +9,8 @@
  * border) — not a different theme per page.
  */
 :root {
+  --booking-hold: #80510a;
+  --booking-hold-soft: #fff4dc;
   --paper: #faf7f0;
   --panel: #ffffff;
   --ink: #211d16;
@@ -53,6 +55,8 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
+    --booking-hold: #e1bd66;
+    --booking-hold-soft: #362c18;
     --paper: #171410;
     --panel: #201c16;
     --ink: #f2ede2;
@@ -153,3 +157,11 @@ code {
 [data-booking-status='rejected'] { color: var(--danger); }
 .booking-status-tag[data-booking-status='approved'] { color: var(--success); background: var(--success-soft); }
 .booking-status-tag[data-booking-status='rejected'] { color: var(--danger); background: var(--danger-soft); }
+/* Booking status colours are shared by detail badges, approval queues and calendars. */
+[data-booking-status='pending'], [data-booking-status='changed'], [data-booking-status='cancelled'] {
+  --booking-status-color: var(--accent-strong); --booking-status-bg: var(--accent-soft);
+}
+[data-booking-status='tentative'] { --booking-status-color: var(--booking-hold); --booking-status-bg: var(--booking-hold-soft); }
+[data-booking-status='approved'] { --booking-status-color: var(--success); --booking-status-bg: var(--success-soft); }
+[data-booking-status='rejected'] { --booking-status-color: var(--danger); --booking-status-bg: var(--danger-soft); }
+.booking-status-tag[data-booking-status='tentative'] { color: var(--booking-hold); background: var(--booking-hold-soft); }

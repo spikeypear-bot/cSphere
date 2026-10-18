@@ -1,3 +1,4 @@
+import { BOOKING_STATUS_LABELS, type VenueBookingDisplayStatus } from '../../types/venueBookingStatus'
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 
 export function approvedOverlaps(schedule: VenueSchedule) {
@@ -11,23 +12,28 @@ export function approvedOverlaps(schedule: VenueSchedule) {
 export interface CalendarEntry {
   id: string
   entryId: string
-  type: 'confirmed' | 'tentative' | 'unavailable'
-  phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable'
+  type: Extract<VenueBookingDisplayStatus, 'approved' | 'tentative' | 'pending'> | 'unavailable'
+  phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable' | 'Reserved period'
   title: string
   start: string
   end: string
+  expiresAt?: string
   eventStart?: string
   eventEnd?: string
 }
-export const entryLabels = { confirmed: 'Confirmed booking', tentative: 'Tentative hold', unavailable: 'Unavailable' }
-export function calendarEntries(schedule: VenueSchedule): CalendarEntry[] {
+export const entryLabels = { approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable' }
+export function calendarEntries(schedule: VenueSchedule, expired = new Set<string>()): CalendarEntry[] {
   const entries: CalendarEntry[] = schedule.unavailablePeriods.map(p => ({
     id: `unavailable:${p.unavailabilityId}`, entryId: p.unavailabilityId, type: 'unavailable',
     phase: 'Unavailable', title: p.reason, start: p.startDateTime, end: p.endDateTime,
   }))
+  const activeHolds = (schedule.holds ?? []).filter(h => h.status === 'active' && !expired.has(h.holdId))
+  for (const h of activeHolds) entries.push({ id: 'hold:' + h.holdId, entryId: h.bookingId, type: 'tentative',
+    phase: 'Reserved period', title: h.eventName, start: h.reservedStart, end: h.reservedEnd, expiresAt: h.expiresAt })
   for (const b of schedule.bookings) {
+    if (activeHolds.some(h => h.bookingId === b.bookingId)) continue
     if (b.status !== 'approved' && b.status !== 'pending') continue
-    const base = { entryId: b.bookingId, type: b.status === 'approved' ? 'confirmed' as const : 'tentative' as const,
+    const base = { entryId: b.bookingId, type: b.status === 'approved' ? 'approved' as const : 'pending' as const,
       title: b.eventName, eventStart: b.startDateTime, eventEnd: b.endDateTime }
     for (const [phase, start, end] of [
       ['Setup', b.effectiveStart, b.startDateTime], ['Event', b.startDateTime, b.endDateTime],

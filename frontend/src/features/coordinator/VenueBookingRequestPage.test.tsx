@@ -1,3 +1,4 @@
+// @stories EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -138,6 +139,26 @@ function renderPage(initialEntry = `/coordinator/events/${EVENT}/venue-booking`)
     </MemoryRouter>,
   )
 }
+
+describe('VenueBookingRequestPage: other events stay private (ECL-C7)', () => {
+  it("ECL-C7 AC10, AC11 (negative): another event's booking shows as Booked by another event with its time, not its name", async () => {
+    seedSession('coordinator')
+    const busy = option('v1', '1 Harbour Road', 160, 'blocked', {
+      conflicts: [{ description: 'Booked by another event', startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z' }],
+      reasons: ['Booked by another event, 10 Mar 2027, 9:00 AM – 12:00 PM (Singapore time).'],
+    })
+    stubApi({ ...routes(), [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, [busy]) })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('checkbox', { name: /Show unavailable venues/ }))
+    const card = (await screen.findAllByText('1 Harbour Road'))[0].closest('button') as HTMLElement
+    expect(card).toHaveTextContent(/Booked by another event/)
+    expect(card).not.toHaveTextContent(/Occupied:/)
+    cleanup()
+    vi.unstubAllGlobals()
+  })
+})
 
 describe('VenueBookingRequestPage (EC03)', () => {
   it('submits independent windows and buffers for multiple venues in Singapore time', async () => {
@@ -413,7 +434,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.queryByText('Event page')).not.toBeInTheDocument()
   })
 
-  it('tells a coordinator who is not assigned to the event that they cannot request a venue', async () => {
+  it('ECL-C7 AC2, AC18 (negative): tells a coordinator who is not assigned to the event that they cannot request a venue', async () => {
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
       [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(403, { message: 'Forbidden' }),
@@ -421,6 +442,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     })
     renderPage()
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Only the coordinator assigned to this event')
+    expect(await screen.findByRole('heading', { name: "This event isn't assigned to you" })).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Go to My events' })).toHaveAttribute('href', '/coordinator/my-events')
   })
 })
