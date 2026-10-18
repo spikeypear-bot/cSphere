@@ -1,4 +1,4 @@
-// @stories VS15 VS-C2 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS15 VS-C2 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { apiClient } from '../../lib/apiClient'
@@ -15,12 +15,54 @@ beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute('open', '') }
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{ venueId: 'v1', venueAddress: 'Main Hall' }, { venueId: 'v2', venueAddress: 'Other Hall' }] : schedule)
 })
-afterEach(() => { cleanup(); vi.resetAllMocks() })
+afterEach(() => { cleanup(); vi.useRealTimers(); vi.resetAllMocks() })
 async function mount() {
   render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>)
   fireEvent.change(await screen.findByLabelText('Venue'), { target: { value: 'v1' } })
   await screen.findByRole('table')
 }
+async function mountWithClock() {
+  vi.useFakeTimers()
+  await act(async () => { render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>) })
+  await act(async () => { fireEvent.change(screen.getByLabelText('Venue'), { target: { value: 'v1' } }) })
+  expect(screen.getByRole('table')).toBeInTheDocument()
+}
+it('VS-C3 VS-C4 (regression): hold expiry removes occupancy and its open dialog while buffer conflict indicators remain', async () => {
+  const partner = { ...booking, bookingId: 'b3', eventName: 'Next event', startDateTime: at('13:00'),
+    endDateTime: at('14:00'), effectiveStart: at('12:30'), effectiveEnd: at('14:00') }
+  const serverTime = new Date().toISOString()
+  const hold = { holdId: 'h1', bookingId: 'b2', venueId: 'v1', eventId: 'e2', eventName: 'Held workshop',
+    reservedStart: at('15:00'), reservedEnd: at('16:00'), status: 'active' as const,
+    expiresAt: new Date(Date.parse(serverTime) + 1000).toISOString(), serverTime,
+    createdBy: 'vs1', createdAt: serverTime, endedAt: null }
+  const integrated = { ...schedule, bookings: [...schedule.bookings, partner], holds: [hold] }
+  vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
+    ? [{ venueId: 'v1', venueAddress: 'Main Hall' }] : integrated)
+  await mountWithClock()
+  const held = screen.getByRole('button', { name: /Tentative Hold.*Held workshop/i })
+  expect(held).toHaveAttribute('data-booking-status', 'tentative')
+  expect(held).toHaveAttribute('data-conflict', 'false')
+  fireEvent.click(held)
+  expect(within(screen.getByRole('dialog')).getByText('Hold expiry (SGT)')).toBeInTheDocument()
+  expect(within(screen.getByRole('dialog')).getByText('Active')).toBeInTheDocument()
+  expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'View booking details' })).toHaveAttribute('href', '/venue-staff/bookings/b2')
+  // Even a stale response must not restore a hold after its local deadline.
+  await act(async () => { await vi.advanceTimersByTimeAsync(1000) })
+  expect(screen.queryByRole('button', { name: /Tentative Hold.*Held workshop/i })).not.toBeInTheDocument()
+  expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  expect(screen.getByRole('table').querySelectorAll('[data-conflict="true"]')).toHaveLength(5)
+  expect(screen.getByRole('link', { name: 'Next event' })).toHaveAttribute('href', '/venue-staff/bookings/b3')
+})
+it('VS-C3 VS-C4 (regression): polling refreshes booking statuses and conflict indicators together', async () => {
+  await mountWithClock()
+  vi.mocked(apiClient.get).mockClear()
+  vi.mocked(apiClient.get).mockResolvedValue({ ...schedule, bookings: schedule.bookings.map(b => ({ ...b, status: 'approved' })) })
+  await act(async () => { await vi.advanceTimersByTimeAsync(5000) })
+  expect(apiClient.get).toHaveBeenCalledTimes(1)
+  expect(screen.queryByRole('button', { name: /Pending request/ })).not.toBeInTheDocument()
+  expect(within(screen.getByRole('table')).getAllByRole('button', { name: /Approved booking/ })).toHaveLength(6)
+  expect(screen.getByRole('table').querySelectorAll('[data-conflict="true"]')).toHaveLength(6)
+})
 it('refreshes on window focus and removes released occupancy while retaining other entries', async () => {
   await mount()
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
@@ -42,9 +84,10 @@ it('VS-C4 AC7, AC8, AC9, AC10 (conflict): highlights buffers, links both booking
   expect(within(list).getByText('30 / 45 minutes')).toBeInTheDocument()
   expect(within(list).getByText('Conflict period (SGT):')).toBeInTheDocument()
   const table = screen.getByRole('table')
-  const entries = within(table).getAllByRole('button', { name: /Confirmed booking/ })
+  const entries = within(table).getAllByRole('button', { name: /Approved booking/ })
   expect(entries).toHaveLength(5)
   entries.forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'true'))
+  entries.forEach(entry => expect(entry).toHaveAttribute('data-booking-status', 'approved'))
   within(table).getAllByRole('button', { name: /Tentative hold|Unavailable/ }).forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'false'))
   fireEvent.click(entries[0])
   expect(within(screen.getByRole('dialog')).getByRole('link', { name: 'Next event' })).toBeInTheDocument()
@@ -76,7 +119,7 @@ it('VS-C4 AC8 (boundary): highlights a visible booking with an off-screen confli
   expect(screen.getByRole('link', { name: 'Off-screen event' })).toHaveAttribute('href', '/venue-staff/bookings/outside')
   const table = screen.getByRole('table')
   expect(within(table).queryByRole('button', { name: /Off-screen event/ })).not.toBeInTheDocument()
-  within(table).getAllByRole('button', { name: /Confirmed booking/ }).forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'true'))
+  within(table).getAllByRole('button', { name: /Approved booking/ }).forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'true'))
 })
 it('requests displayed dates, navigates periods and returns to today', async () => {
   await mount()

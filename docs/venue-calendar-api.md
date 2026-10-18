@@ -4,7 +4,7 @@ The Venue Staff availability route now shows a read-only month calendar in Asia/
 
 The route is `/venue-staff/availability-calendar`. The venue selector reuses the shared `.field` dropdown styling used in Booking Approval. Navigation and refresh use compact buttons. The month heading sits directly above a two-column row containing the legend on the left and Refresh schedule on the right.
 
-Approved bookings display as Confirmed booking. Pending requests display as Tentative hold and remain non-reserving. Each booking produces separate Event, Setup and Turnaround entries, with zero-length buffers omitted. Details retain the full selected interval and original event timing. Unavailability details include the recorded reason. No mutation actions are available in this calendar.
+Approved bookings display as Approved booking. Pending requests display as Pending request and remain non-reserving. Active tentative holds display separately and reserve their saved occupied period until expiry. Each booking produces separate Event, Setup and Turnaround entries, with zero-length buffers omitted; an active hold replaces its pending booking's segments with one Reserved period entry. Hold details include the expiry timestamp and Active status. Details retain the full selected interval and original event timing. Unavailability details include the recorded reason. No mutation actions are available in this calendar.
 
 ## Schedule API
 
@@ -12,7 +12,7 @@ Approved bookings display as Confirmed booking. Pending requests display as Tent
 
 The frontend requests the entire visible calendar grid, including adjacent-month dates. Queries include intervals where start < range end and end > range start; touching boundaries do not overlap. Booking retrieval considers the full buffered interval, then the frontend displays booking-window/setup/turnaround segments separately. Calendar reads include completed events with pending or approved bookings, but exclude cancelled events and changed/rejected/cancelled bookings. Calls without bounds retain the previous active-only behaviour, and operational conflict checks are unchanged.
 
-Navigation and refresh retrieve current stored data. Old entries and details disappear while reloading or after failure. Late responses for a previous venue/month are ignored. There is an explicit empty state and retry action. No polling is introduced.
+Navigation, window focus, explicit refresh and five-second polling retrieve current stored data. Old entries and details disappear while explicitly reloading or after failure. Late responses for a previous venue/month are ignored. There is an explicit empty state and retry action. Server-relative hold deadlines remove expired hold occupancy locally and trigger a fresh read even before the scheduled expiry worker runs.
 
 Month navigation, Today, venue changes and refresh update the calendar in place. Before an update, the calendar frame preserves its current height so replacing the grid with loading, empty or error content does not collapse the page and move the scroll position upward. This reserved space lasts for the current page visit; a shorter month can therefore leave blank space below the grid. Refresh remains in the legend row and is disabled while loading. Clicking Today when already viewing the current month leaves the view unchanged; use Refresh schedule to reload it.
 
@@ -45,3 +45,10 @@ while retaining its existing historical entries and local historical overlaps.
 Selected dialogs resolve their entry from fresh schedule data. See
 [existing booking conflicts](venue-booking-conflicts.md) for the agreed scope,
 read-only API and notification-scan distinction.
+
+VS-C3 and VS-C4 share the same schedule response: `settings`, `bookings`,
+`unavailablePeriods`, `holds` and `activeConflicts`. Both bounded and unbounded
+schedule reads include active, unexpired holds. Hold expiry, release and conversion
+remove the hold from subsequent reads; conversion exposes the same booking as
+approved, without creating a second booking. Conflict indicators use the stored
+`approved` status and retain the shared booking-status colours.

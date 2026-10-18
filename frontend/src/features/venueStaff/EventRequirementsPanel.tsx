@@ -35,6 +35,6 @@ export function EventRequirementsPanel({ event, timing, status, highlightStart, 
       <div><dt>Accessibility Requirements</dt><dd>{accessibility || 'Not specified'}</dd></div>
       <div><dt>Equipment Requirements</dt><dd>{event.equipmentRequirements?.trim() || 'Not specified'}</dd></div>
     </dl>
-    <BookingTimingConflicts timing={timing} />
+    <BookingTimingConflicts timing={timing} bookingLinks />
   </Card>
 }

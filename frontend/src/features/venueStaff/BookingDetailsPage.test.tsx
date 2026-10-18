@@ -1,4 +1,4 @@
-// @stories VS02 VS03 VS04 VS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS02 VS03 VS04 VS09 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -25,6 +25,20 @@ function page(path = '/venue-staff/catalogue') {
   </Routes></MemoryRouter>)
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+it('VS-C4 AC9 (regression): staff requirements link conflicts without duplicating the timing summary or editor', async () => {
+  const current = { ...booking, status: 'approved', timing: { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,
+    startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime,
+    effectiveStart: booking.event.startDatetime, effectiveEnd: booking.event.endDatetime,
+    timingNote: 'Crew access', editable: true, conflicts: [{ bookingId: 'b2', eventName: 'Conflicting workshop',
+      startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime }] } }
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(current)))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  const requirements = await screen.findByRole('region', { name: 'Event Requirements' })
+  expect(within(requirements).getByRole('link', { name: 'Conflicting workshop' })).toHaveAttribute('href', '/venue-staff/bookings/b2')
+  expect(screen.getAllByText('Edit booking timings')).toHaveLength(1)
+  expect(screen.getAllByText('Setup / Turnaround')).toHaveLength(1)
+})
 
 it.each(['?from=booking-approvals', ''])('keeps the page, open editor and unsaved input mounted during focus refresh (%s)', async suffix => {
   let finish!: (value: Response) => void

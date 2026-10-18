@@ -24,7 +24,7 @@ import com.example.connect_sphere.venueavailability.*;
 import com.example.connect_sphere.venuebooking.hold.*;
 import com.example.connect_sphere.venuebooking.service.*;
 
-@Tag("integration") @Tag("VS-C3") @Tag("VS08")
+@Tag("integration") @Tag("VS-C3") @Tag("VS-C4") @Tag("VS08")
 @SpringBootTest(properties="venue.holds.expiry-delay-ms=86400000")
 @AutoConfigureMockMvc
 @Import(VenueHoldFlowTest.TimeConfig.class)
@@ -116,6 +116,47 @@ class VenueHoldFlowTest {
         bookings.approve(b);
         assertThatThrownBy(()->holds.create(b,expiry,actor)).isInstanceOf(VenueBookingStateException.class);
     }
+    @Test @DisplayName("VS-C3 VS-C4 schedule (regression): both schedule APIs retain active holds and read-only buffer conflicts")
+    void integratedSchedule() throws Exception {
+        UUID v=venue(),a=booking(v,"2027-04-01T09:00:00+08:00","2027-04-01T10:00:00+08:00"),
+            b=booking(v,"2027-04-01T10:30:00+08:00","2027-04-01T12:00:00+08:00"),
+            pending=booking(v,"2027-04-01T14:00:00+08:00","2027-04-01T15:00:00+08:00");
+        bookings.approve(a);bookings.approve(b);
+        // Represent a legacy conflict introduced by saved turnaround durations.
+        jdbc.update("UPDATE venue_bookings SET turnaround_duration_minutes=45 WHERE booking_id=?",a);
+        var hold=holds.create(pending,expiry,actor);
+        for(boolean bounded:List.of(false,true)) {
+            var request=get("/api/venues/"+v+"/schedule")
+                .with(jwt().jwt(j->j.subject(actor.toString())).authorities(new SimpleGrantedAuthority("ROLE_VS")));
+            if(bounded) request.param("start","2027-04-01T00:00:00+08:00").param("end","2027-04-02T00:00:00+08:00");
+            mvc.perform(request).andExpect(status().isOk())
+                .andExpect(jsonPath("$.holds.length()").value(1))
+                .andExpect(jsonPath("$.holds[0].holdId").value(hold.holdId().toString()))
+                .andExpect(jsonPath("$.holds[0].expiresAt").exists())
+                .andExpect(jsonPath("$.holds[0].status").value("active"))
+                .andExpect(jsonPath("$.activeConflicts.length()").value(1));
+        }
+        clock.time.set(expiry.toInstant());
+        assertThat(availability.schedule(v).holds()).isEmpty();
+        assertThat(availability.schedule(v).activeConflicts()).hasSize(1);
+        assertThat(holds.history(pending).getFirst().endedAt()).isNull();
+        assertThat(statusOf(a)).isEqualTo("approved");assertThat(statusOf(b)).isEqualTo("approved");
+        assertThat(statusOf(pending)).isEqualTo("pending");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE event_id IN (SELECT event_id FROM venue_bookings WHERE venue_id=?)",Integer.class,v)).isZero();
+    }
+    @Test @DisplayName("VS-C3 release (regression): manual release frees approval and removes calendar hold without modifying other reservations")
+    void releaseFreesApproval(){
+        UUID v=venue(),pending=booking(v),competitor=booking(v),other=booking(v,"2027-04-01T14:00:00+08:00","2027-04-01T15:00:00+08:00");
+        bookings.approve(other);
+        var hold=holds.create(pending,expiry,actor);
+        assertThatThrownBy(()->bookings.approve(competitor)).isInstanceOf(VenueBookingConflictException.class);
+        assertThat(statusOf(competitor)).isEqualTo("pending");
+        holds.release(hold.holdId(),actor);
+        bookings.approve(competitor);
+        assertThat(availability.schedule(v).holds()).isEmpty();
+        assertThat(statusOf(pending)).isEqualTo("pending");assertThat(statusOf(other)).isEqualTo("approved");
+        assertThat(statusOf(competitor)).isEqualTo("approved");
+    }
     @Test @DisplayName("VS-C3 conflicts (boundary): buffers reserve once; touching intervals and different venues allowed")
     void occupiedIntervals(){
         UUID v=venue(),b=booking(v);
@@ -144,6 +185,8 @@ class VenueHoldFlowTest {
         assertThat(holds.history(b)).extracting(VenueHold::status).containsExactlyInAnyOrder("released","converted");
         assertThat(repository.blocking(v)).isEmpty();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_bookings WHERE venue_id=?",Integer.class,v)).isEqualTo(1);
+        assertThat(availability.schedule(v).holds()).isEmpty();
+        assertThat(availability.schedule(v).bookings()).extracting(AvailabilityModels.Booking::status).containsExactly("approved");
     }
     @Test @DisplayName("VS-C3 expiry (failure): failed notification rolls back persisted expiry and retries once, but never blocks availability")
     void notificationRetry(){

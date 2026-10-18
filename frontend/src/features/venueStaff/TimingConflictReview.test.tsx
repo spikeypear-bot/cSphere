@@ -47,3 +47,11 @@ it('VS-C4 AC9 (happy): booking timing summary links the conflicting booking on t
       endDatetime: second.endDateTime, effectiveStart: second.effectiveStart, effectiveEnd: second.effectiveEnd }] }} /></MemoryRouter>)
   expect(screen.getByRole('link', { name: 'Second event' })).toHaveAttribute('href', '/venue-staff/bookings/b')
 })
+it('VS-C4 AC9 (scope): conflict links remain opt-in for shared summaries outside Venue Staff', () => {
+  render(<BookingTimingSummary timing={{ startDatetime: first.startDateTime, endDatetime: first.endDateTime,
+    effectiveStart: first.effectiveStart, effectiveEnd: first.effectiveEnd, setupDurationMinutes: 0, turnaroundDurationMinutes: 60,
+    timingNote: null, conflicts: [{ bookingId: second.bookingId, eventName: second.eventName, startDatetime: second.startDateTime,
+      endDatetime: second.endDateTime, effectiveStart: second.effectiveStart, effectiveEnd: second.effectiveEnd }] }} />)
+  expect(screen.getByText(/Second event/)).toBeInTheDocument()
+  expect(screen.queryByRole('link')).not.toBeInTheDocument()
+})

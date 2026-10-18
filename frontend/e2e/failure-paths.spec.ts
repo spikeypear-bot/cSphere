@@ -19,13 +19,13 @@ test('a rejected request tells the organiser it was rejected and why (EC02, EC-N
     await coordinator.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Reject' }).click()
     await coordinator.getByLabel(/reason/i).fill('The date clashes with the annual audit.')
     await coordinator.getByRole('button', { name: 'Confirm rejection' }).click()
-    await expect(coordinator.getByText('Rejected').first()).toBeVisible()
+    await expect(coordinator.getByText('Rejected', { exact: true }).first()).toBeVisible()
   })
 
   await test.step('EC-NEW2 AC3, AC29 / EO15: the organiser sees Rejected and the reason, with no further actions', async () => {
     await organiser.goto('/organiser')
     const row = organiser.getByRole('listitem').filter({ hasText: eventName })
-    await expect(row.getByText('Rejected').first()).toBeVisible()
+    await expect(row.getByText('Rejected', { exact: true }).first()).toBeVisible()
     await organiser.getByRole('button', { name: /Notifications/ }).click()
     await expect(organiser.getByText('The date clashes with the annual audit.').first()).toBeVisible()
     await expect(row.getByRole('link', { name: /Continue editing|Respond|View event/ })).toHaveCount(0)
