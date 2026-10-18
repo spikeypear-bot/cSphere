@@ -6,8 +6,6 @@
 .venue-calendar__status-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .75rem; align-items: center; }
 .venue-calendar__status-row > .button { justify-self: end; }
 .venue-calendar__legend { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 0; }
-.venue-calendar [data-kind="confirmed"] { --entry-color: #245d99; --entry-bg: #eaf2fc; }
-.venue-calendar [data-kind="tentative"] { --entry-color: #80510a; --entry-bg: #fff4dc; }
 .venue-calendar [data-kind="unavailable"] { --entry-color: #9d354b; --entry-bg: #fdeef1; }
 .venue-calendar__legend li { border-left: 4px solid var(--entry-color); background: var(--entry-bg); color: var(--entry-color); padding: .4rem .7rem; }
 .venue-calendar__scroll { overflow-x: auto; margin-top: 1rem; }
@@ -21,6 +19,8 @@
 .venue-calendar__grid ul { list-style: none; padding: 0; margin: 0; display: grid; gap: .35rem; }
 .venue-calendar__entry { display: grid; gap: .25rem; width: 100%; text-align: left; border: 0; border-left: 3px solid var(--entry-color); border-radius: 3px; background: var(--entry-bg); color: var(--entry-color); padding: .5rem; cursor: pointer; font: inherit; font-size: .75rem; overflow-wrap: anywhere; }
 .venue-calendar__entry strong { font-size: .85rem; }
+.venue-calendar__entry[data-conflict="true"] { box-shadow: inset 0 0 0 2px #b36b00; }
+.venue-calendar__legend .venue-calendar__conflict-legend { border: 2px solid #b36b00; color: var(--ink); background: var(--surface); }
 .venue-calendar__entry:hover { filter: brightness(.95); }
 .venue-calendar__entry:focus-visible { outline: 3px solid #245d99; outline-offset: 2px; }
 .venue-calendar__caption { text-align: left; padding-block: .5rem; }
@@ -29,3 +29,6 @@
 .venue-calendar__details::backdrop { background: #0006; }
 .venue-calendar__details dt { font-weight: 600; margin-top: 1rem; }
 .venue-calendar__details dd { margin: .3rem 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+
+
+.venue-calendar [data-booking-status] { --entry-color: var(--booking-status-color); --entry-bg: var(--booking-status-bg); }

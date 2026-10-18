@@ -43,6 +43,8 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @Tag("unit")
 @WebMvcTest(EventController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
+@Tag("EC09")
+@Tag("AU04")
 class AssignedEventsAccessTest {
 
     private static final String ASSIGNED = "/api/events/assigned";

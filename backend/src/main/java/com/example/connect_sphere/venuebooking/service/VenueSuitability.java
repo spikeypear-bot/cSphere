@@ -1,5 +1,7 @@
 package com.example.connect_sphere.venuebooking.service;
 
+import com.example.connect_sphere.common.enums.AccessibilityFeature;
+import com.example.connect_sphere.common.enums.Facility;
 import java.util.List;
 
 import com.example.connect_sphere.event.entity.Event;
@@ -49,5 +51,15 @@ public record VenueSuitability(
 
     public boolean facilitiesOk() {
         return missingFacilities.isEmpty();
+    }
+
+    /** Missing accessibility features as people read them, e.g. "Step-free access". */
+    public String missingAccessibilityLabels() {
+        return String.join(", ", missingAccessibility.stream().map(AccessibilityFeature::labelOf).toList());
+    }
+
+    /** Missing facilities as people read them, e.g. "Stage". */
+    public String missingFacilityLabels() {
+        return String.join(", ", missingFacilities.stream().map(Facility::labelOf).toList());
     }
 }

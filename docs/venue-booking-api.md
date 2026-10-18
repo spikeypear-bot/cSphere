@@ -9,6 +9,7 @@ Each booking has its own start/end window and saved setup/turnaround durations. 
 | GET | `/api/events/{eventId}/venue-options` | Assigned coordinator; optional `startDatetime`, `endDatetime`, `setupDurationMinutes`, `turnaroundDurationMinutes` recheck the proposed occupied window |
 | POST | `/api/events/{eventId}/venue-bookings` | Assigned coordinator; creates one pending booking, returns 201 |
 | POST | `/api/events/{eventId}/venue-bookings/batch` | Assigned coordinator; accepts `{ "bookings": [...] }`, returns 201 and an array; all bookings succeed or the transaction rolls back |
+| POST | `/api/events/{eventId}/venue-bookings/{bookingId}/cancel` | Assigned coordinator; optional `{ "reason": "..." }`; cancels a pending/approved booking and releases its occupied period while retaining the row |
 | GET | `/api/events/{eventId}/venue-bookings` | Assigned coordinator or Safety Officer under existing event-access rules; includes booking-specific times and `timing` |
 | PUT | `/api/venue-bookings/{bookingId}/timing` | Venue Staff; updates saved setup/turnaround durations with a reason and stale-write guard |
 | GET | `/api/venues/{venueId}/timing-conflicts` | Venue Staff; lists overlaps between approved occupied periods |
@@ -17,6 +18,13 @@ Each booking has its own start/end window and saved setup/turnaround durations. 
 New requests are allowed in Planning (`pending` or `safety_changes_requested`), with the confirmed-event exception for an eligible replacement. Replacements can be linked to a venue booking that is affected by unavailability or has been rejected/cancelled. Other active venue bookings for the same event do not block a replacement, but booking the same venue again while it is active remains disallowed. A source booking may have one pending or approved replacement; rejected/cancelled replacement attempts leave the source available for another attempt.
 
 See [timing request/response examples, editing rules and migration policy](venue-booking-duration-snapshots.md). The sections below retain the individual slices' historical implementation and verification notes; the current contract above and VS08 conflict fields below describe the integrated behavior.
+
+See [VS25 release acceptance review](venue-reservation-release.md#acceptance-review--16-october-2026)
+for criterion-by-criterion evidence and limitations. Cancellation rejects terminal
+booking states, completed/cancelled events and originals with a pending
+replacement. Approved cancellation updates event readiness in the same transaction.
+Database failures roll back, but the coordinator cancellation endpoint currently
+lacks the tailored HTTP 503 retry response used by staff approval/rejection.
 
 ## VS02 / VS16 — Pending booking review and booking/event reads
 
@@ -425,6 +433,24 @@ rejected records. After an uncertain response the UI reads current booking data
 before allowing another decision. Rejection does not create a second booking or
 modify the original event requirements.
 
+On `/venue-staff/bookings/{id}`, saved rejection details occupy a full-width red
+panel above the Venue / Event Requirements columns. Rejection Reason, Suggested
+Alternative Venue and Alternative Arrangement use stacked labels and values;
+optional suggestions are omitted when absent. The panel shares its component
+with approval/rejection confirmations. Event Requirements uses the existing
+definition-list styling and displays Venue Occupied, Setup / Turnaround, Booking
+Window, Expected Attendance, Venue Requirements, Accessibility Requirements and
+Equipment Requirements, in that order. Time ranges use the saved booking timings
+and Singapore-time formatting; separate start/end rows are omitted. Legacy
+responses without timings fall back to the event window and zero durations.
+
+The separate **Edit booking timings** card contains only the expandable editor:
+Booking-specific durations, Setup (minutes), Turnaround (minutes), the proposed
+occupied time in SGT, Reason for booking timings, the conflict guidance and Save
+booking timings. Saving refreshes the values in Event Requirements immediately.
+Historical bookings retain their timing summary in Event Requirements without an
+empty editor card. Existing overlap warnings remain visible there.
+
 ## VS08 approval conflicts
 
 Approval now returns HTTP 409 with `message` and a `conflicts` array for direct
@@ -435,7 +461,7 @@ values; clients should display them using the existing Singapore-time formatter.
 The query runs after the existing venue lock and before any booking updates. It
 uses stored booking times (event-time fallback for legacy nulls), the same venue, booking status `approved`, and
 `existingStart < requestedEnd AND existingEnd > requestedStart`. Only the current
-booking ID is excluded; an approved booking still counts when its associated
+booking ID is excluded, plus the validated original when approving a replacement (VS25); an approved booking still counts when its associated
 event is completed or cancelled. Results are ordered by start time and booking ID.
 A blocked request remains pending and existing approved bookings are unchanged.
 

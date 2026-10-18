@@ -1,3 +1,4 @@
+// @stories EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -165,10 +166,45 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
 })
 
 describe('Cancelling a pending venue booking request (EC03)', () => {
-  it('cancels with an optional reason and then offers a new request', async () => {
+  it('retains the approved booking and displays a cancellation failure', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { bookingId: 'b1', status: 'approved', venueAddress: 'Main Hall' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+      [`POST /api/events/${EVENT}/venue-bookings/b1/cancel`]: () => jsonResponse(409, { message: 'Resolve the pending replacement first.' }),
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+    await user.click(await screen.findByRole('button', { name: 'Cancel this booking' }))
+    await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
+    expect(await screen.findByText('Resolve the pending replacement first.')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Venue bookings' })).toHaveTextContent('Approved')
+  })
+
+  it('opens cancellation for only the selected booking', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { bookingId: 'b1', status: 'approved', venueAddress: 'Main Hall' },
+        { bookingId: 'b2', status: 'approved', venueAddress: 'Other Hall' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+    await user.click((await screen.findAllByRole('button', { name: 'Cancel this booking' }))[0])
+    expect(screen.getAllByRole('button', { name: 'Confirm cancellation' })).toHaveLength(1)
+    expect(screen.getByText('Other Hall')).toBeInTheDocument()
+  })
+
+  it.each(['pending', 'approved'])('cancels a %s booking with an optional reason and then offers a new request', async status => {
     seedSession('coordinator')
     let cancelled = false
-    const booking = { bookingId: 'b1', status: 'pending', venueId: 'v1', venueAddress: '1 Harbour Road', venueCapacity: 160,
+    const booking = { bookingId: 'b1', status, venueId: 'v1', venueAddress: '1 Harbour Road', venueCapacity: 160,
       bookingNotes: null, suitabilityNote: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1' }
     const calls = stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -182,13 +218,18 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
     const user = userEvent.setup()
     renderEvent('/coordinator')
 
-    await user.click(await screen.findByRole('button', { name: 'Cancel this request' }))
+    await user.click(await screen.findByRole('button', { name: status === 'approved' ? 'Cancel this booking' : 'Cancel this request' }))
     await user.type(screen.getByLabelText('Reason for Venue Staff (optional)'), 'Wrong venue')
     await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
 
     expect(await screen.findByRole('link', { name: 'Rebook this venue' })).toHaveAttribute(
       'href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=b1`,
     )
+    expect(screen.getByRole('link', { name: 'Request a venue' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Earlier venue requests' })).toBeInTheDocument()
+    const earlier = within(screen.getByRole('list', { name: 'Earlier venue requests' }))
+    expect(earlier.getByText('1 Harbour Road')).toBeInTheDocument()
+    expect(earlier.getByText('Cancelled')).toBeInTheDocument()
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Wrong venue' })
   })
 })

@@ -410,16 +410,24 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
     })
     vi.stubGlobal('fetch', fetchMock)
 
-    const user = userEvent.setup()
-    renderWizard()
+    // IS212 Week 9 (flaky tests): control the clock instead of sleeping. A
+    // real 1.7 s wait was slow and could still miss on a slow CI runner; fake
+    // timers make this instant and pin the exact debounce boundary.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    try {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      renderWizard()
 
-    await user.type(screen.getByLabelText('Event name'), 'Q1 Town Hall')
-    expect(fetchMock).not.toHaveBeenCalled()
+      await user.type(screen.getByLabelText('Event name'), 'Q1 Town Hall')
+      await vi.advanceTimersByTimeAsync(1400)
+      expect(fetchMock).not.toHaveBeenCalled()
 
-    await new Promise((resolve) => setTimeout(resolve, 1700))
-
-    expect(fetchMock).toHaveBeenCalledWith('/api/event-requests', expect.objectContaining({ method: 'POST' }))
-  }, 10000)
+      await vi.advanceTimersByTimeAsync(200)
+      expect(fetchMock).toHaveBeenCalledWith('/api/event-requests', expect.objectContaining({ method: 'POST' }))
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 
   it('restores unsynced input from a local backup when the server is unreachable', async () => {
     window.localStorage.setItem(

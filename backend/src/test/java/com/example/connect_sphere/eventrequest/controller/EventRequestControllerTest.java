@@ -41,6 +41,10 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @Tag("unit")
 @WebMvcTest(EventRequestController.class)
 @AutoConfigureMockMvc(addFilters = false)
+@Tag("EO01")
+@Tag("EO02")
+@Tag("EO15")
+@Tag("AU04")
 class EventRequestControllerTest {
 
     private static final String ACME = "Acme Conferences";

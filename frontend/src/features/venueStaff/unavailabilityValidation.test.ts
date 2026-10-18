@@ -1,3 +1,4 @@
+// @stories VS01  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { expect, it } from 'vitest'
 import { singaporeToday, unavailabilityDateErrors } from './unavailabilityValidation'
 

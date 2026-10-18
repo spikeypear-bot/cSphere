@@ -1,3 +1,4 @@
+// @stories VS-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { expect, it } from 'vitest'
 import { occupiedPeriod, validMinutes } from './bookingTiming'
 import { approvedOverlaps } from '../features/venueStaff/venueCalendar'

@@ -31,6 +31,9 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("AU04")
+@Tag("EO09")
+@Tag("EO19")
 class EventRequestScopingTest {
 
     // Match DevUserSeeder's own organisation strings exactly, so the seeded

@@ -11,6 +11,7 @@ export type NotificationTypeName =
   | 'event_confirmed'
   | 'event_returned_to_planning'
   | 'event_safety_approved'
+  | 'venue_hold_expired'
   | 'venue_timing_changed'
   | 'venue_timing_conflict'
 

@@ -120,6 +120,8 @@ function CoordinatorLeadRoutes() {
       <Route index element={<CoordinatorLeadHomePage />} />
       <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
       <Route path="unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
+      {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
+      <Route path="events/:eventId" element={<EventDetailsPage />} />
       <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
       {skeletonRoutes(coordinatorLeadFeatures)}
     </Routes>

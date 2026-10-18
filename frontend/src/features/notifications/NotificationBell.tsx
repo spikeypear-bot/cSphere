@@ -19,6 +19,7 @@ function timeAgo(iso: string): string {
 }
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'venue_hold_expired') return `Tentative venue hold expired for "${n.eventName}"`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
   if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
   if (n.type === 'venue_unavailable') return `A venue booking for "${n.eventName}" is unavailable`

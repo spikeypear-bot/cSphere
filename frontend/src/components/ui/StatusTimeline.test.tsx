@@ -1,3 +1,4 @@
+// @stories EO15  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it } from 'vitest'
 import { render, screen, cleanup } from '@testing-library/react'
 import { StatusTimeline } from './StatusTimeline'

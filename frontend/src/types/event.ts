@@ -74,3 +74,10 @@ export interface OrganiserArrangementsDto {
   firstConfirmedAt: string | null
   confirmedAt: string | null
 }
+
+/** ECL-C7: GET /api/events/by-coordinator (Lead only). */
+export interface CoordinatorEventsDto {
+  coordinatorId: string
+  coordinatorName: string
+  events: { requestId: string | null; event: EventDto }[]
+}

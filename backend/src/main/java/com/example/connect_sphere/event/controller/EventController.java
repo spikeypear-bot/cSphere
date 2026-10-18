@@ -56,6 +56,12 @@ public class EventController {
         return jwt.getClaimAsString("organisation");
     }
 
+    /** ECL-C7: every coordinator's active events. Lead only (see SecurityConfig). */
+    @GetMapping("/by-coordinator")
+    public List<com.example.connect_sphere.event.dto.CoordinatorEventsDto> eventsByCoordinator() {
+        return service.activeEventsByCoordinator();
+    }
+
     /** EC09: the caller's own active events. Coordinator only (see SecurityConfig). */
     @GetMapping("/assigned")
     public List<EventDto> assignedEvents(@AuthenticationPrincipal Jwt jwt) {
@@ -64,12 +70,14 @@ public class EventController {
 
     @GetMapping("/{id}")
     public EventDto get(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
-        // Coordinators aren't scoped to an organisation (same reasoning as
-        // EventRequestController's queue/approve/reject); an Organiser only
-        // ever sees their own organisation's event, same as everywhere else
-        // in this app.
+        // ECL-C7: a coordinator sees only events assigned to them; the Lead
+        // sees any event (oversight, read-only); an Organiser only their own
+        // organisation's (D20).
         if ("ec".equalsIgnoreCase(roleOf(jwt))) {
-            return service.getForCoordinator(id);
+            return service.getForCoordinator(userIdOf(jwt), id);
+        }
+        if ("ecl".equalsIgnoreCase(roleOf(jwt))) {
+            return service.getForLead(id);
         }
         return service.get(organisationOf(jwt), id);
     }
@@ -77,7 +85,9 @@ public class EventController {
     /** The event's full timeline, filtered to what the caller's role may see. */
     @GetMapping("/{id}/timeline")
     public List<ActivityDto> timeline(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
-        UserRole role = "ec".equalsIgnoreCase(roleOf(jwt)) ? UserRole.ec : UserRole.eo;
+        String claim = roleOf(jwt);
+        UserRole role = "ec".equalsIgnoreCase(claim) ? UserRole.ec
+                : "ecl".equalsIgnoreCase(claim) ? UserRole.ecl : UserRole.eo;
         return eventRequestService.timelineForEvent(role, organisationOf(jwt), userIdOf(jwt), id);
     }
 

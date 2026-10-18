@@ -28,6 +28,9 @@ import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 @Tag("unit")
+@Tag("SO-C3")
+@Tag("SO-C4")
+@Tag("EC08")
 class ReadinessServiceTest {
 
     private static final UUID EVENT_ID = UUID.randomUUID();

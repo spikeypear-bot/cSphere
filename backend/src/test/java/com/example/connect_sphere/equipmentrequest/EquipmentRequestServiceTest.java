@@ -23,6 +23,7 @@ import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
 @Tag("unit")
+@Tag("EC07")
 class EquipmentRequestServiceTest {
 
     @Mock private EventRepository events;
