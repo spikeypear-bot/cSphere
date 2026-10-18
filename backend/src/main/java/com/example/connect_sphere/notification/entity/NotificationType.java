@@ -21,5 +21,8 @@ public enum NotificationType {
     // EC08: the Safety Officer approved; the coordinator can now confirm.
     event_safety_approved,
     venue_timing_changed,
-    venue_timing_conflict
+    venue_timing_conflict,
+    event_reassignment_requested,
+    event_reassignment_approved,
+    event_reassignment_declined
 }

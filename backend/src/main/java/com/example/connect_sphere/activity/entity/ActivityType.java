@@ -39,6 +39,12 @@ public enum ActivityType {
     /** ELC-C5: the Lead moved the request to another Event Coordinator;
      * the message names both. */
     coordinator_reassigned(Set.of(UserRole.eo, UserRole.ec), true),
+    /** EC-C1: an Event Coordinator asked the Lead to transfer an active event. */
+    event_reassignment_requested(Set.of(UserRole.eo, UserRole.ec)),
+    /** EC-C1: the Lead approved a transfer to another coordinator. */
+    event_reassignment_approved(Set.of(UserRole.eo, UserRole.ec)),
+    /** EC-C1: the Lead declined a transfer request. */
+    event_reassignment_declined(Set.of(UserRole.eo, UserRole.ec)),
     /** EC01: the coordinator asked for missing/unclear information. */
     clarification_requested(Set.of(UserRole.eo, UserRole.ec)),
     /** EO26: the organiser answered and resubmitted. */
