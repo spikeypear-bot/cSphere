@@ -1,4 +1,8 @@
 @startuml ConnectSphere-Code-Level-Class-Diagram
+' STALE: hand-drawn and last updated 2026-09-19 (decision-log D16). Kept for
+' reference only; the current diagrams are generated into docs/class-diagrams/
+' (see the DEV15 entry in decision-log.md). Do not update this file.
+'
 ' C4 "Code" level view (IS212 Week 5): the Java classes actually implemented
 ' in backend/src/main/java/com/example/connect_sphere, not the full database
 ' schema — see SCHEMA.md for the complete ER diagram of every table,

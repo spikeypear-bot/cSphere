@@ -1,0 +1,176 @@
+@startuml
+
+hide circle
+skinparam classAttributeIconSize 0
+set separator none
+legend top left
++ field: has a getter and a setter (every field is private in the code)
+endlegend
+
+
+class ApiError {
+	{field} -message : String
+	{field} -missingFields : List<String>
+	{method}  {static} +missingFields ( message : String , missingFields : List ) : ApiError
+	{method}  {static} +of ( message : String ) : ApiError
+}
+
+
+class RestAccessDeniedHandler {
+	{field} -objectMapper : ObjectMapper
+	{method} +handle ( request : HttpServletRequest , response : HttpServletResponse , accessDeniedException : AccessDeniedException ) : void
+}
+
+
+class RestAuthenticationEntryPoint {
+	{field} -objectMapper : ObjectMapper
+	{method} +commence ( request : HttpServletRequest , response : HttpServletResponse , authException : AuthenticationException ) : void
+}
+
+
+class AuthenticationConfig {
+	{method} +authenticationManager ( userDetailsService : UserDetailsService , passwordEncoder : PasswordEncoder ) : AuthenticationManager
+}
+
+
+class JwtConfig {
+	{field} -key : SecretKey
+	{method} +jwtAuthenticationConverter () : JwtAuthenticationConverter
+	{method} +jwtDecoder () : JwtDecoder
+	{method} +jwtEncoder () : JwtEncoder
+}
+
+
+class SecurityConfig {
+	{method} +filterChain ( http : HttpSecurity , jwtAuthenticationConverter : JwtAuthenticationConverter , authenticationEntryPoint : RestAuthenticationEntryPoint , accessDeniedHandler : RestAccessDeniedHandler ) : SecurityFilterChain
+	{method} +passwordEncoder () : PasswordEncoder
+}
+
+
+class AuthController {
+	{field} -authenticationManager : AuthenticationManager
+	{method} +login ( request : LoginRequest ) : ResponseEntity
+	{method} +logout ( request : RefreshRequest ) : ResponseEntity
+	{method} +refresh ( request : RefreshRequest ) : ResponseEntity
+}
+
+
+class LoginRequest {
+	{field} -password : String
+	{field} -username : String
+}
+
+
+class LoginResponse {
+	{field} -accessToken : String
+	{field} -expiresIn : long
+	{field} -organisation : String
+	{field} -refreshToken : String
+	{field} -role : String
+	{field} -tokenType : String
+	{field} -userId : UUID
+	{field} -username : String
+}
+
+
+class RefreshRequest {
+	{field} -refreshToken : String
+}
+
+
+class RefreshToken <<Entity>>  {
+	{field} +expiresAt : OffsetDateTime
+	{field} +familyId : UUID
+	{field} +issuedAt : OffsetDateTime
+	{field} +revokedAt : OffsetDateTime
+	{field} +tokenHash : String
+	{field} +tokenId : UUID {id}
+}
+
+
+class User <<Entity>>  {
+	{field} +createdAt : OffsetDateTime
+	{field} +email : String
+	{field} +hashedPassword : String
+	{field} +organisation : String
+	{field} +userId : UUID {id}
+	{field} +username : String
+}
+
+
+enum UserRole {
+	{field} +attendee
+	{field} +ec
+	{field} +ecl
+	{field} +eo
+	{field} +safety_officer
+	{field} +technician
+	{field} +vs
+}
+
+
+interface RefreshTokenRepository {
+	{method}  {abstract} +findByTokenHash ( tokenHash : String ) : Optional
+	{method}  {abstract} +revokeFamily ( familyId : UUID , now : OffsetDateTime ) : int
+}
+
+
+interface UserRepository {
+	{method}  {abstract} +existsByUsername ( username : String ) : boolean
+	{method}  {abstract} +findByRole ( role : UserRole ) : List
+	{method}  {abstract} +findByRoleAndOrganisation ( role : UserRole , organisation : String ) : List
+	{method}  {abstract} +findByUsername ( username : String ) : Optional
+}
+
+
+class AppUserDetailsService {
+	{method} +loadUserByUsername ( username : String ) : UserDetails
+}
+
+
+class InvalidRefreshTokenException {
+}
+
+
+class RefreshTokenService {
+	{field} {static} -TOKEN_BYTES : int
+	{field} {static} -log : Logger
+	{field} -random : SecureRandom
+	{field} -ttl : Duration
+	{method} +issueForNewSession ( user : User ) : String
+	{method} +revokeSession ( presented : String ) : void
+	{method} +rotate ( presented : String ) : Rotation
+}
+
+
+class RefreshTokenService.Rotation {
+	{field} -refreshToken : String
+}
+
+
+class TokenService {
+	{field} -encoder : JwtEncoder
+	{field} -issuer : String
+	{field} -ttl : Duration
+	{method} +accessTokenTtlSeconds () : long
+	{method} +issueAccessToken ( principal : UserPrincipal ) : String
+}
+
+
+class UserPrincipal {
+}
+
+
+
+
+AuthController --> RefreshTokenService : refreshTokenService
+AuthController --> TokenService : tokenService
+RefreshToken --> User : user
+User --> UserRole : role
+AppUserDetailsService --> UserRepository : repository
+RefreshTokenService --> RefreshTokenRepository : repository
+RefreshTokenService.Rotation --> User : user
+UserPrincipal --> User : user
+
+
+@enduml

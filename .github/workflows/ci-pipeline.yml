@@ -73,3 +73,13 @@ jobs:
       - name: Integration test summary
         if: ${{ !cancelled() }}
         run: python3 ../.github/scripts/test-summary.py "Backend integration tests" target/surefire-reports
+      # DEV15: the test runs above regenerate docs/class-diagrams from the
+      # code, so any change there means the committed diagrams are stale.
+      - name: Class diagrams up to date
+        run: |
+          if [ -n "$(git status --porcelain -- ../docs/class-diagrams)" ]; then
+            echo "::error::docs/class-diagrams is out of date. Run the backend tests and commit the regenerated .puml files."
+            git status --short -- ../docs/class-diagrams
+            git diff --stat -- ../docs/class-diagrams
+            exit 1
+          fi
