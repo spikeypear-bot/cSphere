@@ -304,8 +304,7 @@ function VenueBookingCard({ eventId, planning, active, canRebook, onCancelled }:
           ) : null}
         </>
       )}
-        
-        {historicalBookings.length > 0 ? (
+      {historicalBookings.length > 0 ? (
         <div className="event-details__earlier-requests">
           <h3>Earlier venue requests</h3>
           <ul className="event-details__booking-list" aria-label="Earlier venue requests">
@@ -349,13 +348,12 @@ function VenueBookingCard({ eventId, planning, active, canRebook, onCancelled }:
             })}
           </ul>
         </div>
-       
       ) : null}
-      {planning && activeBookings.length === 0 && historicalBookings.length === 0 ? (
-        <Link className="button button--primary" to={`/coordinator/events/${eventId}/venue-booking`}>
-          Request a venue
-        </Link>
-      ) : null}
+      {bookings.some(b => b.status === 'changed') && <div>
+        <h3>Released bookings</h3>
+        <ul>{bookings.filter(b => b.status === 'changed').map(b =>
+          <li key={b.bookingId}>{b.venueAddress}: {BOOKING_STATUS_LABELS[b.status]}</li>)}</ul>
+      </div>}
     </Card>
   )
 }

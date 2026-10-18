@@ -199,7 +199,7 @@ public class VenueBookingRequestService {
         }
         Venue venue = venues.findForUpdate(request.venueId())
                 .orElseThrow(() -> new VenueNotFoundException(request.venueId()));
-        if (replacement && original.getVenueId().equals(venue.getVenueId())) {
+        if (replacement && !ACTIVE.contains(original.getStatus()) && original.getVenueId().equals(venue.getVenueId())) {
             throw new InvalidVenueBookingException("Choose a venue different from the booking being replaced.");
         }
         UUID originalBookingId = original == null ? null : original.getBookingId();

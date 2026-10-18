@@ -229,6 +229,9 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
     expect(screen.getByRole('link', { name: 'Rebook this venue' })).toHaveAttribute(
       'href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=b1`,
     )
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Wrong venue' })
+  })
+})
 
 describe('OrganiserHomePage clarification row (EO26)', () => {
   it("highlights a request that needs clarification, shows the question, and links to Respond", async () => {

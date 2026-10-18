@@ -103,7 +103,7 @@ public class VenueBookingService {
         // active until approval succeeds; the event and venue locks cover the swap.
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow();
-            if (!original.getEventId().equals(eventId) || !availability.affected(original.getBookingId()))
+            if (!original.getEventId().equals(eventId) || !isEligibleReplacementSource(original))
                 throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
         }
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
@@ -159,7 +159,7 @@ public class VenueBookingService {
                 throw new VenueBookingStateException("The original booking is no longer eligible for replacement. Refresh this event.");
             }
             if (original.getStatus() == VenueBookingStatus.pending || original.getStatus() == VenueBookingStatus.approved) {
-                 if (holdService != null) holdService.endForBooking(original.getBookingId(), null);
+                if (holdService != null) holdService.endForBooking(original.getBookingId(), null);
                 original.setStatus(VenueBookingStatus.changed);
                 records.saveAndFlush(original);
             }
