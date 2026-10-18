@@ -4,6 +4,8 @@
 
 ConnectSphere is an Event Planning and Venue Booking System for ConnectSphere Event Services, a regional Southeast-Asian event-planning and venue-services organisation. It replaces fragmented coordination across email, spreadsheets, calendars, messaging apps, and manual documents with a single platform for planning and managing events, venues, equipment, and the people involved — Event Organisers, Event Coordinators, Venue Staff, Technical Support Staff, and Attendees. This is an SMU IS212 Software Project Management team deliverable: build a working, demonstrable, testable Release 1 that implements a customer-approved set of core features end-to-end, run under a real scrum process — not the broadest possible interpretation of the customer briefing.
 
+> **Before writing or changing any test**, follow "Writing or changing a test — every time" under *Testing rules (IS212 Week 9)* below. CI fails the PR if a test file names no user story.
+
 ## Sources of Truth (read in this order)
 
 1. `docs/product-context.md` — detailed requirements, roles, workflows, business rules, data model, NFRs, traceability.
@@ -181,6 +183,36 @@ Week 6 asked "is the evidence from one unit trustworthy?"; Week 9 asks "does it 
 - **Test names say which AC and which kind of case**, e.g. `@DisplayName("EC08 AC26, AC27 (conflict): …")` or `it('EO04 AC14 (boundary): …')`. Case types: happy / negative / boundary / conflict / failure / cross-cutting (Week 4's 5 steps, plus the rubric's conflict and failure).
 - **Unit vs integration traceability.** A unit test usually proves one story's AC. Integration and E2E tests often cut across several stories, so tag all of them.
 - **Week 4 test cases go in the Sheet** (*Test Cases – Sprint N*: ID, scenario, pre-conditions, steps, data, expected, plus an execution record). **Remarks name the automated tests that execute each case**, so Sheet, ACs and code point at each other. Repository copies are in `docs/test-cases/` (e.g. `sprint3-jillian.md`, which maps all 95 ACs of EC-NEW2/EC08/EO04).
+
+**Writing or changing a test — every time (all agents, no prompt needed).** CI's `traceability` job fails the PR if any test file names no story. Follow these steps for every test you create or edit, without being asked:
+
+1. **Find the story ID** from the branch name (`git branch --show-current`).
+   - Examples: `feat/vs-c3-tentative-venue-holds` → `VS-C3`; `feature/ecnew5-change_log` → `EC-NEW5`; `feat/ec08-…` → `EC08`.
+   - Use the canonical form: uppercase, a hyphen before `C` or `NEW`, and two digits for plain numbers (`EO04`, `EC08`, `VS-C3`, `EC-NEW5`, `ECL-C7`, `TS01`, `SO-C4`, `AU04`, `DEV15`).
+   - If the branch names no clear story, **stop and ask the user**. Never guess or invent an ID.
+2. **Tag every test file you create or edit.**
+   - **Backend** (`backend/src/test/**/*Test.java`): on the class, add `@Tag("<StoryID>")` next to exactly one layer tag. Use `@Tag("integration")` for tests that use a real database or Spring context (`@SpringBootTest`), and `@Tag("unit")` otherwise.
+   - **Frontend** (`frontend/src/**/*.test.ts(x)`): make line 1 `// @stories <StoryID>`, and start the top-level `describe` title with the story ID.
+   - **E2E** (`frontend/e2e/*.spec.ts`): make line 1 `// @stories <IDs>`, and start each test title with a story ID.
+   - **Tests that cover several stories** (usually integration or E2E): tag **all** of them.
+   - **Existing tags:** keep them and add yours. Never remove or rename another story's tag.
+3. **Name each test after the AC it checks:** `"<StoryID> AC<n> (<case>): <what the user experiences>"`.
+   - Backend example: `@DisplayName("VS-C3 AC7 (conflict): a hold that overlaps a confirmed booking is refused and nothing is saved")`.
+   - Frontend example: `it('VS-C3 AC3 (negative): shows a validation error when the expiry is missing', …)`.
+   - `<case>` is exactly one of: happy, negative, boundary, conflict, failure, cross-cutting.
+   - **AC numbers come only from the acceptance criteria the user gives you**, numbered 1, 2, 3… in the order given. If you don't have them, ask. If the user can't give them, write just the story and case (`"VS-C3 (boundary): …"`). **Never make up AC numbers.**
+   - Expected values come from the AC text, not from what the code currently returns.
+4. **Cover more than the happy path.** For each AC, consider happy, negative (wrong role, missing or invalid input), boundary (limits, empty, exactly at the edge), conflict (overlaps, concurrent changes) and failure (the action fails and nothing is saved) cases. A test that checks something is refused also checks that nothing changed.
+5. **Verify before saying you're done.**
+   - Run `python .github/scripts/traceability.py --check` from the repo root. It must not list "Untraced test files".
+   - Run the tests you touched, and report both results to the user.
+   - Don't commit changes to `docs/test-traceability.md` unless asked.
+6. **Never:**
+   - weaken, skip or delete an existing test to make the check or build pass;
+   - change another story's tests or tags, except to add your own story's tag;
+   - edit or disable `.github/scripts/traceability.py` or the CI workflow to get past the check.
+
+   If something blocks you, stop and tell the user.
 
 **Test doubles: pick by what the AC requires.** These corrections to the team's Week 9 notes are deliberate; use this vocabulary in Q&A.
 
