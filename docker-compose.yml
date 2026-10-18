@@ -52,7 +52,7 @@ services:
     working_dir: /build
     volumes:
       - ./backend:/build
-      # The DEV15 class diagram tests write to ../docs/class-diagrams
+      # The DEV15 diagram tests write to ../docs/class-diagrams and ../docs/er-diagrams
       - ./docs:/docs
       - m2cache:/root/.m2
     depends_on:

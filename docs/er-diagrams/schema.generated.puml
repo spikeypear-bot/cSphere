@@ -1,0 +1,423 @@
+@startuml
+
+hide circle
+legend top left
+* column: NOT NULL
+<<PK>> primary key, <<FK>> foreign key
+Line ends: }o zero or many, |o zero or one, || exactly one
+Postgres enum types are listed on their own; columns name them as their type
+endlegend
+
+entity equipment_logs {
+	* log_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* equipment_id : uuid <<FK>>
+	* quantity : integer
+	technical_requirements : text
+	serial_number : character varying(255) <<FK>>
+	* loaned_from : timestamp with time zone
+	* loaned_until : timestamp with time zone
+}
+
+entity equipment_request_equipments {
+	* request_id : uuid <<PK>> <<FK>>
+	* equipment_id : uuid <<PK>> <<FK>>
+	--
+	* equipment_qty : integer
+}
+
+entity equipment_requests {
+	* request_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* status : equipment_request_status
+	* technical_requirement : text
+	reject_reason : text
+}
+
+entity equipment_status_periods {
+	* status_period_id : uuid <<PK>>
+	--
+	* equipment_id : uuid <<FK>>
+	* serial_number : character varying(255) <<FK>>
+	* status : equipment_status
+	* period_start : timestamp with time zone
+	period_end : timestamp with time zone
+	* created_at : timestamp with time zone
+}
+
+entity equipments {
+	* equipment_id : uuid <<PK>>
+	--
+	* equipment_name : character varying(255)
+	* equipment_qty : integer
+	serialised : boolean
+	* equipment_type : character(1)
+}
+
+entity event_readiness_items {
+	* item_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* item_key : character varying(80)
+	* checked : boolean
+	* note : character varying(2000)
+	checked_by : uuid <<FK>>
+	checked_at : timestamp with time zone
+	updated_by : uuid <<FK>>
+	updated_at : timestamp with time zone
+}
+
+entity event_request_activity {
+	* activity_id : uuid <<PK>>
+	--
+	* request_id : uuid <<FK>>
+	event_id : uuid <<FK>>
+	* activity_type : character varying(50)
+	* actor_user_id : uuid <<FK>>
+	* actor_role : character varying(20)
+	* actor_name : character varying(255)
+	message : text
+	* flagged_fields : text[]
+	from_status : character varying(50)
+	to_status : character varying(50)
+	* audience_roles : text[]
+	* occurred_at : timestamp with time zone
+	field_questions : jsonb
+	field_values : jsonb
+}
+
+entity event_requests {
+	* request_id : uuid <<PK>>
+	--
+	request_type : character(1)
+	event_id : uuid <<FK>>
+	event_name : character varying(255)
+	purpose : text
+	description : text
+	start_datetime : timestamp with time zone
+	end_datetime : timestamp with time zone
+	expected_attendance : integer
+	venue_requirements : text
+	equipment_requirements : text
+	* accessibility_needs : text[]
+	registration_needs : boolean
+	* status : event_request_status
+	* created_at : timestamp with time zone
+	organisation : character varying(100)
+	created_by : uuid <<FK>>
+	* updated_at : timestamp with time zone
+	coordinator_id : uuid <<FK>>
+	rejection_reason : text
+	* required_facilities : facilities[]
+}
+
+entity event_safety_reviews {
+	* event_id : uuid <<PK>> <<FK>>
+	--
+	* review_status : character varying(32)
+	* note : character varying(2000)
+	* reviewed_by : uuid <<FK>>
+	* reviewed_at : timestamp with time zone
+}
+
+entity events {
+	* event_id : uuid <<PK>>
+	--
+	* event_name : character varying(255)
+	* purpose : text
+	description : text
+	* start_datetime : timestamp with time zone
+	* end_datetime : timestamp with time zone
+	* expected_attendance : integer
+	venue_id : uuid <<FK>>
+	* accessibility_needs : accessibilities[]
+	registration_needs : boolean
+	organisation : character varying(100)
+	actual_attendance : integer
+	* venue_requirements : text
+	equipment_requirements : text
+	* status : event_status
+	coordinator_id : uuid <<FK>>
+	* required_facilities : facilities[]
+	safety_approved_at : timestamp with time zone
+	safety_feedback : text
+	first_confirmed_at : timestamp with time zone
+	confirmed_at : timestamp with time zone
+	confirmed_by : uuid <<FK>>
+}
+
+entity notifications {
+	* notification_id : uuid <<PK>>
+	--
+	* recipient_user_id : uuid <<FK>>
+	event_request_id : uuid <<FK>>
+	event_id : uuid <<FK>>
+	* type : notification_type
+	* event_name : character varying(255)
+	new_status : character varying(50)
+	reason : text
+	coordinator_name : character varying(255)
+	coordinator_email : character varying(255)
+	is_reassignment : boolean
+	* occurred_at : timestamp with time zone
+	read_at : timestamp with time zone
+	message : text
+	venue_booking_id : uuid
+}
+
+entity refresh_tokens {
+	* token_id : uuid <<PK>>
+	--
+	* user_id : uuid <<FK>>
+	* token_hash : character varying(64)
+	* family_id : uuid
+	* issued_at : timestamp with time zone
+	* expires_at : timestamp with time zone
+	revoked_at : timestamp with time zone
+}
+
+entity serialised_equipments {
+	* equipment_id : uuid <<PK>> <<FK>>
+	* serial_number : character varying(255) <<PK>>
+	--
+	* status : equipment_status
+}
+
+entity users {
+	* user_id : uuid <<PK>>
+	--
+	* hashed_password : character varying(255)
+	* email : character varying(255)
+	* username : character varying(255)
+	* created_at : timestamp with time zone
+	* role : user_role
+	organisation : character varying(100)
+}
+
+entity venue_booking_holds {
+	* hold_id : uuid <<PK>>
+	--
+	* booking_id : uuid <<FK>>
+	* reserved_start : timestamp with time zone
+	* reserved_end : timestamp with time zone
+	* expires_at : timestamp with time zone
+	* status : character varying(16)
+	* created_by : uuid <<FK>>
+	* created_at : timestamp with time zone
+	ended_at : timestamp with time zone
+}
+
+entity venue_bookings {
+	* booking_id : uuid <<PK>>
+	--
+	* venue_id : uuid <<FK>>
+	* event_id : uuid <<FK>>
+	* status : venue_booking_status
+	booking_notes : text
+	reject_reason : text
+	submitted_by : uuid <<FK>>
+	submitted_at : timestamp with time zone
+	suitability_note : text
+	alternative_venue_id : uuid <<FK>>
+	alternative_arrangement : text
+	replaces_booking_id : uuid <<FK>>
+	start_datetime : timestamp with time zone
+	end_datetime : timestamp with time zone
+	* setup_duration_minutes : integer
+	* turnaround_duration_minutes : integer
+	timing_note : text
+	timing_updated_at : timestamp with time zone
+	timing_updated_by : uuid <<FK>>
+}
+
+entity venue_operating_hours {
+	* operating_hour_id : uuid <<PK>>
+	--
+	* venue_id : uuid <<FK>>
+	* day_of_week : integer
+	* open_time : time without time zone
+	* close_time : time without time zone
+}
+
+entity venue_operational_issues {
+	* issue_id : uuid <<PK>>
+	--
+	* venue_id : uuid <<FK>>
+	* description : text
+	affected_from : timestamp with time zone
+	affected_until : timestamp with time zone
+	* created_by : uuid <<FK>>
+	* created_at : timestamp with time zone
+}
+
+entity venue_timing_conflicts {
+	* first_booking_id : uuid <<PK>> <<FK>>
+	* second_booking_id : uuid <<PK>> <<FK>>
+	--
+	* fingerprint : text
+}
+
+entity venue_unavailability {
+	* unavailability_id : uuid <<PK>>
+	--
+	* venue_id : uuid <<FK>>
+	* start_datetime : timestamp with time zone
+	* end_datetime : timestamp with time zone
+	* reason : text
+	* created_by : uuid <<FK>>
+	* created_at : timestamp with time zone
+}
+
+entity venue_unavailability_bookings {
+	* unavailability_id : uuid <<PK>> <<FK>>
+	* booking_id : uuid <<PK>> <<FK>>
+	--
+}
+
+entity venues {
+	* venue_id : uuid <<PK>>
+	--
+	* venue_address : text
+	* supported_layouts : text[]
+	* venue_capacity : integer
+	* venue_accessibilities : accessibilities[]
+	* operating_information : text
+	* venue_facilities : facilities[]
+	additional_information : text
+	* setup_minutes : integer
+	* turnaround_minutes : integer
+}
+
+enum accessibilities {
+	accessible_parking
+	drop_off_zone
+	public_transport
+	step_free_access
+	wide_doorways
+	elevators
+	wheelchair_support
+	none
+}
+
+enum equipment_request_status {
+	processing
+	approved
+	rejected
+}
+
+enum equipment_status {
+	AVAILABLE
+	FAULTY
+	UNAVAILABLE
+}
+
+enum event_request_status {
+	pending
+	approved
+	rejected
+	cancelled
+	draft
+	clarification_required
+}
+
+enum event_status {
+	confirmed
+	cancelled
+	completed
+	pending
+	awaiting_safety_review
+	safety_changes_requested
+	safety_approved
+}
+
+enum facilities {
+	audio_visual_equipment
+	air_conditioning
+	breakout_spaces
+	projection
+	stage
+	dining_area
+	barbeque_pit
+}
+
+enum notification_type {
+	status_change
+	coordinator_assignment
+	clarification_requested
+	clarification_responded
+	venue_booking_requested
+	venue_booking_cancelled
+	venue_unavailable
+	event_confirmed
+	event_returned_to_planning
+	event_safety_approved
+	venue_timing_changed
+	venue_timing_conflict
+	venue_hold_expired
+}
+
+enum user_role {
+	ec
+	eo
+	vs
+	attendee
+	technician
+	ecl
+	safety_officer
+}
+
+enum venue_booking_status {
+	pending
+	approved
+	changed
+	rejected
+	cancelled
+}
+
+equipment_logs }o--|| equipments : equipment_id
+equipment_logs }o--o| serialised_equipments : equipment_id, serial_number
+equipment_logs }o--|| events : event_id
+equipment_request_equipments }o--|| equipments : equipment_id
+equipment_request_equipments }o--|| equipment_requests : request_id
+equipment_requests }o--|| events : event_id
+equipment_status_periods }o--|| serialised_equipments : equipment_id, serial_number
+event_readiness_items }o--o| users : checked_by
+event_readiness_items }o--|| events : event_id
+event_readiness_items }o--o| users : updated_by
+event_request_activity }o--|| users : actor_user_id
+event_request_activity }o--o| events : event_id
+event_request_activity }o--|| event_requests : request_id
+event_requests }o--o| users : coordinator_id
+event_requests }o--o| users : created_by
+event_requests }o--o| events : event_id
+event_safety_reviews |o--|| events : event_id
+event_safety_reviews }o--|| users : reviewed_by
+events }o--o| users : confirmed_by
+events }o--o| users : coordinator_id
+events }o--o| venues : venue_id
+notifications }o--o| events : event_id
+notifications }o--o| event_requests : event_request_id
+notifications }o--|| users : recipient_user_id
+refresh_tokens }o--|| users : user_id
+serialised_equipments }o--|| equipments : equipment_id
+venue_booking_holds }o--|| venue_bookings : booking_id
+venue_booking_holds }o--|| users : created_by
+venue_bookings }o--o| venues : alternative_venue_id
+venue_bookings }o--|| events : event_id
+venue_bookings }o--o| venue_bookings : replaces_booking_id
+venue_bookings }o--o| users : submitted_by
+venue_bookings }o--o| users : timing_updated_by
+venue_bookings }o--|| venues : venue_id
+venue_operating_hours }o--|| venues : venue_id
+venue_operational_issues }o--|| users : created_by
+venue_operational_issues }o--|| venues : venue_id
+venue_timing_conflicts }o--|| venue_bookings : first_booking_id
+venue_timing_conflicts }o--|| venue_bookings : second_booking_id
+venue_unavailability }o--|| users : created_by
+venue_unavailability }o--|| venues : venue_id
+venue_unavailability_bookings }o--|| venue_bookings : booking_id
+venue_unavailability_bookings }o--|| venue_unavailability : unavailability_id
+
+@enduml

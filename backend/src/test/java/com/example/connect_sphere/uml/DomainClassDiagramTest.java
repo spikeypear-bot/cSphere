@@ -48,40 +48,6 @@ import org.springframework.jdbc.core.JdbcTemplate;
 @SpringBootTest
 class DomainClassDiagramTest {
 
-    // One row per foreign key (a composite key is one row with several
-    // columns), with what the multiplicities need: whether every column is
-    // NOT NULL (target end: 1 vs 0..1) and whether the columns are unique
-    // together (source end: 0..1 vs 0..*).
-    private static final String FOREIGN_KEYS = """
-            SELECT src.relname AS table_name, dst.relname AS ref_table,
-                   array_agg(a.attname::text ORDER BY k.ord) AS columns,
-                   bool_and(a.attnotnull) AS not_null,
-                   EXISTS (SELECT 1 FROM pg_constraint u
-                           WHERE u.conrelid = c.conrelid AND u.contype IN ('p', 'u')
-                             AND u.conkey @> c.conkey AND u.conkey <@ c.conkey) AS is_unique
-            FROM pg_constraint c
-            JOIN pg_class src ON src.oid = c.conrelid
-            JOIN pg_class dst ON dst.oid = c.confrelid
-            JOIN pg_namespace n ON n.oid = src.relnamespace
-            CROSS JOIN LATERAL unnest(c.conkey) WITH ORDINALITY AS k(attnum, ord)
-            JOIN pg_attribute a ON a.attrelid = c.conrelid AND a.attnum = k.attnum
-            WHERE c.contype = 'f' AND n.nspname = current_schema()
-            GROUP BY c.oid, c.conrelid, c.conkey, src.relname, dst.relname
-            ORDER BY 1, 3
-            """;
-
-    // Whether a status column may be empty: the enum end's 1 vs 0..1.
-    private static final String NOT_NULL_COLUMNS = """
-            SELECT table_name || '.' || column_name FROM information_schema.columns
-            WHERE table_schema = current_schema() AND is_nullable = 'NO'
-            """;
-
-    @Autowired
-    private EntityManagerFactory entityManagerFactory;
-
-    @Autowired
-    private JdbcTemplate jdbc;
-
     // Classes on the domain diagram that are neither entities nor enums. A
     // new one fails the test: add it here if it is a real domain value type,
     // or leave it out of the diagram with ClassDiagrams.NOT_DOMAIN.
@@ -96,14 +62,16 @@ class DomainClassDiagramTest {
     private static final Pattern DECLARATION = Pattern.compile("^(class|enum|interface) (\\S+) (.*)$",
             Pattern.MULTILINE);
 
-    private record ForeignKey(String table, List<String> columns, String refTable, boolean notNull,
-            boolean unique) {
-    }
-
     // The field a column maps to; joinedType is set when it is a @ManyToOne or
     // @OneToOne field, whose type is the other end of the relationship.
     private record ColumnField(String path, Class<?> joinedType) {
     }
+
+    @Autowired
+    private EntityManagerFactory entityManagerFactory;
+
+    @Autowired
+    private JdbcTemplate jdbc;
 
     @Test
     @DisplayName("DEV15 AC1 (happy): the domain diagram shows the core domain objects with their attributes and operations")
@@ -201,15 +169,8 @@ class DomainClassDiagramTest {
     }
 
     private List<String> foreignKeyRelationships(Map<String, List<Class<?>>> entitiesByTable) {
-        List<ForeignKey> foreignKeys = jdbc.query(FOREIGN_KEYS, (rs, i) -> new ForeignKey(
-                rs.getString("table_name"),
-                List.of((String[]) rs.getArray("columns").getArray()),
-                rs.getString("ref_table"),
-                rs.getBoolean("not_null"),
-                rs.getBoolean("is_unique")));
-
         List<String> relationships = new ArrayList<>();
-        for (ForeignKey fk : foreignKeys) {
+        for (DatabaseSchema.ForeignKey fk : DatabaseSchema.foreignKeys(jdbc)) {
             List<Class<?>> targets = entitiesByTable.get(fk.refTable());
             if (targets == null) {
                 continue;
@@ -242,7 +203,11 @@ class DomainClassDiagramTest {
      * a line to the enum without one.
      */
     private List<String> enumRelationships(Map<String, List<Class<?>>> entitiesByTable) {
-        Set<String> notNull = Set.copyOf(jdbc.queryForList(NOT_NULL_COLUMNS, String.class));
+        // Whether a status column may be empty: the enum end's 1 vs 0..1.
+        Set<String> notNull = DatabaseSchema.columns(jdbc).stream()
+                .filter(DatabaseSchema.Column::notNull)
+                .map(column -> column.table() + "." + column.name())
+                .collect(Collectors.toSet());
         List<String> relationships = new ArrayList<>();
         entitiesByTable.forEach((table, entities) -> {
             for (Class<?> entity : entities) {
