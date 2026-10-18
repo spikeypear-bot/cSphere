@@ -18,6 +18,10 @@ enum ActivityType {
 	{field} +clarification_responded
 	{field} +coordinator_assigned
 	{field} +coordinator_reassigned
+	{field} +equipment_approved
+	{field} +equipment_rejected
+	{field} +equipment_requested
+	{field} +event_completed
 	{field} +event_confirmed
 	{field} +rejected
 	{field} +returned_to_planning
@@ -27,8 +31,18 @@ enum ActivityType {
 	{field} +safety_review_withdrawn
 	{field} +sent_for_safety_review
 	{field} +submitted
+	{field} +venue_added
+	{field} +venue_alternative_suggested
+	{field} +venue_booking_approved
 	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
+	{field} +venue_booking_replaced
 	{field} +venue_booking_requested
+	{field} +venue_hold_converted
+	{field} +venue_hold_created
+	{field} +venue_hold_expired
+	{field} +venue_hold_released
+	{field} +venue_unavailable
 }
 
 
@@ -261,6 +275,7 @@ enum NotificationType {
 	{field} +status_change
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
+	{field} +venue_hold_expired
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -427,6 +442,23 @@ class VenueEvent <<Entity>>  {
 	{field} -expectedAttendance : Integer
 	{field} -startDatetime : OffsetDateTime
 	{field} -venueRequirements : String
+}
+
+
+class VenueHold {
+	{field} -bookingId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -createdBy : UUID
+	{field} -endedAt : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expiresAt : OffsetDateTime
+	{field} -holdId : UUID
+	{field} -reservedEnd : OffsetDateTime
+	{field} -reservedStart : OffsetDateTime
+	{field} -serverTime : OffsetDateTime
+	{field} -status : String
+	{field} -venueId : UUID
 }
 
 

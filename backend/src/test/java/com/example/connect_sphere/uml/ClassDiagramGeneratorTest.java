@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.io.IOException;
 import java.util.List;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -13,9 +14,11 @@ import org.junit.jupiter.api.Test;
  * and lives in {@link DomainClassDiagramTest}.
  */
 @Tag("unit")
+@Tag("DEV15")
 class ClassDiagramGeneratorTest {
 
     @Test
+    @DisplayName("DEV15 AC3 (happy): the full diagram of every layer is regenerated from the code into the design docs")
     void generatesFullDiagram() throws IOException {
         String diagram = ClassDiagrams.generate(ClassDiagrams.fullConfig(), "full", List.of());
 
@@ -37,6 +40,7 @@ class ClassDiagramGeneratorTest {
     }
 
     @Test
+    @DisplayName("DEV15 AC3 (happy): the auth diagram of the login, token and security classes is regenerated from the code")
     void generatesAuthDiagram() throws IOException {
         String diagram = ClassDiagrams.generate(ClassDiagrams.authConfig(), "auth", List.of());
 

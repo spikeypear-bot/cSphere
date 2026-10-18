@@ -27,6 +27,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -43,6 +44,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * relationships the generator draws for @ManyToOne fields.
  */
 @Tag("integration")
+@Tag("DEV15")
 @SpringBootTest
 class DomainClassDiagramTest {
 
@@ -87,7 +89,9 @@ class DomainClassDiagramTest {
             "EffectivePeriod",
             "EquipmentRequestLineId",
             "SerialisedEquipmentId",
-            "VenueBecameUnavailable");
+            "VenueBecameUnavailable",
+            // VS-C3's tentative hold: a record read with JDBC, not an entity.
+            "VenueHold");
 
     private static final Pattern DECLARATION = Pattern.compile("^(class|enum|interface) (\\S+) (.*)$",
             Pattern.MULTILINE);
@@ -102,7 +106,72 @@ class DomainClassDiagramTest {
     }
 
     @Test
-    void generatesDomainDiagramWithForeignKeyRelationships() throws IOException {
+    @DisplayName("DEV15 AC1 (happy): the domain diagram shows the core domain objects with their attributes and operations")
+    void showsCoreDomainObjects() throws IOException {
+        String diagram = generateDomainDiagram();
+
+        assertThat(diagram).contains(
+                "class Event ",
+                "class Venue ",
+                "class VenueBooking ",
+                "class EquipmentRequest ",
+                "class User ",
+                "enum UserRole ",
+                "class EventSafetyReview ");
+        assertThat(diagram).contains(
+                "eventId : UUID {id}",
+                "supportedLayouts : List<String>",
+                "+decide ( status : EquipmentRequestStatus , rejectReason : String ) : void");
+        assertThat(diagram).doesNotContain("@Column", "@ManyToOne", "<<Table>>", "TableName");
+    }
+
+    @Test
+    @DisplayName("DEV15 AC2 (happy): relationships follow the schema's foreign keys, including the Week 7 concepts")
+    void showsSchemaRelationships() throws IOException {
+        String diagram = generateDomainDiagram();
+
+        // Relationships the code only holds as UUIDs come from the foreign keys.
+        assertThat(diagram)
+                .containsPattern("EventSafetyReview \"\\S+\" --> \"\\S+\" Event : eventId")
+                .containsPattern("EventRequest \"\\S+\" --> \"\\S+\" User : coordinatorId");
+        // @ManyToOne lines get their multiplicities from the same foreign keys.
+        assertThat(diagram).contains(
+                "VenueBooking \"0..*\" --> \"1\" VenueEvent : event",
+                "VenueBooking \"0..*\" --> \"0..1\" Venue : alternativeVenue",
+                "RefreshToken \"0..*\" --> \"1\" User : user");
+        assertThat(diagram).doesNotContainPattern("\\w --> \\w+ : (event|venue|user|equipment)\\n");
+        assertThat(diagram).contains("Event --> \"1\" EventStatus : status");
+        // A list of enum values is an association to the enum, not aggregation.
+        assertThat(diagram).contains("EventRequest --> \"0..*\" AccessibilityFeature : accessibilityNeeds");
+        assertThat(diagram).doesNotContain(" o-- ");
+        // Week 7: several venue bookings per event, setup/turnaround, tentative
+        // holds with expiry, and the Event Coordinator Lead and Safety Officer roles.
+        assertThat(diagram).contains(
+                "VenueBookingRecord \"0..*\" --> \"1\" Event : eventId",
+                "setupDurationMinutes : int",
+                "turnaroundDurationMinutes : int",
+                "class VenueHold ",
+                "expiresAt : OffsetDateTime",
+                "\t{field} +ecl\n",
+                "\t{field} +safety_officer\n");
+    }
+
+    @Test
+    @DisplayName("DEV15 AC1 (negative): web, service, persistence and scheduling plumbing stays off the domain diagram")
+    void leavesOutPlumbing() throws IOException {
+        String diagram = generateDomainDiagram();
+
+        assertThat(diagram).doesNotContain("Controller", "Service ", "Repository", "Dto", "class StatusView ",
+                "class OperatingHours ", "class HoldClockConfig ", "class VenueHoldExpiryJob ");
+        assertThat(DECLARATION.matcher(diagram).results()
+                .filter(c -> c.group(1).equals("class") && !c.group(3).startsWith("<<Entity>>"))
+                .map(c -> c.group(2)))
+                .as("classes on the domain diagram that are neither entities, enums nor known value types")
+                .allMatch(DOMAIN_VALUE_TYPES::contains);
+    }
+
+    /** Generates and writes the domain diagram, with the database's foreign keys. */
+    private String generateDomainDiagram() throws IOException {
         Map<String, List<Class<?>>> entitiesByTable = domainEntitiesByTable();
         List<String> relationships = foreignKeyRelationships(entitiesByTable);
         relationships.addAll(enumRelationships(entitiesByTable));
@@ -116,42 +185,7 @@ class DomainClassDiagramTest {
                 legend.add(names(entities) + (entities.size() == 2 ? " both" : " all") + " map table " + table);
             }
         });
-
-        String diagram = ClassDiagrams.generate(ClassDiagrams.domainConfig(legend), "domain", relationships);
-
-        // DEV15 AC: the core domain objects must be on the diagram.
-        assertThat(diagram).contains(
-                "class Event ",
-                "class Venue ",
-                "class VenueBooking ",
-                "class EquipmentRequest ",
-                "class User ",
-                "enum UserRole ",
-                "class EventSafetyReview ");
-        assertThat(diagram).doesNotContain("Controller", "Service ", "Repository", "Dto", "class StatusView ",
-                "class OperatingHours ");
-        // ...and so must the relationships the code only holds as UUIDs.
-        assertThat(diagram)
-                .containsPattern("EventSafetyReview \"\\S+\" --> \"\\S+\" Event : eventId")
-                .containsPattern("VenueBookingRecord \"\\S+\" --> \"\\S+\" Event : eventId")
-                .containsPattern("EventRequest \"\\S+\" --> \"\\S+\" User : coordinatorId");
-        // @ManyToOne lines get their multiplicities from the same foreign keys.
-        assertThat(diagram).contains(
-                "VenueBooking \"0..*\" --> \"1\" VenueEvent : event",
-                "VenueBooking \"0..*\" --> \"0..1\" Venue : alternativeVenue",
-                "RefreshToken \"0..*\" --> \"1\" User : user");
-        assertThat(diagram).doesNotContainPattern("\\w --> \\w+ : (event|venue|user|equipment)\\n");
-        assertThat(diagram).contains("Event --> \"1\" EventStatus : status");
-        // A list of enum values is an association to the enum, not aggregation.
-        assertThat(diagram).contains("EventRequest --> \"0..*\" AccessibilityFeature : accessibilityNeeds",
-                "supportedLayouts : List<String>", "eventId : UUID {id}");
-        assertThat(diagram).doesNotContain(" o-- ", "@Column", "@ManyToOne", "<<Table>>", "TableName");
-
-        assertThat(DECLARATION.matcher(diagram).results()
-                .filter(c -> c.group(1).equals("class") && !c.group(3).startsWith("<<Entity>>"))
-                .map(c -> c.group(2)))
-                .as("classes on the domain diagram that are neither entities, enums nor known value types")
-                .allMatch(DOMAIN_VALUE_TYPES::contains);
+        return ClassDiagrams.generate(ClassDiagrams.domainConfig(legend), "domain", relationships);
     }
 
     /**

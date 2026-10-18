@@ -56,8 +56,10 @@ final class ClassDiagrams {
             ".*\\.testsupport\\..*",
             ".*Tests?");
 
-    // Domain level: drop web/service/persistence plumbing, request/response
-    // shapes, the mock scaffolding and nested helper types. The last line names
+    // Domain level: drop web/service/persistence plumbing (including
+    // configuration and scheduled jobs kept next to a feature, like
+    // HoldClockConfig and VenueHoldExpiryJob), request/response shapes, the
+    // mock scaffolding and nested helper types. The last line names
     // the @Components that live outside a service package, AvailabilityModels
     // (it only holds nested records), StatusView (the status shape every API
     // response carries) and OperatingHours (a static helper with no state).
@@ -67,7 +69,7 @@ final class ClassDiagrams {
             NOT_DESIGN,
             ".*\\$.*",
             ".*\\.(mock|config|common\\.web|controller|service|repository|dto|mapper)\\..*",
-            ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl)",
+            ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job)",
             ".*\\.(Add|Create|Reserve|Submit|Update|SafetyApproval)\\w*",
             ".*\\.(JourneyStatusResolver|ExistingTimingConflictScan|AvailabilityModels|StatusView|OperatingHours)");
 

@@ -23,6 +23,7 @@ class ActivityDto {
 	{field} -fromStatus : String
 	{field} -message : String
 	{field} -occurredAt : OffsetDateTime
+	{field} -significance : String
 	{field} -toStatus : String
 	{field} -type : String
 }
@@ -34,6 +35,10 @@ enum ActivityType {
 	{field} +clarification_responded
 	{field} +coordinator_assigned
 	{field} +coordinator_reassigned
+	{field} +equipment_approved
+	{field} +equipment_rejected
+	{field} +equipment_requested
+	{field} +event_completed
 	{field} +event_confirmed
 	{field} +rejected
 	{field} +returned_to_planning
@@ -43,8 +48,18 @@ enum ActivityType {
 	{field} +safety_review_withdrawn
 	{field} +sent_for_safety_review
 	{field} +submitted
+	{field} +venue_added
+	{field} +venue_alternative_suggested
+	{field} +venue_booking_approved
 	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
+	{field} +venue_booking_replaced
 	{field} +venue_booking_requested
+	{field} +venue_hold_converted
+	{field} +venue_hold_created
+	{field} +venue_hold_expired
+	{field} +venue_hold_released
+	{field} +venue_unavailable
 }
 
 
@@ -73,6 +88,7 @@ interface RequestActivityRepository {
 
 
 class ActivityService {
+	{field} {static} ~IMPORTANT_FIELDS : List<String>
 	{method} +record ( entry : Entry ) : void
 	{method} +submittedAt ( requestIds : Collection ) : Map
 	{method} +timeline ( requestId : UUID , viewerRole : UserRole ) : List
@@ -89,6 +105,19 @@ class ActivityService.Entry {
 	{field} -message : String
 	{field} -requestId : UUID
 	{field} -toStatus : String
+}
+
+
+class ChangeLogRecorder {
+	{method} +on ( change : EventChange ) : void
+	{method} +on ( unavailable : VenueBecameUnavailable ) : void
+}
+
+
+class EventChange {
+	{field} -actorUserId : UUID
+	{field} -eventId : UUID
+	{field} -message : String
 }
 
 
@@ -426,6 +455,7 @@ class EquipmentRequestController {
 
 class EquipmentRequestDecisionService {
 	{field} {static} -MAX_REJECTION_REASON_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
 	{method} +updateStatus ( requestId : UUID , input : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
 }
 
@@ -483,6 +513,7 @@ class EquipmentRequestResponse {
 
 class EquipmentRequestService {
 	{field} {static} -MAX_REQUIREMENT_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
 	{method} +listForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +listForSafetyOfficer ( eventId : UUID ) : List
 	{method} +submit ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
@@ -525,11 +556,23 @@ class EventController {
 	{method} +arrangements ( jwt : Jwt , id : UUID ) : OrganiserArrangementsDto
 	{method} +assignedEvents ( jwt : Jwt ) : List
 	{method} +confirm ( jwt : Jwt , id : UUID ) : EventDto
+	{method} +eventsByCoordinator () : List
 	{method} +get ( jwt : Jwt , id : UUID ) : EventDto
 	{method} +readiness ( jwt : Jwt , id : UUID ) : EventReadinessDto
 	{method} +sendForSafetyReview ( jwt : Jwt , id : UUID ) : EventReadinessDto
 	{method} +timeline ( jwt : Jwt , id : UUID ) : List
 	{method} +withdrawFromSafetyReview ( jwt : Jwt , id : UUID , body : Map ) : EventReadinessDto
+}
+
+
+class CoordinatorEventsDto {
+	{field} -coordinatorId : UUID
+	{field} -coordinatorName : String
+}
+
+
+class CoordinatorEventsDto.HeldEvent {
+	{field} -requestId : UUID
 }
 
 
@@ -701,6 +744,7 @@ class EventNotReadyException {
 
 
 class EventService {
+	{method} +activeEventsByCoordinator () : List
 	{method} +assignedEvents ( coordinatorId : UUID ) : List
 	{method} +confirm ( actingCoordinatorId : UUID , eventId : UUID ) : EventDto
 	{method} +get ( organisation : String , eventId : UUID ) : EventDto
@@ -939,6 +983,8 @@ class MissingRejectionReasonException {
 
 
 class NotAssignedCoordinatorException {
+	{field} {static} +MESSAGE : String
+	{field} -requestOrEventId : UUID
 }
 
 
@@ -995,6 +1041,7 @@ enum NotificationType {
 	{field} +status_change
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
+	{field} +venue_hold_expired
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -1017,6 +1064,7 @@ class NotificationService {
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
 	{method} +createEventConfirmedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
+	{method} +createHoldExpiredNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , name : String , expiry : OffsetDateTime ) : void
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
@@ -1412,10 +1460,16 @@ class AvailabilityModels.Booking {
 	{field} -effectiveEnd : OffsetDateTime
 	{field} -effectiveStart : OffsetDateTime
 	{field} -endDateTime : OffsetDateTime
+	{field} -eventEndDateTime : OffsetDateTime
 	{field} -eventId : UUID
 	{field} -eventName : String
+	{field} -eventStartDateTime : OffsetDateTime
 	{field} -startDateTime : OffsetDateTime
 	{field} -status : String
+	{field} -venueId : UUID
+	{field} -venueName : String
+	{method} +setupDurationMinutes () : long
+	{method} +turnaroundDurationMinutes () : long
 }
 
 
@@ -1458,6 +1512,7 @@ class AvailabilityModels.Settings {
 class AvailabilityRepository {
 	{field} -jdbc : JdbcTemplate
 	{method} +affected ( bookingId : UUID ) : boolean
+	{method} +blocking ( venueId : UUID , now : OffsetDateTime ) : List
 	{method} +bookings ( venueId : UUID ) : List
 	{method} +bookings ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
 	{method} +hasOperationalIssue ( venueId : UUID , period : EffectivePeriod ) : boolean
@@ -1514,8 +1569,9 @@ class OperatingHours {
 
 
 class TimingConflictController {
-	{method} +list ( venueId : UUID ) : List
+	{method} +list ( venueId : UUID ) : ResponseEntity
 	{method} +scan ( venueId : UUID ) : List
+	{method} +unavailable () : ApiError
 }
 
 
@@ -1528,6 +1584,8 @@ class TimingConflictService {
 
 
 class TimingConflictService.Overlap {
+	{method} +overlapEnd () : OffsetDateTime
+	{method} +overlapStart () : OffsetDateTime
 }
 
 
@@ -1682,9 +1740,12 @@ class VenueOptionDto {
 
 
 class VenueOptionDto.ConflictDto {
+	{field} {static} +ANOTHER_EVENT : String
+	{field} {static} -WHEN : DateTimeFormatter
+	{field} -description : String
 	{field} -endDatetime : OffsetDateTime
-	{field} -eventName : String
 	{field} -startDatetime : OffsetDateTime
+	{method} +sentence () : String
 }
 
 
@@ -1763,6 +1824,74 @@ class VenueEvent <<Entity>>  {
 }
 
 
+class HoldClockConfig {
+	{method} +venueHoldClock () : Clock
+}
+
+
+class VenueHold {
+	{field} -bookingId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -createdBy : UUID
+	{field} -endedAt : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expiresAt : OffsetDateTime
+	{field} -holdId : UUID
+	{field} -reservedEnd : OffsetDateTime
+	{field} -reservedStart : OffsetDateTime
+	{field} -serverTime : OffsetDateTime
+	{field} -status : String
+	{field} -venueId : UUID
+}
+
+
+class VenueHoldController {
+	{method} +conflict ( ex : VenueBookingConflictException ) : ResponseEntity
+	{method} +convert ( holdId : UUID ) : VenueBookingDto
+	{method} +create ( bookingId : UUID , body : CreateHold , jwt : Jwt ) : VenueHold
+	{method} +failed ( ex : RuntimeException ) : ResponseEntity
+	{method} +history ( bookingId : UUID ) : List
+	{method} +release ( holdId : UUID , jwt : Jwt ) : VenueHold
+}
+
+
+class VenueHoldController.CreateHold {
+	{field} -expiresAt : OffsetDateTime
+}
+
+
+class VenueHoldExpiryJob {
+	{method} +expire () : void
+}
+
+
+class VenueHoldRepository {
+	{field} {static} -SELECT : String
+	{field} -clock : Clock
+	{field} -jdbc : JdbcTemplate
+	{method} +blocking ( venueId : UUID ) : List
+	{method} +bookingId ( holdId : UUID ) : UUID
+	{method} +hasActive ( bookingId : UUID ) : boolean
+	{method} +history ( bookingId : UUID ) : List
+	{method} +insert ( id : UUID , bookingId : UUID , start : OffsetDateTime , end : OffsetDateTime , expiry : OffsetDateTime , actor : UUID ) : void
+	{method} +now () : OffsetDateTime
+	{method} +overdue () : List
+	{method} +requireActive ( holdId : UUID , bookingId : UUID ) : void
+	{method} +transition ( holdId : UUID , status : String , endedAt : OffsetDateTime ) : void
+}
+
+
+class VenueHoldService {
+	{field} -publisher : ApplicationEventPublisher
+	{method} +create ( bookingId : UUID , expiry : OffsetDateTime , actor : UUID ) : VenueHold
+	{method} +endForBooking ( bookingId : UUID , actor : UUID ) : void
+	{method} +expire ( holdId : UUID ) : void
+	{method} +history ( bookingId : UUID ) : List
+	{method} +release ( holdId : UUID , actor : UUID ) : VenueHold
+}
+
+
 interface VenueBookingRecordRepository {
 	{method}  {abstract} +approvePending ( id : UUID , pending : VenueBookingStatus , approved : VenueBookingStatus ) : int
 	{method}  {abstract} +existsByReplacesBookingIdAndStatus ( replacesBookingId : UUID , status : VenueBookingStatus ) : boolean
@@ -1811,6 +1940,7 @@ class VenueBookingNotFoundException {
 
 class VenueBookingRequestService {
 	{field} {static} ~MAX_TEXT_LENGTH : int
+	{field} {static} -SGT : DateTimeFormatter
 	{method} +bookingsForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +bookingsForSafetyOfficer ( eventId : UUID ) : List
 	{method} +cancel ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , reason : String ) : EventVenueBookingDto
@@ -1824,8 +1954,10 @@ class VenueBookingRequestService {
 
 class VenueBookingService {
 	{field} {static} -MAX_TEXT_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
 	{field} -entityManager : EntityManager
 	{method} +approve ( bookingId : UUID ) : VenueBookingDto
+	{method} +approve ( bookingId : UUID , convertingHoldId : UUID ) : VenueBookingDto
 	{method} +get ( bookingId : UUID ) : VenueBookingDto
 	{method} +listForVenue ( venueId : UUID ) : List
 	{method} +listPending () : List
@@ -1845,6 +1977,8 @@ class VenueSuitability {
 	{field} -missingFacilities : List<String>
 	{method} +capacityOk () : boolean
 	{method} +facilitiesOk () : boolean
+	{method} +missingAccessibilityLabels () : String
+	{method} +missingFacilityLabels () : String
 	{method} +needsJustification () : boolean
 	{method}  {static} +of ( event : Event , venue : Venue ) : VenueSuitability
 }
@@ -1934,8 +2068,12 @@ class VenueOperationalIssueService {
 
 RequestActivity --> ActivityType : activityType
 ActivityService --> RequestActivityRepository : repository
+ActivityService --> EventRepository : events
 ActivityService --> UserRepository : userRepository
 ActivityService.Entry --> ActivityType : type
+ChangeLogRecorder --> ActivityService : activity
+ChangeLogRecorder --> EventRequestRepository : eventRequests
+EventChange --> ActivityType : type
 JourneyStatusResolver --> EventRepository : events
 AddStatusPeriodRequest --> EquipmentStatus : status
 EquipmentCatalogueController --> EquipmentRepository : equipmentRepository
@@ -1979,6 +2117,8 @@ EventController --> EventArrangementsService : arrangements
 EventController --> EventLifecycleService : lifecycle
 EventController --> EventService : service
 EventController --> EventRequestService : eventRequestService
+CoordinatorEventsDto --> "0..*" CoordinatorEventsDto.HeldEvent : events
+CoordinatorEventsDto.HeldEvent --> EventDto : event
 EventDto --> StatusView : journeyStatus
 EventReadinessDto --> "0..*" EventReadinessDto.Item : items
 EventReadinessDto --> StatusView : journeyStatus
@@ -2007,6 +2147,7 @@ EventService --> "0..*" EventStatus : ACTIVE_STATUSES
 EventService --> JourneyStatusResolver : statuses
 EventService --> EventRepository : repository
 EventService --> EventLifecycleService : lifecycle
+EventService --> EventRequestRepository : eventRequestRepository
 EventService --> NotificationService : notificationService
 EventService --> UserRepository : userRepository
 EventRequestController --> EventRequestService : service
@@ -2083,9 +2224,12 @@ AvailabilityController --> AvailabilityService : service
 AvailabilityModels.Preview --> "0..*" AvailabilityModels.Booking : affectedBookings
 AvailabilityModels.Schedule --> "0..*" AvailabilityModels.Booking : bookings
 AvailabilityModels.Schedule --> "0..*" AvailabilityModels.Period : unavailablePeriods
+AvailabilityModels.Schedule --> "0..*" TimingConflictService.Overlap : activeConflicts
+AvailabilityModels.Schedule --> "0..*" VenueHold : holds
 AvailabilityModels.Schedule --> AvailabilityModels.Settings : settings
 AvailabilityService --> VenueRepository : venues
 AvailabilityService --> AvailabilityRepository : repository
+AvailabilityService --> VenueHoldRepository : holds
 ExistingTimingConflictScan --> VenueRepository : venues
 ExistingTimingConflictScan --> TimingConflictService : conflicts
 TimingConflictController --> TimingConflictService : service
@@ -2096,11 +2240,13 @@ TimingConflictService.Overlap --> AvailabilityModels.Booking : second
 EventVenueBookingController --> VenueBookingRequestService : service
 VenueBookingController --> VenueBookingService : service
 BookingTimingDto --> "0..*" VenueBookingConflictDto : conflicts
+EventVenueBookingDto --> "0..*" VenueHold : holds
 EventVenueBookingDto --> BookingTimingDto : timing
 EventVenueBookingDto --> VenueBookingStatus : status
 SubmitVenueBookingRequest.Batch --> "0..*" SubmitVenueBookingRequest : bookings
 VenueBookingConflictResponse --> "0..*" VenueBookingConflictDto : conflicts
 VenueBookingConflictResponse --> "0..*" VenueUnavailabilityConflictDto : unavailablePeriods
+VenueBookingDto --> "0..*" VenueHold : holds
 VenueBookingDto --> VenueDto : venue
 VenueBookingDto --> BookingTimingDto : timing
 VenueBookingDto --> VenueBookingDto.EventRequirements : event
@@ -2114,12 +2260,24 @@ VenueBooking --> VenueBookingStatus : status
 VenueBooking --> VenueEvent : event
 VenueBookingRecord --> VenueBookingStatus : status
 VenueEvent --> EventStatus : status
+VenueHoldController --> VenueHoldRepository : holds
+VenueHoldController --> VenueHoldService : service
+VenueHoldController --> VenueBookingService : bookings
+VenueHoldExpiryJob --> VenueHoldRepository : holds
+VenueHoldExpiryJob --> VenueHoldService : service
+VenueHoldService --> EventRepository : events
+VenueHoldService --> NotificationService : notifications
+VenueHoldService --> VenueRepository : venues
+VenueHoldService --> AvailabilityService : availability
+VenueHoldService --> VenueHoldRepository : holds
+VenueHoldService --> VenueBookingRecordRepository : bookings
 VenueBookingConflictException --> "0..*" VenueBookingConflictDto : conflicts
 VenueBookingConflictException --> "0..*" VenueUnavailabilityConflictDto : unavailablePeriods
 VenueBookingConflictException --|> VenueBookingStateException
 VenueBookingRequestService --> "0..*" VenueBookingStatus : ACTIVE
 VenueBookingRequestService --> ActivityService : activityService
 VenueBookingRequestService --> EventRepository : events
+VenueBookingRequestService --> EventLifecycleService : lifecycle
 VenueBookingRequestService --> EventRequestRepository : eventRequests
 VenueBookingRequestService --> NotificationService : notificationService
 VenueBookingRequestService --> UserRepository : users
@@ -2129,6 +2287,8 @@ VenueBookingRequestService --> VenueRepository : venues
 VenueBookingRequestService --> AvailabilityService : availability
 VenueBookingRequestService --> VenueBookingRecordRepository : bookings
 VenueBookingRequestService --> VenueOperationalIssueRepository : operationalIssues
+VenueBookingRequestService --> VenueHoldRepository : holds
+VenueBookingRequestService --> VenueHoldService : holdService
 VenueBookingService --> EventRepository : events
 VenueBookingService --> VenueMapper : venueMapper
 VenueBookingService --> VenueRepository : venues
@@ -2136,6 +2296,8 @@ VenueBookingService --> AvailabilityService : availability
 VenueBookingService --> TimingConflictService : timingConflicts
 VenueBookingService --> VenueBookingRecordRepository : records
 VenueBookingService --> VenueBookingRepository : bookings
+VenueBookingService --> VenueHoldRepository : holds
+VenueBookingService --> VenueHoldService : holdService
 CoordinatorVenueOperationalIssueController --> VenueOperationalIssueService : service
 VenueOperationalIssueController --> VenueOperationalIssueService : service
 CoordinatorVenueOperationalIssueDto --> "0..*" CoordinatorVenueOperationalIssueDto.OverlappingEventDto : overlappingEvents
