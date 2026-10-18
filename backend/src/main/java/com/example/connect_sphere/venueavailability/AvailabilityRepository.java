@@ -100,27 +100,17 @@ public class AvailabilityRepository {
                         r.getString("reason"), r.getObject("created_at", OffsetDateTime.class)), venueId, end, start);
     }
 
-    private static String sgt(OffsetDateTime t) {
-        return t.atZoneSameInstant(java.time.ZoneId.of("Asia/Singapore"))
-                .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
-    }
-
     public void insert(UUID id, UUID venueId, UUID actor, Request r, List<Booking> affected) {
         jdbc.update("INSERT INTO venue_unavailability(unavailability_id,venue_id,start_datetime,end_datetime,reason,created_by) VALUES (?,?,?,?,?,?)",
                 id, venueId, r.startDateTime(), r.endDateTime(), r.reason().strip(), actor);
-        String venueAddress = jdbc.queryForObject(
-                "SELECT venue_address FROM venues WHERE venue_id=?", String.class, venueId);
         for (Booking b : affected) {
             jdbc.update("INSERT INTO venue_unavailability_bookings VALUES (?,?)", id, b.bookingId());
             if (b.coordinatorId() != null) {
-                String message = "Affected booking at " + venueAddress + " ("
-                        + sgt(b.startDateTime()) + " to " + sgt(b.endDateTime())
-                        + "). Alternative venue arrangements required. The original booking and event have not been cancelled.";
                 jdbc.update("""
                         INSERT INTO notifications(notification_id,recipient_user_id,event_id,type,event_name,reason,message,venue_booking_id)
                         VALUES (?,?,?,'venue_unavailable',?,?,?,?)
                         """, UUID.randomUUID(), b.coordinatorId(), b.eventId(), b.eventName(), r.reason().strip(),
-                        message, b.bookingId());
+                        "Alternative venue arrangements required. The original booking and event have not been cancelled.", b.bookingId());
             }
         }
     }

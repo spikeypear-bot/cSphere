@@ -22,7 +22,7 @@ function describe(n: NotificationDto): string {
   if (n.type === 'venue_hold_expired') return `Tentative venue hold expired for "${n.eventName}"`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
   if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
-  if (n.type === 'venue_unavailable') return `A venue booking for "${n.eventName}" is unavailable`
+  if (n.type === 'venue_unavailable') return `Alternative venue arrangements required for "${n.eventName}"`
   if (n.type === 'event_confirmed') return `"${n.eventName}" is confirmed`
   if (n.type === 'event_returned_to_planning') return `"${n.eventName}" is back in Planning`
   if (n.type === 'event_safety_approved') return `"${n.eventName}" passed its safety check and is ready to confirm`
@@ -111,9 +111,7 @@ export function NotificationBell() {
                       {n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {n.message ? n.type === 'venue_unavailable' ? (
-                        <span className="notification-bell__item-reason">{n.message}</span>
-                      ) : (
+                      {n.message ? (
                         <span className="notification-bell__item-reason">“{n.message}”</span>
                       ) : null}
                       <span className="notification-bell__item-time">{timeAgo(n.occurredAt)}</span>

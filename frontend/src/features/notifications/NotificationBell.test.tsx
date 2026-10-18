@@ -49,15 +49,6 @@ const REJECTED_NOTIFICATION = {
   read: true,
 }
 
-const VENUE_UNAVAILABLE_NOTIFICATION = {
-  ...STATUS_CHANGE_NOTIFICATION,
-  notificationId: 'n3',
-  type: 'venue_unavailable',
-  reason: 'Maintenance',
-  message: 'Affected booking at Downtown Hall (2027-04-01T10:00+08:00 to 2027-04-01T12:00+08:00). Alternative venue arrangements required.',
-  linkPath: '/coordinator/events/event-1/venue-booking',
-}
-
 function renderBell() {
   return render(
     <MemoryRouter initialEntries={['/organiser']}>
@@ -158,21 +149,5 @@ describe('NotificationBell — EO09/EO19', () => {
 
     await user.click(await screen.findByLabelText('Notifications'))
     expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
-  })
-
-  it('EC-C4 identifies the affected venue booking in the immediate notification', async () => {
-    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input)
-      if (url === '/api/notifications') return jsonResponse(200, [VENUE_UNAVAILABLE_NOTIFICATION])
-      if (url === '/api/notifications/unread-count') return jsonResponse(200, { count: 1 })
-      throw new Error(`Unexpected fetch: ${url}`)
-    }))
-    const user = userEvent.setup()
-    renderBell()
-
-    await user.click(await screen.findByLabelText(/Notifications/))
-
-    expect(await screen.findByText('A venue booking for "Alumni Homecoming" is unavailable')).toBeInTheDocument()
-    expect(screen.getByText(VENUE_UNAVAILABLE_NOTIFICATION.message)).toBeInTheDocument()
   })
 })
