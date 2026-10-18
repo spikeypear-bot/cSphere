@@ -9,6 +9,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -26,6 +27,11 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
  * precomputed server-side, so a wrong one would silently send people to a
  * page they cannot open.
  */
+@Tag("unit")
+@Tag("EC01")
+@Tag("EO26")
+@Tag("EC03")
+@Tag("EO19")
 class NotificationLinkTest {
 
     @Mock private NotificationRepository repository;

@@ -43,6 +43,8 @@ import com.example.connect_sphere.venue.service.VenueService;
 @Tag("EO19")
 @SpringBootTest
 @AutoConfigureMockMvc
+@Tag("EC08")
+@Tag("SO-C4")
 class NotificationFlowTest {
 
     @Autowired MockMvc mvc;

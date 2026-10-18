@@ -16,6 +16,7 @@ import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 
 @Tag("unit")
+@Tag("VS07")
 class VenueMapperTest {
     private final VenueMapper mapper = Mappers.getMapper(VenueMapper.class);
 

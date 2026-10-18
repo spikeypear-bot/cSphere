@@ -7,6 +7,7 @@ import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.*;
 import java.util.concurrent.*;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -28,6 +29,7 @@ import com.example.connect_sphere.venuebooking.service.*;
 @AutoConfigureMockMvc
 @Tag("integration")
 @Tag("VS-C2")
+@Tag("VS-C4")
 class VenueTimingWorkflowTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;
@@ -301,6 +303,56 @@ class VenueTimingWorkflowTest {
         for (String role : List.of("ec1","eo1","ts1","ecl1","so1","att1"))
             mvc.perform(put("/api/venue-bookings/"+b+"/timing").with(flow.as(role)).contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isForbidden());
+    }
+
+    @Test
+    @DisplayName("VS-C4 AC4, AC6, AC10 (conflict): GET returns current unique pairs without writes and drops resolved pairs")
+    void conflictRetrievalIsFreshReadOnlyAndIncludesBookingAndEventWindows() throws Exception {
+        UUID v=venue(0,0), a=booking(v,"approved","09:00","10:00",0,45), b=booking(v,"approved","10:30","12:00",0,0);
+        jdbc.update("UPDATE venue_bookings SET start_datetime=?, end_datetime=? WHERE booking_id=?", at("09:05"), at("10:00"), a);
+        String beforeA=snapshot(a), beforeB=snapshot(b);
+        int notifications=notificationCount("venue_timing_conflict");
+        for (int i=0; i<2; i++) mvc.perform(get("/api/venues/"+v+"/timing-conflicts").with(flow.as("vs1")))
+            .andExpect(status().isOk()).andExpect(header().string("Cache-Control", "no-store"))
+            .andExpect(jsonPath("$.length()").value(1))
+            .andExpect(jsonPath("$[0].first.venueId").value(v.toString()))
+            .andExpect(jsonPath("$[0].first.eventStartDateTime").exists())
+            .andExpect(jsonPath("$[0].first.setupDurationMinutes").exists())
+            .andExpect(jsonPath("$[0].overlapStart").exists()).andExpect(jsonPath("$[0].overlapEnd").exists());
+        assertThat(snapshot(a)).isEqualTo(beforeA); assertThat(snapshot(b)).isEqualTo(beforeB);
+        assertThat(notificationCount("venue_timing_conflict")).isEqualTo(notifications);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_timing_conflicts WHERE first_booking_id IN (?,?)", Integer.class,a,b)).isZero();
+        jdbc.update("UPDATE venue_bookings SET turnaround_duration_minutes=30 WHERE booking_id=?",a);
+        mvc.perform(get("/api/venues/"+v+"/timing-conflicts").with(flow.as("vs1")))
+            .andExpect(status().isOk()).andExpect(content().json("[]"));
+        // Independent booking windows and cancellations are reflected on the very next GET.
+        jdbc.update("UPDATE venue_bookings SET start_datetime=?,end_datetime=? WHERE booking_id=?",at("10:15"),at("12:00"),b);
+        assertThat(conflicts.list(v)).hasSize(1);
+        mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1"))
+            .param("start",at("09:00").toString()).param("end",at("09:30").toString()))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.bookings.length()").value(1))
+            .andExpect(jsonPath("$.activeConflicts.length()").value(1));
+        jdbc.update("UPDATE venue_bookings SET status='cancelled' WHERE booking_id=?",b);
+        assertThat(conflicts.list(v)).isEmpty();
+        assertThat(bookings.get(a).status().name()).isEqualTo("approved");
+    }
+
+    @Test
+    @DisplayName("VS-C4 AC4, AC6 (negative): exclude released, other-venue and inactive-event bookings; enforce role and missing IDs")
+    void conflictRetrievalRespectsExistingScope() throws Exception {
+        UUID v=venue(0,0), other=venue(0,0);
+        booking(v,"approved","09:00","12:00",0,0);
+        for (String status: List.of("pending","rejected","cancelled","changed")) booking(v,status,"10:00","11:00",60,60);
+        booking(other,"approved","10:00","11:00",60,60);
+        UUID inactive=booking(v,"approved","10:00","11:00",60,60);
+        for (String status: List.of("completed","cancelled")) {
+            jdbc.update("UPDATE events SET status=?::event_status WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",status,inactive);
+            assertThat(conflicts.list(v)).isEmpty();
+        }
+        mvc.perform(get("/api/venues/"+UUID.randomUUID()+"/timing-conflicts").with(flow.as("vs1"))).andExpect(status().isNotFound());
+        mvc.perform(get("/api/venues/invalid/timing-conflicts").with(flow.as("vs1"))).andExpect(status().isBadRequest());
+        mvc.perform(get("/api/venues/"+v+"/timing-conflicts").with(flow.as("ec1"))).andExpect(status().isForbidden());
+        mvc.perform(get("/api/venues/"+v+"/timing-conflicts")).andExpect(status().isUnauthorized());
     }
 
     @Test void legacyOverlapsAreReportedOnceWithoutCancellingAndCanBeReduced() {

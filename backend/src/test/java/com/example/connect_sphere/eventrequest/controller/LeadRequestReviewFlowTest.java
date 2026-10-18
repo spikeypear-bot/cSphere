@@ -43,6 +43,8 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("ECL-C3")
+@Tag("ELC-C6")
 class LeadRequestReviewFlowTest {
 
     private static final String UNASSIGNED = "/api/event-requests/unassigned";

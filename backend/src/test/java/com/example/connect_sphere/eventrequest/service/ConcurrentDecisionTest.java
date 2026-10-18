@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -39,7 +40,10 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingRequestServic
  * append-only by design), so it writes them under an organisation no dev
  * account belongs to: nobody sees them in any console.
  */
+@Tag("integration")
 @SpringBootTest
+@Tag("ELC-C6")
+@Tag("EC02")
 class ConcurrentDecisionTest {
 
     private static final String HIDDEN_ORG = "Automated Concurrency Tests";

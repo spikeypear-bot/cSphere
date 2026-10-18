@@ -305,3 +305,9 @@
     white-space: nowrap;
   }
 }
+
+/* ECL-C7 */
+.not-assigned { padding: 1.5rem; display: grid; gap: 0.75rem; }
+.not-assigned h1 { margin: 0; font-size: 1.25rem; }
+.not-assigned p { margin: 0; }
+.not-assigned__links { display: flex; gap: 0.5rem; flex-wrap: wrap; }

@@ -24,6 +24,7 @@ import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 
 @Tag("unit")
+@Tag("VS07")
 class VenueServiceTest {
     private final VenueRepository repository = mock(VenueRepository.class);
     private final VenueService service = new VenueService(repository, Mappers.getMapper(VenueMapper.class));

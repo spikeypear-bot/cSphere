@@ -66,7 +66,9 @@ public class EquipmentRequestController {
     public List<EquipmentRequestDetailsResponse> forEvent(
             @AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
         // The token's role claim is the UserRole name (TokenService).
-        if ("safety_officer".equalsIgnoreCase(jwt.getClaimAsString("role"))) {
+        // Read-only: Safety Officer review and Lead oversight (ECL-C7).
+        String role = jwt.getClaimAsString("role");
+        if ("safety_officer".equalsIgnoreCase(role) || "ecl".equalsIgnoreCase(role)) {
             return service.listForSafetyOfficer(eventId);
         }
         return service.listForEvent(userIdOf(jwt), eventId);

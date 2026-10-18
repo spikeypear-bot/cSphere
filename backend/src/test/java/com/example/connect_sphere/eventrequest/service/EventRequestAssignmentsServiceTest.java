@@ -47,6 +47,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * Which rows the query itself returns is AssignedRequestsQueryTest's job.
  */
 @Tag("unit")
+@Tag("ECL-C2")
 class EventRequestAssignmentsServiceTest {
 
     @Mock private EventRequestRepository repository;

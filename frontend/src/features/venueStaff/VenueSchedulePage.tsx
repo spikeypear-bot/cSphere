@@ -4,11 +4,14 @@ import { Button } from '../../components/ui/Button'
 import { useVenueRead } from './useVenueRead'
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 import { formatEventTimeRange as range } from './formatEventDateTime'
+import { NO_HOLDS, useHoldDeadline } from './useHoldDeadline'
+import { formatEventDateTime } from './formatEventDateTime'
 import { calendarDays, calendarEntries, dayTime, entriesOnDay, entryLabels, midnight, shiftMonth, singaporeDate } from './venueCalendar'
 import type { CalendarEntry } from './venueCalendar'
 import './VenueSchedulePage.css'
 import { Link } from 'react-router-dom'
 import { approvedOverlaps } from './venueCalendar'
+import { BookingConflictList, type BookingOverlap } from './BookingConflictList'
 
 export function VenueSchedulePage() {
   const venues = useVenueRead<VenueDto[]>('/venues')
@@ -25,7 +28,7 @@ export function VenueSchedulePage() {
   const title = new Intl.DateTimeFormat('en-SG', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
   return <div className="feature-skeleton venue-calendar">
     <h1>Venue availability calendar</h1>
-    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Tentative holds are pending requests and do not reserve the venue.</p>
+    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Active tentative holds reserve the full occupied period until their expiry. Pending requests do not reserve the venue.</p>
     {venues.error ? <p role="alert">{venues.error} <Button onClick={venues.retry}>Retry venues</Button></p>
       : !venues.data ? <p role="status">Loading venues…</p> : !venues.data.length ? <p>No venues available.</p> : <div className="field venue-calendar__venue">
         <label htmlFor="calendar-venue">Venue</label>
@@ -52,7 +55,8 @@ export function VenueSchedulePage() {
 function CalendarLegend({ onRefresh, loading = false }: { onRefresh?: () => void; loading?: boolean }) {
   return <div className="venue-calendar__status-row">
     <ul className="venue-calendar__legend" aria-label="Calendar legend">
-      {Object.entries(entryLabels).map(([type, label]) => <li key={type} data-kind={type}>{label}</li>)}
+      {Object.entries(entryLabels).map(([type, label]) => <li key={type} data-kind={type} data-booking-status={type === 'unavailable' ? undefined : type}>{label}</li>)}
+      <li className="venue-calendar__conflict-legend">⚠ Conflict — occupied periods overlap</li>
     </ul>
     {onRefresh && <Button type="button" className="venue-calendar__control" disabled={loading} onClick={onRefresh}>Refresh schedule</Button>}
   </div>
@@ -62,23 +66,23 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
   const days = calendarDays(month)
   const end = new Date(Date.parse(`${days.at(-1)}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
   const query = new URLSearchParams({ start: midnight(days[0]), end: midnight(end) })
-  const read = useVenueRead<VenueSchedule>(`/venues/${venueId}/schedule?${query}`)
-  const [selected, setSelected] = useState<CalendarEntry | null>(null)
+  const read = useVenueRead<VenueSchedule>(`/venues/${venueId}/schedule?${query}`, false, 5000)
+  const [selectedId, setSelected] = useState<string | null>(null)
+  const expired = useHoldDeadline(read.data?.holds ?? NO_HOLDS, read.retry)
   const refresh = () => { onRefreshStart(); setSelected(null); read.retry() }
   if (read.error) return <section aria-label="Venue schedule"><CalendarLegend onRefresh={refresh} /><p role="alert">{read.error} <Button type="button" onClick={refresh}>Retry schedule</Button></p></section>
   if (!read.data) return <section aria-label="Venue schedule" aria-busy="true"><CalendarLegend onRefresh={refresh} loading /><p role="status">Loading schedule…</p></section>
-  const entries = calendarEntries(read.data)
-  const overlaps = approvedOverlaps(read.data)
+  const entries = calendarEntries(read.data, expired)
+  const selected = entries.find(entry => entry.id === selectedId)
+  const activeConflicts = read.data.activeConflicts ?? approvedOverlaps(read.data)
+  // Keep historical calendar overlaps while also identifying off-screen active partners.
+  const overlaps = [...new Map([...approvedOverlaps(read.data), ...activeConflicts]
+    .map(pair => [[pair.first.bookingId, pair.second.bookingId].sort().join(':'), pair])).values()]
+  const conflictingIds = new Set(overlaps.flatMap(pair => [pair.first.bookingId, pair.second.bookingId]))
   return <section aria-label="Venue schedule">
     <CalendarLegend onRefresh={refresh} />
-    {overlaps.length > 0 && <div role="status" className="unavailability-warning">
-      <p>Approved bookings have overlapping occupied times. No booking has been cancelled.</p>
-      <ul>{overlaps.map(({ first, second }) => <li key={`${first.bookingId}:${second.bookingId}`}>
-        <Link to={`/venue-staff/bookings/${first.bookingId}`}>{first.eventName}</Link> ({range(first.effectiveStart, first.effectiveEnd)})
-        {' overlaps '}<Link to={`/venue-staff/bookings/${second.bookingId}`}>{second.eventName}</Link> ({range(second.effectiveStart, second.effectiveEnd)})
-      </li>)}</ul>
-      <Link to={`/venue-staff/catalogue/${venueId}`}>Review all active conflicts for this venue</Link>
-    </div>}
+    <BookingConflictList pairs={activeConflicts} venueName={venueName} />
+    <Link to={`/venue-staff/catalogue/${venueId}`}>Review all active conflicts for this venue</Link>
     {!days.filter(day => day.startsWith(month)).some(day => entriesOnDay(entries, day).length) && <p role="status">No schedule entries for this month.</p>}
     <p className="venue-calendar__hint">Select an entry for details. Arrows indicate that an entry continues across dates.</p>
     <div className="venue-calendar__scroll" role="region" aria-label="Monthly calendar" tabIndex={0}>
@@ -89,22 +93,26 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
           {days.slice(week * 7, week * 7 + 7).map(day => <td key={day} data-outside={!day.startsWith(month)}>
             <time dateTime={day} aria-current={day === singaporeDate() ? 'date' : undefined}>{Number(day.slice(-2))}</time>
             <ul>{entriesOnDay(entries, day).map(entry => <li key={entry.id}>
-              <button className="venue-calendar__entry" data-kind={entry.type}
-                aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}`}
-                onClick={() => setSelected(entry)}>
+              <button className="venue-calendar__entry" data-kind={entry.type} data-booking-status={entry.type === 'unavailable' ? undefined : entry.type}
+                data-conflict={entry.type === 'approved' && conflictingIds.has(entry.entryId)}
+                aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}${entry.type === 'approved' && conflictingIds.has(entry.entryId) ? ', Conflict' : ''}`}
+                onClick={() => setSelected(entry.id)}>
                 <span>{entryLabels[entry.type]}{entry.phase !== 'Unavailable' ? ` · ${entry.phase}` : ''}</span>
                 <strong>{entry.title}</strong><span>{dayTime(entry, day)}</span>
+                {entry.type === 'approved' && conflictingIds.has(entry.entryId) && <span>⚠ Conflict</span>}
               </button>
             </li>)}</ul>
           </td>)}
         </tr>)}</tbody>
       </table>
     </div>
-    {selected && <EntryDetails entry={selected} venueName={venueName} onClose={() => setSelected(null)} />}
+    {selected && <EntryDetails entry={selected} venueName={venueName}
+      conflicts={overlaps.filter(pair => pair.first.bookingId === selected.entryId || pair.second.bookingId === selected.entryId)}
+      onClose={() => setSelected(null)} />}
   </section>
 }
 
-function EntryDetails({ entry, venueName, onClose }: { entry: CalendarEntry; venueName: string; onClose: () => void }) {
+function EntryDetails({ entry, venueName, conflicts, onClose }: { entry: CalendarEntry; venueName: string; conflicts: BookingOverlap[]; onClose: () => void }) {
   const ref = useRef<HTMLDialogElement>(null)
   useEffect(() => { ref.current?.showModal() }, [])
   return <dialog ref={ref} className="venue-calendar__details" aria-labelledby="calendar-detail-title" onCancel={onClose} onClose={onClose}>
@@ -113,10 +121,12 @@ function EntryDetails({ entry, venueName, onClose }: { entry: CalendarEntry; ven
       <dt>Venue</dt><dd>{venueName}</dd>
       <dt>Type</dt><dd>{entryLabels[entry.type]}</dd>
       <dt>Entry</dt><dd>{entry.phase}</dd>
+      {entry.expiresAt && <><dt>Hold expiry (SGT)</dt><dd>{formatEventDateTime(entry.expiresAt)}</dd><dt>Hold status</dt><dd>Active</dd></>}
       <dt>Start / end (SGT)</dt><dd>{range(entry.start, entry.end)}</dd>
       {entry.eventStart && entry.eventEnd && entry.phase !== 'Event' && <><dt>Event timing (SGT)</dt><dd>{range(entry.eventStart, entry.eventEnd)}</dd></>}
       {entry.type === 'unavailable' && <><dt>Reason</dt><dd>{entry.title}</dd></>}
     </dl>
+    {conflicts.length > 0 && <BookingConflictList pairs={conflicts} venueName={venueName} />}
     {entry.type !== 'unavailable' && <Link to={`/venue-staff/bookings/${entry.entryId}`}>View booking details</Link>}
     <Button onClick={onClose}>Close</Button>
   </dialog>
