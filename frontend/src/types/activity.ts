@@ -31,6 +31,9 @@ export type ActivityTypeName =
   | 'returned_to_planning'
   | 'event_confirmed'
   | 'event_completed'
+  | 'event_reassignment_requested'
+  | 'event_reassignment_approved'
+  | 'event_reassignment_declined'
 
 /** One entry of a request's timeline (V13 event_request_activity). The
  * server has already filtered out entries the viewer's role may not see. */

@@ -14,6 +14,9 @@ export type NotificationTypeName =
   | 'venue_hold_expired'
   | 'venue_timing_changed'
   | 'venue_timing_conflict'
+  | 'event_reassignment_requested'
+  | 'event_reassignment_approved'
+  | 'event_reassignment_declined'
 
 export interface NotificationDto {
   notificationId: string
