@@ -1,0 +1,2309 @@
+@startuml
+
+hide circle
+skinparam classAttributeIconSize 0
+set separator none
+legend top left
++ field: has a getter and a setter (every field is private in the code)
+endlegend
+
+
+class ConnectSphereApplication {
+	{method}  {static} +main ( args : String[] ) : void
+}
+
+
+class ActivityDto {
+	{field} -activityId : UUID
+	{field} -actorName : String
+	{field} -actorRole : String
+	{field} -fieldQuestions : Map<String, String>
+	{field} -fieldValues : Map<String, Object>
+	{field} -flaggedFields : List<String>
+	{field} -fromStatus : String
+	{field} -message : String
+	{field} -occurredAt : OffsetDateTime
+	{field} -significance : String
+	{field} -toStatus : String
+	{field} -type : String
+}
+
+
+enum ActivityType {
+	{field} +approved
+	{field} +clarification_requested
+	{field} +clarification_responded
+	{field} +coordinator_assigned
+	{field} +coordinator_reassigned
+	{field} +equipment_approved
+	{field} +equipment_rejected
+	{field} +equipment_requested
+	{field} +event_completed
+	{field} +event_confirmed
+	{field} +rejected
+	{field} +returned_to_planning
+	{field} +safety_approved
+	{field} +safety_changes_requested
+	{field} +safety_rejected
+	{field} +safety_review_withdrawn
+	{field} +sent_for_safety_review
+	{field} +submitted
+	{field} +venue_added
+	{field} +venue_alternative_suggested
+	{field} +venue_booking_approved
+	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
+	{field} +venue_booking_replaced
+	{field} +venue_booking_requested
+	{field} +venue_hold_converted
+	{field} +venue_hold_created
+	{field} +venue_hold_expired
+	{field} +venue_hold_released
+	{field} +venue_unavailable
+}
+
+
+class RequestActivity <<Entity>>  {
+	{field} +activityId : UUID {id}
+	{field} +actorName : String
+	{field} +actorRole : String
+	{field} +actorUserId : UUID
+	{field} +audienceRoles : List<String>
+	{field} +eventId : UUID
+	{field} +fieldQuestions : Map<String, String>
+	{field} +fieldValues : Map<String, Object>
+	{field} +flaggedFields : List<String>
+	{field} +fromStatus : String
+	{field} +message : String
+	{field} +occurredAt : OffsetDateTime
+	{field} +requestId : UUID
+	{field} +toStatus : String
+}
+
+
+interface RequestActivityRepository {
+	{method}  {abstract} +findByRequestIdInAndActivityType ( requestIds : Collection , activityType : ActivityType ) : List
+	{method}  {abstract} +findVisible ( requestId : UUID , role : String ) : List
+}
+
+
+class ActivityService {
+	{field} {static} ~IMPORTANT_FIELDS : List<String>
+	{method} +record ( entry : Entry ) : void
+	{method} +submittedAt ( requestIds : Collection ) : Map
+	{method} +timeline ( requestId : UUID , viewerRole : UserRole ) : List
+}
+
+
+class ActivityService.Entry {
+	{field} -actorUserId : UUID
+	{field} -eventId : UUID
+	{field} -fieldQuestions : Map<String, String>
+	{field} -fieldValues : Map<String, Object>
+	{field} -flaggedFields : List<String>
+	{field} -fromStatus : String
+	{field} -message : String
+	{field} -requestId : UUID
+	{field} -toStatus : String
+}
+
+
+class ChangeLogRecorder {
+	{method} +on ( change : EventChange ) : void
+	{method} +on ( unavailable : VenueBecameUnavailable ) : void
+}
+
+
+class EventChange {
+	{field} -actorUserId : UUID
+	{field} -eventId : UUID
+	{field} -message : String
+}
+
+
+enum AccessibilityFeature {
+	{field} +accessible_parking
+	{field} +drop_off_zone
+	{field} +elevators
+	{field} +none
+	{field} +public_transport
+	{field} +step_free_access
+	{field} +wheelchair_support
+	{field} +wide_doorways
+}
+
+
+enum Facility {
+	{field} +air_conditioning
+	{field} +audio_visual_equipment
+	{field} +barbeque_pit
+	{field} +breakout_spaces
+	{field} +dining_area
+	{field} +projection
+	{field} +stage
+}
+
+
+enum JourneyStatus {
+	{field} +AWAITING_SAFETY_REVIEW
+	{field} +CANCELLED
+	{field} +CLARIFICATION_REQUIRED
+	{field} +COMPLETED
+	{field} +CONFIRMED
+	{field} +DRAFT
+	{field} +PLANNING
+	{field} +REJECTED
+	{field} +SAFETY_APPROVED
+	{field} +SAFETY_CHANGES_REQUESTED
+	{field} +SUBMITTED
+	{field} +UNDER_REVIEW
+}
+
+
+enum JourneyStatus.Stage {
+	{field} +EVENT
+	{field} +REQUEST
+}
+
+
+class JourneyStatusResolver {
+	{field} -clock : Clock
+	{method} +forEvent ( event : Event ) : StatusView
+	{method} +forRequest ( request : EventRequest ) : StatusView
+	{method} +journeyOf ( event : Event ) : JourneyStatus
+}
+
+
+class StatusView {
+	{field} -code : String
+	{field} -datePassed : boolean
+	{field} -explanation : String
+	{field} -isFinal : boolean
+	{field} -label : String
+	{field} -nextActor : String
+	{field} -stage : String
+	{method}  {static} +of ( status : JourneyStatus , datePassed : boolean ) : StatusView
+}
+
+
+class ApiError {
+	{field} -message : String
+	{field} -missingFields : List<String>
+	{method}  {static} +missingFields ( message : String , missingFields : List ) : ApiError
+	{method}  {static} +of ( message : String ) : ApiError
+}
+
+
+class ApiExceptionHandler {
+	{method} +handleAccessDenied ( ex : AccessDeniedException ) : ResponseEntity
+	{method} +handleAuthenticationFailure ( ex : AuthenticationException ) : ResponseEntity
+	{method} +handleEquipmentRequestState ( ex : EquipmentRequestStateException ) : ResponseEntity
+	{method} +handleEventLifecycle ( ex : EventLifecycleException ) : ResponseEntity
+	{method} +handleEventLifecycleValidation ( ex : EventLifecycleValidationException ) : ResponseEntity
+	{method} +handleEventNotFound ( ex : EventNotFoundException ) : ResponseEntity
+	{method} +handleEventNotPending ( ex : EventNotPendingException ) : ResponseEntity
+	{method} +handleEventNotReady ( ex : EventNotReadyException ) : ResponseEntity
+	{method} +handleIncomplete ( ex : IncompleteEventRequestException ) : ResponseEntity
+	{method} +handleIncompleteReadiness ( ex : IncompleteReadinessException ) : ResponseEntity
+	{method} +handleInvalidCoordinator ( ex : InvalidCoordinatorException ) : ResponseEntity
+	{method} +handleInvalidEquipmentRequest ( ex : InvalidEquipmentRequestException ) : ResponseEntity
+	{method} +handleInvalidMessage ( ex : InvalidMessageException ) : ResponseEntity
+	{method} +handleInvalidReadinessUpdate ( ex : InvalidReadinessUpdateException ) : ResponseEntity
+	{method} +handleInvalidRefreshToken ( ex : InvalidRefreshTokenException ) : ResponseEntity
+	{method} +handleInvalidSchedule ( ex : InvalidEventRequestScheduleException ) : ResponseEntity
+	{method} +handleInvalidVenue ( ex : InvalidVenueException ) : ResponseEntity
+	{method} +handleInvalidVenueBooking ( ex : InvalidVenueBookingException ) : ResponseEntity
+	{method} +handleInvalidVenueOperationalIssue ( ex : InvalidVenueOperationalIssueException ) : ResponseEntity
+	{method} +handleMissingOrganisation ( ex : MissingOrganisationException ) : ResponseEntity
+	{method} +handleMissingRejectionReason ( ex : MissingRejectionReasonException ) : ResponseEntity
+	{method} +handleNotAssignedCoordinator ( ex : NotAssignedCoordinatorException ) : ResponseEntity
+	{method} +handleNotEditable ( ex : EventRequestNotEditableException ) : ResponseEntity
+	{method} +handleNotFound ( ex : EventRequestNotFoundException ) : ResponseEntity
+	{method} +handleNotPending ( ex : EventRequestNotPendingException ) : ResponseEntity
+	{method} +handleNotificationNotFound ( ex : NotificationNotFoundException ) : ResponseEntity
+	{method} +handleRequestState ( ex : EventRequestStateException ) : ResponseEntity
+	{method} +handleResponseStatus ( ex : ResponseStatusException ) : ResponseEntity
+	{method} +handleVenueBookingNotFound ( ex : VenueBookingNotFoundException ) : ResponseEntity
+	{method} +handleVenueBookingState ( ex : VenueBookingStateException ) : ResponseEntity
+	{method} +handleVenueNotFound ( ex : VenueNotFoundException ) : ResponseEntity
+}
+
+
+class RestAccessDeniedHandler {
+	{field} -objectMapper : ObjectMapper
+	{method} +handle ( request : HttpServletRequest , response : HttpServletResponse , accessDeniedException : AccessDeniedException ) : void
+}
+
+
+class RestAuthenticationEntryPoint {
+	{field} -objectMapper : ObjectMapper
+	{method} +commence ( request : HttpServletRequest , response : HttpServletResponse , authException : AuthenticationException ) : void
+}
+
+
+class AuthenticationConfig {
+	{method} +authenticationManager ( userDetailsService : UserDetailsService , passwordEncoder : PasswordEncoder ) : AuthenticationManager
+}
+
+
+class JwtConfig {
+	{field} -key : SecretKey
+	{method} +jwtAuthenticationConverter () : JwtAuthenticationConverter
+	{method} +jwtDecoder () : JwtDecoder
+	{method} +jwtEncoder () : JwtEncoder
+}
+
+
+class SecurityConfig {
+	{method} +filterChain ( http : HttpSecurity , jwtAuthenticationConverter : JwtAuthenticationConverter , authenticationEntryPoint : RestAuthenticationEntryPoint , accessDeniedHandler : RestAccessDeniedHandler ) : SecurityFilterChain
+	{method} +passwordEncoder () : PasswordEncoder
+}
+
+
+class AddStatusPeriodRequest {
+	{field} -end : Instant
+	{field} -start : Instant
+}
+
+
+class DevEquipmentSeeder {
+	{field} {static} -GENERAL_EQUIPMENT_TYPE : char
+	{field} {static} -SEED_EQUIPMENT : List<DevEquipmentSeeder.SeedEquipment>
+	{field} -jdbc : JdbcTemplate
+	{field} {static} -log : Logger
+	{method} +run ( args : String[] ) : void
+}
+
+
+class Equipment <<Entity>>  {
+	{field} -id : UUID {id}
+	{field} -name : String
+	{field} -quantity : int
+	{field} -serialised : Boolean
+	{field} -type : char
+}
+
+
+class EquipmentAvailabilityResponse {
+	{field} -availableQuantity : int
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -serialised : boolean
+	{field} -totalQuantity : int
+}
+
+
+class EquipmentCatalogueController {
+	{method} +catalogue () : List
+}
+
+
+class EquipmentCatalogueResponse {
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -serialised : boolean
+	{field} -totalQuantity : int
+}
+
+
+class EquipmentLog <<Entity>>  {
+	{field} -equipmentId : UUID
+	{field} -eventId : UUID
+	{field} -id : UUID {id}
+	{field} -loanedFrom : Instant
+	{field} -loanedUntil : Instant
+	{field} -quantity : int
+	{field} -serialNumber : String
+	{field} -technicalRequirements : String
+}
+
+
+interface EquipmentLogRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
+}
+
+
+interface EquipmentRepository {
+	{method}  {abstract} +findForUpdate ( equipmentId : UUID ) : Optional
+}
+
+
+class EquipmentReservationController {
+	{method} +availability ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +reservationsForEvent ( eventId : UUID ) : List
+	{method} +reserve ( request : ReserveEquipmentRequest ) : EquipmentReservationResponse
+}
+
+
+class EquipmentReservationResponse {
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -eventId : UUID
+	{field} -loanedFrom : Instant
+	{field} -loanedUntil : Instant
+	{field} -logId : UUID
+	{field} -quantity : int
+	{field} -serialNumber : String
+}
+
+
+class EquipmentReservationService {
+	{method} +availabilityForEvent ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +reservationsForEvent ( eventId : UUID ) : List
+	{method} +reserve ( req : ReserveEquipmentRequest ) : EquipmentReservationResponse
+}
+
+
+enum EquipmentStatus {
+	{field} +AVAILABLE
+	{field} +FAULTY
+	{field} +UNAVAILABLE
+}
+
+
+class EquipmentStatusController {
+	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , request : AddStatusPeriodRequest ) : void
+	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
+	{method} +listUnits ( start : Instant , end : Instant ) : List
+	{method} +removePeriod ( periodId : UUID ) : void
+}
+
+
+class EquipmentStatusPeriod <<Entity>>  {
+	{field} -createdAt : Instant
+	{field} -equipmentId : UUID
+	{field} -id : UUID {id}
+	{field} -periodEnd : Instant
+	{field} -periodStart : Instant
+	{field} -serialNumber : String
+}
+
+
+interface EquipmentStatusPeriodRepository {
+	{method}  {abstract} +findByEquipmentIdAndSerialNumberOrderByPeriodStartAsc ( equipmentId : UUID , serialNumber : String ) : List
+	{method}  {abstract} +findOverlapping ( start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
+}
+
+
+class EquipmentStatusService {
+	{field} {static} -FAR_FUTURE : Instant
+	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , status : EquipmentStatus , start : Instant , end : Instant ) : void
+	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
+	{method} +listUnits ( start : Instant , end : Instant ) : List
+	{method} +removePeriod ( periodId : UUID ) : void
+}
+
+
+class EquipmentUnitResponse {
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -serialNumber : String
+}
+
+
+class ReserveEquipmentRequest {
+	{field} -end : Instant
+	{field} -equipmentId : UUID
+	{field} -eventId : UUID
+	{field} -quantity : int
+	{field} -serialNumber : String
+	{field} -start : Instant
+}
+
+
+class SerialisedEquipment <<Entity>>  {
+}
+
+
+class SerialisedEquipmentId {
+	{field} -equipmentId : UUID
+	{field} -serialNumber : String
+}
+
+
+interface SerialisedEquipmentRepository {
+}
+
+
+class StatusPeriodResponse {
+	{field} -end : Instant
+	{field} -id : UUID
+	{field} -start : Instant
+}
+
+
+class EquipmentRequest <<Entity>>  {
+	{field} -eventId : UUID
+	{field} -id : UUID {id}
+	{field} -rejectReason : String
+	{field} -technicalRequirement : String
+	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
+}
+
+
+class EquipmentRequestController {
+	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
+	{method} +lines ( requestId : UUID ) : List
+	{method} +listProcessing () : List
+	{method} +submit ( jwt : Jwt , eventId : UUID , request : SubmitEquipmentRequest ) : ResponseEntity
+	{method} +updateStatus ( requestId : UUID , request : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
+}
+
+
+class EquipmentRequestDecisionService {
+	{field} {static} -MAX_REJECTION_REASON_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
+	{method} +updateStatus ( requestId : UUID , input : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
+}
+
+
+class EquipmentRequestDetailsResponse {
+	{field} -eventId : UUID
+	{field} -rejectReason : String
+	{field} -requestId : UUID
+	{field} -status : String
+	{field} -technicalRequirement : String
+}
+
+
+class EquipmentRequestLine <<Entity>>  {
+	{field} -quantity : int
+}
+
+
+class EquipmentRequestLineId {
+	{field} -equipmentId : UUID
+	{field} -requestId : UUID
+}
+
+
+interface EquipmentRequestLineRepository {
+	{method}  {abstract} +findByIdRequestId ( requestId : UUID ) : List
+}
+
+
+class EquipmentRequestLineResponse {
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -quantity : int
+}
+
+
+interface EquipmentRequestRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findByEventIdForUpdate ( eventId : UUID ) : List
+	{method}  {abstract} +findByStatus ( status : EquipmentRequestStatus ) : List
+	{method}  {abstract} +findForUpdate ( requestId : UUID ) : Optional
+}
+
+
+class EquipmentRequestResponse {
+	{field} -eventEnd : Instant
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -eventStart : Instant
+	{field} -requestId : UUID
+	{field} -status : String
+	{field} -technicalRequirement : String
+}
+
+
+class EquipmentRequestService {
+	{field} {static} -MAX_REQUIREMENT_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
+	{method} +listForEvent ( coordinatorId : UUID , eventId : UUID ) : List
+	{method} +listForSafetyOfficer ( eventId : UUID ) : List
+	{method} +submit ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
+}
+
+
+class EquipmentRequestStateException {
+}
+
+
+enum EquipmentRequestStatus {
+	{field} +approved
+	{field} +processing
+	{field} +rejected
+}
+
+
+class InvalidEquipmentRequestException {
+}
+
+
+class SubmitEquipmentRequest {
+	{field} -technicalRequirement : String
+}
+
+
+class SubmitEquipmentRequest.Item {
+	{field} -equipmentId : UUID
+	{field} -quantity : int
+}
+
+
+class UpdateEquipmentRequestStatus {
+	{field} -rejectReason : String
+	{field} -status : String
+}
+
+
+class EventController {
+	{method} +arrangements ( jwt : Jwt , id : UUID ) : OrganiserArrangementsDto
+	{method} +assignedEvents ( jwt : Jwt ) : List
+	{method} +confirm ( jwt : Jwt , id : UUID ) : EventDto
+	{method} +eventsByCoordinator () : List
+	{method} +get ( jwt : Jwt , id : UUID ) : EventDto
+	{method} +readiness ( jwt : Jwt , id : UUID ) : EventReadinessDto
+	{method} +sendForSafetyReview ( jwt : Jwt , id : UUID ) : EventReadinessDto
+	{method} +timeline ( jwt : Jwt , id : UUID ) : List
+	{method} +withdrawFromSafetyReview ( jwt : Jwt , id : UUID , body : Map ) : EventReadinessDto
+}
+
+
+class CoordinatorEventsDto {
+	{field} -coordinatorId : UUID
+	{field} -coordinatorName : String
+}
+
+
+class CoordinatorEventsDto.HeldEvent {
+	{field} -requestId : UUID
+}
+
+
+class EventDto {
+	{field} -accessibilityNeeds : List<String>
+	{field} -confirmedAt : OffsetDateTime
+	{field} -coordinatorEmail : String
+	{field} -coordinatorName : String
+	{field} -description : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -organisation : String
+	{field} -purpose : String
+	{field} -registrationNeeds : Boolean
+	{field} -requiredFacilities : List<String>
+	{field} -safetyApprovedAt : OffsetDateTime
+	{field} -safetyFeedback : String
+	{field} -startDatetime : OffsetDateTime
+	{field} -status : String
+	{field} -venueId : UUID
+	{field} -venueRequirements : String
+}
+
+
+class EventReadinessDto {
+	{field} -blockers : List<String>
+	{field} -canConfirm : boolean
+	{field} -canSendForReview : boolean
+	{field} -canWithdraw : boolean
+	{field} -datePassed : boolean
+	{field} -safetyFeedback : String
+}
+
+
+class EventReadinessDto.Item {
+	{field} -actionPath : String
+	{field} -detail : String
+	{field} -key : String
+	{field} -label : String
+	{field} -state : String
+}
+
+
+class OrganiserArrangementsDto {
+	{field} -accessibilityNeeds : List<String>
+	{field} -confirmedAt : OffsetDateTime
+	{field} -coordinatorEmail : String
+	{field} -coordinatorName : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -firstConfirmedAt : OffsetDateTime
+	{field} -safetyApprovedAt : OffsetDateTime
+	{field} -startDatetime : OffsetDateTime
+	{field} -view : String
+}
+
+
+class OrganiserArrangementsDto.Equipment {
+	{field} -name : String
+	{field} -quantity : int
+}
+
+
+class OrganiserArrangementsDto.Venue {
+	{field} -accessibilities : List<String>
+	{field} -capacity : Integer
+	{field} -facilities : List<String>
+	{field} -layouts : List<String>
+	{field} -name : String
+	{field} -noLongerAvailable : boolean
+	{field} -operatingInformation : String
+	{field} -venueId : UUID
+}
+
+
+class Event <<Entity>>  {
+	{field} +accessibilityNeeds : List<String>
+	{field} +actualAttendance : Integer
+	{field} +confirmedAt : OffsetDateTime
+	{field} +confirmedBy : UUID
+	{field} +coordinatorId : UUID
+	{field} +description : String
+	{field} +endDatetime : OffsetDateTime
+	{field} +equipmentRequirements : String
+	{field} +eventId : UUID {id}
+	{field} +eventName : String
+	{field} +expectedAttendance : Integer
+	{field} +firstConfirmedAt : OffsetDateTime
+	{field} +organisation : String
+	{field} +purpose : String
+	{field} +registrationNeeds : Boolean
+	{field} +requiredFacilities : List<String>
+	{field} +safetyApprovedAt : OffsetDateTime
+	{field} +safetyFeedback : String
+	{field} +startDatetime : OffsetDateTime
+	{field} +venueId : UUID
+	{field} +venueRequirements : String
+}
+
+
+enum EventStatus {
+	{field} +awaiting_safety_review
+	{field} +cancelled
+	{field} +completed
+	{field} +confirmed
+	{field} +pending
+	{field} +safety_approved
+	{field} +safety_changes_requested
+}
+
+
+interface EventRepository {
+	{method}  {abstract} +findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc ( coordinatorId : UUID , statuses : Collection ) : List
+	{method}  {abstract} +findByStatusInOrderByStartDatetimeAsc ( statuses : Collection ) : List
+	{method}  {abstract} +findByStatusOrderByStartDatetimeAsc ( status : EventStatus ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class EventArrangementsService {
+	{method} +forOrganiser ( organisation : String , eventId : UUID ) : OrganiserArrangementsDto
+}
+
+
+class EventLifecycleException {
+}
+
+
+class EventLifecycleService {
+	{field} {static} ~MAX_TEXT : int
+	{field} -clock : Clock
+	{method} +confirm ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
+	{method} +onVenueBecameUnavailable ( change : VenueBecameUnavailable ) : void
+	{method} +readiness ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
+	{method} +recordSafetyDecision ( officerId : UUID , eventId : UUID , decision : SafetyDecision , feedback : String ) : void
+	{method} +returnToPlanning ( eventId : UUID , actorId : UUID , reason : String ) : boolean
+	{method} +sendForSafetyReview ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
+	{method} +withdrawFromSafetyReview ( coordinatorId : UUID , eventId : UUID , reason : String ) : EventReadinessDto
+}
+
+
+enum EventLifecycleService.SafetyDecision {
+	{field} +APPROVE
+	{field} +REJECT
+	{field} +REQUEST_CHANGES
+}
+
+
+class EventLifecycleValidationException {
+}
+
+
+class EventNotFoundException {
+}
+
+
+class EventNotPendingException {
+}
+
+
+class EventNotReadyException {
+	{field} -blockers : List<String>
+}
+
+
+class EventService {
+	{method} +activeEventsByCoordinator () : List
+	{method} +assignedEvents ( coordinatorId : UUID ) : List
+	{method} +confirm ( actingCoordinatorId : UUID , eventId : UUID ) : EventDto
+	{method} +get ( organisation : String , eventId : UUID ) : EventDto
+}
+
+
+class EventRequestController {
+	{method} +approve ( jwt : Jwt , id : UUID ) : EventRequestDto
+	{method} +assignUnassigned ( jwt : Jwt , id : UUID , request : AssignCoordinatorRequest ) : EventRequestDto
+	{method} +assignedRequests () : List
+	{method} +coordinators () : List
+	{method} +get ( jwt : Jwt , id : UUID ) : EventRequestDto
+	{method} +leadReview ( id : UUID ) : EventRequestReviewDto
+	{method} +list ( jwt : Jwt ) : List
+	{method} +reassign ( jwt : Jwt , id : UUID , request : AssignCoordinatorRequest ) : EventRequestDto
+	{method} +reject ( jwt : Jwt , id : UUID , request : RejectEventRequestRequest ) : EventRequestDto
+	{method} +rejectUnassigned ( jwt : Jwt , id : UUID , request : RejectEventRequestRequest ) : EventRequestDto
+	{method} +requestClarification ( jwt : Jwt , id : UUID , request : RequestClarificationRequest ) : EventRequestDto
+	{method} +requestClarificationUnassigned ( jwt : Jwt , id : UUID , request : RequestClarificationRequest ) : EventRequestDto
+	{method} +resubmit ( jwt : Jwt , id : UUID , request : ResubmitEventRequestRequest ) : EventRequestDto
+	{method} +review ( jwt : Jwt , id : UUID ) : EventRequestReviewDto
+	{method} +reviewQueue ( jwt : Jwt ) : ReviewQueueDto
+	{method} +saveNewDraft ( jwt : Jwt , request : SaveEventRequestRequest ) : ResponseEntity
+	{method} +submit ( jwt : Jwt , id : UUID ) : EventRequestDto
+	{method} +timeline ( jwt : Jwt , id : UUID ) : List
+	{method} +unassignedRequests () : List
+	{method} +updateDraft ( jwt : Jwt , id : UUID , request : SaveEventRequestRequest ) : EventRequestDto
+}
+
+
+class AssignCoordinatorRequest {
+	{field} -coordinatorUserId : UUID
+}
+
+
+class CoordinatorAssignmentsDto {
+	{field} -coordinatorId : UUID
+	{field} -coordinatorName : String
+}
+
+
+class CoordinatorAssignmentsDto.AssignedRequest {
+	{field} -submittedAt : OffsetDateTime
+}
+
+
+class CoordinatorDto {
+	{field} -userId : UUID
+	{field} -username : String
+}
+
+
+class EventRequestDto {
+	{field} -coordinatorId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -createdByName : String
+	{field} -description : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -organisation : String
+	{field} -purpose : String
+	{field} -registrationNeeds : Boolean
+	{field} -rejectionReason : String
+	{field} -requestId : UUID
+	{field} -requestType : Character
+	{field} -requiredFacilities : List<String>
+	{field} -startDatetime : OffsetDateTime
+	{field} -updatedAt : OffsetDateTime
+	{field} -venueRequirements : String
+}
+
+
+class EventRequestReviewDto {
+	{field} -missingFields : List<String>
+	{field} -scheduleValid : boolean
+}
+
+
+class RejectEventRequestRequest {
+	{field} -reason : String
+}
+
+
+class RequestClarificationRequest {
+	{field} -fieldQuestions : Map<String, String>
+	{field} -flaggedFields : List<String>
+	{field} -message : String
+}
+
+
+class ResubmitEventRequestRequest {
+	{field} -response : String
+}
+
+
+class ReviewQueueDto {
+}
+
+
+class SaveEventRequestRequest {
+	{field} -description : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -purpose : String
+	{field} -registrationNeeds : Boolean
+	{field} -startDatetime : OffsetDateTime
+	{field} -venueRequirements : String
+}
+
+
+class EventRequest <<Entity>>  {
+	{field} +coordinatorId : UUID
+	{field} +createdAt : OffsetDateTime
+	{field} +createdBy : UUID
+	{field} +description : String
+	{field} +endDatetime : OffsetDateTime
+	{field} +equipmentRequirements : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +expectedAttendance : Integer
+	{field} +organisation : String
+	{field} +purpose : String
+	{field} +registrationNeeds : Boolean
+	{field} +rejectionReason : String
+	{field} +requestId : UUID {id}
+	{field} +requestType : Character
+	{field} +requiredFacilities : List<String>
+	{field} +startDatetime : OffsetDateTime
+	{field} +updatedAt : OffsetDateTime
+	{field} +venueRequirements : String
+}
+
+
+enum EventRequestStatus {
+	{field} +approved
+	{field} +cancelled
+	{field} +clarification_required
+	{field} +draft
+	{field} +pending
+	{field} +rejected
+}
+
+
+interface EventRequestMapper {
+	{method}  {abstract} +toDto ( entity : EventRequest ) : EventRequestDto
+}
+
+
+class UserNameLookup {
+	{method} +username ( userId : UUID ) : String
+}
+
+
+interface EventRequestRepository {
+	{method}  {abstract} +findByCoordinatorIdAndStatusOrderByUpdatedAtAsc ( coordinatorId : UUID , status : EventRequestStatus ) : List
+	{method}  {abstract} +findByCoordinatorIdIsNotNullAndStatusInOrderByStartDatetimeAscRequestIdAsc ( statuses : Collection ) : List
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : Optional
+	{method}  {abstract} +findByOrganisationOrderByCreatedAtDesc ( organisation : String ) : List
+	{method}  {abstract} +findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc ( statuses : Collection ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class EventRequestNotEditableException {
+}
+
+
+class EventRequestNotFoundException {
+}
+
+
+class EventRequestNotPendingException {
+}
+
+
+class EventRequestService {
+	{field} {static} ~FLAGGABLE_FIELDS : Set<String>
+	{field} {static} ~MAX_MESSAGE_LENGTH : int
+	{field} {static} -REQUEST_TYPE_CREATION : char
+	{method} +approve ( actingCoordinatorId : UUID , requestId : UUID ) : EventRequestDto
+	{method} +assignCoordinator ( leadId : UUID , requestId : UUID , coordinatorUserId : UUID ) : EventRequestDto
+	{method} +assignedRequests () : List
+	{method} +coordinators () : List
+	{method} +get ( organisation : String , requestId : UUID ) : EventRequestDto
+	{method} +list ( organisation : String ) : List
+	{method} +reassignCoordinator ( leadId : UUID , requestId : UUID , coordinatorUserId : UUID ) : EventRequestDto
+	{method} +reject ( actingCoordinatorId : UUID , requestId : UUID , reason : String ) : EventRequestDto
+	{method} +rejectUnassigned ( leadId : UUID , requestId : UUID , reason : String ) : EventRequestDto
+	{method} +requestClarification ( coordinatorId : UUID , requestId : UUID , message : String , flaggedFields : List ) : EventRequestDto
+	{method} +requestClarification ( coordinatorId : UUID , requestId : UUID , message : String , flaggedFields : List , fieldQuestions : Map ) : EventRequestDto
+	{method} +requestClarificationUnassigned ( leadId : UUID , requestId : UUID , message : String ) : EventRequestDto
+	{method} +resubmit ( organisation : String , actingUserId : UUID , requestId : UUID , response : String ) : EventRequestDto
+	{method} +resubmit ( organisation : String , actingUserId : UUID , requestId : UUID , response : String , details : SaveEventRequestRequest ) : EventRequestDto
+	{method} +reviewQueue ( coordinatorId : UUID ) : ReviewQueueDto
+	{method} +saveNewDraft ( organisation : String , createdBy : UUID , request : SaveEventRequestRequest ) : EventRequestDto
+	{method} +submit ( organisation : String , actingUserId : UUID , requestId : UUID ) : EventRequestDto
+	{method} +timelineForEvent ( viewerRole : UserRole , organisation : String , viewerId : UUID , eventId : UUID ) : List
+	{method} +timelineForOrganiser ( organisation : String , requestId : UUID ) : List
+	{method} +unassignedRequests () : List
+	{method} +updateDraft ( organisation : String , requestId : UUID , request : SaveEventRequestRequest ) : EventRequestDto
+}
+
+
+class EventRequestStateException {
+}
+
+
+class IncompleteEventRequestException {
+	{field} -missingFields : List<String>
+}
+
+
+class InvalidCoordinatorException {
+}
+
+
+class InvalidEventRequestScheduleException {
+}
+
+
+class InvalidMessageException {
+}
+
+
+class MissingOrganisationException {
+}
+
+
+class MissingRejectionReasonException {
+}
+
+
+class NotAssignedCoordinatorException {
+	{field} {static} +MESSAGE : String
+	{field} -requestOrEventId : UUID
+}
+
+
+class NotificationController {
+	{method} +list ( jwt : Jwt ) : List
+	{method} +markRead ( jwt : Jwt , id : UUID ) : NotificationDto
+	{method} +unreadCount ( jwt : Jwt ) : Map
+}
+
+
+class NotificationDto {
+	{field} -coordinatorEmail : String
+	{field} -coordinatorName : String
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -eventRequestId : UUID
+	{field} -isReassignment : Boolean
+	{field} -linkPath : String
+	{field} -message : String
+	{field} -newStatus : String
+	{field} -notificationId : UUID
+	{field} -occurredAt : OffsetDateTime
+	{field} -read : boolean
+	{field} -reason : String
+	{field} -type : String
+}
+
+
+class Notification <<Entity>>  {
+	{field} +coordinatorEmail : String
+	{field} +coordinatorName : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +eventRequestId : UUID
+	{field} +isReassignment : Boolean
+	{field} +message : String
+	{field} +newStatus : String
+	{field} +notificationId : UUID {id}
+	{field} +occurredAt : OffsetDateTime
+	{field} +readAt : OffsetDateTime
+	{field} +reason : String
+	{field} +recipientUserId : UUID
+	{field} +venueBookingId : UUID
+}
+
+
+enum NotificationType {
+	{field} +clarification_requested
+	{field} +clarification_responded
+	{field} +coordinator_assignment
+	{field} +event_confirmed
+	{field} +event_returned_to_planning
+	{field} +event_safety_approved
+	{field} +status_change
+	{field} +venue_booking_cancelled
+	{field} +venue_booking_requested
+	{field} +venue_hold_expired
+	{field} +venue_timing_changed
+	{field} +venue_timing_conflict
+	{field} +venue_unavailable
+}
+
+
+interface NotificationRepository {
+	{method}  {abstract} +countByRecipientUserIdAndReadAtIsNull ( recipientUserId : UUID ) : long
+	{method}  {abstract} +findByRecipientUserIdOrderByOccurredAtDesc ( recipientUserId : UUID ) : List
+}
+
+
+class NotificationNotFoundException {
+}
+
+
+class NotificationService {
+	{field} {static} -log : Logger
+	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
+	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
+	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
+	{method} +createEventConfirmedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
+	{method} +createHoldExpiredNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , name : String , expiry : OffsetDateTime ) : void
+	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
+	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
+	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
+	{method} +createVenueBookingCancelledNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String , reason : String ) : void
+	{method} +createVenueBookingRequestedNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String ) : void
+	{method} +list ( recipientUserId : UUID ) : List
+	{method} +markRead ( recipientUserId : UUID , notificationId : UUID ) : NotificationDto
+	{method} +unreadCount ( recipientUserId : UUID ) : long
+}
+
+
+class EventReadinessController {
+	{method} +get ( jwt : Jwt , eventId : UUID ) : ReadinessDto
+}
+
+
+class EventSafetyReview <<Entity>>  {
+	{field} -eventId : UUID {id}
+	{field} -note : String
+	{field} -reviewStatus : String
+	{field} -reviewedAt : OffsetDateTime
+	{field} -reviewedBy : UUID
+	{method} +update ( status : String , reason : String , reviewer : UUID , at : OffsetDateTime ) : void
+}
+
+
+interface EventSafetyReviewRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : Optional
+}
+
+
+class IncompleteReadinessException {
+	{field} -outstandingItems : List<String>
+}
+
+
+class InvalidReadinessUpdateException {
+}
+
+
+class ReadinessDto {
+	{field} -approvalNote : String
+	{field} -approvalStatus : String
+	{field} -completedItems : int
+	{field} -eventId : UUID
+	{field} -reviewedAt : OffsetDateTime
+	{field} -reviewedBy : String
+	{field} -totalItems : int
+}
+
+
+class ReadinessItemDto {
+	{field} -checked : boolean
+	{field} -checkedAt : OffsetDateTime
+	{field} -checkedBy : String
+	{field} -itemKey : String
+	{field} -label : String
+	{field} -note : String
+	{field} -updatedAt : OffsetDateTime
+	{field} -updatedBy : String
+}
+
+
+class ReadinessItemState <<Entity>>  {
+	{field} -checked : boolean
+	{field} -checkedAt : OffsetDateTime
+	{field} -checkedBy : UUID
+	{field} -eventId : UUID
+	{field} -itemId : UUID {id}
+	{field} -itemKey : String
+	{field} -note : String
+	{field} -updatedAt : OffsetDateTime
+	{field} -updatedBy : UUID
+	{method} +update ( nextChecked : boolean , nextNote : String , actor : UUID , at : OffsetDateTime ) : void
+}
+
+
+interface ReadinessItemStateRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findByEventIdAndItemKey ( eventId : UUID , itemKey : String ) : Optional
+}
+
+
+class ReadinessService {
+	{field} {static} -MAX_NOTE_LENGTH : int
+	{field} {static} -STANDARD_ITEMS : List<ReadinessService.StandardItem>
+	{method} +forCoordinator ( coordinatorId : UUID , eventId : UUID ) : ReadinessDto
+	{method} +forSafetyOfficer ( eventId : UUID ) : ReadinessDto
+	{method} +review ( safetyOfficerId : UUID , eventId : UUID , input : SafetyApprovalRequest ) : ReadinessDto
+	{method} +updateItem ( actorId : UUID , eventId : UUID , itemKey : String , input : UpdateReadinessItemRequest ) : ReadinessDto
+}
+
+
+class SafetyApprovalRequest {
+	{field} -decision : String
+	{field} -note : String
+}
+
+
+class SafetyEventListItemDto {
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -startDatetime : OffsetDateTime
+	{field} -status : String
+	{field} -venueAddress : String
+}
+
+
+class SafetyOfficerController {
+	{method} +confirmedEvents () : List
+	{method} +planningEvents () : List
+	{method} +readiness ( eventId : UUID ) : ReadinessDto
+	{method} +review ( jwt : Jwt , eventId : UUID , request : SafetyApprovalRequest ) : ReadinessDto
+	{method} +updateItem ( jwt : Jwt , eventId : UUID , itemKey : String , request : UpdateReadinessItemRequest ) : ReadinessDto
+}
+
+
+class UpdateReadinessItemRequest {
+	{field} -checked : Boolean
+	{field} -note : String
+}
+
+
+class AuthController {
+	{field} -authenticationManager : AuthenticationManager
+	{method} +login ( request : LoginRequest ) : ResponseEntity
+	{method} +logout ( request : RefreshRequest ) : ResponseEntity
+	{method} +refresh ( request : RefreshRequest ) : ResponseEntity
+}
+
+
+class LoginRequest {
+	{field} -password : String
+	{field} -username : String
+}
+
+
+class LoginResponse {
+	{field} -accessToken : String
+	{field} -expiresIn : long
+	{field} -organisation : String
+	{field} -refreshToken : String
+	{field} -role : String
+	{field} -tokenType : String
+	{field} -userId : UUID
+	{field} -username : String
+}
+
+
+class RefreshRequest {
+	{field} -refreshToken : String
+}
+
+
+class RefreshToken <<Entity>>  {
+	{field} +expiresAt : OffsetDateTime
+	{field} +familyId : UUID
+	{field} +issuedAt : OffsetDateTime
+	{field} +revokedAt : OffsetDateTime
+	{field} +tokenHash : String
+	{field} +tokenId : UUID {id}
+}
+
+
+class User <<Entity>>  {
+	{field} +createdAt : OffsetDateTime
+	{field} +email : String
+	{field} +hashedPassword : String
+	{field} +organisation : String
+	{field} +userId : UUID {id}
+	{field} +username : String
+}
+
+
+enum UserRole {
+	{field} +attendee
+	{field} +ec
+	{field} +ecl
+	{field} +eo
+	{field} +safety_officer
+	{field} +technician
+	{field} +vs
+}
+
+
+interface RefreshTokenRepository {
+	{method}  {abstract} +findByTokenHash ( tokenHash : String ) : Optional
+	{method}  {abstract} +revokeFamily ( familyId : UUID , now : OffsetDateTime ) : int
+}
+
+
+interface UserRepository {
+	{method}  {abstract} +existsByUsername ( username : String ) : boolean
+	{method}  {abstract} +findByRole ( role : UserRole ) : List
+	{method}  {abstract} +findByRoleAndOrganisation ( role : UserRole , organisation : String ) : List
+	{method}  {abstract} +findByUsername ( username : String ) : Optional
+}
+
+
+class AppUserDetailsService {
+	{method} +loadUserByUsername ( username : String ) : UserDetails
+}
+
+
+class DevUserSeeder {
+	{field} {static} -DEV_PASSWORD : String
+	{field} {static} -INTERNAL_ORG : String
+	{field} {static} -ORG_ACME : String
+	{field} {static} -ORG_GLOBEX : String
+	{field} {static} -ORG_INITECH : String
+	{field} {static} -SEED_USERS : List<DevUserSeeder.SeedUser>
+	{field} {static} -log : Logger
+	{field} -passwordEncoder : PasswordEncoder
+	{method} +run ( args : String[] ) : void
+}
+
+
+class InvalidRefreshTokenException {
+}
+
+
+class RefreshTokenService {
+	{field} {static} -TOKEN_BYTES : int
+	{field} {static} -log : Logger
+	{field} -random : SecureRandom
+	{field} -ttl : Duration
+	{method} +issueForNewSession ( user : User ) : String
+	{method} +revokeSession ( presented : String ) : void
+	{method} +rotate ( presented : String ) : Rotation
+}
+
+
+class RefreshTokenService.Rotation {
+	{field} -refreshToken : String
+}
+
+
+class TokenService {
+	{field} -encoder : JwtEncoder
+	{field} -issuer : String
+	{field} -ttl : Duration
+	{method} +accessTokenTtlSeconds () : long
+	{method} +issueAccessToken ( principal : UserPrincipal ) : String
+}
+
+
+class UserPrincipal {
+}
+
+
+class VenueController {
+	{method} +create ( input : CreateVenueDto ) : ResponseEntity
+	{method} +get ( id : UUID ) : VenueDto
+	{method} +handleInvalidBody ( ex : HttpMessageNotReadableException ) : ResponseEntity
+	{method} +handleInvalidId ( ex : MethodArgumentTypeMismatchException ) : ResponseEntity
+	{method} +handleInvalidSearch ( ex : InvalidVenueSearchException ) : ResponseEntity
+	{method} +list () : List
+	{method} +search ( startDatetime : String , endDatetime : String , capacity : String , facility : List ) : List
+	{method} +update ( venueId : UUID , input : UpdateVenueDto ) : VenueDto
+}
+
+
+class CreateVenueDto {
+	{field} -additionalInformation : String
+	{field} -operatingInformation : String
+	{field} -setupMinutes : BigDecimal
+	{field} -turnaroundMinutes : BigDecimal
+	{field} -venueAddress : String
+	{field} -venueCapacity : Integer
+}
+
+
+class UpdateVenueDto {
+	{field} +additionalInformation : String
+	{field} +operatingInformation : String
+	{field} +setupMinutes : BigDecimal
+	{field} +turnaroundMinutes : BigDecimal
+	{field} +venueCapacity : Integer
+}
+
+
+class VenueDto {
+	{field} -additionalInformation : String
+	{field} -operatingInformation : String
+	{field} -setupMinutes : int
+	{field} -turnaroundMinutes : int
+	{field} -venueAddress : String
+	{field} -venueCapacity : Integer
+	{field} -venueId : UUID
+}
+
+
+class VenueOperatingHourDto {
+	{field} -closeTime : LocalTime
+	{field} -dayOfWeek : int
+	{field} -openTime : LocalTime
+}
+
+
+class Venue <<Entity>>  {
+	{field} +additionalInformation : String
+	{field} +operatingInformation : String
+	{field} +setupMinutes : int
+	{field} +supportedLayouts : List<String>
+	{field} +turnaroundMinutes : int
+	{field} +venueAccessibilities : List<String>
+	{field} +venueAddress : String
+	{field} +venueCapacity : Integer
+	{field} +venueFacilities : List<String>
+	{field} +venueId : UUID {id}
+}
+
+
+enum VenueLayout {
+	{field} +banquet
+	{field} +boardroom
+	{field} +classroom
+	{field} +exhibition
+	{field} +theatre
+}
+
+
+class VenueOperatingHour <<Entity>>  {
+	{field} +closeTime : LocalTime
+	{field} +dayOfWeek : int
+	{field} +openTime : LocalTime
+	{field} +operatingHourId : UUID {id}
+	{field} +venueId : UUID
+}
+
+
+interface VenueMapper {
+	{method}  {abstract} +toDto ( entity : Venue ) : VenueDto
+}
+
+
+interface VenueOperatingHourRepository {
+	{method}  {abstract} +deleteByVenueId ( venueId : UUID ) : void
+	{method}  {abstract} +findByVenueIdIn ( venueIds : List ) : List
+	{method}  {abstract} +findByVenueIdOrderByDayOfWeekAscOpenTimeAsc ( venueId : UUID ) : List
+}
+
+
+interface VenueRepository {
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class InvalidVenueException {
+}
+
+
+class InvalidVenueSearchException {
+}
+
+
+class VenueNotFoundException {
+}
+
+
+class VenueSearchService {
+	{method} +search ( rawStart : String , rawEnd : String , rawCapacity : String , rawFacilities : List ) : List
+}
+
+
+class VenueService {
+	{method} +createVenue ( input : CreateVenueDto ) : VenueDto
+	{method} +get ( id : UUID ) : VenueDto
+	{method} +list () : List
+	{method} +updateVenue ( id : UUID , input : UpdateVenueDto ) : VenueDto
+}
+
+
+class AvailabilityController {
+	{method} +create ( venueId : UUID , jwt : Jwt , request : Request ) : Period
+	{method} +invalidBody () : ApiError
+	{method} +list ( venueId : UUID ) : List
+	{method} +preview ( venueId : UUID , request : Request ) : Preview
+	{method} +schedule ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : ResponseEntity
+	{method} +settings ( venueId : UUID ) : Settings
+	{method} +settings ( venueId : UUID , settings : Settings ) : Settings
+}
+
+
+class AvailabilityModels {
+}
+
+
+class AvailabilityModels.Booking {
+	{field} -bookingId : UUID
+	{field} -coordinatorId : UUID
+	{field} -effectiveEnd : OffsetDateTime
+	{field} -effectiveStart : OffsetDateTime
+	{field} -endDateTime : OffsetDateTime
+	{field} -eventEndDateTime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -eventStartDateTime : OffsetDateTime
+	{field} -startDateTime : OffsetDateTime
+	{field} -status : String
+	{field} -venueId : UUID
+	{field} -venueName : String
+	{method} +setupDurationMinutes () : long
+	{method} +turnaroundDurationMinutes () : long
+}
+
+
+class AvailabilityModels.Period {
+	{field} -createdAt : OffsetDateTime
+	{field} -endDateTime : OffsetDateTime
+	{field} -reason : String
+	{field} -startDateTime : OffsetDateTime
+	{field} -unavailabilityId : UUID
+	{field} -venueId : UUID
+}
+
+
+class AvailabilityModels.Preview {
+	{field} -previewToken : String
+}
+
+
+class AvailabilityModels.Request {
+	{field} -acknowledgedBookingIds : List<UUID>
+	{field} -endDateTime : OffsetDateTime
+	{field} -previewToken : String
+	{field} -reason : String
+	{field} -startDateTime : OffsetDateTime
+	{method}  {static} +fromJson ( start : String , end : String , reason : String , ids : List , token : String ) : Request
+}
+
+
+class AvailabilityModels.Schedule {
+}
+
+
+class AvailabilityModels.Settings {
+	{field} -setupMinutes : Integer
+	{field} -turnaroundMinutes : Integer
+	{method}  {static} +fromJson ( setup : BigDecimal , turnaround : BigDecimal ) : Settings
+}
+
+
+class AvailabilityRepository {
+	{field} -jdbc : JdbcTemplate
+	{method} +affected ( bookingId : UUID ) : boolean
+	{method} +blocking ( venueId : UUID , now : OffsetDateTime ) : List
+	{method} +bookings ( venueId : UUID ) : List
+	{method} +bookings ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method} +hasOperationalIssue ( venueId : UUID , period : EffectivePeriod ) : boolean
+	{method} +insert ( id : UUID , venueId : UUID , actor : UUID , r : Request , affected : List ) : void
+	{method} +outsideOperatingHours ( venueId : UUID , period : EffectivePeriod ) : boolean
+	{method} +periods ( venueId : UUID ) : List
+	{method} +periods ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method} +settings ( venueId : UUID ) : Settings
+	{method} +settings ( venueId : UUID , s : Settings ) : void
+}
+
+
+class AvailabilityService {
+	{field} -publisher : ApplicationEventPublisher
+	{method} +affected ( bookingId : UUID ) : boolean
+	{method} +conflicts ( venueId : UUID , eventId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method} +conflicts ( venueId : UUID , eventId : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : List
+	{method} +conflictsForBooking ( venueId : UUID , bookingId : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : List
+	{method} +create ( id : UUID , actor : UUID , r : Request ) : Period
+	{method} +hasOperationalIssue ( id : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : boolean
+	{method} +list ( id : UUID ) : List
+	{method} +outsideOperatingHours ( id : UUID , start : OffsetDateTime , end : OffsetDateTime ) : boolean
+	{method} +outsideOperatingHours ( id : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : boolean
+	{method}  {static} +overlaps ( a : OffsetDateTime , b : OffsetDateTime , c : OffsetDateTime , d : OffsetDateTime ) : boolean
+	{method} +preview ( id : UUID , r : Request ) : Preview
+	{method} +schedule ( id : UUID ) : Schedule
+	{method} +schedule ( id : UUID , start : OffsetDateTime , end : OffsetDateTime ) : Schedule
+	{method} +settings ( id : UUID ) : Settings
+	{method} +timing ( venueId : UUID , bookingId : UUID , start : OffsetDateTime , end : OffsetDateTime , setup : int , turnaround : int , note : String , active : boolean ) : BookingTimingDto
+	{method} +unavailable ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : boolean
+	{method} +unavailablePeriods ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method} +unavailablePeriods ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : List
+	{method} +updateSettings ( id : UUID , settings : Settings ) : Settings
+}
+
+
+class EffectivePeriod {
+	{field} -end : OffsetDateTime
+	{field} -start : OffsetDateTime
+	{method}  {static} +minutes ( value : BigDecimal , fallback : int ) : int
+	{method}  {static} +of ( eventStart : OffsetDateTime , eventEnd : OffsetDateTime , durations : Settings ) : EffectivePeriod
+	{method}  {static} +validate ( durations : Settings ) : void
+}
+
+
+class ExistingTimingConflictScan {
+	{method} +scan () : void
+}
+
+
+class OperatingHours {
+	{method}  {static} +covers ( day : int , opens : LocalTime , closes : LocalTime , period : EffectivePeriod ) : boolean
+}
+
+
+class TimingConflictController {
+	{method} +list ( venueId : UUID ) : ResponseEntity
+	{method} +scan ( venueId : UUID ) : List
+	{method} +unavailable () : ApiError
+}
+
+
+class TimingConflictService {
+	{field} -jdbc : JdbcTemplate
+	{method} +list ( venueId : UUID ) : List
+	{method} +notifyCoordinator ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , eventName : String , type : String , message : String ) : void
+	{method} +scan ( venueId : UUID ) : List
+}
+
+
+class TimingConflictService.Overlap {
+	{method} +overlapEnd () : OffsetDateTime
+	{method} +overlapStart () : OffsetDateTime
+}
+
+
+class VenueBecameUnavailable {
+	{field} -actorId : UUID
+	{field} -eventIds : List<UUID>
+	{field} -reason : String
+}
+
+
+class EventVenueBookingController {
+	{method} +bookings ( jwt : Jwt , eventId : UUID ) : List
+	{method} +cancel ( jwt : Jwt , eventId : UUID , bookingId : UUID , body : Map ) : EventVenueBookingDto
+	{method} +submit ( jwt : Jwt , eventId : UUID , request : SubmitVenueBookingRequest ) : ResponseEntity
+	{method} +submitBatch ( jwt : Jwt , eventId : UUID , request : Batch ) : ResponseEntity
+	{method} +venueOptions ( jwt : Jwt , eventId : UUID , setupDurationMinutes : BigDecimal , turnaroundDurationMinutes : BigDecimal , startDatetime : OffsetDateTime , endDatetime : OffsetDateTime ) : List
+}
+
+
+class VenueBookingController {
+	{method} +approve ( bookingId : UUID ) : VenueBookingDto
+	{method} +conflict ( ex : VenueBookingConflictException ) : ResponseEntity
+	{method} +get ( bookingId : UUID ) : VenueBookingDto
+	{method} +invalidId ( ex : MethodArgumentTypeMismatchException ) : ResponseEntity
+	{method} +list ( venueId : UUID ) : List
+	{method} +notFound ( ex : VenueBookingNotFoundException ) : ResponseEntity
+	{method} +pending () : List
+	{method} +reject ( bookingId : UUID , request : RejectVenueBookingRequest ) : VenueBookingDto
+	{method} +timing ( bookingId : UUID , jwt : Jwt , request : UpdateBookingTimingRequest ) : VenueBookingDto
+	{method} +updateFailed ( ex : RuntimeException ) : ResponseEntity
+}
+
+
+class BookingTimingDto {
+	{field} -editable : boolean
+	{field} -effectiveEnd : OffsetDateTime
+	{field} -effectiveStart : OffsetDateTime
+	{field} -endDatetime : OffsetDateTime
+	{field} -setupDurationMinutes : int
+	{field} -startDatetime : OffsetDateTime
+	{field} -timingNote : String
+	{field} -turnaroundDurationMinutes : int
+}
+
+
+class EventVenueBookingDto {
+	{field} -alternativeArrangement : String
+	{field} -alternativeVenueAddress : String
+	{field} -alternativeVenueId : UUID
+	{field} -bookingId : UUID
+	{field} -bookingNotes : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -rejectReason : String
+	{field} -replacesBookingId : UUID
+	{field} -requiresAlternative : boolean
+	{field} -startDatetime : OffsetDateTime
+	{field} -submittedAt : OffsetDateTime
+	{field} -submittedBy : String
+	{field} -suitabilityNote : String
+	{field} -venueAddress : String
+	{field} -venueCapacity : Integer
+	{field} -venueId : UUID
+}
+
+
+class RejectVenueBookingRequest {
+	{field} -alternativeArrangement : String
+	{field} -alternativeVenueId : UUID
+	{field} -reason : String
+}
+
+
+class SubmitVenueBookingRequest {
+	{field} -bookingNotes : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -replacesBookingId : UUID
+	{field} -setupDurationMinutes : BigDecimal
+	{field} -startDatetime : OffsetDateTime
+	{field} -suitabilityNote : String
+	{field} -timingNote : String
+	{field} -turnaroundDurationMinutes : BigDecimal
+	{field} -venueId : UUID
+}
+
+
+class SubmitVenueBookingRequest.Batch {
+}
+
+
+class UpdateBookingTimingRequest {
+	{field} -previousSetupDurationMinutes : Integer
+	{field} -previousTurnaroundDurationMinutes : Integer
+	{field} -setupDurationMinutes : BigDecimal
+	{field} -timingNote : String
+	{field} -turnaroundDurationMinutes : BigDecimal
+}
+
+
+class VenueBookingConflictDto {
+	{field} -bookingId : UUID
+	{field} -effectiveEnd : OffsetDateTime
+	{field} -effectiveStart : OffsetDateTime
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventName : String
+	{field} -setupDurationMinutes : int
+	{field} -startDatetime : OffsetDateTime
+	{field} -turnaroundDurationMinutes : int
+	{method}  {static} +from ( b : Booking ) : VenueBookingConflictDto
+	{method}  {static} +of ( id : UUID , name : String , start : OffsetDateTime , end : OffsetDateTime , setup : int , turnaround : int ) : VenueBookingConflictDto
+}
+
+
+class VenueBookingConflictResponse {
+	{field} -message : String
+}
+
+
+class VenueBookingDto {
+	{field} -alternativeArrangement : String
+	{field} -alternativeVenueAddress : String
+	{field} -alternativeVenueId : UUID
+	{field} -bookingId : UUID
+	{field} -bookingNotes : String
+	{field} -rejectReason : String
+	{field} -replacesBookingId : UUID
+	{field} -requiresAlternative : boolean
+	{field} -submittedAt : OffsetDateTime
+	{field} -suitabilityNote : String
+}
+
+
+class VenueBookingDto.EventRequirements {
+	{field} -accessibilityNeeds : List<String>
+	{field} -endDatetime : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -startDatetime : OffsetDateTime
+	{field} -venueRequirements : String
+}
+
+
+class VenueOptionDto {
+	{field} -capacityOk : boolean
+	{field} -missingAccessibility : List<String>
+	{field} -missingFacilities : List<String>
+	{field} -reasons : List<String>
+	{field} -spareCapacity : int
+	{field} -verdict : String
+}
+
+
+class VenueOptionDto.ConflictDto {
+	{field} {static} +ANOTHER_EVENT : String
+	{field} {static} -WHEN : DateTimeFormatter
+	{field} -description : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -startDatetime : OffsetDateTime
+	{method} +sentence () : String
+}
+
+
+class VenueOptionDto.UnavailablePeriodDto {
+	{field} -affectedFrom : OffsetDateTime
+	{field} -affectedUntil : OffsetDateTime
+	{field} -description : String
+}
+
+
+class VenueUnavailabilityConflictDto {
+	{field} -endDatetime : OffsetDateTime
+	{field} -reason : String
+	{field} -startDatetime : OffsetDateTime
+	{field} -unavailabilityId : UUID
+}
+
+
+class VenueBooking <<Entity>>  {
+	{field} -alternativeArrangement : String
+	{field} -alternativeVenueId : UUID
+	{field} -bookingId : UUID {id}
+	{field} -bookingNotes : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -rejectReason : String
+	{field} -replacesBookingId : UUID
+	{field} -setupDurationMinutes : int
+	{field} -startDatetime : OffsetDateTime
+	{field} -submittedAt : OffsetDateTime
+	{field} -suitabilityNote : String
+	{field} -timingNote : String
+	{field} -turnaroundDurationMinutes : int
+}
+
+
+class VenueBookingRecord <<Entity>>  {
+	{field} +alternativeArrangement : String
+	{field} +alternativeVenueId : UUID
+	{field} +bookingId : UUID {id}
+	{field} +bookingNotes : String
+	{field} +endDatetime : OffsetDateTime
+	{field} +eventId : UUID
+	{field} +rejectReason : String
+	{field} +replacesBookingId : UUID
+	{field} +setupDurationMinutes : int
+	{field} +startDatetime : OffsetDateTime
+	{field} +submittedAt : OffsetDateTime
+	{field} +submittedBy : UUID
+	{field} +suitabilityNote : String
+	{field} +timingNote : String
+	{field} +timingUpdatedAt : OffsetDateTime
+	{field} +timingUpdatedBy : UUID
+	{field} +turnaroundDurationMinutes : int
+	{field} +venueId : UUID
+}
+
+
+enum VenueBookingStatus {
+	{field} +approved
+	{field} +cancelled
+	{field} +changed
+	{field} +pending
+	{field} +rejected
+}
+
+
+class VenueEvent <<Entity>>  {
+	{field} -accessibilityNeeds : List<String>
+	{field} -endDatetime : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -eventId : UUID {id}
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -startDatetime : OffsetDateTime
+	{field} -venueRequirements : String
+}
+
+
+class HoldClockConfig {
+	{method} +venueHoldClock () : Clock
+}
+
+
+class VenueHold {
+	{field} -bookingId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -createdBy : UUID
+	{field} -endedAt : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expiresAt : OffsetDateTime
+	{field} -holdId : UUID
+	{field} -reservedEnd : OffsetDateTime
+	{field} -reservedStart : OffsetDateTime
+	{field} -serverTime : OffsetDateTime
+	{field} -status : String
+	{field} -venueId : UUID
+}
+
+
+class VenueHoldController {
+	{method} +conflict ( ex : VenueBookingConflictException ) : ResponseEntity
+	{method} +convert ( holdId : UUID ) : VenueBookingDto
+	{method} +create ( bookingId : UUID , body : CreateHold , jwt : Jwt ) : VenueHold
+	{method} +failed ( ex : RuntimeException ) : ResponseEntity
+	{method} +history ( bookingId : UUID ) : List
+	{method} +release ( holdId : UUID , jwt : Jwt ) : VenueHold
+}
+
+
+class VenueHoldController.CreateHold {
+	{field} -expiresAt : OffsetDateTime
+}
+
+
+class VenueHoldExpiryJob {
+	{method} +expire () : void
+}
+
+
+class VenueHoldRepository {
+	{field} {static} -SELECT : String
+	{field} -clock : Clock
+	{field} -jdbc : JdbcTemplate
+	{method} +blocking ( venueId : UUID ) : List
+	{method} +bookingId ( holdId : UUID ) : UUID
+	{method} +hasActive ( bookingId : UUID ) : boolean
+	{method} +history ( bookingId : UUID ) : List
+	{method} +insert ( id : UUID , bookingId : UUID , start : OffsetDateTime , end : OffsetDateTime , expiry : OffsetDateTime , actor : UUID ) : void
+	{method} +now () : OffsetDateTime
+	{method} +overdue () : List
+	{method} +requireActive ( holdId : UUID , bookingId : UUID ) : void
+	{method} +transition ( holdId : UUID , status : String , endedAt : OffsetDateTime ) : void
+}
+
+
+class VenueHoldService {
+	{field} -publisher : ApplicationEventPublisher
+	{method} +create ( bookingId : UUID , expiry : OffsetDateTime , actor : UUID ) : VenueHold
+	{method} +endForBooking ( bookingId : UUID , actor : UUID ) : void
+	{method} +expire ( holdId : UUID ) : void
+	{method} +history ( bookingId : UUID ) : List
+	{method} +release ( holdId : UUID , actor : UUID ) : VenueHold
+}
+
+
+interface VenueBookingRecordRepository {
+	{method}  {abstract} +approvePending ( id : UUID , pending : VenueBookingStatus , approved : VenueBookingStatus ) : int
+	{method}  {abstract} +existsByReplacesBookingIdAndStatus ( replacesBookingId : UUID , status : VenueBookingStatus ) : boolean
+	{method}  {abstract} +findApprovalConflicts ( venueId : UUID , bookingId : UUID , status : VenueBookingStatus , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method}  {abstract} +findApprovedForCoordinator ( coordinatorId : UUID , status : VenueBookingStatus ) : List
+	{method} +findApprovedOverlapping ( eventId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method}  {abstract} +findEventId ( id : UUID ) : Optional
+	{method}  {abstract} +findFirstByEventIdAndStatusIn ( eventId : UUID , statuses : Collection ) : Optional
+	{method}  {abstract} +findForEvent ( eventId : UUID ) : List
+	{method}  {abstract} +findOverlapping ( status : VenueBookingStatus , eventId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method}  {abstract} +findVenueIdsWithOverlappingBookings ( status : VenueBookingStatus , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method}  {abstract} +rejectPending ( id : UUID , pending : VenueBookingStatus , rejected : VenueBookingStatus , reason : String , alternativeVenueId : UUID , alternativeArrangement : String ) : int
+}
+
+
+interface VenueBookingRecordRepository.ApprovalConflict {
+}
+
+
+interface VenueBookingRecordRepository.Conflict {
+}
+
+
+interface VenueBookingRecordRepository.CoordinatorBooking {
+}
+
+
+interface VenueBookingRepository {
+	{method}  {abstract} +findById ( id : UUID ) : Optional
+	{method}  {abstract} +findByStatusOrderByEventStartDatetimeAscBookingIdAsc ( status : VenueBookingStatus ) : List
+	{method}  {abstract} +findByVenueVenueIdOrderByEventStartDatetimeAscBookingIdAsc ( venueId : UUID ) : List
+}
+
+
+class InvalidVenueBookingException {
+}
+
+
+class VenueBookingConflictException {
+}
+
+
+class VenueBookingNotFoundException {
+}
+
+
+class VenueBookingRequestService {
+	{field} {static} ~MAX_TEXT_LENGTH : int
+	{field} {static} -SGT : DateTimeFormatter
+	{method} +bookingsForEvent ( coordinatorId : UUID , eventId : UUID ) : List
+	{method} +bookingsForSafetyOfficer ( eventId : UUID ) : List
+	{method} +cancel ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , reason : String ) : EventVenueBookingDto
+	{method} +submit ( coordinatorId : UUID , eventId : UUID , request : SubmitVenueBookingRequest ) : EventVenueBookingDto
+	{method} +submitBatch ( coordinatorId : UUID , eventId : UUID , batch : Batch ) : List
+	{method} +venueOptions ( coordinatorId : UUID , eventId : UUID ) : List
+	{method} +venueOptions ( coordinatorId : UUID , eventId : UUID , setup : BigDecimal , turnaround : BigDecimal ) : List
+	{method} +venueOptions ( coordinatorId : UUID , eventId : UUID , setup : BigDecimal , turnaround : BigDecimal , requestedStart : OffsetDateTime , requestedEnd : OffsetDateTime ) : List
+}
+
+
+class VenueBookingService {
+	{field} {static} -MAX_TEXT_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
+	{field} -entityManager : EntityManager
+	{method} +approve ( bookingId : UUID ) : VenueBookingDto
+	{method} +approve ( bookingId : UUID , convertingHoldId : UUID ) : VenueBookingDto
+	{method} +get ( bookingId : UUID ) : VenueBookingDto
+	{method} +listForVenue ( venueId : UUID ) : List
+	{method} +listPending () : List
+	{method} +reject ( bookingId : UUID , reason : String , alternativeVenueId : UUID , alternativeArrangement : String ) : VenueBookingDto
+	{method} +updateTiming ( bookingId : UUID , actor : UUID , request : UpdateBookingTimingRequest ) : VenueBookingDto
+}
+
+
+class VenueBookingStateException {
+}
+
+
+class VenueSuitability {
+	{field} -capacity : int
+	{field} -expectedAttendance : int
+	{field} -missingAccessibility : List<String>
+	{field} -missingFacilities : List<String>
+	{method} +capacityOk () : boolean
+	{method} +facilitiesOk () : boolean
+	{method} +missingAccessibilityLabels () : String
+	{method} +missingFacilityLabels () : String
+	{method} +needsJustification () : boolean
+	{method}  {static} +of ( event : Event , venue : Venue ) : VenueSuitability
+}
+
+
+class CoordinatorVenueOperationalIssueController {
+	{method} +list ( jwt : Jwt ) : List
+}
+
+
+class VenueOperationalIssueController {
+	{method} +create ( venueId : UUID , jwt : Jwt , request : CreateVenueOperationalIssueRequest ) : ResponseEntity
+	{method} +list ( venueId : UUID ) : List
+}
+
+
+class CoordinatorVenueOperationalIssueDto {
+	{field} -affectedFrom : OffsetDateTime
+	{field} -affectedUntil : OffsetDateTime
+	{field} -createdAt : OffsetDateTime
+	{field} -description : String
+	{field} -issueId : UUID
+	{field} -venueAddress : String
+	{field} -venueId : UUID
+}
+
+
+class CoordinatorVenueOperationalIssueDto.OverlappingEventDto {
+	{field} -effectiveEnd : OffsetDateTime
+	{field} -effectiveStart : OffsetDateTime
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -startDatetime : OffsetDateTime
+}
+
+
+class CreateVenueOperationalIssueRequest {
+	{field} -affectedFrom : OffsetDateTime
+	{field} -affectedUntil : OffsetDateTime
+	{field} -description : String
+}
+
+
+class VenueOperationalIssueDto {
+	{field} -affectedFrom : OffsetDateTime
+	{field} -affectedUntil : OffsetDateTime
+	{field} -createdAt : OffsetDateTime
+	{field} -createdBy : UUID
+	{field} -description : String
+	{field} -issueId : UUID
+	{field} -venueId : UUID
+	{method}  {static} +from ( issue : VenueOperationalIssue ) : VenueOperationalIssueDto
+}
+
+
+class VenueOperationalIssue <<Entity>>  {
+	{field} +affectedFrom : OffsetDateTime
+	{field} +affectedUntil : OffsetDateTime
+	{field} +createdAt : OffsetDateTime
+	{field} +createdBy : UUID
+	{field} +description : String
+	{field} +issueId : UUID {id}
+	{field} +venueId : UUID
+}
+
+
+interface VenueOperationalIssueRepository {
+	{method}  {abstract} +findByVenueIdInOrderByAffectedFromAscCreatedAtDesc ( venueIds : List ) : List
+	{method}  {abstract} +findByVenueIdOrderByAffectedFromAscCreatedAtDesc ( venueId : UUID ) : List
+}
+
+
+class InvalidVenueOperationalIssueException {
+}
+
+
+class VenueOperationalIssueService {
+	{field} {static} -MAX_DESCRIPTION_LENGTH : int
+	{method} +create ( venueId : UUID , userId : UUID , request : CreateVenueOperationalIssueRequest ) : VenueOperationalIssueDto
+	{method} +list ( venueId : UUID ) : List
+	{method} +listForCoordinator ( coordinatorId : UUID ) : List
+}
+
+
+
+
+RequestActivity --> ActivityType : activityType
+ActivityService --> RequestActivityRepository : repository
+ActivityService --> EventRepository : events
+ActivityService --> UserRepository : userRepository
+ActivityService.Entry --> ActivityType : type
+ChangeLogRecorder --> ActivityService : activity
+ChangeLogRecorder --> EventRequestRepository : eventRequests
+EventChange --> ActivityType : type
+JourneyStatusResolver --> EventRepository : events
+AddStatusPeriodRequest --> EquipmentStatus : status
+EquipmentCatalogueController --> EquipmentRepository : equipmentRepository
+EquipmentReservationController --> EquipmentReservationService : service
+EquipmentReservationService --> EquipmentLogRepository : logRepository
+EquipmentReservationService --> EquipmentRepository : equipmentRepository
+EquipmentReservationService --> EquipmentStatusPeriodRepository : statusPeriodRepository
+EquipmentReservationService --> SerialisedEquipmentRepository : unitRepository
+EquipmentReservationService --> EquipmentRequestLineRepository : requestLineRepository
+EquipmentReservationService --> EquipmentRequestRepository : requestRepository
+EquipmentStatusController --> EquipmentStatusService : service
+EquipmentStatusPeriod --> EquipmentStatus : status
+EquipmentStatusService --> EquipmentLogRepository : logRepository
+EquipmentStatusService --> EquipmentRepository : equipmentRepository
+EquipmentStatusService --> EquipmentStatusPeriodRepository : periodRepository
+EquipmentStatusService --> SerialisedEquipmentRepository : unitRepository
+EquipmentUnitResponse --> EquipmentStatus : status
+SerialisedEquipment --> Equipment : equipment
+SerialisedEquipment --> EquipmentStatus : status
+SerialisedEquipment *-- SerialisedEquipmentId : id
+StatusPeriodResponse --> EquipmentStatus : status
+EquipmentRequest --> EquipmentRequestStatus : status
+EquipmentRequestController --> EquipmentRequestDecisionService : decisionService
+EquipmentRequestController --> EquipmentRequestLineRepository : lineRepository
+EquipmentRequestController --> EquipmentRequestRepository : requestRepository
+EquipmentRequestController --> EquipmentRequestService : service
+EquipmentRequestController --> EventRepository : eventRepository
+EquipmentRequestDecisionService --> EquipmentLogRepository : reservations
+EquipmentRequestDecisionService --> EquipmentRequestLineRepository : lines
+EquipmentRequestDecisionService --> EquipmentRequestRepository : requests
+EquipmentRequestDecisionService --> EventRepository : events
+EquipmentRequestDetailsResponse --> "0..*" EquipmentRequestLineResponse : lines
+EquipmentRequestLine --> Equipment : equipment
+EquipmentRequestLine *-- EquipmentRequestLineId : id
+EquipmentRequestService --> EquipmentRepository : equipment
+EquipmentRequestService --> EquipmentRequestLineRepository : lines
+EquipmentRequestService --> EquipmentRequestRepository : requests
+EquipmentRequestService --> EventRepository : events
+SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
+EventController --> EventArrangementsService : arrangements
+EventController --> EventLifecycleService : lifecycle
+EventController --> EventService : service
+EventController --> EventRequestService : eventRequestService
+CoordinatorEventsDto --> "0..*" CoordinatorEventsDto.HeldEvent : events
+CoordinatorEventsDto.HeldEvent --> EventDto : event
+EventDto --> StatusView : journeyStatus
+EventReadinessDto --> "0..*" EventReadinessDto.Item : items
+EventReadinessDto --> StatusView : journeyStatus
+OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Equipment : equipment
+OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Venue : venues
+OrganiserArrangementsDto --> StatusView : journeyStatus
+Event --> EventStatus : status
+EventArrangementsService --> JourneyStatusResolver : statuses
+EventArrangementsService --> EquipmentRequestLineRepository : equipmentLines
+EventArrangementsService --> EquipmentRequestRepository : equipmentRequests
+EventArrangementsService --> EventRepository : events
+EventArrangementsService --> UserRepository : users
+EventArrangementsService --> VenueRepository : venues
+EventArrangementsService --> AvailabilityService : availability
+EventArrangementsService --> VenueBookingRecordRepository : bookings
+EventLifecycleService --> ActivityService : activity
+EventLifecycleService --> JourneyStatusResolver : statuses
+EventLifecycleService --> EquipmentRequestRepository : equipmentRequests
+EventLifecycleService --> EventRepository : events
+EventLifecycleService --> EventRequestRepository : eventRequests
+EventLifecycleService --> NotificationService : notifications
+EventLifecycleService --> UserRepository : users
+EventLifecycleService --> AvailabilityService : availability
+EventLifecycleService --> VenueBookingRecordRepository : bookings
+EventService --> "0..*" EventStatus : ACTIVE_STATUSES
+EventService --> JourneyStatusResolver : statuses
+EventService --> EventRepository : repository
+EventService --> EventLifecycleService : lifecycle
+EventService --> EventRequestRepository : eventRequestRepository
+EventService --> NotificationService : notificationService
+EventService --> UserRepository : userRepository
+EventRequestController --> EventRequestService : service
+CoordinatorAssignmentsDto --> "0..*" CoordinatorAssignmentsDto.AssignedRequest : requests
+CoordinatorAssignmentsDto.AssignedRequest --> EventRequestDto : request
+EventRequestDto --> "0..*" AccessibilityFeature : accessibilityNeeds
+EventRequestDto --> StatusView : journeyStatus
+EventRequestDto --> EventRequestStatus : status
+EventRequestReviewDto --> "0..*" ActivityDto : timeline
+EventRequestReviewDto --> EventRequestDto : request
+ResubmitEventRequestRequest --> SaveEventRequestRequest : details
+ReviewQueueDto --> "0..*" EventRequestDto : awaitingOrganiser
+ReviewQueueDto --> "0..*" EventRequestDto : needsReview
+SaveEventRequestRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
+SaveEventRequestRequest --> "0..*" Facility : requiredFacilities
+EventRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
+EventRequest --> EventRequestStatus : status
+UserNameLookup --> UserRepository : users
+EventRequestService --> ActivityService : activityService
+EventRequestService --> EventRepository : eventRepository
+EventRequestService --> EventRequestMapper : mapper
+EventRequestService --> EventRequestRepository : repository
+EventRequestService --> NotificationService : notificationService
+EventRequestService --> UserRepository : userRepository
+NotificationController --> NotificationService : service
+Notification --> NotificationType : type
+NotificationService --> NotificationRepository : repository
+EventReadinessController --> ReadinessService : readiness
+ReadinessDto --> "0..*" ReadinessItemDto : items
+ReadinessService --> "0..*" EventStatus : VISIBLE
+ReadinessService --> EventRepository : events
+ReadinessService --> EventLifecycleService : lifecycle
+ReadinessService --> EventRequestRepository : eventRequests
+ReadinessService --> NotificationService : notifications
+ReadinessService --> EventSafetyReviewRepository : reviews
+ReadinessService --> ReadinessItemStateRepository : itemStates
+ReadinessService --> UserRepository : users
+SafetyEventListItemDto --> StatusView : journeyStatus
+SafetyOfficerController --> "0..*" EventStatus : PRE_CONFIRMATION
+SafetyOfficerController --> JourneyStatusResolver : statuses
+SafetyOfficerController --> EventRepository : events
+SafetyOfficerController --> ReadinessService : readiness
+SafetyOfficerController --> VenueRepository : venues
+AuthController --> RefreshTokenService : refreshTokenService
+AuthController --> TokenService : tokenService
+RefreshToken --> User : user
+User --> UserRole : role
+AppUserDetailsService --> UserRepository : repository
+DevUserSeeder --> UserRepository : repository
+RefreshTokenService --> RefreshTokenRepository : repository
+RefreshTokenService.Rotation --> User : user
+UserPrincipal --> User : user
+VenueController --> VenueSearchService : searchService
+VenueController --> VenueService : service
+CreateVenueDto --> "0..*" AccessibilityFeature : venueAccessibilities
+CreateVenueDto --> "0..*" Facility : venueFacilities
+CreateVenueDto --> "0..*" VenueOperatingHourDto : operatingHours
+CreateVenueDto --> "0..*" VenueLayout : supportedLayouts
+UpdateVenueDto --> "0..*" AccessibilityFeature : venueAccessibilities
+UpdateVenueDto --> "0..*" Facility : venueFacilities
+UpdateVenueDto --> "0..*" VenueOperatingHourDto : operatingHours
+UpdateVenueDto --> "0..*" VenueLayout : supportedLayouts
+VenueDto --> "0..*" AccessibilityFeature : venueAccessibilities
+VenueDto --> "0..*" Facility : venueFacilities
+VenueDto --> "0..*" VenueOperatingHourDto : operatingHours
+VenueDto --> "0..*" VenueLayout : supportedLayouts
+VenueSearchService --> VenueMapper : mapper
+VenueSearchService --> VenueRepository : venues
+VenueSearchService --> AvailabilityService : availability
+VenueService --> VenueMapper : mapper
+VenueService --> VenueOperatingHourRepository : hours
+VenueService --> VenueRepository : repository
+AvailabilityController --> AvailabilityService : service
+AvailabilityModels.Preview --> "0..*" AvailabilityModels.Booking : affectedBookings
+AvailabilityModels.Schedule --> "0..*" AvailabilityModels.Booking : bookings
+AvailabilityModels.Schedule --> "0..*" AvailabilityModels.Period : unavailablePeriods
+AvailabilityModels.Schedule --> "0..*" TimingConflictService.Overlap : activeConflicts
+AvailabilityModels.Schedule --> "0..*" VenueHold : holds
+AvailabilityModels.Schedule --> AvailabilityModels.Settings : settings
+AvailabilityService --> VenueRepository : venues
+AvailabilityService --> AvailabilityRepository : repository
+AvailabilityService --> VenueHoldRepository : holds
+ExistingTimingConflictScan --> VenueRepository : venues
+ExistingTimingConflictScan --> TimingConflictService : conflicts
+TimingConflictController --> TimingConflictService : service
+TimingConflictService --> VenueRepository : venues
+TimingConflictService --> AvailabilityRepository : availability
+TimingConflictService.Overlap --> AvailabilityModels.Booking : first
+TimingConflictService.Overlap --> AvailabilityModels.Booking : second
+EventVenueBookingController --> VenueBookingRequestService : service
+VenueBookingController --> VenueBookingService : service
+BookingTimingDto --> "0..*" VenueBookingConflictDto : conflicts
+EventVenueBookingDto --> "0..*" VenueHold : holds
+EventVenueBookingDto --> BookingTimingDto : timing
+EventVenueBookingDto --> VenueBookingStatus : status
+SubmitVenueBookingRequest.Batch --> "0..*" SubmitVenueBookingRequest : bookings
+VenueBookingConflictResponse --> "0..*" VenueBookingConflictDto : conflicts
+VenueBookingConflictResponse --> "0..*" VenueUnavailabilityConflictDto : unavailablePeriods
+VenueBookingDto --> "0..*" VenueHold : holds
+VenueBookingDto --> VenueDto : venue
+VenueBookingDto --> BookingTimingDto : timing
+VenueBookingDto --> VenueBookingDto.EventRequirements : event
+VenueBookingDto --> VenueBookingStatus : status
+VenueOptionDto --> "0..*" VenueOptionDto.ConflictDto : conflicts
+VenueOptionDto --> "0..*" VenueOptionDto.UnavailablePeriodDto : unavailablePeriods
+VenueOptionDto --> VenueDto : venue
+VenueBooking --> Venue : alternativeVenue
+VenueBooking --> Venue : venue
+VenueBooking --> VenueBookingStatus : status
+VenueBooking --> VenueEvent : event
+VenueBookingRecord --> VenueBookingStatus : status
+VenueEvent --> EventStatus : status
+VenueHoldController --> VenueHoldRepository : holds
+VenueHoldController --> VenueHoldService : service
+VenueHoldController --> VenueBookingService : bookings
+VenueHoldExpiryJob --> VenueHoldRepository : holds
+VenueHoldExpiryJob --> VenueHoldService : service
+VenueHoldService --> EventRepository : events
+VenueHoldService --> NotificationService : notifications
+VenueHoldService --> VenueRepository : venues
+VenueHoldService --> AvailabilityService : availability
+VenueHoldService --> VenueHoldRepository : holds
+VenueHoldService --> VenueBookingRecordRepository : bookings
+VenueBookingConflictException --> "0..*" VenueBookingConflictDto : conflicts
+VenueBookingConflictException --> "0..*" VenueUnavailabilityConflictDto : unavailablePeriods
+VenueBookingConflictException --|> VenueBookingStateException
+VenueBookingRequestService --> "0..*" VenueBookingStatus : ACTIVE
+VenueBookingRequestService --> ActivityService : activityService
+VenueBookingRequestService --> EventRepository : events
+VenueBookingRequestService --> EventLifecycleService : lifecycle
+VenueBookingRequestService --> EventRequestRepository : eventRequests
+VenueBookingRequestService --> NotificationService : notificationService
+VenueBookingRequestService --> UserRepository : users
+VenueBookingRequestService --> VenueMapper : venueMapper
+VenueBookingRequestService --> VenueOperatingHourRepository : operatingHours
+VenueBookingRequestService --> VenueRepository : venues
+VenueBookingRequestService --> AvailabilityService : availability
+VenueBookingRequestService --> VenueBookingRecordRepository : bookings
+VenueBookingRequestService --> VenueOperationalIssueRepository : operationalIssues
+VenueBookingRequestService --> VenueHoldRepository : holds
+VenueBookingRequestService --> VenueHoldService : holdService
+VenueBookingService --> EventRepository : events
+VenueBookingService --> VenueMapper : venueMapper
+VenueBookingService --> VenueRepository : venues
+VenueBookingService --> AvailabilityService : availability
+VenueBookingService --> TimingConflictService : timingConflicts
+VenueBookingService --> VenueBookingRecordRepository : records
+VenueBookingService --> VenueBookingRepository : bookings
+VenueBookingService --> VenueHoldRepository : holds
+VenueBookingService --> VenueHoldService : holdService
+CoordinatorVenueOperationalIssueController --> VenueOperationalIssueService : service
+VenueOperationalIssueController --> VenueOperationalIssueService : service
+CoordinatorVenueOperationalIssueDto --> "0..*" CoordinatorVenueOperationalIssueDto.OverlappingEventDto : overlappingEvents
+VenueOperationalIssueService --> VenueRepository : venues
+VenueOperationalIssueService --> VenueBookingRecordRepository : bookings
+VenueOperationalIssueService --> VenueOperationalIssueRepository : issues
+
+
+@enduml

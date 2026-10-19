@@ -22,6 +22,7 @@
 		<springdoc.version>3.1.0</springdoc.version>
 		<!-- 0.8.14+ is needed to read Java 25 class files -->
 		<jacoco.version>0.8.15</jacoco.version>
+		<plantuml-generator.version>3.0.1</plantuml-generator.version>
 	</properties>
 
 	<dependencies>
@@ -124,6 +125,15 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-flyway-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<!-- DEV15: generates the PlantUML class diagrams from the compiled
+			     classes (see uml/ClassDiagrams). Test scope only, so
+			     it never ends up in the application jar. -->
+			<groupId>de.elnarion.util</groupId>
+			<artifactId>plantuml-generator-util</artifactId>
+			<version>${plantuml-generator.version}</version>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>

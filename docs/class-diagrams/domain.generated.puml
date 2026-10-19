@@ -1,0 +1,534 @@
+@startuml
+
+hide circle
+skinparam classAttributeIconSize 0
+set separator none
+legend top left
++ field: has a getter and a setter (every field is private in the code)
+Multiplicities come from the database foreign keys
+Lines labelled with a UUID field: foreign keys the entity stores as an id
+Event, VenueEvent both map table events
+VenueBooking, VenueBookingRecord both map table venue_bookings
+endlegend
+
+
+enum ActivityType {
+	{field} +approved
+	{field} +clarification_requested
+	{field} +clarification_responded
+	{field} +coordinator_assigned
+	{field} +coordinator_reassigned
+	{field} +equipment_approved
+	{field} +equipment_rejected
+	{field} +equipment_requested
+	{field} +event_completed
+	{field} +event_confirmed
+	{field} +rejected
+	{field} +returned_to_planning
+	{field} +safety_approved
+	{field} +safety_changes_requested
+	{field} +safety_rejected
+	{field} +safety_review_withdrawn
+	{field} +sent_for_safety_review
+	{field} +submitted
+	{field} +venue_added
+	{field} +venue_alternative_suggested
+	{field} +venue_booking_approved
+	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
+	{field} +venue_booking_replaced
+	{field} +venue_booking_requested
+	{field} +venue_hold_converted
+	{field} +venue_hold_created
+	{field} +venue_hold_expired
+	{field} +venue_hold_released
+	{field} +venue_unavailable
+}
+
+
+class RequestActivity <<Entity>>  {
+	{field} +activityId : UUID {id}
+	{field} +actorName : String
+	{field} +actorRole : String
+	{field} +actorUserId : UUID
+	{field} +audienceRoles : List<String>
+	{field} +eventId : UUID
+	{field} +fieldQuestions : Map<String, String>
+	{field} +fieldValues : Map<String, Object>
+	{field} +flaggedFields : List<String>
+	{field} +fromStatus : String
+	{field} +message : String
+	{field} +occurredAt : OffsetDateTime
+	{field} +requestId : UUID
+	{field} +toStatus : String
+}
+
+
+enum AccessibilityFeature {
+	{field} +accessible_parking
+	{field} +drop_off_zone
+	{field} +elevators
+	{field} +none
+	{field} +public_transport
+	{field} +step_free_access
+	{field} +wheelchair_support
+	{field} +wide_doorways
+}
+
+
+enum Facility {
+	{field} +air_conditioning
+	{field} +audio_visual_equipment
+	{field} +barbeque_pit
+	{field} +breakout_spaces
+	{field} +dining_area
+	{field} +projection
+	{field} +stage
+}
+
+
+enum JourneyStatus {
+	{field} +AWAITING_SAFETY_REVIEW
+	{field} +CANCELLED
+	{field} +CLARIFICATION_REQUIRED
+	{field} +COMPLETED
+	{field} +CONFIRMED
+	{field} +DRAFT
+	{field} +PLANNING
+	{field} +REJECTED
+	{field} +SAFETY_APPROVED
+	{field} +SAFETY_CHANGES_REQUESTED
+	{field} +SUBMITTED
+	{field} +UNDER_REVIEW
+}
+
+
+class Equipment <<Entity>>  {
+	{field} -id : UUID {id}
+	{field} -name : String
+	{field} -quantity : int
+	{field} -serialised : Boolean
+	{field} -type : char
+}
+
+
+class EquipmentLog <<Entity>>  {
+	{field} -equipmentId : UUID
+	{field} -eventId : UUID
+	{field} -id : UUID {id}
+	{field} -loanedFrom : Instant
+	{field} -loanedUntil : Instant
+	{field} -quantity : int
+	{field} -serialNumber : String
+	{field} -technicalRequirements : String
+}
+
+
+enum EquipmentStatus {
+	{field} +AVAILABLE
+	{field} +FAULTY
+	{field} +UNAVAILABLE
+}
+
+
+class EquipmentStatusPeriod <<Entity>>  {
+	{field} -createdAt : Instant
+	{field} -equipmentId : UUID
+	{field} -id : UUID {id}
+	{field} -periodEnd : Instant
+	{field} -periodStart : Instant
+	{field} -serialNumber : String
+}
+
+
+class SerialisedEquipment <<Entity>>  {
+}
+
+
+class SerialisedEquipmentId {
+	{field} -equipmentId : UUID
+	{field} -serialNumber : String
+}
+
+
+class EquipmentRequest <<Entity>>  {
+	{field} -eventId : UUID
+	{field} -id : UUID {id}
+	{field} -rejectReason : String
+	{field} -technicalRequirement : String
+	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
+}
+
+
+class EquipmentRequestLine <<Entity>>  {
+	{field} -quantity : int
+}
+
+
+class EquipmentRequestLineId {
+	{field} -equipmentId : UUID
+	{field} -requestId : UUID
+}
+
+
+enum EquipmentRequestStatus {
+	{field} +approved
+	{field} +processing
+	{field} +rejected
+}
+
+
+class Event <<Entity>>  {
+	{field} +accessibilityNeeds : List<String>
+	{field} +actualAttendance : Integer
+	{field} +confirmedAt : OffsetDateTime
+	{field} +confirmedBy : UUID
+	{field} +coordinatorId : UUID
+	{field} +description : String
+	{field} +endDatetime : OffsetDateTime
+	{field} +equipmentRequirements : String
+	{field} +eventId : UUID {id}
+	{field} +eventName : String
+	{field} +expectedAttendance : Integer
+	{field} +firstConfirmedAt : OffsetDateTime
+	{field} +organisation : String
+	{field} +purpose : String
+	{field} +registrationNeeds : Boolean
+	{field} +requiredFacilities : List<String>
+	{field} +safetyApprovedAt : OffsetDateTime
+	{field} +safetyFeedback : String
+	{field} +startDatetime : OffsetDateTime
+	{field} +venueId : UUID
+	{field} +venueRequirements : String
+}
+
+
+enum EventStatus {
+	{field} +awaiting_safety_review
+	{field} +cancelled
+	{field} +completed
+	{field} +confirmed
+	{field} +pending
+	{field} +safety_approved
+	{field} +safety_changes_requested
+}
+
+
+class EventRequest <<Entity>>  {
+	{field} +coordinatorId : UUID
+	{field} +createdAt : OffsetDateTime
+	{field} +createdBy : UUID
+	{field} +description : String
+	{field} +endDatetime : OffsetDateTime
+	{field} +equipmentRequirements : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +expectedAttendance : Integer
+	{field} +organisation : String
+	{field} +purpose : String
+	{field} +registrationNeeds : Boolean
+	{field} +rejectionReason : String
+	{field} +requestId : UUID {id}
+	{field} +requestType : Character
+	{field} +requiredFacilities : List<String>
+	{field} +startDatetime : OffsetDateTime
+	{field} +updatedAt : OffsetDateTime
+	{field} +venueRequirements : String
+}
+
+
+enum EventRequestStatus {
+	{field} +approved
+	{field} +cancelled
+	{field} +clarification_required
+	{field} +draft
+	{field} +pending
+	{field} +rejected
+}
+
+
+class Notification <<Entity>>  {
+	{field} +coordinatorEmail : String
+	{field} +coordinatorName : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +eventRequestId : UUID
+	{field} +isReassignment : Boolean
+	{field} +message : String
+	{field} +newStatus : String
+	{field} +notificationId : UUID {id}
+	{field} +occurredAt : OffsetDateTime
+	{field} +readAt : OffsetDateTime
+	{field} +reason : String
+	{field} +recipientUserId : UUID
+	{field} +venueBookingId : UUID
+}
+
+
+enum NotificationType {
+	{field} +clarification_requested
+	{field} +clarification_responded
+	{field} +coordinator_assignment
+	{field} +event_confirmed
+	{field} +event_returned_to_planning
+	{field} +event_safety_approved
+	{field} +status_change
+	{field} +venue_booking_cancelled
+	{field} +venue_booking_requested
+	{field} +venue_hold_expired
+	{field} +venue_timing_changed
+	{field} +venue_timing_conflict
+	{field} +venue_unavailable
+}
+
+
+class EventSafetyReview <<Entity>>  {
+	{field} -eventId : UUID {id}
+	{field} -note : String
+	{field} -reviewStatus : String
+	{field} -reviewedAt : OffsetDateTime
+	{field} -reviewedBy : UUID
+	{method} +update ( status : String , reason : String , reviewer : UUID , at : OffsetDateTime ) : void
+}
+
+
+class ReadinessItemState <<Entity>>  {
+	{field} -checked : boolean
+	{field} -checkedAt : OffsetDateTime
+	{field} -checkedBy : UUID
+	{field} -eventId : UUID
+	{field} -itemId : UUID {id}
+	{field} -itemKey : String
+	{field} -note : String
+	{field} -updatedAt : OffsetDateTime
+	{field} -updatedBy : UUID
+	{method} +update ( nextChecked : boolean , nextNote : String , actor : UUID , at : OffsetDateTime ) : void
+}
+
+
+class RefreshToken <<Entity>>  {
+	{field} +expiresAt : OffsetDateTime
+	{field} +familyId : UUID
+	{field} +issuedAt : OffsetDateTime
+	{field} +revokedAt : OffsetDateTime
+	{field} +tokenHash : String
+	{field} +tokenId : UUID {id}
+}
+
+
+class User <<Entity>>  {
+	{field} +createdAt : OffsetDateTime
+	{field} +email : String
+	{field} +hashedPassword : String
+	{field} +organisation : String
+	{field} +userId : UUID {id}
+	{field} +username : String
+}
+
+
+enum UserRole {
+	{field} +attendee
+	{field} +ec
+	{field} +ecl
+	{field} +eo
+	{field} +safety_officer
+	{field} +technician
+	{field} +vs
+}
+
+
+class Venue <<Entity>>  {
+	{field} +additionalInformation : String
+	{field} +operatingInformation : String
+	{field} +setupMinutes : int
+	{field} +supportedLayouts : List<String>
+	{field} +turnaroundMinutes : int
+	{field} +venueAccessibilities : List<String>
+	{field} +venueAddress : String
+	{field} +venueCapacity : Integer
+	{field} +venueFacilities : List<String>
+	{field} +venueId : UUID {id}
+}
+
+
+enum VenueLayout {
+	{field} +banquet
+	{field} +boardroom
+	{field} +classroom
+	{field} +exhibition
+	{field} +theatre
+}
+
+
+class VenueOperatingHour <<Entity>>  {
+	{field} +closeTime : LocalTime
+	{field} +dayOfWeek : int
+	{field} +openTime : LocalTime
+	{field} +operatingHourId : UUID {id}
+	{field} +venueId : UUID
+}
+
+
+class EffectivePeriod {
+	{field} -end : OffsetDateTime
+	{field} -start : OffsetDateTime
+	{method}  {static} +minutes ( value : BigDecimal , fallback : int ) : int
+	{method}  {static} +of ( eventStart : OffsetDateTime , eventEnd : OffsetDateTime , durations : Settings ) : EffectivePeriod
+	{method}  {static} +validate ( durations : Settings ) : void
+}
+
+
+class VenueBecameUnavailable {
+	{field} -actorId : UUID
+	{field} -eventIds : List<UUID>
+	{field} -reason : String
+}
+
+
+class VenueBooking <<Entity>>  {
+	{field} -alternativeArrangement : String
+	{field} -alternativeVenueId : UUID
+	{field} -bookingId : UUID {id}
+	{field} -bookingNotes : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -rejectReason : String
+	{field} -replacesBookingId : UUID
+	{field} -setupDurationMinutes : int
+	{field} -startDatetime : OffsetDateTime
+	{field} -submittedAt : OffsetDateTime
+	{field} -suitabilityNote : String
+	{field} -timingNote : String
+	{field} -turnaroundDurationMinutes : int
+}
+
+
+class VenueBookingRecord <<Entity>>  {
+	{field} +alternativeArrangement : String
+	{field} +alternativeVenueId : UUID
+	{field} +bookingId : UUID {id}
+	{field} +bookingNotes : String
+	{field} +endDatetime : OffsetDateTime
+	{field} +eventId : UUID
+	{field} +rejectReason : String
+	{field} +replacesBookingId : UUID
+	{field} +setupDurationMinutes : int
+	{field} +startDatetime : OffsetDateTime
+	{field} +submittedAt : OffsetDateTime
+	{field} +submittedBy : UUID
+	{field} +suitabilityNote : String
+	{field} +timingNote : String
+	{field} +timingUpdatedAt : OffsetDateTime
+	{field} +timingUpdatedBy : UUID
+	{field} +turnaroundDurationMinutes : int
+	{field} +venueId : UUID
+}
+
+
+enum VenueBookingStatus {
+	{field} +approved
+	{field} +cancelled
+	{field} +changed
+	{field} +pending
+	{field} +rejected
+}
+
+
+class VenueEvent <<Entity>>  {
+	{field} -accessibilityNeeds : List<String>
+	{field} -endDatetime : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -eventId : UUID {id}
+	{field} -eventName : String
+	{field} -expectedAttendance : Integer
+	{field} -startDatetime : OffsetDateTime
+	{field} -venueRequirements : String
+}
+
+
+class VenueHold {
+	{field} -bookingId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -createdBy : UUID
+	{field} -endedAt : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -expiresAt : OffsetDateTime
+	{field} -holdId : UUID
+	{field} -reservedEnd : OffsetDateTime
+	{field} -reservedStart : OffsetDateTime
+	{field} -serverTime : OffsetDateTime
+	{field} -status : String
+	{field} -venueId : UUID
+}
+
+
+class VenueOperationalIssue <<Entity>>  {
+	{field} +affectedFrom : OffsetDateTime
+	{field} +affectedUntil : OffsetDateTime
+	{field} +createdAt : OffsetDateTime
+	{field} +createdBy : UUID
+	{field} +description : String
+	{field} +issueId : UUID {id}
+	{field} +venueId : UUID
+}
+
+
+
+
+RequestActivity --> "1" ActivityType : activityType
+EquipmentStatusPeriod --> "1" EquipmentStatus : status
+SerialisedEquipment "0..*" --> "1" Equipment : equipment
+SerialisedEquipment --> "1" EquipmentStatus : status
+SerialisedEquipment *-- SerialisedEquipmentId : id
+EquipmentRequest --> "1" EquipmentRequestStatus : status
+EquipmentRequestLine "0..*" --> "1" Equipment : equipment
+EquipmentRequestLine *-- EquipmentRequestLineId : id
+Event --> "1" EventStatus : status
+EventRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
+EventRequest --> "1" EventRequestStatus : status
+Notification --> "1" NotificationType : type
+RefreshToken "0..*" --> "1" User : user
+User --> "1" UserRole : role
+VenueBooking "0..*" --> "0..1" Venue : alternativeVenue
+VenueBooking "0..*" --> "1" Venue : venue
+VenueBooking --> "1" VenueBookingStatus : status
+VenueBooking "0..*" --> "1" VenueEvent : event
+VenueBookingRecord --> "1" VenueBookingStatus : status
+VenueEvent --> "1" EventStatus : status
+
+
+EquipmentLog "0..*" --> "1" Equipment : equipmentId
+EquipmentLog "0..*" --> "0..1" SerialisedEquipment : equipmentId, serialNumber
+EquipmentLog "0..*" --> "1" Event : eventId
+EquipmentRequestLine "0..*" --> "1" EquipmentRequest : id.requestId
+EquipmentRequest "0..*" --> "1" Event : eventId
+EquipmentStatusPeriod "0..*" --> "1" SerialisedEquipment : equipmentId, serialNumber
+ReadinessItemState "0..*" --> "0..1" User : checkedBy
+ReadinessItemState "0..*" --> "1" Event : eventId
+ReadinessItemState "0..*" --> "0..1" User : updatedBy
+RequestActivity "0..*" --> "1" User : actorUserId
+RequestActivity "0..*" --> "0..1" Event : eventId
+RequestActivity "0..*" --> "1" EventRequest : requestId
+EventRequest "0..*" --> "0..1" User : coordinatorId
+EventRequest "0..*" --> "0..1" User : createdBy
+EventRequest "0..*" --> "0..1" Event : eventId
+EventSafetyReview "0..1" --> "1" Event : eventId
+EventSafetyReview "0..*" --> "1" User : reviewedBy
+Event "0..*" --> "0..1" User : confirmedBy
+Event "0..*" --> "0..1" User : coordinatorId
+Event "0..*" --> "0..1" Venue : venueId
+Notification "0..*" --> "0..1" Event : eventId
+Notification "0..*" --> "0..1" EventRequest : eventRequestId
+Notification "0..*" --> "1" User : recipientUserId
+VenueBookingRecord "0..*" --> "0..1" Venue : alternativeVenueId
+VenueBookingRecord "0..*" --> "1" Event : eventId
+VenueBooking "0..*" --> "0..1" VenueBooking : replacesBookingId
+VenueBookingRecord "0..*" --> "0..1" VenueBooking : replacesBookingId
+VenueBookingRecord "0..*" --> "0..1" User : submittedBy
+VenueBookingRecord "0..*" --> "0..1" User : timingUpdatedBy
+VenueBookingRecord "0..*" --> "1" Venue : venueId
+VenueOperatingHour "0..*" --> "1" Venue : venueId
+VenueOperationalIssue "0..*" --> "1" User : createdBy
+VenueOperationalIssue "0..*" --> "1" Venue : venueId
+
+@enduml

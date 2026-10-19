@@ -39,6 +39,11 @@ venue and equipment resources an event consumes.
 
 ### Entity relationships
 
+A curated overview, written by hand. The complete ER diagram of every table,
+column and foreign key is generated from the migrated database into
+[`docs/er-diagrams/schema.generated.puml`](../../../../../../docs/er-diagrams/schema.generated.puml)
+on every backend test run (DEV15).
+
 ```mermaid
 erDiagram
     users                        ||--o{ event_requests               : raises
