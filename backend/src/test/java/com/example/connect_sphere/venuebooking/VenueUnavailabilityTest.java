@@ -432,6 +432,43 @@ class VenueUnavailabilityTest {
         assertThat(availability.affected(b)).isFalse();
         assertThat(jdbc.queryForObject("SELECT booking_notes FROM venue_bookings WHERE booking_id=?",String.class,b)).isEqualTo("Preserve me");
     }
+    @Test void rejectedAndCancelledBookingsCanBeRebookedWithoutChangingOtherEventBookings() {
+        for (String originalStatus : List.of("rejected", "cancelled")) {
+            UUID sourceVenue=venue(), targetVenue=venue(), otherVenue=venue();
+            UUID original=booking(sourceVenue, originalStatus);
+            UUID eventId=event(original);
+            UUID unaffected=UUID.randomUUID();
+            jdbc.update("""
+                    INSERT INTO venue_bookings(booking_id,venue_id,event_id,status,setup_duration_minutes,turnaround_duration_minutes)
+                    SELECT ?,venue_id,?,'approved',setup_minutes,turnaround_minutes FROM venues WHERE venue_id=?
+                    """, unaffected, eventId, otherVenue);
+
+            var replacement=requests.submit(coordinator,eventId,
+                    new SubmitVenueBookingRequest(targetVenue,"Replacement",null,original));
+            assertThat(replacement.status().name()).isEqualTo("pending");
+            assertThat(replacement.replacesBookingId()).isEqualTo(original);
+            assertThat(statusOf(original)).isEqualTo(originalStatus);
+
+            bookings.approve(replacement.bookingId());
+
+            assertThat(statusOf(original)).isEqualTo(originalStatus);
+            assertThat(statusOf(unaffected)).isEqualTo("approved");
+            assertThat(statusOf(replacement.bookingId())).isEqualTo("approved");
+            assertThat(jdbc.queryForObject("SELECT venue_id FROM events WHERE event_id=?",UUID.class,eventId)).isEqualTo(targetVenue);
+            assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_bookings WHERE event_id=?",Integer.class,eventId)).isEqualTo(3);
+        }
+    }
+    @Test void replacementMustUseAnotherVenueAndCannotReplaceUnaffectedActiveBooking() {
+        UUID old=venue(), next=venue(), unaffected=booking(old,"approved");
+        assertThatThrownBy(() -> requests.submit(coordinator,event(unaffected),
+                new SubmitVenueBookingRequest(next,null,null,unaffected)))
+                .isInstanceOf(VenueBookingStateException.class);
+
+        UUID rejected=booking(old,"rejected");
+        assertThatThrownBy(() -> requests.submit(coordinator,event(rejected),
+                new SubmitVenueBookingRequest(old,null,null,rejected)))
+                .isInstanceOf(InvalidVenueBookingException.class);
+    }
     @Test void rejectedAndWithdrawnReplacementsKeepOriginalAndAllowRetry() {
         UUID old=venue(), next=venue(), b=booking(old,"pending"); record(old,period("10:00","11:00"));
         var first=requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b));
