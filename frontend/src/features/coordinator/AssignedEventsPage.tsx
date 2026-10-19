@@ -89,6 +89,12 @@ function AssignedEventCard({ event }: { event: EventDto }) {
       >
         Open event
       </Link>
+      <Link
+        to={`/coordinator/events/${event.eventId}/reassignment-request`}
+        className="button button--secondary assigned-events__open"
+      >
+        Request reassignment
+      </Link>
     </Card>
   )
 }

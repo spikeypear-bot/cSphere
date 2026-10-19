@@ -14,6 +14,8 @@ import com.example.connect_sphere.event.service.EventLifecycleValidationExceptio
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
+import com.example.connect_sphere.event.service.EventReassignmentNotFoundException;
+import com.example.connect_sphere.event.service.EventReassignmentStateException;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStateException;
 import com.example.connect_sphere.equipmentrequest.InvalidEquipmentRequestException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotEditableException;
@@ -165,6 +167,16 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(EventNotPendingException.class)
     public ResponseEntity<ApiError> handleEventNotPending(EventNotPendingException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventReassignmentNotFoundException.class)
+    public ResponseEntity<ApiError> handleEventReassignmentNotFound(EventReassignmentNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventReassignmentStateException.class)
+    public ResponseEntity<ApiError> handleEventReassignmentState(EventReassignmentStateException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
     }
 

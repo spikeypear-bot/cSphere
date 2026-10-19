@@ -61,6 +61,9 @@ const TITLES: Record<ActivityTypeName, string> = {
   returned_to_planning: 'returned the event to Planning',
   event_confirmed: 'confirmed the event',
   event_completed: 'recorded that the event took place',
+  event_reassignment_requested: 'requested event reassignment',
+  event_reassignment_approved: 'approved event reassignment',
+  event_reassignment_declined: 'declined event reassignment',
 }
 
 /** Venue entries move through booking statuses, not request statuses. */
