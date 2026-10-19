@@ -113,6 +113,12 @@ public class SecurityConfig{
 			    "/api/event-requests/*/approve",
 			    "/api/event-requests/*/reject",
 			    "/api/event-requests/*/clarifications").hasRole("EC")
+		    // EC-C1: only the assigned Event Coordinator may request or inspect
+		    // reassignment status for an event.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/reassignment-requests").hasRole("EC")
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/reassignment-requests").hasRole("EC")
+		    // EC-C1: event reassignment decisions and queue are Lead-only.
+		    .requestMatchers("/api/event-reassignment-requests", "/api/event-reassignment-requests/**").hasRole("ECL")
 		    // ELC-C6's assign action and coordinator list share the rule below.
 		    // ECL-C1 queue and ECL-C3 review, reject and clarification: Lead
 		    // only. Must sit above the blanket EO rule below.

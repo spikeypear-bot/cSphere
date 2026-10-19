@@ -146,19 +146,10 @@ export function EventDetailsPage() {
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
 
-{role === 'coordinator' ? (
-  <VenueBookingCard
-    eventId={event.eventId}
-    planning={planning}
-    canRebook={planning || event.status === 'confirmed'}
-    active={event.status !== 'completed' && event.status !== 'cancelled'}
-    onCancelled={() => {
-      setBookingReloadToken(n => n + 1)
-      setReloadToken(n => n + 1)
-      readinessState.reload()
-    }}
-  />
-) : null}
+      {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning}
+        active={event.status !== 'completed' && event.status !== 'cancelled'}
+        canRebook={planning || event.status === 'confirmed'}
+        onCancelled={() => { setBookingReloadToken(n => n + 1); setReloadToken(n => n + 1); readinessState.reload() }} /> : null}
       {role === 'coordinator' && planning ? (
         <Card className="event-details__venue">
           <h2>Equipment</h2>
@@ -227,8 +218,8 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
 }
 
 /** EC03 from the event page: the current booking request, or the way to make one. */
-function VenueBookingCard({ eventId, planning, canRebook, active, onCancelled }: {
-  eventId: string; planning: boolean; canRebook: boolean; active: boolean; onCancelled: () => void
+function VenueBookingCard({ eventId, planning, active, canRebook, onCancelled }: {
+  eventId: string; planning: boolean; active: boolean; canRebook: boolean; onCancelled: () => void
 }) {
   const [reload, setReload] = useState(0)
   const { data: bookings, failed } = useSideData<EventVenueBookingDto[]>(
@@ -277,13 +268,13 @@ function VenueBookingCard({ eventId, planning, canRebook, active, onCancelled }:
                   <BookingRequestMeta booking={booking} />
                 </p>
                 <BookingTimingSummary timing={booking.timing} />
-{booking.requiresAlternative && canRebook && !hasResolvedReplacement(booking.bookingId) ? (
-  <Link className="button button--secondary" to={replacementLink(booking)}>Find replacement venue</Link>
-) : null}
-{active && !cancelling && !bookings.some(b => b.status === 'pending' && b.replacesBookingId === booking.bookingId) ? (
-  <Button variant="secondary" onClick={() => setCancelling(booking.bookingId)}>
-    {booking.status === 'approved' ? 'Cancel this booking' : 'Cancel this request'}
-  </Button>
+                {booking.requiresAlternative && canRebook && !hasResolvedReplacement(booking.bookingId) ? (
+                  <Link className="button button--secondary" to={replacementLink(booking)}>Find replacement venue</Link>
+                ) : null}
+                {active && !cancelling && !bookings.some(b => b.status === 'pending' && b.replacesBookingId === booking.bookingId) ? (
+                  <Button variant="secondary" onClick={() => setCancelling(booking.bookingId)}>
+                    {booking.status === 'approved' ? 'Cancel this booking' : 'Cancel this request'}
+                  </Button>
                 ) : null}
                 {cancelling === booking.bookingId ? (
                   <div className="event-details__cancel">
@@ -303,7 +294,16 @@ function VenueBookingCard({ eventId, planning, canRebook, active, onCancelled }:
           </ul>
           {error ? <p role="alert">{error}</p> : null}
         </>
-      ) : <p>No active venue booking. Earlier booking requests remain below for reference.</p>}
+      ) : (
+        <>
+          <p>{bookings.length ? 'No active venue bookings.' : 'No venue has been requested yet.'}</p>
+          {planning ? (
+            <Link className="button button--primary" to={`/coordinator/events/${eventId}/venue-booking`}>
+              Request a venue
+            </Link>
+          ) : null}
+        </>
+      )}
       {historicalBookings.length > 0 ? (
         <div className="event-details__earlier-requests">
           <h3>Earlier venue requests</h3>
@@ -349,14 +349,15 @@ function VenueBookingCard({ eventId, planning, canRebook, active, onCancelled }:
           </ul>
         </div>
       ) : null}
-   {planning && activeBookings.length === 0 ? (
-        <Link className="button button--primary" to={`/coordinator/events/${eventId}/venue-booking`}>
-          Request a venue
-        </Link>
-      ) : null}
+      {bookings.some(b => b.status === 'changed') && <div>
+        <h3>Released bookings</h3>
+        <ul>{bookings.filter(b => b.status === 'changed').map(b =>
+          <li key={b.bookingId}>{b.venueAddress}: {BOOKING_STATUS_LABELS[b.status]}</li>)}</ul>
+      </div>}
     </Card>
   )
 }
+
 function BookingRequestMeta({ booking }: { booking: EventVenueBookingDto }) {
   if (!booking.startDatetime && !booking.endDatetime && !booking.submittedAt) return null
   return (
@@ -370,6 +371,11 @@ function BookingRequestMeta({ booking }: { booking: EventVenueBookingDto }) {
   )
 }
 
+/** EC-NEW5: the event's change log, its whole journey from request to now,
+ * filtered by the server to what this role may see. If it cannot load, the
+ * rest of the event page still works and the log can be retried. */
+/** The event's whole journey from request to now (EC01/EC02/EO26/EC03),
+ * filtered by the server to what this role may see. */
 /** EC-NEW5: the event's change log, its whole journey from request to now,
  * filtered by the server to what this role may see. If it cannot load, the
  * rest of the event page still works and the log can be retried. */

@@ -18,6 +18,9 @@ export function CoordinatorLeadHomePage() {
             <Link to="/coordinator-lead/assignments" className="button button--secondary">
               Coordinator assignments
             </Link>
+            <Link to="/coordinator-lead/reassignment-requests" className="button button--secondary">
+              Event reassignment requests
+            </Link>
           </>
         }
       />

@@ -104,7 +104,7 @@ public class VenueBookingService {
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow();
             if (!original.getEventId().equals(eventId) || !isEligibleReplacementSource(original))
-                throw new VenueBookingStateException("The original booking is no longer eligible for replacement. Refresh this event.");
+                throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
         }
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
         var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
@@ -158,8 +158,8 @@ public class VenueBookingService {
                             List.of(VenueBookingStatus.approved))) {
                 throw new VenueBookingStateException("The original booking is no longer eligible for replacement. Refresh this event.");
             }
-            if (holdService != null) holdService.endForBooking(original.getBookingId(), null);
             if (original.getStatus() == VenueBookingStatus.pending || original.getStatus() == VenueBookingStatus.approved) {
+                if (holdService != null) holdService.endForBooking(original.getBookingId(), null);
                 original.setStatus(VenueBookingStatus.changed);
                 records.saveAndFlush(original);
             }

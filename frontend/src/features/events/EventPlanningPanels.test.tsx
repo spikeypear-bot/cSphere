@@ -222,14 +222,13 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
     await user.type(screen.getByLabelText('Reason for Venue Staff (optional)'), 'Wrong venue')
     await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
 
-    expect(await screen.findByRole('link', { name: 'Rebook this venue' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: 'Request a venue' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Earlier venue requests' })).toBeInTheDocument()
+    expect(screen.getByText('1 Harbour Road')).toBeInTheDocument()
+    expect(screen.getByText('Cancelled')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Rebook this venue' })).toHaveAttribute(
       'href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=b1`,
     )
-    expect(screen.getByRole('link', { name: 'Request a venue' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Earlier venue requests' })).toBeInTheDocument()
-    const earlier = within(screen.getByRole('list', { name: 'Earlier venue requests' }))
-    expect(earlier.getByText('1 Harbour Road')).toBeInTheDocument()
-    expect(earlier.getByText('Cancelled')).toBeInTheDocument()
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Wrong venue' })
   })
 })

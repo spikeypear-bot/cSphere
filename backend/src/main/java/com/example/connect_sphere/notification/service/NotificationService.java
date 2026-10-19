@@ -178,6 +178,33 @@ public class NotificationService {
         repository.saveAndFlush(notification);
     }
 
+    /** EC-C1: tell Event Coordinator Leads that an event is awaiting transfer review. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventReassignmentRequestedNotifications(
+            List<UUID> recipientUserIds, UUID eventId, String eventName, String reason) {
+        createEventReassignmentNotifications(recipientUserIds, eventId, eventName,
+                NotificationType.event_reassignment_requested, reason);
+    }
+
+    /** EC-C1: tell the previous or newly assigned coordinator the Lead's decision. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventReassignmentDecisionNotifications(
+            List<UUID> recipientUserIds, UUID eventId, String eventName,
+            NotificationType type, String message) {
+        createEventReassignmentNotifications(recipientUserIds, eventId, eventName, type, message);
+    }
+
+    private void createEventReassignmentNotifications(
+            List<UUID> recipientUserIds, UUID eventId, String eventName,
+            NotificationType type, String message) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, type, eventName);
+            notification.setEventId(eventId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -260,6 +287,9 @@ public class NotificationService {
         return switch (n.getType()) {
             case venue_hold_expired, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
+            case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
+            case event_reassignment_approved, event_reassignment_declined ->
+                    "/coordinator/events/" + n.getEventId() + "/reassignment-request";
             // Sent to Venue Staff and Technical Support alike; neither has an
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
