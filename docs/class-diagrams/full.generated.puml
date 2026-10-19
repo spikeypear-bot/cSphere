@@ -40,6 +40,9 @@ enum ActivityType {
 	{field} +equipment_requested
 	{field} +event_completed
 	{field} +event_confirmed
+	{field} +event_reassignment_approved
+	{field} +event_reassignment_declined
+	{field} +event_reassignment_requested
 	{field} +rejected
 	{field} +returned_to_planning
 	{field} +safety_approved
@@ -203,6 +206,8 @@ class ApiExceptionHandler {
 	{method} +handleEventNotFound ( ex : EventNotFoundException ) : ResponseEntity
 	{method} +handleEventNotPending ( ex : EventNotPendingException ) : ResponseEntity
 	{method} +handleEventNotReady ( ex : EventNotReadyException ) : ResponseEntity
+	{method} +handleEventReassignmentNotFound ( ex : EventReassignmentNotFoundException ) : ResponseEntity
+	{method} +handleEventReassignmentState ( ex : EventReassignmentStateException ) : ResponseEntity
 	{method} +handleIncomplete ( ex : IncompleteEventRequestException ) : ResponseEntity
 	{method} +handleIncompleteReadiness ( ex : IncompleteReadinessException ) : ResponseEntity
 	{method} +handleInvalidCoordinator ( ex : InvalidCoordinatorException ) : ResponseEntity
@@ -565,6 +570,16 @@ class EventController {
 }
 
 
+class EventReassignmentController {
+	{method} +approve ( jwt : Jwt , requestId : UUID , body : DecideEventReassignmentRequest ) : EventReassignmentRequestDto
+	{method} +coordinators () : List
+	{method} +decline ( jwt : Jwt , requestId : UUID , body : DecideEventReassignmentRequest ) : EventReassignmentRequestDto
+	{method} +latestForCoordinator ( jwt : Jwt , eventId : UUID ) : List
+	{method} +pending () : List
+	{method} +request ( jwt : Jwt , eventId : UUID , body : CreateEventReassignmentRequest ) : EventReassignmentRequestDto
+}
+
+
 class CoordinatorEventsDto {
 	{field} -coordinatorId : UUID
 	{field} -coordinatorName : String
@@ -573,6 +588,17 @@ class CoordinatorEventsDto {
 
 class CoordinatorEventsDto.HeldEvent {
 	{field} -requestId : UUID
+}
+
+
+class CreateEventReassignmentRequest {
+	{field} -reason : String
+}
+
+
+class DecideEventReassignmentRequest {
+	{field} -coordinatorUserId : UUID
+	{field} -reason : String
 }
 
 
@@ -616,6 +642,24 @@ class EventReadinessDto.Item {
 	{field} -key : String
 	{field} -label : String
 	{field} -state : String
+}
+
+
+class EventReassignmentRequestDto {
+	{field} -coordinatorName : String
+	{field} -coordinatorUserId : UUID
+	{field} -decidedAt : OffsetDateTime
+	{field} -decisionReason : String
+	{field} -eventEndDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -eventStartDatetime : OffsetDateTime
+	{field} -organisation : String
+	{field} -reason : String
+	{field} -reassignmentRequestId : UUID
+	{field} -requestedAt : OffsetDateTime
+	{field} -requesterName : String
+	{field} -requesterUserId : UUID
 }
 
 
@@ -678,6 +722,24 @@ class Event <<Entity>>  {
 }
 
 
+class EventReassignmentRequest <<Entity>>  {
+	{field} +decidedAt : OffsetDateTime
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +reason : String
+	{field} +reassignmentRequestId : UUID {id}
+	{field} +requestedAt : OffsetDateTime
+	{field} +requesterUserId : UUID
+}
+
+
+enum EventReassignmentStatus {
+	{field} +approved
+	{field} +declined
+	{field} +pending
+}
+
+
 enum EventStatus {
 	{field} +awaiting_safety_review
 	{field} +cancelled
@@ -686,6 +748,15 @@ enum EventStatus {
 	{field} +pending
 	{field} +safety_approved
 	{field} +safety_changes_requested
+}
+
+
+interface EventReassignmentRequestRepository {
+	{method}  {abstract} +existsByEventIdAndStatus ( eventId : UUID , status : EventReassignmentStatus ) : boolean
+	{method}  {abstract} +findByEventIdOrderByRequestedAtDesc ( eventId : UUID ) : List
+	{method}  {abstract} +findByStatusOrderByRequestedAtAsc ( status : EventReassignmentStatus ) : List
+	{method}  {abstract} +findFirstByEventIdAndRequesterUserIdOrderByRequestedAtDesc ( eventId : UUID , requesterUserId : UUID ) : Optional
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
 }
 
 
@@ -740,6 +811,26 @@ class EventNotPendingException {
 
 class EventNotReadyException {
 	{field} -blockers : List<String>
+}
+
+
+class EventReassignmentNotFoundException {
+}
+
+
+class EventReassignmentService {
+	{field} {static} -MAX_TEXT : int
+	{field} -clock : Clock
+	{method} +approve ( leadId : UUID , requestId : UUID , coordinatorId : UUID ) : EventReassignmentRequestDto
+	{method} +coordinators () : List
+	{method} +decline ( leadId : UUID , requestId : UUID , rawReason : String ) : EventReassignmentRequestDto
+	{method} +latestForCoordinator ( coordinatorId : UUID , eventId : UUID ) : List
+	{method} +pendingRequests () : List
+	{method} +request ( coordinatorId : UUID , eventId : UUID , rawReason : String ) : EventReassignmentRequestDto
+}
+
+
+class EventReassignmentStateException {
 }
 
 
@@ -1036,6 +1127,9 @@ enum NotificationType {
 	{field} +clarification_responded
 	{field} +coordinator_assignment
 	{field} +event_confirmed
+	{field} +event_reassignment_approved
+	{field} +event_reassignment_declined
+	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
 	{field} +status_change
@@ -1064,6 +1158,8 @@ class NotificationService {
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
 	{method} +createEventConfirmedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
+	{method} +createEventReassignmentDecisionNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
+	{method} +createEventReassignmentRequestedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createHoldExpiredNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , name : String , expiry : OffsetDateTime ) : void
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
@@ -1895,6 +1991,7 @@ class VenueHoldService {
 interface VenueBookingRecordRepository {
 	{method}  {abstract} +approvePending ( id : UUID , pending : VenueBookingStatus , approved : VenueBookingStatus ) : int
 	{method}  {abstract} +existsByReplacesBookingIdAndStatus ( replacesBookingId : UUID , status : VenueBookingStatus ) : boolean
+	{method}  {abstract} +existsByReplacesBookingIdAndStatusIn ( replacesBookingId : UUID , statuses : Collection ) : boolean
 	{method}  {abstract} +findApprovalConflicts ( venueId : UUID , bookingId : UUID , status : VenueBookingStatus , start : OffsetDateTime , end : OffsetDateTime ) : List
 	{method}  {abstract} +findApprovedForCoordinator ( coordinatorId : UUID , status : VenueBookingStatus ) : List
 	{method} +findApprovedOverlapping ( eventId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
@@ -2117,15 +2214,18 @@ EventController --> EventArrangementsService : arrangements
 EventController --> EventLifecycleService : lifecycle
 EventController --> EventService : service
 EventController --> EventRequestService : eventRequestService
+EventReassignmentController --> EventReassignmentService : service
 CoordinatorEventsDto --> "0..*" CoordinatorEventsDto.HeldEvent : events
 CoordinatorEventsDto.HeldEvent --> EventDto : event
 EventDto --> StatusView : journeyStatus
 EventReadinessDto --> "0..*" EventReadinessDto.Item : items
 EventReadinessDto --> StatusView : journeyStatus
+EventReassignmentRequestDto --> EventReassignmentStatus : status
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Equipment : equipment
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Venue : venues
 OrganiserArrangementsDto --> StatusView : journeyStatus
 Event --> EventStatus : status
+EventReassignmentRequest --> EventReassignmentStatus : status
 EventArrangementsService --> JourneyStatusResolver : statuses
 EventArrangementsService --> EquipmentRequestLineRepository : equipmentLines
 EventArrangementsService --> EquipmentRequestRepository : equipmentRequests
@@ -2143,6 +2243,13 @@ EventLifecycleService --> NotificationService : notifications
 EventLifecycleService --> UserRepository : users
 EventLifecycleService --> AvailabilityService : availability
 EventLifecycleService --> VenueBookingRecordRepository : bookings
+EventReassignmentService --> "0..*" EventStatus : ACTIVE_STATUSES
+EventReassignmentService --> ActivityService : activity
+EventReassignmentService --> EventReassignmentRequestRepository : requests
+EventReassignmentService --> EventRepository : events
+EventReassignmentService --> EventRequestRepository : eventRequests
+EventReassignmentService --> NotificationService : notifications
+EventReassignmentService --> UserRepository : users
 EventService --> "0..*" EventStatus : ACTIVE_STATUSES
 EventService --> JourneyStatusResolver : statuses
 EventService --> EventRepository : repository

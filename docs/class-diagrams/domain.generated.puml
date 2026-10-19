@@ -23,6 +23,9 @@ enum ActivityType {
 	{field} +equipment_requested
 	{field} +event_completed
 	{field} +event_confirmed
+	{field} +event_reassignment_approved
+	{field} +event_reassignment_declined
+	{field} +event_reassignment_requested
 	{field} +rejected
 	{field} +returned_to_planning
 	{field} +safety_approved
@@ -203,6 +206,24 @@ class Event <<Entity>>  {
 }
 
 
+class EventReassignmentRequest <<Entity>>  {
+	{field} +decidedAt : OffsetDateTime
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +reason : String
+	{field} +reassignmentRequestId : UUID {id}
+	{field} +requestedAt : OffsetDateTime
+	{field} +requesterUserId : UUID
+}
+
+
+enum EventReassignmentStatus {
+	{field} +approved
+	{field} +declined
+	{field} +pending
+}
+
+
 enum EventStatus {
 	{field} +awaiting_safety_review
 	{field} +cancelled
@@ -270,6 +291,9 @@ enum NotificationType {
 	{field} +clarification_responded
 	{field} +coordinator_assignment
 	{field} +event_confirmed
+	{field} +event_reassignment_approved
+	{field} +event_reassignment_declined
+	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
 	{field} +status_change
@@ -484,6 +508,7 @@ EquipmentRequest --> "1" EquipmentRequestStatus : status
 EquipmentRequestLine "0..*" --> "1" Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
 Event --> "1" EventStatus : status
+EventReassignmentRequest --> "1" EventReassignmentStatus : status
 EventRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
 EventRequest --> "1" EventRequestStatus : status
 Notification --> "1" NotificationType : type
@@ -506,6 +531,8 @@ EquipmentStatusPeriod "0..*" --> "1" SerialisedEquipment : equipmentId, serialNu
 ReadinessItemState "0..*" --> "0..1" User : checkedBy
 ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy
+EventReassignmentRequest "0..*" --> "1" Event : eventId
+EventReassignmentRequest "0..*" --> "1" User : requesterUserId
 RequestActivity "0..*" --> "1" User : actorUserId
 RequestActivity "0..*" --> "0..1" Event : eventId
 RequestActivity "0..*" --> "1" EventRequest : requestId

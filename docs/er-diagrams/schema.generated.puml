@@ -69,6 +69,18 @@ entity event_readiness_items {
 	updated_at : timestamp with time zone
 }
 
+entity event_reassignment_requests {
+	* reassignment_request_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* requester_user_id : uuid <<FK>>
+	* reason : text
+	* status : text
+	* requested_at : timestamp with time zone
+	decided_at : timestamp with time zone
+	decision_reason : text
+}
+
 entity event_request_activity {
 	* activity_id : uuid <<PK>>
 	--
@@ -356,6 +368,9 @@ enum notification_type {
 	venue_timing_changed
 	venue_timing_conflict
 	venue_hold_expired
+	event_reassignment_requested
+	event_reassignment_approved
+	event_reassignment_declined
 }
 
 enum user_role {
@@ -386,6 +401,8 @@ equipment_status_periods }o--|| serialised_equipments : equipment_id, serial_num
 event_readiness_items }o--o| users : checked_by
 event_readiness_items }o--|| events : event_id
 event_readiness_items }o--o| users : updated_by
+event_reassignment_requests }o--|| events : event_id
+event_reassignment_requests }o--|| users : requester_user_id
 event_request_activity }o--|| users : actor_user_id
 event_request_activity }o--o| events : event_id
 event_request_activity }o--|| event_requests : request_id
