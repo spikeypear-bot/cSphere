@@ -36,8 +36,8 @@ import java.util.stream.Stream;
  * <li>full — every layer: controllers, services, repositories, DTOs, config</li>
  * <li>auth — login, JWT and refresh-token classes and the security config</li>
  * </ul>
- * Every backend test run regenerates them, and CI fails a PR whose committed
- * diagrams differ from the code, so commit them whenever a class changes shape.
+ * Every backend test run regenerates them, and CI commits the regenerated
+ * diagrams to main after each merge, so they never need updating by hand.
  */
 final class ClassDiagrams {
 

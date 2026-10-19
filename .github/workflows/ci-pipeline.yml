@@ -122,16 +122,24 @@ jobs:
         if: ${{ !cancelled() }}
         run: python3 ../.github/scripts/test-summary.py "Backend integration tests" target/surefire-reports
       # DEV15: the test runs above regenerate the class diagrams and the ER
-      # diagram from the code and the migrated database, so any change there
-      # means the committed diagrams are stale.
-      - name: Generated diagrams up to date
+      # diagram from the code and the migrated database. They are kept for
+      # commit-diagrams, which commits them to main after a merge; on a PR
+      # this only reports what will change once the PR is merged.
+      - name: Generated diagrams
         run: |
-          if [ -n "$(git status --porcelain -- ../docs/class-diagrams ../docs/er-diagrams)" ]; then
-            echo "::error::docs/class-diagrams or docs/er-diagrams is out of date. Run the backend tests and commit the regenerated .puml files."
-            git status --short -- ../docs/class-diagrams ../docs/er-diagrams
+          if [ -z "$(git status --porcelain -- ../docs/class-diagrams ../docs/er-diagrams)" ]; then
+            echo "Generated diagrams are up to date."
+          else
             git diff --stat -- ../docs/class-diagrams ../docs/er-diagrams
-            exit 1
+            echo "::notice::The generated diagrams change with this code; CI commits them to main after merge."
           fi
+      - name: Keep the generated diagrams
+        uses: actions/upload-artifact@v4
+        with:
+          name: generated-diagrams
+          path: |
+            docs/class-diagrams
+            docs/er-diagrams
       # JaCoCo appends both phases to one report during verify.
       - name: Coverage summary
         if: ${{ !cancelled() }}
@@ -142,6 +150,36 @@ jobs:
         with:
           name: backend-coverage
           path: backend/target/site/jacoco
+
+  # DEV15: after a merge, commit the diagrams backend-build regenerated, so
+  # nobody regenerates them by hand. Only this job can write to the repo, and
+  # it runs no project code, only git. A push made with the workflow's own
+  # token starts no new run, so this does not loop.
+  commit-diagrams:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: backend-build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v7
+      - uses: actions/download-artifact@v4
+        with:
+          name: generated-diagrams
+          path: docs
+      - name: Commit regenerated diagrams
+        run: |
+          if [ -z "$(git status --porcelain -- docs/class-diagrams docs/er-diagrams)" ]; then
+            echo "Generated diagrams are up to date."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898799+github-actions[bot]@users.noreply.github.com"
+          git add -A -- docs/class-diagrams docs/er-diagrams
+          git commit -m "docs: regenerate DEV15 diagrams for ${GITHUB_SHA::7}"
+          # If main moved on during this run, that commit's own run commits them.
+          git push origin HEAD:main || echo "::warning::main moved on; the next run on main commits the diagrams."
 
   # Week 9 "other evidence a release gate can require": dependencies with
   # known vulnerabilities. npm audit gates the frontend (everything installed,

@@ -23,7 +23,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  * docs/er-diagrams/schema.generated.puml: every table and column, the primary
  * and foreign keys, the Postgres enum types, and a crow's-foot line per
  * foreign key. Like the class diagrams, every backend test run regenerates
- * it and CI fails a PR whose committed copy differs.
+ * it and CI commits the regenerated copy to main after each merge.
  */
 @Tag("integration")
 @Tag("DEV15")
