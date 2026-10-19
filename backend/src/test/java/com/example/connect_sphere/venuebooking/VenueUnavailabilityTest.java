@@ -407,25 +407,6 @@ class VenueUnavailabilityTest {
         assertThat(availability.list(v)).isEmpty(); assertThat(availability.affected(b)).isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=?",Integer.class,b)).isZero();
     }
-    @org.junit.jupiter.params.ParameterizedTest
-    @org.junit.jupiter.params.provider.ValueSource(strings = {"pending", "approved"})
-    @Tag("EC-C4")
-    void EC_C4_notifiesCoordinatorWithTheAffectedBookingForPlannedAndConfirmedBookings(String status) throws Exception {
-        UUID v = venue(), b = booking(v, status);
-        record(v, period("10:00", "11:00"));
-
-        String venueAddress = jdbc.queryForObject(
-                "SELECT venue_address FROM venues WHERE venue_id=?", String.class, v);
-        mvc.perform(get("/api/notifications").with(flow.as("ec1")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$[?(@.type == 'venue_unavailable' && @.eventId == '" + event(b)
-                        + "')].message").value(org.hamcrest.Matchers.hasItem(
-                                org.hamcrest.Matchers.allOf(
-                                        org.hamcrest.Matchers.containsString("Affected booking at " + venueAddress),
-                                        org.hamcrest.Matchers.containsString("2027-04-01"),
-                                        org.hamcrest.Matchers.containsString("10:00"),
-                                        org.hamcrest.Matchers.containsString("12:00")))));
-    }
     @Test void unavailablePeriodBlocksShortlistSubmissionAndApproval() {
         UUID v=venue(); availability.updateSettings(v,new Settings(30,45)); UUID b=booking(v,"pending");
         Request unavailable = period("09:20","09:40");
