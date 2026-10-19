@@ -35,6 +35,22 @@ enum EventRequestStatus {
   cancelled
 }
 
+enum EventReassignmentStatus {
+  pending
+  approved
+  declined
+}
+
+enum EventStatus {
+  pending
+  awaiting_safety_review
+  safety_changes_requested
+  safety_approved
+  confirmed
+  cancelled
+  completed
+}
+
 enum AccessibilityFeature {
   accessible_parking
   drop_off_zone
@@ -86,6 +102,36 @@ class EventRequest {
   coordinatorId : UUID
   rejectionReason : String
 }
+
+class Event {
+  eventId : UUID
+  eventName : String
+  organisation : String
+  status : EventStatus
+  coordinatorId : UUID
+}
+
+class EventReassignmentRequest {
+  reassignmentRequestId : UUID
+  eventId : UUID
+  requesterUserId : UUID
+  reason : String
+  status : EventReassignmentStatus
+  requestedAt : OffsetDateTime
+  decidedAt : OffsetDateTime
+  decisionReason : String
+}
+
+class EventReassignmentService <<service, EC-C1>> {
+  request(coordinatorId, eventId, reason)
+  pendingRequests()
+  approve(leadId, requestId, coordinatorId)
+  decline(leadId, requestId, reason)
+}
+
+Event "1" -- "0..*" EventReassignmentRequest : transfer history >
+EventReassignmentRequest ..> EventReassignmentStatus : status
+EventReassignmentService ..> EventReassignmentRequest : coordinates
 
 class Venue {
   venueId : UUID
@@ -179,6 +225,9 @@ enum ActivityType {
   coordinator_assigned
   clarification_requested
   clarification_responded
+  event_reassignment_requested
+  event_reassignment_approved
+  event_reassignment_declined
   approved
   rejected
   venue_booking_requested

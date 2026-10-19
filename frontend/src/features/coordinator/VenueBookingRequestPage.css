@@ -1,17 +1,88 @@
 
 .venue-request .card { padding: 1.25rem; }
 .venue-request__needs h2, .venue-request__review h2, .venue-request__history h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+.venue-request__needs { align-self: start; }
 .venue-request__needs dl { margin: 0; display: grid; gap: 0.6rem; }
 .venue-request__needs dt { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
 .venue-request__needs dd { margin: 0; overflow-wrap: anywhere; }
 .venue-request__needs dd, .venue-request__venue-details dd { line-height: 1.45; }
 
 .venue-request__main { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
-.venue-request__toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: space-between; }
+.venue-request__replacement-callout {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+  padding: 1rem 1.15rem;
+  border: 1px solid color-mix(in srgb, var(--role-coordinator) 28%, var(--hairline));
+  border-inline-start: 4px solid var(--role-coordinator);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--role-coordinator) 6%, var(--panel));
+}
+.venue-request__replacement-icon {
+  display: grid;
+  place-items: center;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--role-coordinator) 15%, var(--panel));
+  color: var(--role-coordinator);
+  font-weight: 800;
+}
+.venue-request__replacement-callout h2 { margin: 0; font-size: 1rem; }
+.venue-request__replacement-callout p { margin: 0.3rem 0 0; color: var(--ink-soft); font-size: 0.88rem; line-height: 1.45; }
+.venue-request__replacement-callout .venue-request__replacement-reason { color: var(--ink); }
+.venue-request__toolbar {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr) auto;
+  gap: 0.65rem 1rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--panel);
+}
 .venue-request__toolbar p { margin: 0; }
-.venue-request__search { flex: 1 1 12rem; max-width: 22rem; }
-.venue-request__search input { width: 100%; padding: 0.5rem 0.75rem; font: inherit; border-radius: var(--radius-sm); border: 1px solid var(--hairline-strong); background: var(--panel); color: var(--ink); }
+.venue-request__search { grid-column: 1; grid-row: 1; min-width: 0; }
+.venue-request__search input {
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.75rem;
+  font: inherit;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline-strong);
+  background: var(--paper);
+  color: var(--ink);
+}
 .venue-request__toggle { display: inline-flex; gap: 0.4rem; align-items: center; font-size: 0.9rem; }
+.venue-request__toolbar > .field-hint { grid-column: 2; grid-row: 1; text-align: end; white-space: nowrap; }
+.venue-request__toolbar .venue-request__toggle { grid-column: 1 / -1; grid-row: 2; color: var(--ink-soft); }
+.venue-request__results-heading, .venue-request__history-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem 1rem;
+}
+.venue-request__results-heading { margin: 0.35rem 0 0; }
+.venue-request__results-heading h2, .venue-request__history-heading h2 { margin: 0; font-size: 1.05rem; }
+.venue-request__results-heading p, .venue-request__history-heading p {
+  margin: 0.2rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+.venue-request__result-count {
+  display: inline-flex;
+  align-items: center;
+  min-height: 1.7rem;
+  padding: 0.1rem 0.65rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
 .venue-request__options { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.6rem; }
 
 .venue-option {
@@ -30,7 +101,12 @@
 }
 .venue-option[data-verdict='needs_justification'] { border-inline-start-color: var(--role-coordinator); }
 .venue-option[data-verdict='blocked'] { border-inline-start-color: var(--danger); opacity: 0.85; }
-.venue-option[aria-pressed='true'] { outline: 2px solid var(--accent); outline-offset: 1px; }
+.venue-option[aria-pressed='true'] {
+  border-color: var(--accent);
+  outline: 2px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  outline-offset: 1px;
+  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
+}
 .venue-option:not(:disabled):hover { border-color: var(--hairline-strong); }
 
 .venue-option__head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: baseline; }
@@ -101,6 +177,52 @@
 .venue-request__field label { font-weight: 600; }
 .venue-request__field textarea { font: inherit; width: 100%; box-sizing: border-box; }
 .venue-request__error { color: var(--danger); }
+.venue-request__timings {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0.85rem 0;
+  padding: 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 3%, var(--panel));
+}
+.venue-request__timings legend { padding: 0 0.35rem; font-weight: 700; }
+.venue-request__timings legend span { color: var(--ink-soft); font-size: 0.85rem; font-weight: 500; }
+.venue-request__timings-intro { max-width: 58rem; color: var(--ink-soft); font-size: 0.88rem; line-height: 1.5; }
+.venue-request__window-fields, .venue-request__buffer-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+.venue-request__timings label { display: grid; gap: 0.4rem; min-width: 0; font-size: 0.88rem; font-weight: 600; }
+.venue-request__timings input, .venue-request__timings textarea {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+}
+.venue-request__timings input:focus-visible, .venue-request__timings textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+  border-color: var(--accent);
+}
+.venue-request__buffer-fields label {
+  align-content: start;
+  padding: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+}
+.venue-request__buffer-fields label span { color: var(--ink-soft); font-size: 0.78rem; font-weight: 400; line-height: 1.4; }
+.venue-request__timings .venue-request__timing-note { max-width: 38rem; }
+.venue-request__timings > p[role='alert'] { color: var(--danger); font-size: 0.85rem; }
+@media (max-width: 650px) {
+  .venue-request__window-fields, .venue-request__buffer-fields { grid-template-columns: 1fr; }
+}
 .venue-request__venue-details {
   margin-bottom: 1rem;
   padding: 1rem;
@@ -117,6 +239,43 @@
   .venue-request__venue-details dl { grid-template-columns: 1fr; }
 }
 .venue-request__history ul { margin: 0; padding-inline-start: 1.1rem; }
+.venue-request__history .venue-request__history-heading { margin-bottom: 1rem; }
+.venue-request__history-list { list-style: none; display: grid; gap: 0.65rem; padding: 0 !important; }
+.venue-request__history-item {
+  min-width: 0;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 2%, var(--panel));
+}
+.venue-request__history-item-heading { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; }
+.venue-request__history-item-heading > strong { overflow-wrap: anywhere; }
+.venue-request__history-status {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+.venue-request__history-status[data-booking-status='approved'] { background: var(--success-soft); color: var(--success); }
+.venue-request__history-status[data-booking-status='rejected'] { background: var(--danger-soft); color: var(--danger); }
+.venue-request__history-note { margin: 0.45rem 0 0; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.45; }
+.venue-request__history-item .booking-timing-summary { margin-top: 0.65rem; }
+.venue-request__review > ul[aria-label='Selected venues'] { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.75rem; }
+.venue-request__review > ul[aria-label='Selected venues'] > li {
+  min-width: 0;
+  padding: 0.9rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: color-mix(in srgb, var(--accent) 2%, var(--panel));
+}
+.venue-request__review > ul[aria-label='Selected venues'] > li > strong { display: block; overflow-wrap: anywhere; }
+.venue-request__remove-button { margin-top: 0.25rem; }
+.venue-request__submit-note { margin: 0 0 0.75rem; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.5; }
+.venue-request__submit-button { min-height: 2.75rem; }
 
 .wizard__choice-group {
   display: grid;
@@ -132,4 +291,13 @@
 @media (max-width: 650px) {
   .venue-request__summary { grid-template-columns: auto minmax(0, 1fr); }
   .venue-request__summary-status { grid-column: 2; justify-self: start; }
+  .venue-request__toolbar { grid-template-columns: 1fr; }
+  .venue-request__search, .venue-request__toolbar > .field-hint, .venue-request__toolbar .venue-request__toggle {
+    grid-column: 1;
+  }
+  .venue-request__search { grid-row: 1; }
+  .venue-request__toolbar > .field-hint { grid-row: 2; text-align: start; white-space: normal; }
+  .venue-request__toolbar .venue-request__toggle { grid-row: 3; }
+  .venue-request__replacement-callout { padding: 0.85rem; }
+  .venue-request__review .venue-request__submit-button { width: 100%; }
 }

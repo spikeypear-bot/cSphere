@@ -1,0 +1,88 @@
+.reassignment-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+}
+
+.reassignment-card__header h2 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.reassignment-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem 1.5rem;
+  margin: 0;
+}
+
+.reassignment-facts div {
+  display: grid;
+  align-content: start;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.reassignment-facts dt,
+.reassignment-quote__label {
+  color: var(--ink-faint);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.reassignment-facts dd {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.reassignment-quote {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0.75rem 1rem;
+  background: var(--paper);
+  border-left: 3px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+}
+
+.reassignment-quote--response {
+  border-left-color: var(--accent);
+}
+
+.reassignment-quote p {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.reassignment-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.reassignment-form__intro {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.reassignment-form__count {
+  align-self: flex-end;
+}
+
+.reassignment-form__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.reassignment-card .field textarea {
+  min-height: 8rem;
+  line-height: 1.45;
+}

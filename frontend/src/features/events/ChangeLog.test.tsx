@@ -1,5 +1,5 @@
 // @stories EC-NEW5  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -29,7 +29,16 @@ function items() {
 }
 
 describe('EC-NEW5 change log — reading a long log', () => {
-  afterEach(cleanup)
+  // Pin "now" just after the log's fixed dates: past 30 days the relative
+  // time becomes a plain date, so a real clock fails later.
+  beforeEach(() => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-09-25T01:00:00Z'))
+  })
+  afterEach(() => {
+    vi.useRealTimers()
+    cleanup()
+  })
 
   it('EC-NEW5 AC2–AC6 (happy): each entry says who, in which role, what they did, why, and when in Singapore time', () => {
     render(<ActivityTimeline entries={log} controls />)

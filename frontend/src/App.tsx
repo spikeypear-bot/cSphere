@@ -12,12 +12,14 @@ import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
 import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
 import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
 import { AssignedEventsPage } from './features/coordinator/AssignedEventsPage'
+import { EventReassignmentRequestPage } from './features/coordinator/EventReassignmentRequestPage'
 import { RequestReviewPage } from './features/coordinator/RequestReviewPage'
 import { VenueBookingRequestPage } from './features/coordinator/VenueBookingRequestPage'
 import { VenueSearchPage } from './features/coordinator/VenueSearchPage'
 import { OperationalIssuesPage } from './features/coordinator/OperationalIssuesPage'
 import { EquipmentRequestPage } from './features/coordinator/EquipmentRequestPage'
 import { CoordinatorAssignmentsPage } from './features/coordinatorLead/CoordinatorAssignmentsPage'
+import { EventReassignmentRequestsPage } from './features/coordinatorLead/EventReassignmentRequestsPage'
 import { CoordinatorLeadHomePage } from './features/coordinatorLead/CoordinatorLeadHomePage'
 import { coordinatorLeadFeatures } from './features/coordinatorLead/coordinatorLeadFeatures'
 import { IncomingRequestReviewPage } from './features/coordinatorLead/IncomingRequestReviewPage'
@@ -101,6 +103,7 @@ function CoordinatorRoutes() {
       <Route path="my-events" element={<AssignedEventsPage />} />
       <Route path="requests/:requestId" element={<RequestReviewPage />} />
       <Route path="events/:eventId" element={<EventDetailsPage />} />
+      <Route path="events/:eventId/reassignment-request" element={<EventReassignmentRequestPage />} />
       <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
       <Route path="venue-search" element={<VenueSearchPage />} />
       <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
@@ -123,6 +126,7 @@ function CoordinatorLeadRoutes() {
       {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
       <Route path="events/:eventId" element={<EventDetailsPage />} />
       <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
+      <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
       {skeletonRoutes(coordinatorLeadFeatures)}
     </Routes>
   )

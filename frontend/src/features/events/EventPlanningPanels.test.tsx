@@ -1,6 +1,6 @@
 // @stories EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
@@ -96,6 +96,73 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
     expect(screen.getByText('2 Garden Lane')).toBeInTheDocument()
     expect(screen.getByRole('list', { name: 'Venue bookings' })).toHaveTextContent('Approved')
   })
+
+  it.each(['rejected', 'cancelled'])('offers a linked rebooking action for a %s venue booking', async status => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [{
+        bookingId: 'old-booking', status, venueId: 'v-old', venueAddress: 'Old Hall',
+        venueCapacity: 160, bookingNotes: 'Keep these notes in history', suitabilityNote: null,
+        rejectReason: status === 'rejected' ? 'Venue cannot support the event.' : null,
+        submittedAt: '2026-10-17T04:42:37Z', submittedBy: 'ec1', replacesBookingId: null,
+        startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z',
+      }]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    expect(await screen.findByRole('link', { name: 'Rebook this venue' }))
+      .toHaveAttribute('href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=old-booking`)
+    expect(screen.getByText(new RegExp(status, 'i'))).toBeInTheDocument()
+    expect(screen.getByText((_, element) => !!element?.classList.contains('event-details__booking-meta')
+      && !!element.textContent?.includes(new Date('2027-03-10T01:00:00Z').toLocaleString())
+      && element.textContent.includes(`Requested ${new Date('2026-10-17T04:42:37Z').toLocaleString()}`)))
+      .toBeInTheDocument()
+  })
+
+  it('shows replacement attempts without repeating their venue in the source history', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { bookingId: 'replacement', status: 'rejected', venueId: 'v-new', venueAddress: 'Marina Room',
+          venueCapacity: 180, bookingNotes: null, suitabilityNote: null, rejectReason: 'Not available',
+          submittedAt: null, submittedBy: 'ec1', replacesBookingId: 'old-booking' },
+        { bookingId: 'old-booking', status: 'rejected', venueId: 'v-old', venueAddress: 'Old Harbour Hall',
+          venueCapacity: 160, bookingNotes: null, suitabilityNote: null, rejectReason: 'Venue unavailable',
+          submittedAt: null, submittedBy: 'ec1', replacesBookingId: null },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    const earlierRequests = await screen.findByRole('list', { name: 'Earlier venue requests' })
+    expect(within(earlierRequests).getAllByText('Marina Room', { exact: true })).toHaveLength(1)
+    expect(within(earlierRequests).getByText('Replacement attempt')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Replacement requests for Old Harbour Hall' }))
+      .getByText('Rejected')).toBeInTheDocument()
+    expect(within(earlierRequests).getAllByRole('link', { name: 'Rebook this venue' })
+      .map(link => link.getAttribute('href')))
+      .toContain(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=replacement`)
+  })
+
+  it('offers a replacement action for an unavailable active booking', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [{
+        bookingId: 'affected-booking', status: 'approved', venueId: 'v-old', venueAddress: 'Affected Hall',
+        venueCapacity: 160, bookingNotes: null, suitabilityNote: null, rejectReason: null,
+        submittedAt: null, submittedBy: 'ec1', requiresAlternative: true,
+      }]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    expect(await screen.findByRole('link', { name: 'Find replacement venue' }))
+      .toHaveAttribute('href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=affected-booking`)
+  })
 })
 
 describe('Cancelling a pending venue booking request (EC03)', () => {
@@ -156,8 +223,12 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
     await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
 
     expect(await screen.findByRole('link', { name: 'Request a venue' })).toBeInTheDocument()
-    expect(screen.getByRole('heading', { name: 'Released bookings' })).toBeInTheDocument()
-    expect(screen.getByText(/1 Harbour Road: Cancelled/)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Earlier venue requests' })).toBeInTheDocument()
+    expect(screen.getByText('1 Harbour Road')).toBeInTheDocument()
+    expect(screen.getByText('Cancelled')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Rebook this venue' })).toHaveAttribute(
+      'href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=b1`,
+    )
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Wrong venue' })
   })
 })

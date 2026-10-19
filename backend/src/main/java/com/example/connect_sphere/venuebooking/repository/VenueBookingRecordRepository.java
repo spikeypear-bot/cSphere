@@ -19,6 +19,8 @@ import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 public interface VenueBookingRecordRepository extends JpaRepository<VenueBookingRecord, UUID> {
     boolean existsByReplacesBookingIdAndStatus(UUID replacesBookingId, VenueBookingStatus status);
 
+    boolean existsByReplacesBookingIdAndStatusIn(UUID replacesBookingId, Collection<VenueBookingStatus> statuses);
+
     @Query("SELECT b.eventId FROM VenueBookingRecord b WHERE b.bookingId = :id")
     Optional<UUID> findEventId(@Param("id") UUID id);
 

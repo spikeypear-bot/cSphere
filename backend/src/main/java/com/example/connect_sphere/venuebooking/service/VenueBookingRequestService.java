@@ -182,21 +182,29 @@ public class VenueBookingRequestService {
                     + "Planning (this event is " + stageLabel(event.getStatus()) + ").");
         }
         List<VenueBookingRecord> active = bookings.findForEvent(eventId).stream().filter(b -> ACTIVE.contains(b.getStatus())).toList();
+        VenueBookingRecord original = null;
         if (replacement) {
-            var original = bookings.findById(request.replacesBookingId())
-                    .filter(b -> eventId.equals(b.getEventId()) && ACTIVE.contains(b.getStatus()))
-                    .orElseThrow(() -> new VenueBookingStateException("Select an affected active booking to replace."));
-            if (!availability.affected(original.getBookingId()))
-                throw new VenueBookingStateException("This booking does not require alternative arrangements.");
-            if (active.stream().anyMatch(b -> !b.getBookingId().equals(original.getBookingId())))
-                throw new VenueBookingStateException("This event already has a replacement request. Resolve it first.");
+            original = bookings.findById(request.replacesBookingId())
+                    .filter(b -> eventId.equals(b.getEventId()))
+                    .orElseThrow(() -> new VenueBookingStateException("Select an eligible booking to replace."));
+            if (!isEligibleReplacementSource(original))
+                throw new VenueBookingStateException("This booking is not eligible for a replacement. Refresh this event.");
+            if (bookings.existsByReplacesBookingIdAndStatus(original.getBookingId(), VenueBookingStatus.pending))
+                throw new VenueBookingStateException("A replacement request for this booking is already pending.");
+            if (bookings.existsByReplacesBookingIdAndStatus(original.getBookingId(), VenueBookingStatus.approved))
+                throw new VenueBookingStateException("This booking already has an approved replacement.");
         }
         if (request == null || request.venueId() == null) {
             throw new InvalidVenueBookingException("Select a venue before submitting the booking request.");
         }
         Venue venue = venues.findForUpdate(request.venueId())
                 .orElseThrow(() -> new VenueNotFoundException(request.venueId()));
-        if (!replacement && active.stream().anyMatch(b -> b.getVenueId().equals(venue.getVenueId()))) {
+        if (replacement && !ACTIVE.contains(original.getStatus()) && original.getVenueId().equals(venue.getVenueId())) {
+            throw new InvalidVenueBookingException("Choose a venue different from the booking being replaced.");
+        }
+        UUID originalBookingId = original == null ? null : original.getBookingId();
+        if (active.stream().anyMatch(b -> b.getVenueId().equals(venue.getVenueId())
+                && !b.getBookingId().equals(originalBookingId))) {
             throw new InvalidVenueBookingException("This venue has already been added to this event for the same time. Choose another venue.");
         }
         String notes = optionalText(request.bookingNotes(), "Booking notes");
@@ -290,6 +298,13 @@ public class VenueBookingRequestService {
                     venueStaff, saved.getBookingId(), eventId, event.getEventName()));
         }
         return toDto(saved);
+    }
+
+    private boolean isEligibleReplacementSource(VenueBookingRecord booking) {
+        if (booking.getStatus() == VenueBookingStatus.rejected || booking.getStatus() == VenueBookingStatus.cancelled) {
+            return true;
+        }
+        return ACTIVE.contains(booking.getStatus()) && availability.affected(booking.getBookingId());
     }
 
     @Transactional
@@ -437,24 +452,37 @@ public class VenueBookingRequestService {
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(OffsetDateTime start, OffsetDateTime end,
             java.math.BigDecimal setup, java.math.BigDecimal turnaround) {
-        if (operationalIssues == null) return Map.of();
         if (start == null || end == null) {
             return Map.of();
         }
-        var periods = venues.findAll().stream().collect(Collectors.toMap(Venue::getVenueId,
+        var venueList = venues.findAll();
+        Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailable = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
+                venue -> availability.unavailablePeriods(venue.getVenueId(), start, end,
+                                requestedDurations(venue, setup, turnaround)).stream()
+                        .map(period -> new VenueOptionDto.UnavailablePeriodDto(
+                                period.reason(), period.startDateTime(), period.endDateTime()))
+                        .toList()));
+        if (operationalIssues == null) return unavailable;
+        var occupiedPeriods = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
                 venue -> com.example.connect_sphere.venueavailability.EffectivePeriod.of(start,
                         end, requestedDurations(venue, setup, turnaround))));
-        return operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(periods.keySet()))
+        operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(occupiedPeriods.keySet()))
                 .stream()
                 .filter(issue -> issue.getAffectedFrom() != null && issue.getAffectedUntil() != null
-                        && periods.containsKey(issue.getVenueId())
-                        && issue.getAffectedFrom().isBefore(periods.get(issue.getVenueId()).end())
-                        && issue.getAffectedUntil().isAfter(periods.get(issue.getVenueId()).start()))
+                        && occupiedPeriods.containsKey(issue.getVenueId())
+                        && issue.getAffectedFrom().isBefore(occupiedPeriods.get(issue.getVenueId()).end())
+                        && issue.getAffectedUntil().isAfter(occupiedPeriods.get(issue.getVenueId()).start()))
                 .collect(Collectors.groupingBy(
                         VenueOperationalIssue::getVenueId,
                         Collectors.mapping(issue -> new VenueOptionDto.UnavailablePeriodDto(
                                 issue.getDescription(), issue.getAffectedFrom(), issue.getAffectedUntil()),
-                                Collectors.toList())));
+                                Collectors.toList())))
+                .forEach((venueId, issues) -> unavailable.merge(venueId, issues, (recorded, operational) -> {
+                    List<VenueOptionDto.UnavailablePeriodDto> combined = new ArrayList<>(recorded);
+                    combined.addAll(operational);
+                    return List.copyOf(combined);
+                }));
+        return unavailable;
     }
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue(OffsetDateTime start, OffsetDateTime end,
