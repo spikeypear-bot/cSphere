@@ -452,24 +452,37 @@ public class VenueBookingRequestService {
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(OffsetDateTime start, OffsetDateTime end,
             java.math.BigDecimal setup, java.math.BigDecimal turnaround) {
-        if (operationalIssues == null) return Map.of();
         if (start == null || end == null) {
             return Map.of();
         }
-        var periods = venues.findAll().stream().collect(Collectors.toMap(Venue::getVenueId,
+        var venueList = venues.findAll();
+        Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailable = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
+                venue -> availability.unavailablePeriods(venue.getVenueId(), start, end,
+                                requestedDurations(venue, setup, turnaround)).stream()
+                        .map(period -> new VenueOptionDto.UnavailablePeriodDto(
+                                period.reason(), period.startDateTime(), period.endDateTime()))
+                        .toList()));
+        if (operationalIssues == null) return unavailable;
+        var occupiedPeriods = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
                 venue -> com.example.connect_sphere.venueavailability.EffectivePeriod.of(start,
                         end, requestedDurations(venue, setup, turnaround))));
-        return operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(periods.keySet()))
+        operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(occupiedPeriods.keySet()))
                 .stream()
                 .filter(issue -> issue.getAffectedFrom() != null && issue.getAffectedUntil() != null
-                        && periods.containsKey(issue.getVenueId())
-                        && issue.getAffectedFrom().isBefore(periods.get(issue.getVenueId()).end())
-                        && issue.getAffectedUntil().isAfter(periods.get(issue.getVenueId()).start()))
+                        && occupiedPeriods.containsKey(issue.getVenueId())
+                        && issue.getAffectedFrom().isBefore(occupiedPeriods.get(issue.getVenueId()).end())
+                        && issue.getAffectedUntil().isAfter(occupiedPeriods.get(issue.getVenueId()).start()))
                 .collect(Collectors.groupingBy(
                         VenueOperationalIssue::getVenueId,
                         Collectors.mapping(issue -> new VenueOptionDto.UnavailablePeriodDto(
                                 issue.getDescription(), issue.getAffectedFrom(), issue.getAffectedUntil()),
-                                Collectors.toList())));
+                                Collectors.toList())))
+                .forEach((venueId, issues) -> unavailable.merge(venueId, issues, (recorded, operational) -> {
+                    List<VenueOptionDto.UnavailablePeriodDto> combined = new ArrayList<>(recorded);
+                    combined.addAll(operational);
+                    return List.copyOf(combined);
+                }));
+        return unavailable;
     }
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue(OffsetDateTime start, OffsetDateTime end,

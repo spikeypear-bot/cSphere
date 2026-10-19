@@ -292,6 +292,31 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByRole('button', { name: 'Request 4 Missing Facility Road' })).toBeDisabled()
   })
 
+  it('shows coordinators the recorded unavailability reason and time window', async () => {
+    const unavailable = {
+      ...OPTIONS[0],
+      verdict: 'blocked' as const,
+      reasons: ['Recorded venue unavailability overlaps the event, setup or turnaround period.'],
+      unavailablePeriods: [{
+        description: 'Maintenance',
+        affectedFrom: '2027-03-10T01:30:00Z',
+        affectedUntil: '2027-03-10T02:30:00Z',
+      }],
+    }
+    stubApi({
+      ...routes(),
+      [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, [unavailable]),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByLabelText('Show unavailable venues'))
+    const venue = await screen.findByRole('button', { name: /1 Harbour Road/ })
+    expect(venue).toHaveTextContent('Maintenance')
+    expect(venue).toHaveTextContent('09:30')
+    expect(venue).toHaveTextContent('10:30')
+  })
+
   it('search narrows the list by address or details, and says so when nothing matches', async () => {
     stubApi(routes())
     const user = userEvent.setup()
