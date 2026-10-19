@@ -25,11 +25,10 @@ function renderByline(updatedAt = '2026-09-21T01:00:00Z', timeline = TIMELINE, c
 }
 
 describe('RequestByline', () => {
-  // Pin "now" just after the fixed dates above: past 30 days the byline
-  // switches from "N days ago" to a plain date, so a real clock fails later.
+  // Fixtures are dated September 2026; pin the clock so relative times stay "… ago".
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ['Date'] })
-    vi.setSystemTime(new Date('2026-09-23T01:00:00Z'))
+    vi.setSystemTime(new Date('2026-09-25T01:00:00Z'))
   })
   afterEach(() => {
     vi.useRealTimers()
