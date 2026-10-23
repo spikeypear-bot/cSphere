@@ -1,6 +1,6 @@
 // @stories EO07
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -183,5 +183,145 @@ describe('EO07 organiser requests cancellation of an event', () => {
     expect(await screen.findByText('Your last cancellation request was declined: The venue deposit is non-refundable.'))
       .toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Request cancellation' })).toBeInTheDocument()
+  })
+})
+
+/** Everything the coordinator's (or Lead's) event page loads. */
+function staffPage(apiStatus: () => string, requests: () => EventCancellationRequestDto[],
+  extra: Record<string, (body: unknown) => Response> = {}) {
+  return stubApi({
+    [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event(apiStatus())),
+    [`GET /api/events/${EVENT}/lifecycle`]: () => jsonResponse(200, {
+      journeyStatus: event(apiStatus()).journeyStatus, items: [], canSendForReview: false, canWithdraw: false,
+      canConfirm: false, blockers: [], safetyFeedback: null, datePassed: false,
+    }),
+    [`GET /api/events/${EVENT}/readiness`]: () => jsonResponse(200, {
+      eventId: EVENT, approvalStatus: 'not_reviewed', items: [], completedItems: 0, totalItems: 0,
+      approvalNote: null, reviewedBy: null, reviewedAt: null,
+    }),
+    [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, []),
+    [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    [`GET /api/events/${EVENT}/cancellation-requests`]: () => jsonResponse(200, requests()),
+    ...extra,
+  })
+}
+
+describe('EO07 the assigned coordinator decides; the Lead only reads', () => {
+  it('EO07 AC7 (happy): the coordinator sees the pending request with its reason, and Approve and Decline', async () => {
+    seedSession('coordinator')
+    staffPage(() => 'confirmed', () => [cancellation()])
+    renderEvent('/coordinator')
+
+    expect(await screen.findByRole('heading', { name: 'Cancellation requested' })).toBeInTheDocument()
+    expect(screen.getByText('The client has called the event off.')).toBeInTheDocument()
+    expect(screen.getByText(/Requested 20 Oct 2026.* by eo1/)).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Approve cancellation' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Decline' })).toBeInTheDocument()
+  })
+
+  it('EO07 AC7 (boundary): with no pending request the coordinator sees no cancellation decision', async () => {
+    seedSession('coordinator')
+    staffPage(() => 'confirmed', () => [cancellation({ status: 'declined', decisionReason: 'No' })])
+    renderEvent('/coordinator')
+
+    await screen.findByText('No changes recorded yet.')
+    expect(screen.queryByRole('button', { name: 'Approve cancellation' })).not.toBeInTheDocument()
+  })
+
+  it('EO07 AC8 (happy): approving asks for confirmation, then cancels and the page shows the event as Cancelled', async () => {
+    seedSession('coordinator')
+    let status = 'confirmed'
+    const calls = staffPage(() => status, () => (status === 'cancelled' ? [cancellation({ status: 'approved' })] : [cancellation()]), {
+      [`POST /api/events/${EVENT}/cancellation-requests/can-1/approve`]: () => {
+        status = 'cancelled'
+        return jsonResponse(200, cancellation({ status: 'approved' }))
+      },
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    await user.click(await screen.findByRole('button', { name: 'Approve cancellation' }))
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Cancel the event' }))
+
+    expect(await screen.findAllByText('Cancelled')).not.toHaveLength(0)
+    expect(screen.queryByRole('heading', { name: 'Cancellation requested' })).not.toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'POST').map((c) => c.url))
+      .toEqual([`/api/events/${EVENT}/cancellation-requests/can-1/approve`])
+  })
+
+  it('EO07 AC8 (negative): "Keep event" backs out of approving without sending anything', async () => {
+    seedSession('coordinator')
+    const calls = staffPage(() => 'confirmed', () => [cancellation()])
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    await user.click(await screen.findByRole('button', { name: 'Approve cancellation' }))
+    await user.click(screen.getByRole('button', { name: 'Keep event' }))
+
+    expect(screen.getByRole('button', { name: 'Approve cancellation' })).toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+  })
+
+  it('EO07 AC9 (negative): declining without a reason is refused with a message and nothing is sent', async () => {
+    seedSession('coordinator')
+    const calls = staffPage(() => 'confirmed', () => [cancellation()])
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    await user.click(await screen.findByRole('button', { name: 'Decline' }))
+    await user.click(screen.getByRole('button', { name: 'Decline cancellation' }))
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Please give the organiser a reason for declining.')
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+  })
+
+  it('EO07 AC9 (happy): declining sends the trimmed reason; the event keeps its status and the request leaves the page', async () => {
+    seedSession('coordinator')
+    let declined = false
+    const calls = staffPage(() => 'confirmed', () => [cancellation(declined ? { status: 'declined' } : {})], {
+      [`POST /api/events/${EVENT}/cancellation-requests/can-1/decline`]: () => {
+        declined = true
+        return jsonResponse(200, cancellation({ status: 'declined' }))
+      },
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    await user.click(await screen.findByRole('button', { name: 'Decline' }))
+    await user.type(screen.getByLabelText('Reason for declining (shown to the organiser)'), ' Deposit is non-refundable ')
+    await user.click(screen.getByRole('button', { name: 'Decline cancellation' }))
+
+    await waitFor(() => expect(screen.queryByRole('heading', { name: 'Cancellation requested' })).not.toBeInTheDocument())
+    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Deposit is non-refundable' })
+    expect(screen.getAllByText('Confirmed').length).toBeGreaterThan(0)
+  })
+
+  it('EO07 AC13, AC14 (failure): a refused decision is shown and the request stays on the page', async () => {
+    seedSession('coordinator')
+    staffPage(() => 'confirmed', () => [cancellation()], {
+      [`POST /api/events/${EVENT}/cancellation-requests/can-1/approve`]: () => jsonResponse(409,
+        { message: 'This cancellation request has already been declined. Refresh to see the event\'s current state.' }),
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+
+    await user.click(await screen.findByRole('button', { name: 'Approve cancellation' }))
+    await user.click(screen.getByRole('button', { name: 'Cancel the event' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('already been declined')
+    expect(screen.getByRole('heading', { name: 'Cancellation requested' })).toBeInTheDocument()
+  })
+
+  it('EO07 AC7 (negative): the Lead sees the pending request read-only, with no Approve or Decline', async () => {
+    seedSession('coordinator-lead')
+    staffPage(() => 'confirmed', () => [cancellation()])
+    renderEvent('/coordinator-lead')
+
+    expect(await screen.findByRole('heading', { name: 'Cancellation requested' })).toBeInTheDocument()
+    expect(screen.getByText('The client has called the event off.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Approve cancellation' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Request cancellation' })).not.toBeInTheDocument()
   })
 })

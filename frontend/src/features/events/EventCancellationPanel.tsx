@@ -24,7 +24,10 @@ function cancellable(event: EventDto): boolean {
  * EO07 on the event page. The organiser asks for the event to be cancelled,
  * with a reason; while that waits, they see their reason and when they asked
  * instead of the button (AC6). Nothing about the event changes until the
- * assigned coordinator decides (AC3).
+ * assigned coordinator decides (AC3): they see the pending request with its
+ * reason and approve or decline it (declining needs a reason, AC9). The Lead
+ * sees it read-only (AC7). Who may decide is the server's check; this only
+ * hides buttons that would be refused.
  */
 export function EventCancellationPanel({ event, role, onChanged }: {
   event: EventDto
@@ -62,7 +65,102 @@ export function EventCancellationPanel({ event, role, onChanged }: {
   if (role === 'organiser') {
     return <OrganiserCancellation event={event} pending={pending} latest={latest} onRequested={changed} />
   }
+  if (!pending) return null
+  if (role === 'coordinator') {
+    return <CoordinatorDecision eventId={event.eventId} pending={pending} onDecided={changed} />
+  }
+  if (role === 'coordinator-lead') {
+    return (
+      <Card className="event-details__venue" role="region" aria-labelledby="cancellation-heading">
+        <h2 id="cancellation-heading">Cancellation requested</h2>
+        <p>The organiser asked for this event to be cancelled. The assigned coordinator decides.</p>
+        <PendingSummary request={pending} />
+      </Card>
+    )
+  }
   return null
+}
+
+/** AC7–AC9: the assigned coordinator approves (the event is cancelled and its
+ * venue bookings released) or declines with a reason (nothing changes). */
+function CoordinatorDecision({ eventId, pending, onDecided }: {
+  eventId: string
+  pending: EventCancellationRequestDto
+  onDecided: () => void
+}) {
+  const [mode, setMode] = useState<'idle' | 'approving' | 'declining'>('idle')
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const path = `/events/${eventId}/cancellation-requests/${pending.cancellationRequestId}`
+
+  function reset() {
+    setMode('idle')
+    setReason('')
+    setError(null)
+  }
+
+  async function decide(decision: 'approve' | 'decline') {
+    if (decision === 'decline') {
+      const problem = reasonProblem(reason, 'Please give the organiser a reason for declining.')
+      if (problem) {
+        setError(problem)
+        return
+      }
+    }
+    setBusy(true)
+    setError(null)
+    try {
+      await apiClient.post(`${path}/${decision}`, decision === 'decline' ? { reason: reason.trim() } : {})
+      reset()
+      onDecided()
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : 'The decision could not be saved. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card className="event-details__venue" role="region" aria-labelledby="cancellation-heading">
+      <h2 id="cancellation-heading">Cancellation requested</h2>
+      <p>The organiser asked for this event to be cancelled. It stays as it is until you decide.</p>
+      <PendingSummary request={pending} />
+      {mode === 'idle' ? (
+        <div className="event-details__cancel-actions">
+          <Button onClick={() => setMode('approving')}>Approve cancellation</Button>
+          <Button variant="secondary" onClick={() => setMode('declining')}>Decline</Button>
+        </div>
+      ) : null}
+      {mode === 'approving' ? (
+        <div className="event-details__cancel">
+          <p>The event will be cancelled for good. Its venue bookings and equipment are released for other events,
+            and the organiser, Venue Staff and Technical Support are told.</p>
+          {error ? <p role="alert">{error}</p> : null}
+          <div className="event-details__cancel-actions">
+            <Button variant="secondary" disabled={busy} onClick={reset}>Keep event</Button>
+            <Button disabled={busy} onClick={() => void decide('approve')}>
+              {busy ? 'Cancelling…' : 'Cancel the event'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+      {mode === 'declining' ? (
+        <div className="event-details__cancel">
+          <label htmlFor="cancellation-decline-reason">Reason for declining (shown to the organiser)</label>
+          <textarea id="cancellation-decline-reason" rows={3} value={reason}
+            onChange={(e) => setReason(e.target.value)} />
+          {error ? <p role="alert">{error}</p> : null}
+          <div className="event-details__cancel-actions">
+            <Button variant="secondary" disabled={busy} onClick={reset}>Back</Button>
+            <Button disabled={busy} onClick={() => void decide('decline')}>
+              {busy ? 'Declining…' : 'Decline cancellation'}
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </Card>
+  )
 }
 
 function PendingSummary({ request }: { request: EventCancellationRequestDto }) {

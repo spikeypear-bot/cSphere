@@ -17,6 +17,12 @@ export type NotificationTypeName =
   | 'event_reassignment_requested'
   | 'event_reassignment_approved'
   | 'event_reassignment_declined'
+  // EO07
+  | 'request_cancelled'
+  | 'event_cancellation_requested'
+  | 'event_cancellation_approved'
+  | 'event_cancellation_declined'
+  | 'event_cancelled'
 
 export interface NotificationDto {
   notificationId: string
