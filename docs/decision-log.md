@@ -392,7 +392,7 @@ Everything else in that entry stands:
 
   These run in both UTC and Singapore time.
 - **E2E:** `request-rules.spec.ts`.
-- All 8 ACs traced in `docs/test-cases/sprint4-eoc2.md`.
+- All 8 ACs have automated tests named by AC number.
 
 **Known limit:** shared test fixtures (`FlowSupport`, E2E helpers) use fixed 2027 dates. They will need moving forward before mid-2027; EO-C2's own tests use dates relative to now.
 
