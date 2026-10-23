@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { dateRangeError } from './eventRequestValidation'
+import { hasProblems, requestFieldProblems } from './eventRequestValidation'
 import { useSession } from '../../lib/sessionContext'
 import type {
   AccessibilityFeature,
@@ -115,7 +115,7 @@ interface UseEventRequestDraftResult {
   restoredFromLocalBackup: boolean
   autosaveState: AutosaveState
   save: () => Promise<string | null>
-  submit: () => Promise<{ ok: true } | { ok: false; missingFields: string[] }>
+  submit: () => Promise<{ ok: true } | { ok: false; missingFields: string[]; fieldErrors: Record<string, string> }>
 }
 
 /**
@@ -247,10 +247,11 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
   }, [fields, organisation])
 
   const submit = useCallback(async (): Promise<
-    { ok: true } | { ok: false; missingFields: string[] }
+    { ok: true } | { ok: false; missingFields: string[]; fieldErrors: Record<string, string> }
   > => {
-    const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
-    if (rangeError) throw new Error(rangeError)
+    // EO-C2: refuse locally first, with the server's own messages.
+    const problems = requestFieldProblems(fields)
+    if (hasProblems(problems)) return { ok: false, missingFields: [], fieldErrors: problems as Record<string, string> }
     const savedId = await save()
     if (!savedId) throw new Error('Your latest changes have not been saved yet. Please try submitting again.')
     try {
@@ -259,8 +260,9 @@ export function useEventRequestDraft(requestId: string | undefined): UseEventReq
       clearBackup(organisation, id)
       return { ok: true }
     } catch (error) {
-      if (error instanceof ApiClientError && error.status === 422 && error.missingFields) {
-        return { ok: false, missingFields: error.missingFields }
+      if (error instanceof ApiClientError && error.status === 422 && (error.missingFields || error.fieldErrors)) {
+        // e.g. the start passed while the page was open: the server decides.
+        return { ok: false, missingFields: error.missingFields ?? [], fieldErrors: error.fieldErrors ?? {} }
       }
       throw error
     }

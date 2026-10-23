@@ -88,10 +88,13 @@ class EventRequestControllerTest {
     @Test
     void invalidScheduleReturns422WithAnActionableMessage() throws Exception {
         UUID id = UUID.randomUUID();
-        when(service.submit(ACME, USER_ID, id)).thenThrow(new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException());
+        // EO-C2: one message per field, so the form can show each next to its field.
+        when(service.submit(ACME, USER_ID, id)).thenThrow(new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException(
+                java.util.Map.of("endDatetime", "The end date & time must be after the start date & time.")));
         mockMvc.perform(post("/api/event-requests/" + id + "/submit"))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.message").value("End date & time must be on or after start date & time."));
+                .andExpect(jsonPath("$.message").value("The end date & time must be after the start date & time."))
+                .andExpect(jsonPath("$.fieldErrors.endDatetime").value("The end date & time must be after the start date & time."));
     }
 
     @Test
