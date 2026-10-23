@@ -1,6 +1,9 @@
 package com.example.connect_sphere.venuebooking;
 
 import static org.assertj.core.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -12,7 +15,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.*;
+import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.test.web.servlet.MockMvc;
 import com.example.connect_sphere.notification.dto.NotificationDto;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
@@ -24,6 +30,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 /** EC-C3: the coordinator is reminded before a tentative venue hold expires (default lead 24 hours). */
 @Tag("integration") @Tag("EC-C3")
 @SpringBootTest(properties="venue.holds.expiry-delay-ms=86400000")
+@AutoConfigureMockMvc
 @Import(VenueHoldReminderFlowTest.TimeConfig.class)
 class VenueHoldReminderFlowTest {
     static class MutableClock extends Clock {
@@ -43,6 +50,7 @@ class VenueHoldReminderFlowTest {
     @Autowired VenueHoldExpiryJob expiryJob;
     @Autowired VenueBookingService bookings;
     @Autowired NotificationService notifications;
+    @Autowired MockMvc mvc;
     final List<UUID> eventIds=new ArrayList<>(),venueIds=new ArrayList<>();
     UUID staff,coordinator,otherCoordinator;
     @BeforeEach void setup(){
@@ -239,6 +247,19 @@ class VenueHoldReminderFlowTest {
         assertThat(jdbc.queryForObject("SELECT status::text FROM venue_bookings WHERE booking_id=?",String.class,b)).isEqualTo("pending");
         assertThat(jdbc.queryForMap("SELECT status::text AS status,coordinator_id,start_datetime,end_datetime FROM events WHERE event_id=?",event)).isEqualTo(before);
         assertThat(repository.blocking(v)).hasSize(1);
+    }
+
+    @Test @DisplayName("EC-C3 AC8 (boundary): the coordinator's booking response gives each hold its reminder time, 24 hours before expiry")
+    void reminderDueAtForTheCoordinator() throws Exception {
+        UUID b=booking(venue());var hold=hold(b,Duration.ofHours(30));
+        assertThat(holds.history(b).getFirst().reminderDueAt().toInstant()).isEqualTo(T0.plus(Duration.ofHours(6)));
+        mvc.perform(get("/api/events/"+eventOf(b)+"/venue-bookings")
+                .with(jwt().jwt(j->j.subject(coordinator.toString()).claim("role","ec")).authorities(new SimpleGrantedAuthority("ROLE_EC"))))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].holds[0].holdId").value(hold.holdId().toString()))
+            .andExpect(jsonPath("$[0].holds[0].status").value("active"))
+            .andExpect(jsonPath("$[0].holds[0].reminderDueAt").exists())
+            .andExpect(jsonPath("$[0].holds[0].serverTime").exists());
     }
 
     @Test @DisplayName("EC-C3 AC10 (failure): a failed send leaves the hold unreminded; the next check sends exactly one")

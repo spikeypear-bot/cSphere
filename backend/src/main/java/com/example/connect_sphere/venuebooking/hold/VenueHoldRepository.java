@@ -35,7 +35,7 @@ public class VenueHoldRepository {
             return new VenueHold(r.getObject("hold_id", UUID.class), bookingId, r.getObject("venue_id", UUID.class),
                 r.getObject("event_id", UUID.class), r.getString("event_name"),
                 r.getObject("reserved_start", OffsetDateTime.class), r.getObject("reserved_end", OffsetDateTime.class),
-                expiry, status, r.getObject("created_by", UUID.class), r.getObject("created_at", OffsetDateTime.class),
+                expiry, expiry.minus(reminderLead), status, r.getObject("created_by", UUID.class), r.getObject("created_at", OffsetDateTime.class),
                 r.getObject("ended_at", OffsetDateTime.class), now);
         }, bookingId);
     }
