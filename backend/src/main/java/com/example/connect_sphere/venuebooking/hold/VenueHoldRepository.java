@@ -1,9 +1,11 @@
 package com.example.connect_sphere.venuebooking.hold;
 
 import java.time.Clock;
+import java.time.Duration;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
@@ -13,7 +15,11 @@ import com.example.connect_sphere.venueavailability.AvailabilityModels.Booking;
 public class VenueHoldRepository {
     private final JdbcTemplate jdbc;
     private final Clock clock;
-    public VenueHoldRepository(JdbcTemplate jdbc, Clock clock) { this.jdbc = jdbc; this.clock = clock; }
+    private final Duration reminderLead;
+    public VenueHoldRepository(JdbcTemplate jdbc, Clock clock,
+            @Value("${venue.holds.reminder-lead:PT24H}") Duration reminderLead) {
+        this.jdbc = jdbc; this.clock = clock; this.reminderLead = reminderLead;
+    }
     public OffsetDateTime now() { return OffsetDateTime.now(clock); }
     private static final String SELECT = """
         SELECT h.*, b.venue_id, b.event_id, e.event_name, b.status::text AS booking_status
@@ -67,5 +73,22 @@ public class VenueHoldRepository {
     public List<UUID> overdue() {
         return jdbc.query("SELECT hold_id FROM venue_booking_holds WHERE status='active' AND expires_at<=? ORDER BY expires_at LIMIT 100",
             (r,n)->r.getObject(1,UUID.class),now());
+    }
+    /** EC-C3: active, unreminded holds expiring within the lead (edge included) whose reminder can reach a coordinator. */
+    public List<UUID> dueForReminder() {
+        var now = now();
+        return jdbc.query("""
+            SELECT h.hold_id FROM venue_booking_holds h JOIN venue_bookings b USING(booking_id) JOIN events e USING(event_id)
+            WHERE h.status='active' AND h.reminded_at IS NULL AND h.expires_at>? AND h.expires_at<=?
+            AND b.status='pending' AND e.status NOT IN ('cancelled','completed') AND e.coordinator_id IS NOT NULL
+            ORDER BY h.expires_at LIMIT 100
+            """, (r,n)->r.getObject(1,UUID.class), now, now.plus(reminderLead));
+    }
+    /** Conditional, so a hold is marked reminded at most once and only while it is still due. */
+    public boolean markReminded(UUID holdId, OffsetDateTime now) {
+        return jdbc.update("""
+            UPDATE venue_booking_holds SET reminded_at=? WHERE hold_id=? AND status='active' AND reminded_at IS NULL
+            AND expires_at>? AND expires_at<=?
+            """, now, holdId, now, now.plus(reminderLead)) == 1;
     }
 }
