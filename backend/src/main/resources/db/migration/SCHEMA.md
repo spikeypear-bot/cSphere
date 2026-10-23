@@ -559,7 +559,7 @@ deleted, and the event row itself is kept when it is cancelled (`events.status =
 A request cancelled before approval needs no row here: `event_requests.status` becomes
 `cancelled`. Cancelling an event sets its pending and approved `venue_bookings` to `cancelled` and
 releases their active holds; `equipment_logs` rows are kept, and equipment availability ignores
-logs of cancelled or completed events (decision-log D27).
+logs of cancelled or completed events (decision-log D28).
 
 `notification_type` gains `event_cancellation_requested`, `event_cancellation_approved`,
 `event_cancellation_declined`, `event_cancelled` (each needs `event_id` and `message`) and

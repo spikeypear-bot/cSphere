@@ -177,9 +177,9 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `GET /api/events/{id}/timeline` | `hasAnyRole('EO','EC')` (existing events rule) **plus organisation or assignment check** | D21: the event's whole journey, filtered by role. |
   | `GET /api/events/{id}/venue-options`, `GET\|POST /api/events/{id}/venue-bookings` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus assignment check** | EC03 (D21). |
   | `GET /api/events/assigned` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus scoping to the token's `sub`** | EC09 (Week 7 customer change 5). The caller's own `pending` and `confirmed` events, across all organisations, soonest start first. The coordinator is always the token's subject — there is no parameter to ask for another coordinator's list. The Lead's all-coordinators view is a separate story (ELC-C4). |
-  | `POST /api/event-requests/{id}/cancel`, `POST /api/event-requests/{id}/cancellation-request` | `hasRole('EO')` (blanket `/api/event-requests/**` rule) **plus organisation scoping from the token claim** | EO07 (D27). Cancel a request before approval; request cancellation of its event after. Another organisation's request is 404. |
-  | `GET /api/events/{id}/cancellation-requests` | `hasAnyRole('EO','EC','ECL')`, placed **above** `GET /api/events/**` **plus organisation or assignment check in the service** | EO07 (D27). The owning organisation's organisers, the assigned coordinator (403 otherwise, D25) and the Lead (read-only oversight). |
-  | `POST /api/events/{id}/cancellation-requests/{cid}/approve\|decline` | `hasRole('EC')` **plus assignment check first in the service** | EO07 (D27). Only the event's current coordinator decides; the Lead and other coordinators are refused (403). Each has a row in `CoordinatorAssignmentScopeTest`. |
+  | `POST /api/event-requests/{id}/cancel`, `POST /api/event-requests/{id}/cancellation-request` | `hasRole('EO')` (blanket `/api/event-requests/**` rule) **plus organisation scoping from the token claim** | EO07 (D28). Cancel a request before approval; request cancellation of its event after. Another organisation's request is 404. |
+  | `GET /api/events/{id}/cancellation-requests` | `hasAnyRole('EO','EC','ECL')`, placed **above** `GET /api/events/**` **plus organisation or assignment check in the service** | EO07 (D28). The owning organisation's organisers, the assigned coordinator (403 otherwise, D25) and the Lead (read-only oversight). |
+  | `POST /api/events/{id}/cancellation-requests/{cid}/approve\|decline` | `hasRole('EC')` **plus assignment check first in the service** | EO07 (D28). Only the event's current coordinator decides; the Lead and other coordinators are refused (403). Each has a row in `CoordinatorAssignmentScopeTest`. |
   | `/swagger-ui/**`, `/v3/api-docs/**` | dev profile only, or accept 401 | springdoc is on the classpath; under `anyRequest().authenticated()` the docs page 401s, and a browser navigation cannot attach a Bearer token. |
 
 - **Open for the team to settle:**
@@ -347,7 +347,31 @@ Therefore:
 
 **No database migration.**
 
-### D27 — EO07: two-stage event cancellation; cancelled and completed events release their equipment
+### D27 — IS212 Week 10: guidance plus enforcement for AI agents
+
+2026-10-23, branch `chore/week10-agent-guardrails`. Week 10 (Agentic AI and the Software Team) distinguishes guidance (instruction files) from enforcement (tests, CI, branch protection), and shows an agent PR (#57) that deleted an assertion while CI stayed green.
+
+**Already in place:**
+- Guidance for every tool: `AI_Context.md`, plus `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` pointing to it.
+- Enforcement of traceability: the `traceability` job.
+
+**Added:**
+1. **`test-protection.py`, in the `traceability` job, on pull requests.** It fails a PR that deletes an existing test file, or leaves one with fewer tests or fewer assertions than on the base branch. It lists every changed existing test file, with before and after counts, on the run summary for reviewers.
+   - It is deliberately looser than the lecture's example, which fails on *any* change to an existing test. Our tests legitimately change with the behaviour they check (ECL-C7 and EC-NEW5 both edited existing tests). The weakening that matters is a removed test or assertion.
+   - A deliberate removal is approved by a reviewer adding the `tests-reviewed` label: the slides' named human approval gate. Pull-request runs now also trigger on labelling.
+   - Checked against the last 30 commits of `main`, ECL-C7 and EC-NEW5: no false failures. Removing one assertion or one test is caught.
+   - **Not caught:** an assertion replaced by a weaker one, or a test rewritten to match a misread AC. These stay with human review against the ACs.
+2. **PR template** with the five Week 10 questions (delegated, constrained, evidence, review needed, accountable) in an "AI assistance" section, alongside the team's existing PR headings.
+3. **`AI_Context.md`:**
+   - a "Working with AI agents" section: the guidance-to-enforcement map, a delegation dial for our task types, review-capacity rules, the four kinds of agent-era debt, and the CFO request;
+   - Definition of Done lines for accountability and test protection;
+   - the header no longer says "for Claude Code" (harness debt: the file serves every tool).
+
+**Team action:** add `traceability` (now including test protection) to `main`'s required checks; otherwise it only warns.
+
+**No database migration.**
+
+### D28 — EO07: two-stage event cancellation; cancelled and completed events release their equipment
 
 2026-10-24, branch `feat/eo07-event-cancellation`. Approved by the user with EO07's 14 acceptance criteria before it was built.
 

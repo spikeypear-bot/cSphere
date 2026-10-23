@@ -40,7 +40,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
  * EO07: an Event Organiser stops ConnectSphere arranging an event that will
- * no longer take place (decision-log D27).
+ * no longer take place (decision-log D28).
  *
  * <ul>
  * <li>Before approval (Submitted, Under Review, Clarification Required) the

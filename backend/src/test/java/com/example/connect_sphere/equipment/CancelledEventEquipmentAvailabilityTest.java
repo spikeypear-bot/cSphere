@@ -25,7 +25,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
 /**
- * EO07 AC8 / decision-log D27: equipment reserved for an event that has been
+ * EO07 AC8 / decision-log D28: equipment reserved for an event that has been
  * cancelled (or has finished) is available to other events for that period
  * again. The reservation rows are kept as history; only the overlap queries
  * that availability is computed from stop counting them. Real PostgreSQL;

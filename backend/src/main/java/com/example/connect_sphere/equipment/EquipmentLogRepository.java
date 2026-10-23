@@ -12,7 +12,7 @@ public interface EquipmentLogRepository extends JpaRepository<EquipmentLog, UUID
     List<EquipmentLog> findByEventId(UUID eventId);
 
     // Reservations of this equipment type that overlap the period — used to compute
-    // how much quantity is already committed elsewhere. EO07 (decision-log D27):
+    // how much quantity is already committed elsewhere. EO07 (decision-log D28):
     // a cancelled or completed event no longer holds its equipment. Its log rows
     // are kept as history, they just stop counting, as venue availability
     // already ignores bookings of cancelled events.

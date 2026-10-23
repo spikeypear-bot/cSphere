@@ -2,7 +2,7 @@
 
 An Event Organiser can stop ConnectSphere arranging an event that will no
 longer take place. How depends on how far the request has got (decision-log
-D27):
+D28):
 
 - **Before approval** (Submitted, Under Review, Clarification Required) the
   organiser cancels the request itself, at once.

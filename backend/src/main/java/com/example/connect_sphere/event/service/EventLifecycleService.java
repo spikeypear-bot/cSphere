@@ -413,7 +413,7 @@ public class EventLifecycleService {
      * so those venues are free for that period again (rejected, replaced and
      * already-cancelled bookings are history and stay as they are). Equipment
      * reservations are kept as history; availability ignores a cancelled
-     * event's (decision-log D27). The event row and everything else about it
+     * event's (decision-log D28). The event row and everything else about it
      * are kept (AC11). Venue Staff whose bookings were cancelled, and
      * Technical Support when equipment had been approved, are told after the
      * change commits (AC10).
