@@ -35,6 +35,8 @@ services:
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=root
       - JWT_SECRET
+      # EC-C3 demo only: forwarded when set on the host (e.g. PT5M), else the 24-hour default applies.
+      - VENUE_HOLDS_REMINDER_LEAD
     healthcheck:
       test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
       interval: 10s
