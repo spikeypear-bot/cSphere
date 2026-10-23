@@ -63,6 +63,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("EC08")
 @Tag("EC-NEW2")
 @Tag("ECL-C7")
+@Tag("EO07")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
