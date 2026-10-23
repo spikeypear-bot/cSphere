@@ -70,6 +70,8 @@ class NewEndpointRoleAccessTest {
             {"POST", "/api/event-requests/" + ID + "/cancel"},
             {"POST", "/api/event-requests/" + ID + "/cancellation-request"},
             {"GET", "/api/events/" + ID + "/cancellation-requests"},
+            {"POST", "/api/events/" + ID + "/cancellation-requests/" + ID + "/approve"},
+            {"POST", "/api/events/" + ID + "/cancellation-requests/" + ID + "/decline"},
         };
         return Stream.of("ts1", "att1").flatMap(user ->
                 Stream.of(endpoints).map(e -> Arguments.of(user, e[0], e[1])));

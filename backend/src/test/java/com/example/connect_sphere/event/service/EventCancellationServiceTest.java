@@ -45,6 +45,7 @@ import com.example.connect_sphere.eventrequest.repository.EventRequestRepository
 import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundException;
 import com.example.connect_sphere.eventrequest.service.InvalidMessageException;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
+import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
@@ -73,6 +74,7 @@ class EventCancellationServiceTest {
     @Mock private EventRequestMapper requestMapper;
     @Mock private ActivityService activity;
     @Mock private NotificationService notifications;
+    @Mock private EventLifecycleService lifecycle;
 
     private EventCancellationService service;
 
@@ -81,7 +83,7 @@ class EventCancellationServiceTest {
         MockitoAnnotations.openMocks(this);
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new EventCancellationService(events, cancellations, users, eventRequests, requestMapper, activity,
-                notifications, new JourneyStatusResolver(events, clock), clock);
+                notifications, new JourneyStatusResolver(events, clock), lifecycle, clock);
         when(eventRequests.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(events.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(cancellations.save(any())).thenAnswer(inv -> inv.getArgument(0));
@@ -435,5 +437,184 @@ class EventCancellationServiceTest {
                 .isInstanceOf(NotAssignedCoordinatorException.class);
         assertThatThrownBy(() -> service.forEvent(UserRole.vs, null, UUID.randomUUID(), event.getEventId()))
                 .isInstanceOf(EventNotFoundException.class);
+    }
+
+    // ---- AC7, AC8, AC9, AC13: the assigned coordinator decides ----------------
+
+    private EventCancellationRequest pendingRequest(Event event) {
+        EventCancellationRequest request = new EventCancellationRequest();
+        request.setCancellationRequestId(UUID.randomUUID());
+        request.setEventId(event.getEventId());
+        request.setRequesterUserId(ORGANISER);
+        request.setReason(REASON);
+        request.setStatus(EventCancellationStatus.pending);
+        request.setRequestedAt(OffsetDateTime.parse("2026-12-30T10:00:00Z"));
+        when(cancellations.findForUpdate(request.getCancellationRequestId())).thenReturn(Optional.of(request));
+        return request;
+    }
+
+    @Test
+    @DisplayName("EO07 AC8 (happy): approving cancels the event through the lifecycle, records the decision, and tells the organiser exactly once")
+    void approvingCancelsTheEventAndTellsTheOrganiser() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+
+        EventCancellationRequestDto dto = service.approve(COORDINATOR, event.getEventId(),
+                request.getCancellationRequestId(), null);
+
+        verify(lifecycle, times(1)).cancel(COORDINATOR, event.getEventId(),
+                "Cancelled at the organiser's request: " + REASON);
+        assertThat(request.getStatus()).isEqualTo(EventCancellationStatus.approved);
+        assertThat(request.getDecidedBy()).isEqualTo(COORDINATOR);
+        assertThat(request.getDecidedAt()).isEqualTo(OffsetDateTime.ofInstant(NOW, ZoneOffset.UTC));
+        assertThat(dto.status()).isEqualTo(EventCancellationStatus.approved);
+        verify(notifications, times(1)).createEventCancellationDecisionNotification(ORGANISER, event.getEventId(),
+                "Town Hall", NotificationType.event_cancellation_approved, "Town Hall has been cancelled as you asked.");
+    }
+
+    @Test
+    @DisplayName("EO07 AC9, AC10, AC11 (happy): declining needs a reason, leaves the event alone, is recorded as Major, and tells the organiser the reason exactly once")
+    void decliningKeepsTheEventAndTellsTheOrganiserWhy() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+
+        service.decline(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), "The venue is non-refundable");
+
+        assertThat(request.getStatus()).isEqualTo(EventCancellationStatus.declined);
+        assertThat(request.getDecisionReason()).isEqualTo("The venue is non-refundable");
+        assertThat(event.getStatus()).isEqualTo(EventStatus.confirmed);
+        verifyNoInteractions(lifecycle);
+        verify(events, never()).save(any());
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activity).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(ActivityType.event_cancellation_declined);
+        assertThat(entry.getValue().type().major()).isTrue();
+        assertThat(entry.getValue().actorUserId()).isEqualTo(COORDINATOR);
+        assertThat(entry.getValue().message()).isEqualTo("The venue is non-refundable");
+        verify(notifications, times(1)).createEventCancellationDecisionNotification(ORGANISER, event.getEventId(),
+                "Town Hall", NotificationType.event_cancellation_declined,
+                "Cancellation declined: The venue is non-refundable");
+    }
+
+    @Test
+    @DisplayName("EO07 AC9 (negative): declining without a reason is refused and nothing changes")
+    void decliningWithoutAReasonIsRefused() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+
+        assertThatThrownBy(() -> service.decline(COORDINATOR, event.getEventId(),
+                request.getCancellationRequestId(), "  "))
+                .isInstanceOf(InvalidMessageException.class)
+                .hasMessage("Please give the organiser a reason for declining.");
+
+        assertThat(request.getStatus()).isEqualTo(EventCancellationStatus.pending);
+        verify(cancellations, never()).save(any());
+        verifyNoInteractions(lifecycle, activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 AC7 (negative): a coordinator who is not assigned (or the Lead) cannot approve or decline, and nothing changes")
+    void onlyTheAssignedCoordinatorDecides() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+        UUID stranger = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.approve(stranger, event.getEventId(), request.getCancellationRequestId(), null))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThatThrownBy(() -> service.decline(stranger, event.getEventId(), request.getCancellationRequestId(), "No"))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+
+        assertThat(request.getStatus()).isEqualTo(EventCancellationStatus.pending);
+        verify(cancellations, never()).save(any());
+        verifyNoInteractions(lifecycle, activity, notifications);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = EventCancellationStatus.class, names = {"approved", "declined"})
+    @DisplayName("EO07 AC13 (conflict): a request that was already decided cannot be decided again; nothing changes and nobody is notified")
+    void anAlreadyDecidedRequestIsRefused(EventCancellationStatus decided) {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+        request.setStatus(decided);
+
+        assertThatThrownBy(() -> service.approve(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), null))
+                .isInstanceOf(EventCancellationStateException.class)
+                .hasMessageContaining("already been " + decided.name());
+        assertThatThrownBy(() -> service.decline(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), "No"))
+                .isInstanceOf(EventCancellationStateException.class);
+
+        verify(cancellations, never()).save(any());
+        verifyNoInteractions(lifecycle, activity, notifications);
+    }
+
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = EventStatus.class, names = {"cancelled", "completed"})
+    @DisplayName("EO07 AC13 (conflict): once the event was cancelled or completed, a late decision is refused and nothing changes")
+    void aDecisionOnAFinishedEventIsRefused(EventStatus status) {
+        Event event = approvedEvent(status);
+        EventCancellationRequest request = pendingRequest(event);
+
+        assertThatThrownBy(() -> service.approve(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), null))
+                .isInstanceOf(EventCancellationStateException.class);
+        assertThatThrownBy(() -> service.decline(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), "No"))
+                .isInstanceOf(EventCancellationStateException.class);
+
+        assertThat(request.getStatus()).isEqualTo(EventCancellationStatus.pending);
+        verify(cancellations, never()).save(any());
+        verifyNoInteractions(lifecycle, activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 AC13 (negative): a request that belongs to another event is not found, and nothing changes")
+    void aRequestOfAnotherEventIsNotFound() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        Event other = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest otherRequest = pendingRequest(other);
+
+        assertThatThrownBy(() -> service.approve(COORDINATOR, event.getEventId(),
+                otherRequest.getCancellationRequestId(), null))
+                .isInstanceOf(EventCancellationNotFoundException.class);
+
+        verifyNoInteractions(lifecycle, activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 AC14 (failure): if cancelling the event fails, the request stays pending and nobody is notified")
+    void aFailedApprovalSendsNoNotification() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+        when(lifecycle.cancel(any(), any(), anyString())).thenThrow(new IllegalStateException("database unavailable"));
+
+        assertThatThrownBy(() -> service.approve(COORDINATOR, event.getEventId(),
+                request.getCancellationRequestId(), null)).isInstanceOf(IllegalStateException.class);
+
+        assertThat(request.getStatus()).isEqualTo(EventCancellationStatus.pending);
+        verify(cancellations, never()).save(any());
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 AC14 (failure): if saving a decline fails, nobody is notified")
+    void aFailedDeclineSendsNoNotification() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+        when(cancellations.save(any())).thenThrow(new IllegalStateException("database unavailable"));
+
+        assertThatThrownBy(() -> service.decline(COORDINATOR, event.getEventId(),
+                request.getCancellationRequestId(), "No")).isInstanceOf(IllegalStateException.class);
+
+        verifyNoInteractions(activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 AC4 (boundary): an approval note over 2000 characters is refused and nothing changes")
+    void anOverLongApprovalNoteIsRefused() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+
+        assertThatThrownBy(() -> service.approve(COORDINATOR, event.getEventId(),
+                request.getCancellationRequestId(), "n".repeat(2001))).isInstanceOf(InvalidMessageException.class);
+
+        verifyNoInteractions(lifecycle, activity, notifications);
     }
 }

@@ -140,6 +140,11 @@ public class EquipmentReservationService {
     }
 
     private void requireRequestedForEvent(UUID eventId, UUID equipmentId) {
+        // EO07 AC12: nothing more is reserved for a cancelled or finished event.
+        if (requestRepository.eventClosed(eventId)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This event has been cancelled or has finished, so no equipment can be reserved for it.");
+        }
         boolean requested = requestRepository.findByEventIdForUpdate(eventId).stream()
                 .filter(request -> request.getStatus() == EquipmentRequestStatus.processing)
                 .map(EquipmentRequest::getId)

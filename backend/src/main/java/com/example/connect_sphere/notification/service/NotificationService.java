@@ -218,6 +218,30 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** EO07: tell the organiser the outcome of their cancellation request:
+     * {@code event_cancellation_approved} or {@code event_cancellation_declined}
+     * (the message then carries the coordinator's reason). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventCancellationDecisionNotification(UUID organiserId, UUID eventId, String eventName,
+            NotificationType type, String message) {
+        Notification notification = base(organiserId, type, eventName);
+        notification.setEventId(eventId);
+        notification.setMessage(message);
+        saveBestEffort(notification);
+    }
+
+    /** EO07: tell the staff with arrangements for an event that it is cancelled. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventCancelledNotifications(List<UUID> recipientUserIds, UUID eventId, String eventName,
+            String message) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, NotificationType.event_cancelled, eventName);
+            notification.setEventId(eventId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -318,7 +342,8 @@ public class NotificationService {
             // Sent to Venue Staff and Technical Support alike; neither has an
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
-            case event_confirmed -> null;
+            case event_confirmed, event_cancelled -> null;
+            case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();

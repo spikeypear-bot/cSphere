@@ -67,6 +67,20 @@ public class EventCancellationController {
         return service.requestCancellation(organisationOf(jwt), userIdOf(jwt), requestId, reasonOf(body));
     }
 
+    /** The assigned coordinator approves: the event is cancelled. Body optional: {"reason": "note"}. */
+    @PostMapping("/api/events/{eventId}/cancellation-requests/{cancellationRequestId}/approve")
+    public EventCancellationRequestDto approve(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId,
+            @PathVariable UUID cancellationRequestId, @RequestBody(required = false) CancellationReasonRequest body) {
+        return service.approve(userIdOf(jwt), eventId, cancellationRequestId, reasonOf(body));
+    }
+
+    /** The assigned coordinator declines, with a reason: the event carries on. */
+    @PostMapping("/api/events/{eventId}/cancellation-requests/{cancellationRequestId}/decline")
+    public EventCancellationRequestDto decline(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId,
+            @PathVariable UUID cancellationRequestId, @RequestBody(required = false) CancellationReasonRequest body) {
+        return service.decline(userIdOf(jwt), eventId, cancellationRequestId, reasonOf(body));
+    }
+
     /** The event's cancellation requests, newest first. */
     @GetMapping("/api/events/{eventId}/cancellation-requests")
     public List<EventCancellationRequestDto> forEvent(@AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {

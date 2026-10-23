@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.connect_sphere.event.service.EventCancellationNotFoundException;
 import com.example.connect_sphere.event.service.EventCancellationStateException;
 import com.example.connect_sphere.event.service.EventLifecycleException;
 import com.example.connect_sphere.event.service.EventLifecycleValidationException;
@@ -173,6 +174,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(EventReassignmentNotFoundException.class)
     public ResponseEntity<ApiError> handleEventReassignmentNotFound(EventReassignmentNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(EventCancellationNotFoundException.class)
+    public ResponseEntity<ApiError> handleEventCancellationNotFound(EventCancellationNotFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
     }
 

@@ -98,6 +98,12 @@ public enum ActivityType {
     /** EO07: the organiser asked for an approved event to be cancelled, with
      * the reason; the assigned coordinator decides. */
     event_cancellation_requested(Set.of(UserRole.eo, UserRole.ec), true),
+    /** EO07: the assigned coordinator declined the organiser's cancellation
+     * request, with the reason; the event carries on. */
+    event_cancellation_declined(Set.of(UserRole.eo, UserRole.ec), true),
+    /** EO07: the event was cancelled (the coordinator approved the
+     * organiser's request); its venue bookings were released. Final. */
+    event_cancelled(Set.of(UserRole.eo, UserRole.ec), true),
     /** EC-NEW5/EC-NEW2: a confirmed event's end passed. Never stored: shown in
      * the log at the end time, because no one performs it. */
     event_completed(Set.of(UserRole.eo, UserRole.ec));

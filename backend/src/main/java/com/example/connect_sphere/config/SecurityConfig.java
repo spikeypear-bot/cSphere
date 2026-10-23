@@ -196,6 +196,10 @@ public class SecurityConfig{
 		    // which event is the organisation/assignment check in
 		    // EventCancellationService.
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/cancellation-requests").hasAnyRole("EO", "EC", "ECL")
+		    // EO07: only the event's assigned coordinator decides (assignment
+		    // checked first in EventCancellationService, D25); the Lead reads.
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/cancellation-requests/*/approve",
+			    "/api/events/*/cancellation-requests/*/decline").hasRole("EC")
 		    // ECL-C7: the Lead may read any event (details, timeline) for
 		    // oversight; every coordinator action above stays EC-only.
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC", "ECL")

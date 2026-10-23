@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.equipment.EquipmentLogRepository;
 import com.example.connect_sphere.event.service.EventLifecycleService;
 import com.example.connect_sphere.event.service.EventLifecycleService.SafetyDecision;
 import com.example.connect_sphere.testsupport.FlowSupport;
@@ -49,6 +50,8 @@ import jakarta.persistence.EntityManager;
 @Tag("EO07")
 @Tag("ECL-C1")
 @Tag("EC02")
+@Tag("ECL-C7")
+@Tag("EC08")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -64,6 +67,7 @@ class EventCancellationFlowTest {
     @Autowired EntityManager entityManager;
     @Autowired VenueService venues;
     @Autowired EventLifecycleService lifecycle;
+    @Autowired EquipmentLogRepository equipmentLogs;
 
     private FlowSupport flow;
 
@@ -360,5 +364,271 @@ class EventCancellationFlowTest {
         requestCancellation("eo1", requestId, REASON_BODY).andExpect(status().isConflict());
 
         assertThat(requestState(requestId)).isEqualTo(before);
+    }
+
+    // ---- The assigned coordinator decides (AC7–AC13) ---------------------------
+
+    private UUID pendingCancellation(Planned planned) throws Exception {
+        String body = requestCancellation("eo1", planned.requestId(), REASON_BODY)
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        sync();
+        return UUID.fromString(flow.read(body).get("cancellationRequestId").asString());
+    }
+
+    private ResultActions decide(String as, Planned planned, UUID cancellationId, String decision, String body)
+            throws Exception {
+        return mvc.perform(post("/api/events/" + planned.eventId() + "/cancellation-requests/" + cancellationId
+                + "/" + decision).with(flow.as(as)).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    @DisplayName("EO07 AC8, AC11 (happy): approving cancels the event and its venue booking; the timeline shows the request and the cancellation as Major changes with the reason, and the event is kept")
+    void approvingCancelsTheEventAndItsBookings() throws Exception {
+        Planned planned = confirmedEvent("Approved Gala");
+        UUID cancellationId = pendingCancellation(planned);
+
+        decide("ec1", planned, cancellationId, "approve", "{}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("approved"))
+                .andExpect(jsonPath("$.decidedByName").value("ec1"));
+
+        Map<String, Object> state = eventState(planned);
+        assertThat(state.get("event_status")).isEqualTo("cancelled");
+        assertThat(state.get("bookings")).isEqualTo("cancelled");
+        assertThat(state.get("cancellation_statuses")).isEqualTo("approved");
+        mvc.perform(get("/api/events/" + planned.eventId()).with(flow.as("eo1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.eventName").value("Approved Gala"))
+                .andExpect(jsonPath("$.journeyStatus.label").value("Cancelled"));
+        mvc.perform(get("/api/events/" + planned.eventId() + "/timeline").with(flow.as("eo1")))
+                .andExpect(jsonPath("$[?(@.type == 'event_cancellation_requested')].significance").value(hasItem("major")))
+                .andExpect(jsonPath("$[?(@.type == 'event_cancellation_requested')].message")
+                        .value(hasItem("The client has called the event off.")))
+                .andExpect(jsonPath("$[?(@.type == 'event_cancelled')].significance").value(hasItem("major")))
+                .andExpect(jsonPath("$[?(@.type == 'event_cancelled')].actorName").value(hasItem("ec1")))
+                .andExpect(jsonPath("$[?(@.type == 'event_cancelled')].message").value(hasItem(
+                        "Cancelled at the organiser's request: The client has called the event off.")))
+                .andExpect(jsonPath("$[?(@.type == 'event_cancelled')].toStatus").value(hasItem("CANCELLED")));
+    }
+
+    @Test
+    @DisplayName("EO07 AC8 (happy): a cancelled event leaves the coordinator's My events, the Lead's overview and the Safety Officer's list")
+    void aCancelledEventLeavesEveryActiveList() throws Exception {
+        Planned planned = confirmedEvent("Listed Gala");
+        String id = planned.eventId().toString();
+        mvc.perform(get("/api/events/assigned").with(flow.as("ec1")))
+                .andExpect(jsonPath("$[*].eventId", hasItem(id)));
+        mvc.perform(get("/api/events/by-coordinator").with(flow.as("ecl1")))
+                .andExpect(jsonPath("$[*].events[*].event.eventId", hasItem(id)));
+        mvc.perform(get("/api/safety/events/confirmed").with(flow.as("so1")))
+                .andExpect(jsonPath("$[*].eventId", hasItem(id)));
+
+        decide("ec1", planned, pendingCancellation(planned), "approve", "{}").andExpect(status().isOk());
+        sync();
+
+        mvc.perform(get("/api/events/assigned").with(flow.as("ec1")))
+                .andExpect(jsonPath("$[*].eventId", not(hasItem(id))));
+        mvc.perform(get("/api/events/by-coordinator").with(flow.as("ecl1")))
+                .andExpect(jsonPath("$[*].events[*].event.eventId", not(hasItem(id))));
+        mvc.perform(get("/api/safety/events/confirmed").with(flow.as("so1")))
+                .andExpect(jsonPath("$[*].eventId", not(hasItem(id))));
+        mvc.perform(get("/api/safety/events/planning").with(flow.as("so1")))
+                .andExpect(jsonPath("$[*].eventId", not(hasItem(id))));
+    }
+
+    @Test
+    @DisplayName("EO07 AC8 (conflict): once the event is cancelled, another event can book the same venue for the same time")
+    void anotherEventCanBookTheVenueAfterCancellation() throws Exception {
+        Planned planned = confirmedEvent("Venue Gala");
+        UUID other = flow.approvedEvent("eo3", "ec2", FlowSupport.requestBody("Other Gala", 100, "none"));
+        sync();
+        String sameVenue = "{\"venueId\":\"" + planned.venueId() + "\"}";
+        mvc.perform(post("/api/events/" + other + "/venue-bookings").with(flow.as("ec2"))
+                        .contentType(MediaType.APPLICATION_JSON).content(sameVenue))
+                .andExpect(status().isUnprocessableEntity());
+
+        decide("ec1", planned, pendingCancellation(planned), "approve", "{}").andExpect(status().isOk());
+        sync();
+
+        mvc.perform(post("/api/events/" + other + "/venue-bookings").with(flow.as("ec2"))
+                        .contentType(MediaType.APPLICATION_JSON).content(sameVenue))
+                .andExpect(status().isCreated());
+    }
+
+    @Test
+    @DisplayName("EO07 AC8 (conflict): once the event is cancelled, its reserved equipment counts as available again for that period")
+    void itsEquipmentIsAvailableAgainAfterCancellation() throws Exception {
+        Planned planned = plannedEvent("Equipment Gala");
+        UUID equipmentId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO equipments (equipment_id, equipment_name, equipment_qty, serialised, equipment_type)
+                VALUES (?, 'EO07 mixer', 1, false, 'A')
+                """, equipmentId);
+        java.time.Instant start = java.time.Instant.parse("2027-03-10T01:00:00Z");
+        java.time.Instant end = java.time.Instant.parse("2027-03-10T04:00:00Z");
+        jdbc.update("""
+                INSERT INTO equipment_logs (log_id, event_id, equipment_id, quantity, loaned_from, loaned_until)
+                VALUES (?, ?, ?, 1, ?, ?)
+                """, UUID.randomUUID(), planned.eventId(), equipmentId,
+                java.sql.Timestamp.from(start), java.sql.Timestamp.from(end));
+        assertThat(equipmentLogs.findOverlappingForEquipment(equipmentId, start, end)).hasSize(1);
+
+        decide("ec1", planned, pendingCancellation(planned), "approve", "{}").andExpect(status().isOk());
+        sync();
+
+        assertThat(equipmentLogs.findOverlappingForEquipment(equipmentId, start, end)).isEmpty();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs WHERE event_id = ?", Integer.class,
+                planned.eventId())).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("EO07 AC9 (happy): declining needs a reason, keeps the event and its booking as they were, and the organiser can ask again later")
+    void decliningKeepsTheEventAndAllowsAnotherRequest() throws Exception {
+        Planned planned = confirmedEvent("Declined Gala");
+        UUID cancellationId = pendingCancellation(planned);
+        Map<String, Object> before = eventState(planned);
+
+        decide("ec1", planned, cancellationId, "decline", "{\"reason\":\"  \"}")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Please give the organiser a reason for declining."));
+        assertThat(eventState(planned)).isEqualTo(before);
+
+        decide("ec1", planned, cancellationId, "decline", "{\"reason\":\"The venue deposit is non-refundable.\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("declined"))
+                .andExpect(jsonPath("$.decisionReason").value("The venue deposit is non-refundable."));
+        Map<String, Object> after = eventState(planned);
+        assertThat(after.get("event_status")).isEqualTo("confirmed");
+        assertThat(after.get("bookings")).isEqualTo("approved");
+        mvc.perform(get("/api/events/" + planned.eventId() + "/timeline").with(flow.as("eo1")))
+                .andExpect(jsonPath("$[-1].type").value("event_cancellation_declined"))
+                .andExpect(jsonPath("$[-1].message").value("The venue deposit is non-refundable."))
+                .andExpect(jsonPath("$[-1].significance").value("major"));
+
+        requestCancellation("eo1", planned.requestId(), "{\"reason\":\"Asking again\"}").andExpect(status().isOk());
+    }
+
+    @Test
+    @DisplayName("EO07 AC7 (negative): a coordinator who is not assigned, the Lead and the organiser cannot approve or decline, and nothing changes")
+    void onlyTheAssignedCoordinatorCanDecide() throws Exception {
+        Planned planned = confirmedEvent("Guarded Gala");
+        UUID cancellationId = pendingCancellation(planned);
+        Map<String, Object> before = eventState(planned);
+
+        for (String decision : List.of("approve", "decline")) {
+            decide("ec2", planned, cancellationId, decision, "{\"reason\":\"No\"}")
+                    .andExpect(status().isForbidden())
+                    .andExpect(jsonPath("$.message").value(
+                            com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException.MESSAGE));
+            for (String other : List.of("ecl1", "eo1", "vs1", "ts1", "so1")) {
+                decide(other, planned, cancellationId, decision, "{\"reason\":\"No\"}").andExpect(status().isForbidden());
+            }
+        }
+
+        assertThat(eventState(planned)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("EO07 AC13 (conflict): approving a request that was already declined is refused and nothing changes")
+    void anAlreadyDecidedRequestCannotBeApproved() throws Exception {
+        Planned planned = confirmedEvent("Late Gala");
+        UUID cancellationId = pendingCancellation(planned);
+        decide("ec1", planned, cancellationId, "decline", "{\"reason\":\"We will go ahead.\"}").andExpect(status().isOk());
+        Map<String, Object> before = eventState(planned);
+
+        decide("ec1", planned, cancellationId, "approve", "{}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("already been declined")));
+
+        assertThat(eventState(planned)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("EO07 AC13 (conflict): after the event is reassigned, its pending request moves with it; only the new coordinator can decide")
+    void afterReassignmentOnlyTheNewCoordinatorDecides() throws Exception {
+        Planned planned = confirmedEvent("Moved Gala");
+        UUID cancellationId = pendingCancellation(planned);
+        mvc.perform(post("/api/event-requests/assigned/" + planned.requestId() + "/reassign").with(flow.as("ecl1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"coordinatorUserId\":\"" + flow.idOf("ec2") + "\"}"))
+                .andExpect(status().isOk());
+        sync();
+        Map<String, Object> before = eventState(planned);
+
+        decide("ec1", planned, cancellationId, "approve", "{}").andExpect(status().isForbidden());
+        assertThat(eventState(planned)).isEqualTo(before);
+
+        mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as("ec2")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].status").value("pending"));
+        decide("ec2", planned, cancellationId, "approve", "{}").andExpect(status().isOk());
+        assertThat(eventState(planned).get("event_status")).isEqualTo("cancelled");
+    }
+
+    @Test
+    @DisplayName("EO07 AC12 (negative): a cancelled event takes no further planning, booking, equipment, safety review, confirmation, reassignment or cancellation action, and nothing changes")
+    void aCancelledEventIsFinal() throws Exception {
+        Planned planned = plannedEvent("Final Gala");
+        decide("ec1", planned, pendingCancellation(planned), "approve", "{}").andExpect(status().isOk());
+        Map<String, Object> before = eventState(planned);
+        String event = "/api/events/" + planned.eventId();
+
+        mvc.perform(post(event + "/safety-review").with(flow.as("ec1"))).andExpect(status().isConflict());
+        mvc.perform(post(event + "/confirm").with(flow.as("ec1"))).andExpect(status().isConflict());
+        mvc.perform(post(event + "/venue-bookings").with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"venueId\":\"" + planned.venueId() + "\"}")).andExpect(status().isConflict());
+        mvc.perform(post(event + "/venue-bookings/" + planned.bookingId() + "/cancel").with(flow.as("ec1"))
+                .contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isConflict());
+        mvc.perform(post(event + "/equipment-request").with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"technicalRequirement\":\"Mics\",\"items\":[]}")).andExpect(status().isConflict());
+        mvc.perform(post(event + "/reassignment-requests").with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Leaving\"}")).andExpect(status().isConflict());
+        mvc.perform(post("/api/event-requests/assigned/" + planned.requestId() + "/reassign").with(flow.as("ecl1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"coordinatorUserId\":\"" + flow.idOf("ec2") + "\"}"))
+                .andExpect(status().isConflict());
+        requestCancellation("eo1", planned.requestId(), REASON_BODY).andExpect(status().isConflict());
+        cancelRequest("eo1", planned.requestId(), REASON_BODY).andExpect(status().isConflict());
+
+        assertThat(eventState(planned)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("EO07 AC12 (negative): Technical Support can no longer review or reserve for a cancelled event's equipment request, and it leaves their queue")
+    void aCancelledEventsEquipmentRequestTakesNoFurtherAction() throws Exception {
+        Planned planned = plannedEvent("Equipment Final Gala");
+        UUID equipmentId = UUID.randomUUID();
+        jdbc.update("""
+                INSERT INTO equipments (equipment_id, equipment_name, equipment_qty, serialised, equipment_type)
+                VALUES (?, 'EO07 speaker', 4, false, 'A')
+                """, equipmentId);
+        String created = mvc.perform(post("/api/events/" + planned.eventId() + "/equipment-request").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"technicalRequirement\":\"Stage sound\",\"items\":[{\"equipmentId\":\"%s\",\"quantity\":1}]}"
+                                .formatted(equipmentId)))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID equipmentRequestId = UUID.fromString(flow.read(created).get("requestId").asString());
+        sync();
+        mvc.perform(get("/api/equipment-requests/processing").with(flow.as("ts1")))
+                .andExpect(jsonPath("$[*].requestId", hasItem(equipmentRequestId.toString())));
+
+        decide("ec1", planned, pendingCancellation(planned), "approve", "{}").andExpect(status().isOk());
+        sync();
+
+        mvc.perform(get("/api/equipment-requests/processing").with(flow.as("ts1")))
+                .andExpect(jsonPath("$[*].requestId", not(hasItem(equipmentRequestId.toString()))));
+        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":1,\"serialNumber\":null,\"start\":\"2027-03-10T01:00:00Z\",\"end\":\"2027-03-10T04:00:00Z\"}"
+                                .formatted(planned.eventId(), equipmentId)))
+                .andExpect(status().isConflict());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/equipment-requests/" + equipmentRequestId + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"rejected\",\"rejectReason\":\"n/a\"}"))
+                .andExpect(status().isConflict());
+        sync();
+        assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id = ?",
+                String.class, equipmentRequestId)).isEqualTo("processing");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs WHERE event_id = ?", Integer.class,
+                planned.eventId())).isZero();
     }
 }

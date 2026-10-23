@@ -32,6 +32,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundExcep
 import com.example.connect_sphere.eventrequest.service.InvalidMessageException;
 import com.example.connect_sphere.eventrequest.service.MissingOrganisationException;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
+import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
@@ -49,6 +50,9 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * event's currently assigned coordinator decides. The pending request
  * belongs to the event, so after a reassignment the new coordinator
  * decides it.</li>
+ * <li>Approving cancels the event through
+ * {@link EventLifecycleService#cancel}, the only place an event becomes
+ * Cancelled; declining needs a reason and leaves the event as it is.</li>
  * </ul>
  *
  * <p>Every step takes a row lock first, so it acts on the current state and
@@ -76,20 +80,23 @@ public class EventCancellationService {
     private final ActivityService activity;
     private final NotificationService notifications;
     private final JourneyStatusResolver statuses;
+    private final EventLifecycleService lifecycle;
     private final Clock clock;
 
     @Autowired
     public EventCancellationService(EventRepository events, EventCancellationRequestRepository cancellations,
             UserRepository users, EventRequestRepository eventRequests, EventRequestMapper requestMapper,
-            ActivityService activity, NotificationService notifications, JourneyStatusResolver statuses) {
+            ActivityService activity, NotificationService notifications, JourneyStatusResolver statuses,
+            EventLifecycleService lifecycle) {
         this(events, cancellations, users, eventRequests, requestMapper, activity, notifications, statuses,
-                Clock.systemUTC());
+                lifecycle, Clock.systemUTC());
     }
 
     EventCancellationService(EventRepository events, EventCancellationRequestRepository cancellations,
             UserRepository users, EventRequestRepository eventRequests, EventRequestMapper requestMapper,
             ActivityService activity, NotificationService notifications, JourneyStatusResolver statuses,
-            Clock clock) {
+            EventLifecycleService lifecycle, Clock clock) {
+        this.lifecycle = lifecycle;
         this.events = events;
         this.cancellations = cancellations;
         this.users = users;
@@ -211,7 +218,92 @@ public class EventCancellationService {
                 .map(request -> toDto(request, event)).toList();
     }
 
+    // ---- The assigned coordinator decides (AC7, AC8, AC9, AC13) --------------
+
+    /**
+     * Approving cancels the event (AC8). {@code note} is optional. Checked in
+     * this order, all against the current state under the event row lock:
+     * the caller is the event's coordinator now (AC7, D25: before anything
+     * else, so a stranger learns nothing), the request belongs to this event
+     * and is still pending, and the event can still be cancelled (AC13).
+     */
+    @Transactional
+    public EventCancellationRequestDto approve(UUID coordinatorId, UUID eventId, UUID cancellationRequestId,
+            String note) {
+        Event event = lockedAssigned(coordinatorId, eventId);
+        EventCancellationRequest request = pendingRequest(event, cancellationRequestId);
+        requireCancellable(event);
+        String coordinatorNote = optionalReason(note);
+
+        String message = "Cancelled at the organiser's request: " + request.getReason()
+                + (coordinatorNote == null ? "" : " Coordinator's note: " + coordinatorNote);
+        lifecycle.cancel(coordinatorId, eventId, message);
+        request.setStatus(EventCancellationStatus.approved);
+        request.setDecidedBy(coordinatorId);
+        request.setDecidedAt(now());
+        request.setDecisionReason(coordinatorNote);
+        EventCancellationRequest saved = cancellations.save(request);
+
+        UUID organiserId = saved.getRequesterUserId();
+        String name = event.getEventName();
+        String outcome = name + " has been cancelled as you asked." + (coordinatorNote == null ? ""
+                : " Coordinator's note: " + coordinatorNote);
+        afterCommit(() -> notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,
+                NotificationType.event_cancellation_approved, outcome));
+        return toDto(saved, event);
+    }
+
+    /** Declining needs a reason (AC9); the event and its arrangements stay as
+     * they are, and the organiser may ask again later. */
+    @Transactional
+    public EventCancellationRequestDto decline(UUID coordinatorId, UUID eventId, UUID cancellationRequestId,
+            String rawReason) {
+        Event event = lockedAssigned(coordinatorId, eventId);
+        EventCancellationRequest request = pendingRequest(event, cancellationRequestId);
+        requireCancellable(event);
+        String reason = requiredReason(rawReason, "Please give the organiser a reason for declining.");
+
+        request.setStatus(EventCancellationStatus.declined);
+        request.setDecidedBy(coordinatorId);
+        request.setDecidedAt(now());
+        request.setDecisionReason(reason);
+        EventCancellationRequest saved = cancellations.save(request);
+        EventRequest origin = eventRequests.findByEventId(eventId)
+                .orElseThrow(() -> new EventRequestNotFoundException(eventId));
+        activity.record(new ActivityService.Entry(origin.getRequestId(), eventId,
+                ActivityType.event_cancellation_declined, coordinatorId, reason, null, null, null));
+
+        UUID organiserId = saved.getRequesterUserId();
+        String name = event.getEventName();
+        afterCommit(() -> notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,
+                NotificationType.event_cancellation_declined, "Cancellation declined: " + reason));
+        return toDto(saved, event);
+    }
+
     // ---- helpers ---------------------------------------------------------------
+
+    private Event lockedAssigned(UUID coordinatorId, UUID eventId) {
+        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        requireAssigned(coordinatorId, event);
+        return event;
+    }
+
+    /** AC13: the request must belong to this event and still be pending. */
+    private EventCancellationRequest pendingRequest(Event event, UUID cancellationRequestId) {
+        EventCancellationRequest request = cancellations.findForUpdate(cancellationRequestId)
+                .filter(r -> r.getEventId().equals(event.getEventId()))
+                .orElseThrow(() -> new EventCancellationNotFoundException(cancellationRequestId));
+        if (request.getStatus() != EventCancellationStatus.pending) {
+            throw new EventCancellationStateException("This cancellation request has already been "
+                    + request.getStatus().name() + ". Refresh to see the event's current state.");
+        }
+        return request;
+    }
+
+    /** Trimmed, at most 2000 characters, or null when blank. */
+    static String optionalReason(String raw) {
+        return raw == null || raw.isBlank() ? null : requiredReason(raw, "");
+    }
 
     /** AC3/AC5/AC12: only an event from Planning to Confirmed; never a
      * Cancelled or Completed one. */

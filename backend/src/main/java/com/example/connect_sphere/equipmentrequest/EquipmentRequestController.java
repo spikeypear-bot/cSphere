@@ -45,6 +45,11 @@ public class EquipmentRequestController {
     @GetMapping("/equipment-requests/processing")
     public List<EquipmentRequestResponse> listProcessing() {
         return requestRepository.findByStatus(EquipmentRequestStatus.processing).stream()
+                // EO07: a cancelled or finished event's request needs no review.
+                .filter(r -> eventRepository.findById(r.getEventId())
+                        .map(e -> e.getStatus() != com.example.connect_sphere.event.entity.EventStatus.cancelled
+                                && e.getStatus() != com.example.connect_sphere.event.entity.EventStatus.completed)
+                        .orElse(true))
                 .map(r -> {
                     var event = eventRepository.findById(r.getEventId()).orElse(null);
                     String eventName = event != null ? event.getEventName() : "Unknown event";

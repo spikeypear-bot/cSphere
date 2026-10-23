@@ -37,6 +37,7 @@ import com.example.connect_sphere.venueavailability.AvailabilityService;
 import com.example.connect_sphere.venueavailability.VenueBecameUnavailable;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
+import com.example.connect_sphere.venuebooking.hold.VenueHoldService;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
 /**
@@ -49,6 +50,8 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  *      ▲  ▲                 │        │                          │                        │
  *      │  └────withdraw─────┘        └─changes/reject─▶ Safety Changes Requested ──send──┘ (back to review)
  *      └──────────── returnToPlanning (a venue becomes unavailable, …) ◀──────────────────┘
+ *
+ *   any of the above ──cancel (EO07)──▶ Cancelled (final)
  * </pre>
  *
  * <p>Every state change takes the event row lock first, so two clicks (or two
@@ -70,20 +73,33 @@ public class EventLifecycleService {
     private final UserRepository users;
     private final JourneyStatusResolver statuses;
     private final Clock clock;
+    /** EO07: releases a cancelled event's active venue holds. Null only for
+     * callers built before EO07 that never cancel an event. */
+    private final VenueHoldService holds;
 
     @Autowired
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
             EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
             AvailabilityService availability, ActivityService activity, NotificationService notifications,
-            UserRepository users, JourneyStatusResolver statuses) {
+            UserRepository users, JourneyStatusResolver statuses, VenueHoldService holds) {
         this(events, bookings, equipmentRequests, eventRequests, availability, activity, notifications, users,
-                statuses, Clock.systemUTC());
+                statuses, Clock.systemUTC(), holds);
+    }
+
+    /** Without EO07's hold release, for callers built before it. */
+    public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
+            EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
+            AvailabilityService availability, ActivityService activity, NotificationService notifications,
+            UserRepository users, JourneyStatusResolver statuses, Clock clock) {
+        this(events, bookings, equipmentRequests, eventRequests, availability, activity, notifications, users,
+                statuses, clock, null);
     }
 
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
             EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
             AvailabilityService availability, ActivityService activity, NotificationService notifications,
-            UserRepository users, JourneyStatusResolver statuses, Clock clock) {
+            UserRepository users, JourneyStatusResolver statuses, Clock clock, VenueHoldService holds) {
+        this.holds = holds;
         this.events = events;
         this.bookings = bookings;
         this.equipmentRequests = equipmentRequests;
@@ -380,6 +396,65 @@ public class EventLifecycleService {
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void onVenueBecameUnavailable(VenueBecameUnavailable change) {
         change.eventIds().forEach(id -> returnToPlanning(id, change.actorId(), change.reason()));
+    }
+
+    // ---- Cancellation (EO07) ---------------------------------------------------
+
+    /** What cancelling released, for the caller's own response and tests. */
+    public record Cancellation(List<UUID> cancelledBookingIds, List<UUID> staffNotified) {
+    }
+
+    /**
+     * EO07 AC8: the event is cancelled. The only place {@code events.status}
+     * becomes {@code cancelled}. Under the event row lock: its pending and
+     * approved venue bookings are cancelled and their active holds released,
+     * so those venues are free for that period again (rejected, replaced and
+     * already-cancelled bookings are history and stay as they are). Equipment
+     * reservations are kept as history; availability ignores a cancelled
+     * event's (decision-log D27). The event row and everything else about it
+     * are kept (AC11). Venue Staff whose bookings were cancelled, and
+     * Technical Support when equipment had been approved, are told after the
+     * change commits (AC10).
+     *
+     * <p>Callers check who may cancel (EO07: the assigned coordinator
+     * approving the organiser's request); this checks only that the event can
+     * still be cancelled, against its current state (AC12, AC13).
+     */
+    @Transactional
+    public Cancellation cancel(UUID actorId, UUID eventId, String message) {
+        if (holds == null) {
+            throw new IllegalStateException("Cancelling an event needs the venue hold service.");
+        }
+        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        JourneyStatus from = statuses.journeyOf(event);
+        if (from.isFinal()) {
+            throw new EventLifecycleException("This event can no longer be cancelled (it is " + from.label() + ").");
+        }
+        List<VenueBookingRecord> released = bookings.findForEvent(eventId).stream()
+                .filter(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved)
+                .toList();
+        for (VenueBookingRecord booking : released) {
+            holds.endForBooking(booking.getBookingId(), actorId);
+            booking.setStatus(VenueBookingStatus.cancelled);
+            bookings.save(booking);
+        }
+        event.setStatus(EventStatus.cancelled);
+        Event saved = events.save(event);
+        record(saved, ActivityType.event_cancelled, actorId, message, from);
+
+        boolean hasApprovedEquipment = equipmentRequests.findByEventId(eventId).stream()
+                .anyMatch(r -> r.getStatus() == EquipmentRequestStatus.approved);
+        List<UUID> staff = Stream.concat(
+                        released.isEmpty() ? Stream.<User>empty() : users.findByRole(UserRole.vs).stream(),
+                        hasApprovedEquipment ? users.findByRole(UserRole.technician).stream() : Stream.<User>empty())
+                .map(User::getUserId).distinct().toList();
+        if (!staff.isEmpty()) {
+            String name = saved.getEventName();
+            String notice = name + " (" + saved.getStartDatetime().toLocalDate()
+                    + ") has been cancelled. Its venue bookings and equipment are no longer needed.";
+            afterCommit(() -> notifications.createEventCancelledNotifications(staff, eventId, name, notice));
+        }
+        return new Cancellation(released.stream().map(VenueBookingRecord::getBookingId).toList(), staff);
     }
 
     // ---- helpers --------------------------------------------------------------

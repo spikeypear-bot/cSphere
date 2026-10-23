@@ -75,4 +75,35 @@ class EventCancellationNotificationTest {
         assertThat(sent.message()).isEqualTo("Called off");
         assertThat(sent.linkPath()).isEqualTo("/coordinator/events/" + EVENT);
     }
+
+    @Test
+    @DisplayName("EO07 AC10 (happy): the organiser is told the outcome, with the coordinator's reason when declined, linking to their event")
+    void theOutcomeReachesTheOrganiserAndOpensTheirEvent() {
+        service.createEventCancellationDecisionNotification(RECIPIENT, EVENT, "Town Hall",
+                NotificationType.event_cancellation_declined, "Cancellation declined: Deposit is non-refundable");
+        service.createEventCancellationDecisionNotification(RECIPIENT, EVENT, "Town Hall",
+                NotificationType.event_cancellation_approved, "Town Hall has been cancelled as you asked.");
+
+        List<NotificationDto> sent = delivered();
+        assertThat(sent).extracting(NotificationDto::type).containsExactly(
+                "event_cancellation_declined", "event_cancellation_approved");
+        assertThat(sent.get(0).message()).isEqualTo("Cancellation declined: Deposit is non-refundable");
+        assertThat(sent).allSatisfy(n -> assertThat(n.linkPath()).isEqualTo("/organiser/events/" + EVENT));
+    }
+
+    @Test
+    @DisplayName("EO07 AC10 (happy): each Venue Staff and Technical Support recipient is told once that the event is cancelled; they have no event page, so it links nowhere")
+    void staffAreToldTheEventIsCancelled() {
+        UUID other = UUID.randomUUID();
+        service.createEventCancelledNotifications(List.of(RECIPIENT, other), EVENT, "Town Hall", "Town Hall is cancelled.");
+
+        List<NotificationDto> sent = delivered();
+        assertThat(sent).hasSize(2);
+        assertThat(sent).allSatisfy(n -> {
+            assertThat(n.type()).isEqualTo(NotificationType.event_cancelled.name());
+            assertThat(n.eventId()).isEqualTo(EVENT);
+            assertThat(n.message()).isEqualTo("Town Hall is cancelled.");
+            assertThat(n.linkPath()).isNull();
+        });
+    }
 }
