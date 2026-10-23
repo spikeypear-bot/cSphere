@@ -27,6 +27,8 @@ on:
   pull_request:
     branches:
       - 'main'
+    # labeled/unlabeled: re-run when a reviewer adds "tests-reviewed" (Week 10).
+    types: [opened, synchronize, reopened, labeled, unlabeled]
   # Week 9: scheduled runs repeat the slow checks on an unchanged main, which
   # is where a flaky test shows itself (same code, different result).
   schedule:
@@ -42,8 +44,16 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
+        with:
+          fetch-depth: 0   # test-protection compares the PR with its base branch
       - name: Every test traces to a user story
         run: python3 .github/scripts/traceability.py --check
+      # IS212 Week 10, guidance vs enforcement: AI_Context.md tells agents never
+      # to delete or weaken an existing test; this step enforces it. A reviewer
+      # approves a deliberate removal by adding the "tests-reviewed" label.
+      - name: Existing tests are not deleted or weakened
+        if: github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'tests-reviewed')
+        run: python3 .github/scripts/test-protection.py origin/${{ github.base_ref }}
 
   frontend-build:
     runs-on: ubuntu-latest
