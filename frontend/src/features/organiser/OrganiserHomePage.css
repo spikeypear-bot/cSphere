@@ -47,3 +47,8 @@
   margin: 0.6rem 0 0; padding: 0.5rem 0.75rem; border-radius: var(--radius-sm); white-space: pre-wrap;
   background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel)); font-size: 0.9rem;
 }
+
+/* EO07: cancel a request under review, inline on its row. */
+.organiser-home__cancel { display: flex; flex-direction: column; gap: 0.4rem; flex-basis: 100%; }
+.organiser-home__cancel textarea { width: 100%; }
+.organiser-home__cancel-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }

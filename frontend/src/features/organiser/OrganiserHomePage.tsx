@@ -14,6 +14,7 @@ import type { ActivityDto } from '../../types/activity'
 import type { EventRequestDto } from '../../types/eventRequest'
 import { getCompletionPercent } from './eventRequestCompletion'
 import { organiserExtraFeatures } from './organiserExtraFeatures'
+import { CancelRequestAction } from './CancelRequestAction'
 import './OrganiserHomePage.css'
 
 /** EO15: "view my event requests and their statuses". The scoping happens on
@@ -33,6 +34,8 @@ export function OrganiserHomePage() {
   const [justSubmitted] = useState(() => Boolean((location.state as { justSubmitted?: boolean } | null)?.justSubmitted))
   const [justResubmitted] = useState(() =>
     Boolean((location.state as { justResubmitted?: boolean } | null)?.justResubmitted))
+  // EO07: the request just cancelled from this list, for the confirmation.
+  const [justCancelled, setJustCancelled] = useState<string | null>(null)
   useEffect(() => {
     if (justSubmitted || justResubmitted) navigate('.', { replace: true, state: null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -65,6 +68,8 @@ export function OrganiserHomePage() {
       {justResubmitted ? (
         <Notice>Your updated request has been sent back for review.</Notice>
       ) : null}
+
+      {justCancelled ? <Notice>"{justCancelled}" has been cancelled.</Notice> : null}
 
       {error ? <p role="alert">{error}</p> : null}
 
@@ -117,6 +122,13 @@ export function OrganiserHomePage() {
                 <Link className="button button--primary" to={`/organiser/requests/${request.requestId}/respond`}>
                   Respond
                 </Link>
+              ) : null}
+              {request.status === 'pending' || request.status === 'clarification_required' ? (
+                <CancelRequestAction requestId={request.requestId} eventName={request.eventName || 'Untitled request'}
+                  onCancelled={(updated) => {
+                    setRequests((current) => current?.map((r) => r.requestId === updated.requestId ? updated : r) ?? null)
+                    setJustCancelled(updated.eventName || 'Your request')
+                  }} />
               ) : null}
               {request.status === 'approved' && request.eventId ? (
                 <Link className="button button--secondary" to={`/organiser/events/${request.eventId}`}>
