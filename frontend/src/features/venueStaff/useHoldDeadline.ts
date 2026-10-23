@@ -2,16 +2,18 @@ import { useEffect, useRef, useState } from 'react'
 import type { VenueHold } from '../../types/venueHold'
 
 export const NO_HOLDS: VenueHold[] = []
+const EXPIRY = (h: VenueHold): string | undefined => h.expiresAt
 
 /** Server-derived durations avoid trusting the workstation's clock. Hide occupancy
- * at the deadline even if the refresh fails or the scheduled worker is delayed. */
-export function useHoldDeadline(holds: VenueHold[], refresh?: () => void) {
+ * at the deadline even if the refresh fails or the scheduled worker is delayed.
+ * `at` picks another server deadline, e.g. EC-C3's reminderDueAt; keep it stable. */
+export function useHoldDeadline(holds: VenueHold[], refresh?: () => void, at = EXPIRY) {
   const [expired, setExpired] = useState<Set<string>>(() => new Set())
   const refreshRef = useRef(refresh)
   useEffect(() => { refreshRef.current = refresh }, [refresh])
   useEffect(() => {
-    const timers = holds.filter(h => h.status === 'active').map(h => {
-      const delay = Math.max(0, Date.parse(h.expiresAt) - Date.parse(h.serverTime))
+    const timers = holds.filter(h => h.status === 'active' && at(h)).map(h => {
+      const delay = Math.max(0, Date.parse(at(h)!) - Date.parse(h.serverTime))
       // Browsers clamp large delays to one millisecond; periodically reschedule long holds.
       const deadline = Date.now() + delay
       let timer: ReturnType<typeof setTimeout>
@@ -27,6 +29,6 @@ export function useHoldDeadline(holds: VenueHold[], refresh?: () => void) {
       return () => clearTimeout(timer)
     })
     return () => timers.forEach(cancel => cancel())
-  }, [holds])
+  }, [holds, at])
   return expired
 }

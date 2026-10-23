@@ -175,4 +175,39 @@ describe('NotificationBell — EO09/EO19', () => {
     expect(await screen.findByText('A venue booking for "Alumni Homecoming" is unavailable')).toBeInTheDocument()
     expect(screen.getByText(VENUE_UNAVAILABLE_NOTIFICATION.message)).toBeInTheDocument()
   })
+
+  it('EC-C3 AC1 (happy): a hold reminder says it is expiring soon, shows its details and opens the venue booking page', async () => {
+    const reminder = {
+      ...STATUS_CHANGE_NOTIFICATION,
+      notificationId: 'n4',
+      type: 'venue_hold_expiring',
+      newStatus: null,
+      message: 'The tentative hold on Downtown Hall for "Alumni Homecoming" expires on 2 Mar 2027, 4:00 AM (Singapore time).',
+      linkPath: '/coordinator/events/event-1/venue-booking',
+    }
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input)
+      if (url === '/api/notifications') return jsonResponse(200, [reminder])
+      if (url === '/api/notifications/unread-count') return jsonResponse(200, { count: 1 })
+      if (url === '/api/notifications/n4/read' && init?.method === 'POST') return jsonResponse(200, { ...reminder, read: true })
+      throw new Error(`Unexpected fetch: ${url}`)
+    }))
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/coordinator']}>
+        <SessionProvider>
+          <Routes>
+            <Route path="/coordinator" element={<NotificationBell />} />
+            <Route path="/coordinator/events/:eventId/venue-booking" element={<div>Venue booking page</div>} />
+          </Routes>
+        </SessionProvider>
+      </MemoryRouter>,
+    )
+
+    await user.click(await screen.findByLabelText(/Notifications/))
+    expect(await screen.findByText('Tentative venue hold expiring soon for "Alumni Homecoming"')).toBeInTheDocument()
+    expect(screen.getByText(reminder.message)).toBeInTheDocument()
+    await user.click(screen.getByText('Tentative venue hold expiring soon for "Alumni Homecoming"'))
+    expect(await screen.findByText('Venue booking page')).toBeInTheDocument()
+  })
 })
