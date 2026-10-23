@@ -2,6 +2,7 @@ package com.example.connect_sphere.venuebooking;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import java.time.*;
@@ -18,7 +19,12 @@ import org.springframework.context.annotation.*;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
+import com.example.connect_sphere.testsupport.FlowSupport;
+import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.notification.dto.NotificationDto;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
@@ -34,13 +40,13 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 @Import(VenueHoldReminderFlowTest.TimeConfig.class)
 class VenueHoldReminderFlowTest {
     static class MutableClock extends Clock {
-        final AtomicReference<Instant> time=new AtomicReference<>(Instant.parse("2027-03-01T00:00:00Z"));
+        final AtomicReference<Instant> time=new AtomicReference<>(Instant.parse("2099-03-01T00:00:00Z"));
         public ZoneId getZone(){return ZoneOffset.UTC;}
         public Clock withZone(ZoneId zone){return this;}
         public Instant instant(){return time.get();}
     }
     @TestConfiguration static class TimeConfig { @Bean @Primary MutableClock testReminderClock(){return new MutableClock();} }
-    static final Instant T0=Instant.parse("2027-03-01T00:00:00Z");
+    static final Instant T0=Instant.parse("2099-03-01T00:00:00Z");
     @Autowired MutableClock clock;
     @Autowired JdbcTemplate jdbc;
     @Autowired VenueService venues;
@@ -51,6 +57,8 @@ class VenueHoldReminderFlowTest {
     @Autowired VenueBookingService bookings;
     @Autowired NotificationService notifications;
     @Autowired MockMvc mvc;
+    @Autowired UserRepository users;
+    @Autowired PlatformTransactionManager transactionManager;
     final List<UUID> eventIds=new ArrayList<>(),venueIds=new ArrayList<>();
     UUID staff,coordinator,otherCoordinator;
     @BeforeEach void setup(){
@@ -62,11 +70,18 @@ class VenueHoldReminderFlowTest {
     @AfterEach void clean(){
         jdbc.execute("DROP TRIGGER IF EXISTS ecc3_fail_notification ON notifications");
         jdbc.execute("DROP FUNCTION IF EXISTS ecc3_fail_notification()");
-        for(UUID event:eventIds){
-            jdbc.update("DELETE FROM notifications WHERE event_id=?",event);
-            jdbc.update("DELETE FROM venue_bookings WHERE event_id=?",event);
-            jdbc.update("DELETE FROM events WHERE event_id=?",event);
-        }
+        // API-built events also have a request and append-only timeline rows; remove them as NotificationFlowTest does.
+        new TransactionTemplate(transactionManager).executeWithoutResult(tx -> {
+            jdbc.execute("ALTER TABLE event_request_activity DISABLE TRIGGER trg_activity_append_only");
+            for(UUID event:eventIds){
+                jdbc.update("DELETE FROM notifications WHERE event_id=? OR event_request_id IN (SELECT request_id FROM event_requests WHERE event_id=?)",event,event);
+                jdbc.update("DELETE FROM event_request_activity WHERE request_id IN (SELECT request_id FROM event_requests WHERE event_id=?)",event);
+                jdbc.update("DELETE FROM event_requests WHERE event_id=?",event);
+                jdbc.update("DELETE FROM venue_bookings WHERE event_id=?",event);
+                jdbc.update("DELETE FROM events WHERE event_id=?",event);
+            }
+            jdbc.execute("ALTER TABLE event_request_activity ENABLE TRIGGER trg_activity_append_only");
+        });
         for(UUID v:venueIds){jdbc.update("DELETE FROM venue_operating_hours WHERE venue_id=?",v);jdbc.update("DELETE FROM venues WHERE venue_id=?",v);}
     }
     String venueName;
@@ -79,12 +94,16 @@ class VenueHoldReminderFlowTest {
     }
     /** A pending booking for a Planning event coordinated by ec1. */
     UUID booking(UUID venue){
-        UUID event=UUID.randomUUID(),id=UUID.randomUUID();eventIds.add(event);
+        UUID event=UUID.randomUUID();eventIds.add(event);
         jdbc.update("""
             INSERT INTO events(event_id,event_name,purpose,start_datetime,end_datetime,expected_attendance,venue_requirements,accessibility_needs,status,coordinator_id)
-            VALUES (?,'Alumni Gala','Test','2027-04-01T10:00:00+08:00','2027-04-01T12:00:00+08:00',100,'Seating','{}'::accessibilities[],'pending',?)
+            VALUES (?,'Alumni Gala','Test','2099-04-01T10:00:00+08:00','2099-04-01T12:00:00+08:00',100,'Seating','{}'::accessibilities[],'pending',?)
             """,event,coordinator);
-        jdbc.update("INSERT INTO venue_bookings(booking_id,venue_id,event_id,status,start_datetime,end_datetime) VALUES (?,?,?,'pending','2027-04-01T10:00:00+08:00','2027-04-01T12:00:00+08:00')",id,venue,event);
+        return bookingFor(venue,event);
+    }
+    UUID bookingFor(UUID venue,UUID event){
+        UUID id=UUID.randomUUID();
+        jdbc.update("INSERT INTO venue_bookings(booking_id,venue_id,event_id,status,start_datetime,end_datetime) VALUES (?,?,?,'pending','2099-04-01T10:00:00+08:00','2099-04-01T12:00:00+08:00')",id,venue,event);
         return id;
     }
     VenueHold hold(UUID booking,Duration left){return holds.create(booking,OffsetDateTime.ofInstant(clock.instant().plus(left),ZoneOffset.UTC),staff);}
@@ -103,13 +122,13 @@ class VenueHoldReminderFlowTest {
     @Test @DisplayName("EC-C3 AC1 (happy): the coordinator gets one reminder naming the event, venue and SGT expiry, linking to the venue booking page")
     void remindsTheCoordinator(){
         UUID b=booking(venue());
-        hold(b,Duration.ofHours(20)); // 2027-03-01T20:00Z = 2 Mar 2027, 4:00 AM in Singapore
+        hold(b,Duration.ofHours(20)); // 2099-03-01T20:00Z + 8 h = 2 Mar 2099, 4:00 AM in Singapore
         reminderJob.remind();
         assertThat(recipients(b,"venue_hold_expiring")).containsExactly(coordinator);
         NotificationDto sent=notifications.list(coordinator).stream()
             .filter(n->n.type().equals("venue_hold_expiring") && eventOf(b).equals(n.eventId())).findFirst().orElseThrow();
         assertThat(sent.eventName()).isEqualTo("Alumni Gala");
-        assertThat(sent.message()).contains("Alumni Gala").contains(venueName).contains("2 Mar 2027, 4:00 AM (Singapore time)");
+        assertThat(sent.message()).contains("Alumni Gala").contains(venueName).contains("2 Mar 2099, 4:00 AM (Singapore time)");
         assertThat(sent.linkPath()).isEqualTo("/coordinator/events/"+eventOf(b)+"/venue-booking");
         assertThat(sent.read()).isFalse();
     }
@@ -219,16 +238,30 @@ class VenueHoldReminderFlowTest {
     }
 
     @Test @DisplayName("EC-C3 AC7 (conflict): after reassignment the reminder and expiry notice go to the new coordinator only")
-    void currentCoordinator(){
-        UUID b=booking(venue());hold(b,Duration.ofHours(1));
-        // ECL-C7/EC-C1 reassignment moves events.coordinator_id; the hold is unchanged.
-        jdbc.update("UPDATE events SET coordinator_id=? WHERE event_id=?",otherCoordinator,eventOf(b));
+    void currentCoordinator() throws Exception {
+        // A real request: eo1 submits, ecl1 assigns ec1, ec1 approves; then the hold is placed.
+        var flow=new FlowSupport(mvc,users);
+        UUID event=flow.approvedEvent("eo1","ec1","""
+            {"eventName":"EC-C3 Reassigned Gala %s","purpose":"Quarterly update","description":"All hands",
+             "startDatetime":"2099-04-01T10:00:00+08:00","endDatetime":"2099-04-01T12:00:00+08:00",
+             "expectedAttendance":100,"venueRequirements":"Theatre seating",
+             "accessibilityNeeds":["none"],"registrationNeeds":false}
+            """.formatted(UUID.randomUUID()));
+        eventIds.add(event);
+        UUID b=bookingFor(venue(),event);hold(b,Duration.ofHours(1));
+        UUID requestId=jdbc.queryForObject("SELECT request_id FROM event_requests WHERE event_id=?",UUID.class,event);
+        // The Lead's reassignment (ELC-C5/ECL-C7) moves the request and its event to ec2.
+        mvc.perform(post("/api/event-requests/assigned/"+requestId+"/reassign").with(flow.as("ecl1"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"coordinatorUserId\":\""+otherCoordinator+"\"}"))
+            .andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT coordinator_id FROM events WHERE event_id=?",UUID.class,event)).isEqualTo(otherCoordinator);
         reminderJob.remind();
         clock.time.set(T0.plus(Duration.ofHours(1)));
         expiryJob.expire();
         assertThat(recipients(b,"venue_hold_expiring")).containsExactly(otherCoordinator);
         assertThat(recipients(b,"venue_hold_expired")).containsExactly(otherCoordinator);
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=? AND recipient_user_id=?",Integer.class,b,coordinator)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE event_id=? AND recipient_user_id=? AND type::text IN ('venue_hold_expiring','venue_hold_expired')",
+            Integer.class,event,coordinator)).isZero();
     }
 
     @Test @DisplayName("EC-C3 AC9 (cross-cutting): sending a reminder leaves the hold, booking and event unchanged")
