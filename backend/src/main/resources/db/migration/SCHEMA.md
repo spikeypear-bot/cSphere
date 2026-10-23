@@ -543,3 +543,28 @@ booking is automatically made into a hold. Conversion updates the same booking,
 and re-holding retains older attempts. `venue_hold_expired` notifications require
 a booking reference; prior notification-shape branches remain intact. See
 [workflow, APIs and verification](../../../../../../docs/tentative-venue-holds.md).
+
+## V32 update — event cancellation requests (EO07)
+
+`event_cancellation_requests` records an Event Organiser's request to cancel an approved event,
+decided by the event's currently assigned Event Coordinator. Columns:
+`cancellation_request_id` (UUID PK), `event_id` (required FK → `events`), `requester_user_id`
+(required FK → `users`), `reason` (trimmed, 1–2000 characters), `status` (`pending`, `approved`,
+`declined`), `requested_at`, `decided_by` (nullable FK → `users`), `decided_at` and
+`decision_reason` (trimmed, 1–2000 characters when present). A consistency check requires a
+pending row to have no decision, an approved row a decider and time, and a declined row a decider,
+time and reason. A partial unique index permits one pending request per event. Rows are never
+deleted, and the event row itself is kept when it is cancelled (`events.status = 'cancelled'`).
+
+A request cancelled before approval needs no row here: `event_requests.status` becomes
+`cancelled`. Cancelling an event sets its pending and approved `venue_bookings` to `cancelled` and
+releases their active holds; `equipment_logs` rows are kept, and equipment availability ignores
+logs of cancelled or completed events (decision-log D27).
+
+`notification_type` gains `event_cancellation_requested`, `event_cancellation_approved`,
+`event_cancellation_declined`, `event_cancelled` (each needs `event_id` and `message`) and
+`request_cancelled` (needs `event_request_id` and `message`). The recreated
+`chk_notification_shape` keeps every earlier branch and also lists EC-C3's `venue_hold_expiring`
+(V31, built in parallel) in the booking-reference branch; the check compares `type::text`, so it
+is valid before that enum value exists. See
+[EO07 API](../../../../../../docs/event-cancellation-api.md).
