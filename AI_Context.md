@@ -1,4 +1,4 @@
-# ConnectSphere — Project Context for Claude Code
+# ConnectSphere — Project Context for AI agents and the team
 
 ## Purpose
 
@@ -210,7 +210,7 @@ Week 6 asked "is the evidence from one unit trustworthy?"; Week 9 asks "does it 
    - Run the tests you touched, and report both results to the user.
    - Don't commit changes to `docs/test-traceability.md` unless asked.
 6. **Never:**
-   - weaken, skip or delete an existing test to make the check or build pass;
+   - weaken, skip or delete an existing test to make the check or build pass (CI's `test-protection.py` fails a PR that deletes a test file or removes tests or assertions);
    - change another story's tests or tags, except to add your own story's tag;
    - edit or disable `.github/scripts/traceability.py` or the CI workflow to get past the check.
 
@@ -255,6 +255,57 @@ Be ready to answer, for any test:
 4. Why is this a unit, integration or E2E test?
 5. Where did the expected value come from? (The AC, not the output.)
 6. Is it deterministic? (Clock, data, waits.)
+
+## Working with AI agents (IS212 Week 10 — Agentic AI and the Software Team)
+
+`Materials/Week10/` (lecture, Kahoot, the study-room-booking lab) and `Materials/Project/Week 10 CTO AI Check.docx`. Agents are delegates, not teammates: **a human stays accountable for every merged change.** Week 10's management questions are delegate, constrain, verify and own.
+
+**Guidance vs enforcement.** Guidance (this file, `AGENTS.md`, `CLAUDE.md`) influences an agent but guarantees nothing. Enforcement (tests, CI, branch protection) blocks what it encodes. Put every rule that must always hold into enforcement, and keep the rest as guidance.
+
+| Rule | Guidance | Enforced by |
+|---|---|---|
+| Every test traces to a story | Testing checklist above | CI `traceability` (`traceability.py --check`) |
+| Never delete or weaken an existing test | Testing checklist rule 6 | CI `traceability` → `test-protection.py`: fails a PR that deletes a test file or reduces a file's tests or assertions. A reviewer approves a deliberate removal with the `tests-reviewed` label. |
+| Code builds, lints and passes tests | Definition of Done | CI `frontend-build`, `backend-build`, `smoke`, `e2e` |
+| Role access and data scoping | Endpoint checklist | Security matrix and scope tests (`CoordinatorAssignmentScopeTest` and others) |
+| Expected values come from the AC, not from the code | Testing checklist rule 3 | **Not enforceable.** A human reviews tests against the AC (lecture PR #57: code and test shared one misreading, so CI stayed green). |
+| Reuse existing helpers; no duplicate logic | Development conventions | **Not enforceable.** Human review. |
+
+**Delegation dial.** Set autonomy by reversibility, blast radius and verifiability, not by how hard the task looks or how confident the agent sounds.
+
+| Level | When | ConnectSphere examples |
+|---|---|---|
+| Guarded (agent works; CI must pass) | Easily undone, contained, well tested | Copy, styling, a frontend page whose ACs are fully tested, extra tests |
+| Approval required (a named teammate reviews before merge) | Business rules or shared behaviour | Any story's backend logic, notifications, change log, a new endpoint |
+| Human-led (agent assists) | Hard to undo or wide blast radius | Flyway migrations (never edit an applied one), `SecurityConfig` and role rules, data-scoping, deleting data, CI and branch-protection changes |
+
+Nothing here is Unattended: every PR into `main` is reviewed.
+
+**Review is the bottleneck.** Agents produce code faster than people can review it.
+- Keep PRs small: one story per PR.
+- Don't open more agent PRs than the team can review; limit work in progress.
+- Count review effort when estimating a story.
+- Return an oversized or unclear PR rather than skim it.
+
+**Agent-era technical debt** (watch for all four in review):
+- **Conventional:** duplicated helpers or inconsistent patterns.
+- **Comprehension:** code nobody on the team can explain. It fails the Definition of Done.
+- **Verification:** tests written to match the implementation instead of the AC.
+- **Harness:** stale instructions here or in `docs/`. Update this file in the same PR as the change that makes it stale.
+
+**Five questions for every AI-assisted PR** (in `.github/pull_request_template.md`):
+1. What was delegated?
+2. What constrained the agent?
+3. What evidence supports the change?
+4. Where is human review needed?
+5. Who is accountable?
+
+**CFO request (Week 10 CTO AI Check).** "What value are our teams adding beyond simply asking AI to build the system?" Answer it in the Release 1 slide deck (template due Week 11), with evidence from this repository. Examples of that evidence:
+- stories checked against the customer documents, with wrong ACs raised (decision log D25, D26);
+- architecture and process decisions (the decision log);
+- the guidance plus enforcement above;
+- tests traced to ACs (`docs/test-traceability.md`, `docs/test-cases/`);
+- review findings that changed AI-written code.
 
 ## Adding a new API endpoint — checklist (D19/D20)
 
@@ -400,7 +451,8 @@ A story/feature is Done only when, per the Week 4 course material and this proje
 - The story's Week 4 test cases are recorded on its *Test Cases – Sprint N* lane in the Sheet, with an execution record and the automated tests named in Remarks.
 - The classes behind the story are fully covered, or each exclusion is stated with its reason in `docs/testing-strategy.md`.
 - A change to a critical journey keeps the E2E suite (`npm run test:e2e`) green.
-- The code has been reviewed (by a teammate, or explainable line-by-line by whoever generated it with AI assistance).
+- The code has been reviewed (by a teammate, or explainable line-by-line by whoever generated it with AI assistance). An AI-assisted PR answers the five Week 10 questions in the PR template, and a named teammate is accountable for it.
+- No existing test was deleted or weakened, or a reviewer approved the removal with the `tests-reviewed` label.
 - It works with existing repository conventions (layering, Flyway-owned schema, DTO/mapper pattern).
 - Documentation/README/architecture diagrams are updated when the change affects them.
 - The change is demoable end-to-end, or its limitation is explicitly documented.
@@ -408,7 +460,7 @@ A story/feature is Done only when, per the Week 4 course material and this proje
 
 ## Course timeline (from IS212 materials, for context)
 
-Week 6: automated testing + CI (above). Week 7: six mandatory customer changes (above) and the change-management guide; 20-min ungraded process consult (backlog, Sprint 1 review, tooling, on track for Release 1?) — not a customer clarification session; individual Automated Testing assignment and Topic Research reservation due Friday Week 7. Week 9: quiz on Weeks 5–6, plus integration/E2E testing and CD/release pipelines. Week 10: group Topic Research presentation (7 min + demo). Week 12: Release 1.
+Week 6: automated testing + CI (above). Week 7: six mandatory customer changes (above) and the change-management guide; 20-min ungraded process consult (backlog, Sprint 1 review, tooling, on track for Release 1?) — not a customer clarification session; individual Automated Testing assignment and Topic Research reservation due Friday Week 7. Week 9: quiz on Weeks 5–6, plus integration/E2E testing and CD/release pipelines. Week 10: agentic AI and the software team (above); group Topic Research presentation (7 min + demo); the CFO asks what value teams add beyond AI-generated code (answer in the Release 1 slide deck). Week 11: final quiz on Weeks 9–10 (start of class, in person, LockDown Browser; best 3 of 4 quizzes count); slide-deck template released. Week 12: Release 1.
 
 ## Venue booking timing (implemented 14 October 2026)
 
