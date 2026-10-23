@@ -27,5 +27,8 @@ public enum NotificationType {
     event_reassignment_declined,
     /** EO07 (V32): the assigned coordinator told the organiser cancelled a
      * request under review, with the reason. */
-    request_cancelled
+    request_cancelled,
+    /** EO07 (V32): the assigned coordinator told the organiser asked for the
+     * event to be cancelled, with the reason. */
+    event_cancellation_requested
 }

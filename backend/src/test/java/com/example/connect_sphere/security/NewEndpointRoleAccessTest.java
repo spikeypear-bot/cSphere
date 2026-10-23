@@ -68,6 +68,8 @@ class NewEndpointRoleAccessTest {
             {"POST", "/api/events/" + ID + "/venue-bookings/" + ID + "/cancel"},
             // EO07: cancellation (organiser) and its decision (coordinator).
             {"POST", "/api/event-requests/" + ID + "/cancel"},
+            {"POST", "/api/event-requests/" + ID + "/cancellation-request"},
+            {"GET", "/api/events/" + ID + "/cancellation-requests"},
         };
         return Stream.of("ts1", "att1").flatMap(user ->
                 Stream.of(endpoints).map(e -> Arguments.of(user, e[0], e[1])));

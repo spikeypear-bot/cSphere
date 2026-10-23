@@ -191,6 +191,11 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.GET, "/api/events/assigned").hasRole("EC")
 		    // ECL-C7: the Lead's overview of every coordinator's active events.
 		    .requestMatchers(HttpMethod.GET, "/api/events/by-coordinator").hasRole("ECL")
+		    // EO07: an event's cancellation requests. The owning organisation's
+		    // organisers, the assigned coordinator and the Lead (read-only);
+		    // which event is the organisation/assignment check in
+		    // EventCancellationService.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/cancellation-requests").hasAnyRole("EO", "EC", "ECL")
 		    // ECL-C7: the Lead may read any event (details, timeline) for
 		    // oversight; every coordinator action above stays EC-only.
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC", "ECL")

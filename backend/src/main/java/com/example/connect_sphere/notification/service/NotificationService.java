@@ -206,6 +206,18 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** EO07: tell the assigned coordinator the organiser asked for the event
+     * to be cancelled, with the reason, for them to decide. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventCancellationRequestedNotification(UUID coordinatorId, UUID eventId, String eventName,
+            String reason) {
+        Notification notification = base(coordinatorId, NotificationType.event_cancellation_requested, eventName);
+        notification.setEventId(eventId);
+        notification.setReason(reason);
+        notification.setMessage(reason);
+        saveBestEffort(notification);
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -298,7 +310,8 @@ public class NotificationService {
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
             case venue_hold_expired, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
-            case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
+            case event_returned_to_planning, event_safety_approved, event_cancellation_requested ->
+                    "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
             case event_reassignment_approved, event_reassignment_declined ->
                     "/coordinator/events/" + n.getEventId() + "/reassignment-request";

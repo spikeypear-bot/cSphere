@@ -95,6 +95,9 @@ public enum ActivityType {
     /** EO07: the organiser cancelled their request before it was approved,
      * with the reason. Major: whoever was reviewing it stops. */
     request_cancelled(Set.of(UserRole.eo, UserRole.ec), true),
+    /** EO07: the organiser asked for an approved event to be cancelled, with
+     * the reason; the assigned coordinator decides. */
+    event_cancellation_requested(Set.of(UserRole.eo, UserRole.ec), true),
     /** EC-NEW5/EC-NEW2: a confirmed event's end passed. Never stored: shown in
      * the log at the end time, because no one performs it. */
     event_completed(Set.of(UserRole.eo, UserRole.ec));

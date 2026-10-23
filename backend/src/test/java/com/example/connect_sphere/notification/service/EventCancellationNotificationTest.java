@@ -36,6 +36,7 @@ class EventCancellationNotificationTest {
 
     private static final UUID RECIPIENT = UUID.randomUUID();
     private static final UUID REQUEST = UUID.randomUUID();
+    private static final UUID EVENT = UUID.randomUUID();
 
     @BeforeEach
     void setUp() {
@@ -61,5 +62,17 @@ class EventCancellationNotificationTest {
         assertThat(sent.eventRequestId()).isEqualTo(REQUEST);
         assertThat(sent.message()).isEqualTo("Called off");
         assertThat(sent.linkPath()).isEqualTo("/coordinator/requests/" + REQUEST);
+    }
+
+    @Test
+    @DisplayName("EO07 AC7 (happy): the assigned coordinator is told of a cancellation request, with the reason, linking to the event they decide it on")
+    void aCancellationRequestReachesTheCoordinatorAndOpensTheEvent() {
+        service.createEventCancellationRequestedNotification(RECIPIENT, EVENT, "Town Hall", "Called off");
+
+        NotificationDto sent = delivered().get(0);
+        assertThat(sent.type()).isEqualTo(NotificationType.event_cancellation_requested.name());
+        assertThat(sent.eventId()).isEqualTo(EVENT);
+        assertThat(sent.message()).isEqualTo("Called off");
+        assertThat(sent.linkPath()).isEqualTo("/coordinator/events/" + EVENT);
     }
 }

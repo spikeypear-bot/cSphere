@@ -9,9 +9,11 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.IntStream;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -26,8 +28,14 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.event.service.EventLifecycleService;
+import com.example.connect_sphere.event.service.EventLifecycleService.SafetyDecision;
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.repository.UserRepository;
+import com.example.connect_sphere.venue.dto.CreateVenueDto;
+import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
+import com.example.connect_sphere.venue.entity.VenueLayout;
+import com.example.connect_sphere.venue.service.VenueService;
 
 import jakarta.persistence.EntityManager;
 
@@ -47,11 +55,15 @@ import jakarta.persistence.EntityManager;
 class EventCancellationFlowTest {
 
     private static final String REASON_BODY = "{\"reason\":\"The client has called the event off.\"}";
+    private static final List<VenueOperatingHourDto> ALL_WEEK = IntStream.rangeClosed(1, 7)
+            .mapToObj(day -> new VenueOperatingHourDto(day, LocalTime.of(0, 0), LocalTime.of(23, 59))).toList();
 
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
     @Autowired JdbcTemplate jdbc;
     @Autowired EntityManager entityManager;
+    @Autowired VenueService venues;
+    @Autowired EventLifecycleService lifecycle;
 
     private FlowSupport flow;
 
@@ -63,6 +75,59 @@ class EventCancellationFlowTest {
     private void sync() {
         entityManager.flush();
         entityManager.clear();
+    }
+
+    /** An approved event of eo1's, coordinated by ec1, with one venue Venue Staff approved. */
+    private record Planned(UUID requestId, UUID eventId, UUID venueId, UUID bookingId) {
+    }
+
+    private Planned plannedEvent(String name) throws Exception {
+        UUID eventId = flow.approvedEvent("eo1", "ec1", FlowSupport.requestBody(name, 150, "none"));
+        UUID venueId = venues.createVenue(new CreateVenueDto("EO07 Hall " + UUID.randomUUID(), 200,
+                List.of(VenueLayout.theatre), "Open daily", null, List.of(), List.of(), ALL_WEEK)).venueId();
+        entityManager.flush();
+        String booking = mvc.perform(post("/api/events/" + eventId + "/venue-bookings").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"venueId\":\"" + venueId + "\"}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        UUID bookingId = UUID.fromString(flow.read(booking).get("bookingId").asString());
+        mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders
+                        .patch("/api/venue-bookings/" + bookingId + "/approve").with(flow.as("vs1")))
+                .andExpect(status().isOk());
+        sync();
+        UUID requestId = jdbc.queryForObject("SELECT request_id FROM event_requests WHERE event_id = ?", UUID.class,
+                eventId);
+        return new Planned(requestId, eventId, venueId, bookingId);
+    }
+
+    /** As above, sent for review, approved by the Safety Officer and confirmed by ec1. */
+    private Planned confirmedEvent(String name) throws Exception {
+        Planned planned = plannedEvent(name);
+        mvc.perform(post("/api/events/" + planned.eventId() + "/safety-review").with(flow.as("ec1")))
+                .andExpect(status().isOk());
+        lifecycle.recordSafetyDecision(flow.idOf("so1"), planned.eventId(), SafetyDecision.APPROVE, null);
+        mvc.perform(post("/api/events/" + planned.eventId() + "/confirm").with(flow.as("ec1")))
+                .andExpect(status().isOk());
+        sync();
+        return planned;
+    }
+
+    private ResultActions requestCancellation(String as, UUID requestId, String body) throws Exception {
+        return mvc.perform(post("/api/event-requests/" + requestId + "/cancellation-request").with(flow.as(as))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    /** Everything a cancellation could touch, to prove a refusal changed nothing. */
+    private Map<String, Object> eventState(Planned planned) {
+        sync();
+        return jdbc.queryForMap("""
+                SELECT (SELECT status::text FROM events WHERE event_id = ?) AS event_status,
+                       (SELECT coordinator_id FROM events WHERE event_id = ?) AS coordinator,
+                       (SELECT string_agg(status::text, ',' ORDER BY booking_id) FROM venue_bookings WHERE event_id = ?) AS bookings,
+                       (SELECT count(*) FROM event_cancellation_requests WHERE event_id = ?) AS cancellations,
+                       (SELECT string_agg(status, ',' ORDER BY requested_at) FROM event_cancellation_requests WHERE event_id = ?) AS cancellation_statuses,
+                       (SELECT count(*) FROM event_request_activity WHERE request_id = ?) AS timeline
+                """, planned.eventId(), planned.eventId(), planned.eventId(), planned.eventId(), planned.eventId(),
+                planned.requestId());
     }
 
     private ResultActions cancelRequest(String as, UUID requestId, String body) throws Exception {
@@ -199,5 +264,101 @@ class EventCancellationFlowTest {
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("this one is Cancelled")));
         assertThat(requestState(cancelled)).isEqualTo(cancelledBefore);
+    }
+
+    // ---- After approval: requesting cancellation (AC1, AC3, AC5, AC6) ------
+
+    @Test
+    @DisplayName("EO07 AC3, AC6 (happy): requesting cancellation of a Confirmed event leaves it Confirmed with its venue booked, and the organiser sees the reason and when they asked")
+    void requestingCancellationLeavesTheEventAsItIs() throws Exception {
+        Planned planned = confirmedEvent("Harbour Gala");
+
+        requestCancellation("eo1", planned.requestId(), REASON_BODY)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("pending"))
+                .andExpect(jsonPath("$.reason").value("The client has called the event off."));
+
+        Map<String, Object> state = eventState(planned);
+        assertThat(state.get("event_status")).isEqualTo("confirmed");
+        assertThat(state.get("bookings")).isEqualTo("approved");
+        mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as("eo1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].status").value("pending"))
+                .andExpect(jsonPath("$[0].reason").value("The client has called the event off."))
+                .andExpect(jsonPath("$[0].requesterName").value("eo1"))
+                .andExpect(jsonPath("$[0].requestedAt").isNotEmpty());
+        mvc.perform(get("/api/events/" + planned.eventId()).with(flow.as("eo1")))
+                .andExpect(jsonPath("$.journeyStatus.label").value("Confirmed"));
+    }
+
+    @Test
+    @DisplayName("EO07 AC6 (conflict): a second cancellation request while one is pending is refused and nothing changes")
+    void aSecondPendingRequestIsRefused() throws Exception {
+        Planned planned = plannedEvent("Twice Gala");
+        requestCancellation("eo1", planned.requestId(), REASON_BODY).andExpect(status().isOk());
+        Map<String, Object> before = eventState(planned);
+
+        requestCancellation("eo2", planned.requestId(), "{\"reason\":\"Asking again\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("A cancellation request for this event is already waiting for the coordinator's decision."));
+
+        assertThat(eventState(planned)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("EO07 AC1 (negative): an organiser of another organisation can neither request cancellation nor see the requests, and nothing changes")
+    void anotherOrganisationCannotRequestOrSeeCancellation() throws Exception {
+        Planned planned = plannedEvent("Private Gala");
+        Map<String, Object> before = eventState(planned);
+
+        requestCancellation("eo3", planned.requestId(), REASON_BODY).andExpect(status().isNotFound());
+        mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as("eo3")))
+                .andExpect(status().isNotFound());
+
+        assertThat(eventState(planned)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("EO07 AC1 (cross-cutting): no role but the Event Organiser can request cancellation, and nothing changes")
+    void otherRolesCannotRequestCancellation() throws Exception {
+        Planned planned = plannedEvent("Role Gala");
+        Map<String, Object> before = eventState(planned);
+
+        for (String other : List.of("ec1", "ecl1", "vs1", "ts1", "att1", "so1")) {
+            requestCancellation(other, planned.requestId(), REASON_BODY).andExpect(status().isForbidden());
+        }
+
+        assertThat(eventState(planned)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("EO07 AC7 (negative): a coordinator who is not assigned, Venue Staff and Technical Support cannot read the event's cancellation requests")
+    void outsidersCannotReadTheCancellationRequests() throws Exception {
+        Planned planned = plannedEvent("Closed Gala");
+        requestCancellation("eo1", planned.requestId(), REASON_BODY).andExpect(status().isOk());
+
+        mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as("ec2")))
+                .andExpect(status().isForbidden());
+        for (String other : List.of("vs1", "ts1", "att1", "so1")) {
+            mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as(other)))
+                    .andExpect(status().isForbidden());
+        }
+        mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as("ec1")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("pending"));
+        mvc.perform(get("/api/events/" + planned.eventId() + "/cancellation-requests").with(flow.as("ecl1")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$[0].status").value("pending"));
+    }
+
+    @Test
+    @DisplayName("EO07 AC5 (negative): a request still under review has no event to request cancellation of; it is refused and nothing changes")
+    void aRequestUnderReviewCannotHaveEventCancellationRequested() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Early Gala", 80, "none"));
+        Map<String, Object> before = requestState(requestId);
+
+        requestCancellation("eo1", requestId, REASON_BODY).andExpect(status().isConflict());
+
+        assertThat(requestState(requestId)).isEqualTo(before);
     }
 }
