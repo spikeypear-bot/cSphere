@@ -190,6 +190,20 @@ class EventLifecycleCancellationTest {
     }
 
     @Test
+    @DisplayName("EO07 AC10 (boundary): the cancellation notice gives the event's date in Singapore time, even for an event before 8 am")
+    void cancellationNoticeUsesTheSingaporeDate() {
+        booking(VenueBookingStatus.approved);
+        // 7:00 am on 10 Mar in Singapore is still 9 Mar in UTC, which is how Postgres returns it.
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-09T23:00:00Z"));
+
+        service.cancel(COORDINATOR, event.getEventId(), MESSAGE);
+
+        verify(notifications).createEventCancelledNotifications(eq(List.of(VS_USER)), eq(event.getEventId()),
+                eq("Town Hall"),
+                eq("Town Hall (2027-03-10) has been cancelled. Its venue bookings and equipment are no longer needed."));
+    }
+
+    @Test
     @DisplayName("EO07 AC10 (boundary): Technical Support are not told when no equipment was approved (only requested or rejected)")
     void technicalSupportAreNotToldWithoutApprovedEquipment() {
         booking(VenueBookingStatus.pending);

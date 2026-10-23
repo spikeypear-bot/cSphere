@@ -1,6 +1,8 @@
 package com.example.connect_sphere.event.service;
 
 import java.time.Clock;
+import java.time.LocalDate;
+import java.time.ZoneId;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -286,7 +288,7 @@ public class EventLifecycleService {
 
         UUID organiser = eventRequests.findByEventId(eventId).map(EventRequest::getCreatedBy).orElse(null);
         List<UUID> staff = staffInvolved(saved);
-        String message = saved.getEventName() + " is confirmed for " + saved.getStartDatetime().toLocalDate() + ".";
+        String message = saved.getEventName() + " is confirmed for " + singaporeDate(saved.getStartDatetime()) + ".";
         afterCommit(() -> {
             if (organiser != null) {
                 notifications.createStatusChangeNotification(organiser, null, saved.getEventId(),
@@ -450,7 +452,7 @@ public class EventLifecycleService {
                 .map(User::getUserId).distinct().toList();
         if (!staff.isEmpty()) {
             String name = saved.getEventName();
-            String notice = name + " (" + saved.getStartDatetime().toLocalDate()
+            String notice = name + " (" + singaporeDate(saved.getStartDatetime())
                     + ") has been cancelled. Its venue bookings and equipment are no longer needed.";
             afterCommit(() -> notifications.createEventCancelledNotifications(staff, eventId, name, notice));
         }
@@ -458,6 +460,14 @@ public class EventLifecycleService {
     }
 
     // ---- helpers --------------------------------------------------------------
+
+    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
+
+    /** The event's calendar date as people in Singapore read it. Stored times come back from
+     * Postgres in UTC, so a plain toLocalDate() puts an event before 8 am SGT on the previous day. */
+    private static LocalDate singaporeDate(OffsetDateTime time) {
+        return time.atZoneSameInstant(SINGAPORE).toLocalDate();
+    }
 
     private Event lockedAssigned(UUID coordinatorId, UUID eventId) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
