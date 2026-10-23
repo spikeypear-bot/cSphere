@@ -24,7 +24,8 @@ import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * AU04/DEV05 negative matrix for every endpoint added by EC01/EC02/EO26/EC03:
+ * AU04/DEV05 negative matrix for every endpoint added by EC01/EC02/EO26/EC03
+ * (and EO07's cancellation endpoints):
  * roles with no business there (Technical Support, Attendee) are refused by
  * the filter chain before any lookup, so even a made-up id gets 403, not 404.
  * The roles that do belong are covered by the flow tests.
@@ -39,6 +40,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("EC02")
 @Tag("EC03")
 @Tag("EO26")
+@Tag("EO07")
 class NewEndpointRoleAccessTest {
 
     @Autowired MockMvc mvc;
@@ -64,6 +66,8 @@ class NewEndpointRoleAccessTest {
             {"GET", "/api/events/" + ID + "/venue-bookings"},
             {"POST", "/api/events/" + ID + "/venue-bookings"},
             {"POST", "/api/events/" + ID + "/venue-bookings/" + ID + "/cancel"},
+            // EO07: cancellation (organiser) and its decision (coordinator).
+            {"POST", "/api/event-requests/" + ID + "/cancel"},
         };
         return Stream.of("ts1", "att1").flatMap(user ->
                 Stream.of(endpoints).map(e -> Arguments.of(user, e[0], e[1])));

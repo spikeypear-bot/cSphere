@@ -137,6 +137,9 @@ public class SecurityConfig{
 		    // This rule decides *whether* a caller reaches the endpoint. *Which
 		    // rows* they see is the token's organisation claim, read in
 		    // EventRequestController — the filter chain sees the URL, not the row.
+		    // EO07: POST /api/event-requests/*/cancel and /*/cancellation-request
+		    // are the organiser's and fall under this rule too; which request is
+		    // the organisation check in EventCancellationService.
 		    .requestMatchers("/api/event-requests/**").hasRole("EO")
 		    // Organisers need the catalogue to choose equipment for a request;
 		    // Coordinators and technicians use it for availability and requests.

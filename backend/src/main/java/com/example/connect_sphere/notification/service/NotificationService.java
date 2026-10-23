@@ -194,6 +194,18 @@ public class NotificationService {
         createEventReassignmentNotifications(recipientUserIds, eventId, eventName, type, message);
     }
 
+    /** EO07: tell the assigned coordinator the organiser cancelled a request
+     * they were reviewing, and why. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createRequestCancelledNotification(UUID coordinatorId, UUID eventRequestId, String eventName,
+            String reason) {
+        Notification notification = base(coordinatorId, NotificationType.request_cancelled, eventName);
+        notification.setEventRequestId(eventRequestId);
+        notification.setReason(reason);
+        notification.setMessage(reason);
+        saveBestEffort(notification);
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -295,7 +307,7 @@ public class NotificationService {
             // the information and links nowhere.
             case event_confirmed -> null;
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
-            case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
+            case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
             case status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()
