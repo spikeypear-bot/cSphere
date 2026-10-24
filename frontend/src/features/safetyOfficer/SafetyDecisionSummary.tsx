@@ -15,6 +15,7 @@ const OUTCOME: Record<ReadinessDto['approvalStatus'], string> = {
  */
 export function SafetyDecisionSummary({ readiness }: { readiness: ReadinessDto }) {
   const labels = new Map(readiness.items.map((item) => [item.itemKey, item.label]))
+  const flagged = readiness.flaggedItems ?? []
   return (
     <div className="safety-decision" data-outcome={readiness.approvalStatus}>
       <p className="safety-decision__outcome">
@@ -29,11 +30,11 @@ export function SafetyDecisionSummary({ readiness }: { readiness: ReadinessDto }
       {readiness.approvalNote ? (
         <blockquote className="safety-decision__reason">{readiness.approvalNote}</blockquote>
       ) : null}
-      {readiness.flaggedItems.length > 0 ? (
+      {flagged.length > 0 ? (
         <>
           <p className="safety-decision__items-heading">Checklist items concerned:</p>
           <ul className="safety-decision__items" aria-label="Checklist items concerned">
-            {readiness.flaggedItems.map((key) => <li key={key}>{labels.get(key) ?? key}</li>)}
+            {flagged.map((key) => <li key={key}>{labels.get(key) ?? key}</li>)}
           </ul>
         </>
       ) : null}

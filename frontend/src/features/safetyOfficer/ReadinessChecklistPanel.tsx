@@ -13,7 +13,7 @@ interface Props {
 }
 
 export function ReadinessChecklistPanel({ readiness, editable, savingItem, onSave }: Props) {
-  const flagged = new Set(readiness.flaggedItems)
+  const flagged = new Set(readiness.flaggedItems ?? [])
   return (
     <Card className="safety-panel">
       <h2>Operational readiness checklist</h2>
