@@ -31,6 +31,10 @@ class ActivityDto {
 
 enum ActivityType {
 	{field} +approved
+	{field} +change_approved
+	{field} +change_rejected
+	{field} +change_request_withdrawn
+	{field} +change_requested
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assigned
@@ -93,6 +97,7 @@ interface RequestActivityRepository {
 class ActivityService {
 	{field} {static} ~IMPORTANT_FIELDS : List<String>
 	{method} +record ( entry : Entry ) : void
+	{method}  {static} +sameValue ( a : Object , b : Object ) : boolean
 	{method} +submittedAt ( requestIds : Collection ) : Map
 	{method} +timeline ( requestId : UUID , viewerRole : UserRole ) : List
 }
@@ -121,6 +126,158 @@ class EventChange {
 	{field} -actorUserId : UUID
 	{field} -eventId : UUID
 	{field} -message : String
+}
+
+
+class ChangeImpactService {
+	{field} {static} ~ATTENTION : String
+	{field} {static} ~OK : String
+	{field} {static} -SINGAPORE : DateTimeFormatter
+	{method} +assess ( event : Event , proposed : SaveEventRequestRequest , changedFields : Set ) : List
+}
+
+
+class ChangeRequest <<Entity>>  {
+	{field} +acknowledgedImpacts : List<Map<String, String>>
+	{field} +changeRequestId : UUID {id}
+	{field} +decidedAt : OffsetDateTime
+	{field} +decidedBy : UUID
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +originalValues : Map<String, Object>
+	{field} +proposedValues : Map<String, Object>
+	{field} +reason : String
+	{field} +requestId : UUID
+	{field} +requestedAt : OffsetDateTime
+	{field} +requestedBy : UUID
+}
+
+
+class ChangeRequestController {
+	{method} +approve ( jwt : Jwt , id : UUID , body : Approve ) : View
+	{method} +create ( jwt : Jwt , body : Create ) : ResponseEntity
+	{method} +get ( jwt : Jwt , id : UUID ) : View
+	{method} +impactChanged ( ex : ImpactChanged ) : ResponseEntity
+	{method} +list ( jwt : Jwt , requestId : UUID , eventId : UUID ) : List
+	{method} +notFound ( ex : NotFound ) : ResponseEntity
+	{method} +reject ( jwt : Jwt , id : UUID , body : Reject ) : View
+	{method} +state ( ex : State ) : ResponseEntity
+	{method} +withdraw ( jwt : Jwt , id : UUID ) : View
+}
+
+
+class ChangeRequestController.ImpactChangedError {
+	{field} -message : String
+}
+
+
+class ChangeRequestDto {
+}
+
+
+class ChangeRequestDto.Approve {
+	{field} -acknowledged : List<String>
+}
+
+
+class ChangeRequestDto.Create {
+	{field} -reason : String
+	{field} -requestId : UUID
+}
+
+
+class ChangeRequestDto.FieldChange {
+	{field} -after : Object
+	{field} -before : Object
+	{field} -field : String
+	{field} -label : String
+}
+
+
+class ChangeRequestDto.ImpactItem {
+	{field} -area : String
+	{field} -detail : String
+	{field} -key : String
+	{field} -status : String
+	{field} -title : String
+}
+
+
+class ChangeRequestDto.Reject {
+	{field} -reason : String
+}
+
+
+class ChangeRequestDto.View {
+	{field} -canDecide : boolean
+	{field} -canWithdraw : boolean
+	{field} -changeRequestId : UUID
+	{field} -closedReason : String
+	{field} -currentStatus : String
+	{field} -decidedAt : OffsetDateTime
+	{field} -decidedByName : String
+	{field} -decisionReason : String
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -organisation : String
+	{field} -reason : String
+	{field} -requestId : UUID
+	{field} -requestedAt : OffsetDateTime
+	{field} -requestedByName : String
+	{field} -status : String
+}
+
+
+class ChangeRequestException {
+}
+
+
+class ChangeRequestException.ImpactChanged {
+}
+
+
+class ChangeRequestException.NotFound {
+}
+
+
+class ChangeRequestException.State {
+}
+
+
+interface ChangeRequestRepository {
+	{method}  {abstract} +findByRequestIdOrderByRequestedAtDesc ( requestId : UUID ) : List
+	{method}  {abstract} +findByStatusOrderByRequestedAtAsc ( status : ChangeRequestStatus ) : List
+	{method}  {abstract} +findFirstByRequestIdAndStatus ( requestId : UUID , status : ChangeRequestStatus ) : Optional
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class ChangeRequestService {
+	{field} {static} ~MAX_TEXT : int
+	{field} {static} ~REQUEST_CHANGED_SINCE : String
+	{field} -clock : Clock
+	{method} +approve ( coordinator : Caller , changeRequestId : UUID , acknowledged : List ) : View
+	{method} +create ( organiser : Caller , requestId : UUID , rawReason : String , details : SaveEventRequestRequest ) : View
+	{method} +forEvent ( caller : Caller , eventId : UUID ) : List
+	{method} +forRequest ( caller : Caller , requestId : UUID ) : List
+	{method} +get ( caller : Caller , changeRequestId : UUID ) : View
+	{method} +pending ( caller : Caller ) : List
+	{method} +reject ( coordinator : Caller , changeRequestId : UUID , rawReason : String ) : View
+	{method} +withdraw ( organiser : Caller , changeRequestId : UUID ) : View
+}
+
+
+class ChangeRequestService.Caller {
+	{field} -organisation : String
+	{field} -userId : UUID
+}
+
+
+enum ChangeRequestStatus {
+	{field} +approved
+	{field} +pending
+	{field} +rejected
+	{field} +withdrawn
 }
 
 
@@ -1024,10 +1181,12 @@ class EventRequestService {
 	{field} {static} ~MAX_MESSAGE_LENGTH : int
 	{field} {static} -REQUEST_TYPE_CREATION : char
 	{field} -clock : Clock
+	{method} +applyApprovedDetails ( request : EventRequest , event : Event , details : SaveEventRequestRequest ) : void
 	{method} +approve ( actingCoordinatorId : UUID , requestId : UUID ) : EventRequestDto
 	{method} +assignCoordinator ( leadId : UUID , requestId : UUID , coordinatorUserId : UUID ) : EventRequestDto
 	{method} +assignedRequests () : List
 	{method} +coordinators () : List
+	{method}  {static} +detailsOf ( e : EventRequest ) : SaveEventRequestRequest
 	{method} +get ( organisation : String , requestId : UUID ) : EventRequestDto
 	{method} +list ( organisation : String ) : List
 	{method} +reassignCoordinator ( leadId : UUID , requestId : UUID , coordinatorUserId : UUID ) : EventRequestDto
@@ -1036,6 +1195,7 @@ class EventRequestService {
 	{method} +requestClarification ( coordinatorId : UUID , requestId : UUID , message : String , flaggedFields : List ) : EventRequestDto
 	{method} +requestClarification ( coordinatorId : UUID , requestId : UUID , message : String , flaggedFields : List , fieldQuestions : Map ) : EventRequestDto
 	{method} +requestClarificationUnassigned ( leadId : UUID , requestId : UUID , message : String ) : EventRequestDto
+	{method} +requireValidDetails ( details : SaveEventRequestRequest ) : void
 	{method} +resubmit ( organisation : String , actingUserId : UUID , requestId : UUID , response : String ) : EventRequestDto
 	{method} +resubmit ( organisation : String , actingUserId : UUID , requestId : UUID , response : String , details : SaveEventRequestRequest ) : EventRequestDto
 	{method} +reviewQueue ( coordinatorId : UUID ) : ReviewQueueDto
@@ -1128,6 +1288,9 @@ class Notification <<Entity>>  {
 
 
 enum NotificationType {
+	{field} +change_request_decided
+	{field} +change_request_submitted
+	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
@@ -1161,6 +1324,7 @@ class NotificationNotFoundException {
 class NotificationService {
 	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
 	{field} {static} -log : Logger
+	{method} +createChangeRequestNotifications ( recipientUserIds : List , type : NotificationType , eventRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
@@ -2182,6 +2346,7 @@ class VenueOperationalIssueService {
 
 
 RequestActivity --> ActivityType : activityType
+ActivityService --> "0..*" ActivityType : CHANGE_ENTRIES
 ActivityService --> RequestActivityRepository : repository
 ActivityService --> EventRepository : events
 ActivityService --> UserRepository : userRepository
@@ -2189,6 +2354,34 @@ ActivityService.Entry --> ActivityType : type
 ChangeLogRecorder --> ActivityService : activity
 ChangeLogRecorder --> EventRequestRepository : eventRequests
 EventChange --> ActivityType : type
+ChangeImpactService --> "0..*" EventStatus : SAFETY_STAGES
+ChangeImpactService --> "0..*" VenueBookingStatus : ACTIVE_BOOKINGS
+ChangeImpactService --> EquipmentReservationService : equipment
+ChangeImpactService --> VenueRepository : venues
+ChangeImpactService --> AvailabilityService : availability
+ChangeImpactService --> VenueHoldRepository : holds
+ChangeImpactService --> VenueBookingRecordRepository : bookings
+ChangeRequest --> ChangeRequestStatus : status
+ChangeRequestController --> ChangeRequestService : service
+ChangeRequestController.ImpactChangedError --> "0..*" ChangeRequestDto.ImpactItem : impact
+ChangeRequestDto.Create --> SaveEventRequestRequest : details
+ChangeRequestDto.View --> "0..*" ChangeRequestDto.FieldChange : changes
+ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : followUps
+ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : impact
+ChangeRequestException.ImpactChanged --> "0..*" ChangeRequestDto.ImpactItem : impact
+ChangeRequestException.ImpactChanged --|> ChangeRequestException.State
+ChangeRequestService --> "0..*" EventStatus : ACTIVE_EVENT
+ChangeRequestService --> "0..*" EventStatus : SAFETY_STAGES
+ChangeRequestService --> ActivityService : activity
+ChangeRequestService --> ChangeImpactService : impact
+ChangeRequestService --> ChangeRequestRepository : changeRequests
+ChangeRequestService --> EventRepository : events
+ChangeRequestService --> EventLifecycleService : lifecycle
+ChangeRequestService --> EventRequestRepository : requests
+ChangeRequestService --> EventRequestService : requestRules
+ChangeRequestService --> NotificationService : notifications
+ChangeRequestService --> UserRepository : users
+ChangeRequestService.Caller --> UserRole : role
 JourneyStatusResolver --> EventRepository : events
 AddStatusPeriodRequest --> EquipmentStatus : status
 EquipmentCatalogueController --> EquipmentRepository : equipmentRepository
