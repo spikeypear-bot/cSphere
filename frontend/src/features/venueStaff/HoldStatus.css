@@ -1,0 +1,10 @@
+.hold-status__expiring {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--booking-hold-soft);
+  color: var(--booking-hold);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
