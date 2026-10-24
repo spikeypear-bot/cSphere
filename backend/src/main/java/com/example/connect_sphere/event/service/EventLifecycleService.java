@@ -294,6 +294,14 @@ public class EventLifecycleService {
      */
     @Transactional
     public void recordSafetyDecision(UUID officerId, UUID eventId, SafetyDecision decision, String feedback) {
+        recordSafetyDecision(officerId, eventId, decision, feedback, List.of());
+    }
+
+    /** As above; {@code flaggedItems} are the checklist items the decision
+     * concerns (SO-C5/SO-C6), kept on its timeline entry. */
+    @Transactional
+    public void recordSafetyDecision(UUID officerId, UUID eventId, SafetyDecision decision, String feedback,
+            List<String> flaggedItems) {
         String note = decision == SafetyDecision.APPROVE ? optionalText(feedback)
                 : requireText(feedback, "Please explain what needs to change.");
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
@@ -315,7 +323,7 @@ public class EventLifecycleService {
             case REQUEST_CHANGES -> ActivityType.safety_changes_requested;
             case REJECT -> ActivityType.safety_rejected;
         };
-        record(event, type, officerId, note, JourneyStatus.AWAITING_SAFETY_REVIEW);
+        record(event, type, officerId, note, flaggedItems, JourneyStatus.AWAITING_SAFETY_REVIEW);
 
         // The coordinator acts next either way: confirm, or make the changes.
         UUID coordinatorId = event.getCoordinatorId();
@@ -411,9 +419,14 @@ public class EventLifecycleService {
     /** Timeline entries for events carry journey statuses (PLANNING,
      * SAFETY_APPROVED, …), the same codes every screen labels (EC-NEW2). */
     private void record(Event event, ActivityType type, UUID actorId, String message, JourneyStatus from) {
+        record(event, type, actorId, message, null, from);
+    }
+
+    private void record(Event event, ActivityType type, UUID actorId, String message, List<String> flagged,
+            JourneyStatus from) {
         JourneyStatus to = statuses.journeyOf(event);
         eventRequests.findByEventId(event.getEventId()).ifPresent(origin -> activity.record(
-                new ActivityService.Entry(origin.getRequestId(), event.getEventId(), type, actorId, message, null,
+                new ActivityService.Entry(origin.getRequestId(), event.getEventId(), type, actorId, message, flagged,
                         from.name(), to.name())));
     }
 

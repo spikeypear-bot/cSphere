@@ -13,6 +13,7 @@ import java.util.UUID;
 import java.time.OffsetDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -30,6 +31,8 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("unit")
 @Tag("SO-C3")
 @Tag("SO-C4")
+@Tag("SO-C5")
+@Tag("SO-C6")
 @Tag("EC08")
 class ReadinessServiceTest {
 
@@ -103,7 +106,7 @@ class ReadinessServiceTest {
         assertThat(event.getStatus()).isEqualTo(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         verify(events, never()).save(any());
         verify(reviews, never()).save(any());
-        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any());
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any(), any());
         verify(notifications, never()).createStatusChangeNotification(any(), any(), any(), any(), any(), any());
     }
 
@@ -128,7 +131,7 @@ class ReadinessServiceTest {
 
         // EC08: approval moves the event to Safety Approved (through the
         // lifecycle); the coordinator then confirms it.
-        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.APPROVE, "Ready to proceed");
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.APPROVE, "Ready to proceed", List.of());
         assertThat(result.approvalStatus()).isEqualTo("approved");
         assertThat(result.approvalNote()).isEqualTo("Ready to proceed");
         assertThat(result.completedItems()).isEqualTo(result.totalItems());
@@ -142,7 +145,7 @@ class ReadinessServiceTest {
                 .isInstanceOf(InvalidReadinessUpdateException.class)
                 .hasMessage("The Event Coordinator has not sent this event for its safety check yet.");
         verify(reviews, never()).save(any());
-        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any());
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -151,14 +154,16 @@ class ReadinessServiceTest {
 
         assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", " ")))
                 .isInstanceOf(InvalidReadinessUpdateException.class);
-        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any());
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any(), any());
 
         ReadinessDto changes = service.review(SAFETY_OFFICER_ID, EVENT_ID,
-                new SafetyApprovalRequest("request_changes", "Add a second exit marshal"));
+                new SafetyApprovalRequest("request_changes", "Add a second exit marshal", List.of("safety_operations")));
         verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REQUEST_CHANGES,
-                "Add a second exit marshal");
-        service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", "Crowd flow unsafe"));
-        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REJECT, "Crowd flow unsafe");
+                "Add a second exit marshal", List.of("safety_operations"));
+        service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("reject", "Crowd flow unsafe", List.of("capacity_facilities")));
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REJECT, "Crowd flow unsafe",
+                List.of("capacity_facilities"));
         assertThat(changes.eventId()).isEqualTo(EVENT_ID);
     }
 
@@ -192,5 +197,115 @@ class ReadinessServiceTest {
 
         assertThatThrownBy(() -> service.forCoordinator(UUID.randomUUID(), EVENT_ID))
                 .isInstanceOf(com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException.class);
+    }
+
+    // ---- SO-C5 / SO-C6: the checklist items a decision concerns ----------------
+
+    private static final List<String> ALL_ITEMS = List.of("venue_booking", "capacity_facilities", "accessibility",
+            "equipment", "registration", "safety_operations");
+
+    private void everyItemChecked() {
+        OffsetDateTime at = OffsetDateTime.now().minusMinutes(1);
+        when(itemStates.findByEventId(EVENT_ID)).thenReturn(ALL_ITEMS.stream()
+                .map(key -> new ReadinessItemState(EVENT_ID, key, true, "", SAFETY_OFFICER_ID, at)).toList());
+    }
+
+    private void assertNothingDecided() {
+        assertThat(event.getStatus()).isEqualTo(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        verify(reviews, never()).save(any());
+        verify(lifecycle, never()).recordSafetyDecision(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC5, SO-C6 AC5 (negative): a rejection or a request for changes that names no checklist item is refused, and nothing is decided")
+    void aRejectionOrRequestNamingNoChecklistItemIsRefused() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("reject", "Crowd flow unsafe")))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("Select at least one checklist item the rejection concerns.");
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("request_changes", "Add a marshal", List.of())))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("Select at least one checklist item that needs changing.");
+        assertNothingDecided();
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC5, SO-C6 AC5 (negative): an item that is not on the checklist is refused, and nothing is decided")
+    void anItemNotOnTheChecklistIsRefused() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("reject", "Unsafe", List.of("accessibility", "parking"))))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("Unknown checklist item(s): parking.");
+        assertNothingDecided();
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC5, SO-C6 AC5 (negative): an approval cannot name checklist items, and nothing is decided")
+    void anApprovalCannotNameChecklistItems() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        everyItemChecked();
+
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("approve", "", List.of("equipment"))))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("Checklist items are only selected when requesting changes or rejecting.");
+        assertNothingDecided();
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC6, AC11, SO-C6 AC12 (happy): a rejection is allowed with every item ticked; its items are kept in checklist order, once each, on the review and the timeline")
+    void theSelectedItemsAreKeptInChecklistOrderOnTheReviewAndTimeline() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        everyItemChecked();
+
+        service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", "  Layout blocks the exits  ",
+                List.of("safety_operations", "accessibility", "safety_operations")));
+
+        ArgumentCaptor<EventSafetyReview> saved = ArgumentCaptor.forClass(EventSafetyReview.class);
+        verify(reviews).save(saved.capture());
+        assertThat(saved.getValue().getReviewStatus()).isEqualTo("rejected");
+        assertThat(saved.getValue().getNote()).isEqualTo("Layout blocks the exits");
+        assertThat(saved.getValue().getFlaggedItems()).containsExactly("accessibility", "safety_operations");
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REJECT,
+                "Layout blocks the exits", List.of("accessibility", "safety_operations"));
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC10, SO-C6 AC11 (happy): the readiness view returns the latest decision's items")
+    void theReadinessViewReturnsTheLatestDecisionsItems() {
+        EventSafetyReview review = new EventSafetyReview(EVENT_ID, "changes_requested", "Add a marshal",
+                SAFETY_OFFICER_ID, OffsetDateTime.now());
+        review.update("changes_requested", "Add a marshal", List.of("safety_operations"), SAFETY_OFFICER_ID,
+                OffsetDateTime.now());
+        when(reviews.findByEventId(EVENT_ID)).thenReturn(Optional.of(review));
+
+        ReadinessDto view = service.forSafetyOfficer(EVENT_ID);
+
+        assertThat(view.approvalStatus()).isEqualTo("changes_requested");
+        assertThat(view.approvalNote()).isEqualTo("Add a marshal");
+        assertThat(view.flaggedItems()).containsExactly("safety_operations");
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC3, AC4, SO-C6 AC3, AC4 (boundary): a blank reason is refused; 2,000 characters after trimming is accepted, 2,001 is refused")
+    void theReasonIsRequiredAndAtMost2000Characters() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        List<String> items = List.of("equipment");
+
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("request_changes", "   ", items)))
+                .isInstanceOf(InvalidReadinessUpdateException.class);
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID,
+                new SafetyApprovalRequest("reject", "x".repeat(2001), items)))
+                .isInstanceOf(InvalidReadinessUpdateException.class);
+        assertNothingDecided();
+
+        service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", " " + "x".repeat(2000) + " ", items));
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REJECT, "x".repeat(2000), items);
     }
 }

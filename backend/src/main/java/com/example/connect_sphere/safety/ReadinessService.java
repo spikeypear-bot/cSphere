@@ -134,6 +134,7 @@ public class ReadinessService {
                     ? "Explain why the safety arrangement is rejected, so the coordinator knows what to fix."
                     : "Explain what needs to change, so the coordinator knows what to fix.");
         }
+        List<String> flagged = flaggedItems(outcome, input.flaggedItems());
         String status = switch (outcome) {
             case APPROVE -> "approved";
             case REQUEST_CHANGES -> "changes_requested";
@@ -142,10 +143,37 @@ public class ReadinessService {
         OffsetDateTime now = OffsetDateTime.now();
         EventSafetyReview review = reviews.findByEventId(eventId)
                 .orElseGet(() -> new EventSafetyReview(eventId, status, note, safetyOfficerId, now));
-        review.update(status, note, safetyOfficerId, now);
+        review.update(status, note, flagged, safetyOfficerId, now);
         reviews.save(review);
-        lifecycle.recordSafetyDecision(safetyOfficerId, eventId, outcome, note.isEmpty() ? null : note);
+        lifecycle.recordSafetyDecision(safetyOfficerId, eventId, outcome, note.isEmpty() ? null : note, flagged);
         return readiness(event);
+    }
+
+    /**
+     * SO-C5/SO-C6: a rejection or a request for changes names at least one
+     * checklist item; an approval names none. Returned in checklist order,
+     * once each.
+     */
+    private static List<String> flaggedItems(SafetyDecision outcome, List<String> requested) {
+        List<String> given = requested == null ? List.of() : requested;
+        if (outcome == SafetyDecision.APPROVE) {
+            if (!given.isEmpty()) {
+                throw new InvalidReadinessUpdateException(
+                        "Checklist items are only selected when requesting changes or rejecting.");
+            }
+            return List.of();
+        }
+        if (given.isEmpty()) {
+            throw new InvalidReadinessUpdateException(outcome == SafetyDecision.REJECT
+                    ? "Select at least one checklist item the rejection concerns."
+                    : "Select at least one checklist item that needs changing.");
+        }
+        List<String> unknown = given.stream()
+                .filter(key -> STANDARD_ITEMS.stream().noneMatch(item -> item.key().equals(key))).toList();
+        if (!unknown.isEmpty()) {
+            throw new InvalidReadinessUpdateException("Unknown checklist item(s): " + String.join(", ", unknown) + ".");
+        }
+        return STANDARD_ITEMS.stream().map(StandardItem::key).filter(given::contains).toList();
     }
 
     private ReadinessDto readiness(UUID eventId) {
@@ -176,6 +204,7 @@ public class ReadinessService {
                 review == null || review.getReviewedBy() == null ? null
                         : users.findById(review.getReviewedBy()).map(User::getUsername).orElse(null),
                 review == null ? null : review.getReviewedAt(),
+                review == null ? List.of() : List.copyOf(review.getFlaggedItems()),
                 completed, items.size(), items);
     }
 
