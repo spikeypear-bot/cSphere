@@ -14,6 +14,10 @@ endlegend
 
 enum ActivityType {
 	{field} +approved
+	{field} +change_approved
+	{field} +change_rejected
+	{field} +change_request_withdrawn
+	{field} +change_requested
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assigned
@@ -64,6 +68,30 @@ class RequestActivity <<Entity>>  {
 	{field} +occurredAt : OffsetDateTime
 	{field} +requestId : UUID
 	{field} +toStatus : String
+}
+
+
+class ChangeRequest <<Entity>>  {
+	{field} +acknowledgedImpacts : List<Map<String, String>>
+	{field} +changeRequestId : UUID {id}
+	{field} +decidedAt : OffsetDateTime
+	{field} +decidedBy : UUID
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +originalValues : Map<String, Object>
+	{field} +proposedValues : Map<String, Object>
+	{field} +reason : String
+	{field} +requestId : UUID
+	{field} +requestedAt : OffsetDateTime
+	{field} +requestedBy : UUID
+}
+
+
+enum ChangeRequestStatus {
+	{field} +approved
+	{field} +pending
+	{field} +rejected
+	{field} +withdrawn
 }
 
 
@@ -287,6 +315,9 @@ class Notification <<Entity>>  {
 
 
 enum NotificationType {
+	{field} +change_request_decided
+	{field} +change_request_submitted
+	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
@@ -502,6 +533,7 @@ class VenueOperationalIssue <<Entity>>  {
 
 
 RequestActivity --> "1" ActivityType : activityType
+ChangeRequest --> "1" ChangeRequestStatus : status
 EquipmentStatusPeriod --> "1" EquipmentStatus : status
 SerialisedEquipment "0..*" --> "1" Equipment : equipment
 SerialisedEquipment --> "1" EquipmentStatus : status
@@ -530,6 +562,10 @@ EquipmentLog "0..*" --> "1" Event : eventId
 EquipmentRequestLine "0..*" --> "1" EquipmentRequest : id.requestId
 EquipmentRequest "0..*" --> "1" Event : eventId
 EquipmentStatusPeriod "0..*" --> "1" SerialisedEquipment : equipmentId, serialNumber
+ChangeRequest "0..*" --> "0..1" User : decidedBy
+ChangeRequest "0..*" --> "0..1" Event : eventId
+ChangeRequest "0..*" --> "1" EventRequest : requestId
+ChangeRequest "0..*" --> "1" User : requestedBy
 ReadinessItemState "0..*" --> "0..1" User : checkedBy
 ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy

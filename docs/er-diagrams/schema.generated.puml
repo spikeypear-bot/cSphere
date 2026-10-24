@@ -56,6 +56,23 @@ entity equipments {
 	* equipment_type : character(1)
 }
 
+entity event_change_requests {
+	* change_request_id : uuid <<PK>>
+	--
+	* request_id : uuid <<FK>>
+	event_id : uuid <<FK>>
+	* requested_by : uuid <<FK>>
+	* reason : text
+	* original_values : jsonb
+	* proposed_values : jsonb
+	* status : text
+	* requested_at : timestamp with time zone
+	decided_by : uuid <<FK>>
+	decided_at : timestamp with time zone
+	decision_reason : text
+	acknowledged_impacts : jsonb
+}
+
 entity event_readiness_items {
 	* item_id : uuid <<PK>>
 	--
@@ -373,6 +390,9 @@ enum notification_type {
 	event_reassignment_approved
 	event_reassignment_declined
 	venue_hold_expiring
+	change_request_submitted
+	change_request_withdrawn
+	change_request_decided
 }
 
 enum user_role {
@@ -400,6 +420,10 @@ equipment_request_equipments }o--|| equipments : equipment_id
 equipment_request_equipments }o--|| equipment_requests : request_id
 equipment_requests }o--|| events : event_id
 equipment_status_periods }o--|| serialised_equipments : equipment_id, serial_number
+event_change_requests }o--o| users : decided_by
+event_change_requests }o--o| events : event_id
+event_change_requests }o--|| event_requests : request_id
+event_change_requests }o--|| users : requested_by
 event_readiness_items }o--o| users : checked_by
 event_readiness_items }o--|| events : event_id
 event_readiness_items }o--o| users : updated_by
