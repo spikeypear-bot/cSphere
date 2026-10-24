@@ -21,15 +21,21 @@ export function CoordinatorLeadHomePage() {
             <Link to="/coordinator-lead/reassignment-requests" className="button button--secondary">
               Event reassignment requests
             </Link>
+            <Link to="/coordinator-lead/active-events" className="button button--secondary">
+              Active events
+            </Link>
           </>
         }
       />
 
-      <div className="page-section--divided">
-        <h2>More Event Coordinator Lead stories</h2>
-        <p className="field-hint">Not built yet — pick one up next.</p>
-        <SkeletonFeatureGrid basePath="/coordinator-lead" features={coordinatorLeadFeatures} />
-      </div>
+      {/* Shown only while some Lead story is still a skeleton. */}
+      {coordinatorLeadFeatures.length > 0 ? (
+        <div className="page-section--divided">
+          <h2>More Event Coordinator Lead stories</h2>
+          <p className="field-hint">Not built yet — pick one up next.</p>
+          <SkeletonFeatureGrid basePath="/coordinator-lead" features={coordinatorLeadFeatures} />
+        </div>
+      ) : null}
     </div>
   )
 }
