@@ -117,6 +117,15 @@ public class SecurityConfig{
 		    // reassignment status for an event.
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/reassignment-requests").hasRole("EC")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/reassignment-requests").hasRole("EC")
+		    // EO03 / EC-NEW3 change requests: organisers ask and withdraw, the
+		    // assigned coordinator decides, and organisers, coordinators and the
+		    // Lead read. Which rows each may see or act on is decided in
+		    // ChangeRequestService (organisation, assignment).
+		    .requestMatchers(HttpMethod.POST, "/api/change-requests", "/api/change-requests/*/withdraw").hasRole("EO")
+		    .requestMatchers(HttpMethod.POST, "/api/change-requests/*/approve",
+			    "/api/change-requests/*/reject").hasRole("EC")
+		    .requestMatchers(HttpMethod.GET, "/api/change-requests", "/api/change-requests/*").hasAnyRole("EO", "EC", "ECL")
+		    .requestMatchers("/api/change-requests/**").denyAll()
 		    // EC-C1: event reassignment decisions and queue are Lead-only.
 		    .requestMatchers("/api/event-reassignment-requests", "/api/event-reassignment-requests/**").hasRole("ECL")
 		    // ELC-C6's assign action and coordinator list share the rule below.

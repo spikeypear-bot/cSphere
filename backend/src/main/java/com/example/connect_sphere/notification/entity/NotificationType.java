@@ -24,5 +24,11 @@ public enum NotificationType {
     venue_timing_conflict,
     event_reassignment_requested,
     event_reassignment_approved,
-    event_reassignment_declined
+    event_reassignment_declined,
+    /** EO03 (V31): an organiser asked for a change; sent to the coordinator, or the Leads if unassigned. */
+    change_request_submitted,
+    /** EO03 (V31): the organiser withdrew it. */
+    change_request_withdrawn,
+    /** EC-NEW3 (V31): the coordinator approved or rejected it; sent to the organiser. */
+    change_request_decided
 }

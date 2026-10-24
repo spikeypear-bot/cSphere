@@ -21,6 +21,7 @@ import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
+import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
 
 /**
  * One page per event, shared by the Organiser and the Event Coordinator. Both
@@ -133,6 +134,8 @@ export function EventDetailsPage() {
           </div>
         </dl>
       </Card>
+
+      <ChangeRequestPanel eventId={event.eventId} journeyCode={journey?.code} />
 
       {flash?.justApproved ? (
         <Notice>Request approved. The event is now in Planning and the organiser has been notified.</Notice>

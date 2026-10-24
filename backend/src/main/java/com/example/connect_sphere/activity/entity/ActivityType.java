@@ -94,7 +94,16 @@ public enum ActivityType {
     event_confirmed(Set.of(UserRole.eo, UserRole.ec, UserRole.vs)),
     /** EC-NEW5/EC-NEW2: a confirmed event's end passed. Never stored: shown in
      * the log at the end time, because no one performs it. */
-    event_completed(Set.of(UserRole.eo, UserRole.ec));
+    event_completed(Set.of(UserRole.eo, UserRole.ec)),
+    /** EO03: the organiser asked to change the request or event. Major when it
+     * touches Week 4's important fields (ActivityService.timeline). */
+    change_requested(Set.of(UserRole.eo, UserRole.ec)),
+    /** EO03: the organiser withdrew their pending change request. */
+    change_request_withdrawn(Set.of(UserRole.eo, UserRole.ec)),
+    /** EC-NEW3: the coordinator approved the change; it is now in effect. */
+    change_approved(Set.of(UserRole.eo, UserRole.ec)),
+    /** EC-NEW3: the coordinator rejected the change, with a reason. */
+    change_rejected(Set.of(UserRole.eo, UserRole.ec));
 
     private final Set<UserRole> audience;
     private final boolean major;
