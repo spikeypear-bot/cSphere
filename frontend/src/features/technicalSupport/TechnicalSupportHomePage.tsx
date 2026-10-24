@@ -33,6 +33,13 @@ export function TechnicalSupportHomePage() {
             <span className="chip">TS03</span>
           </Card>
         </Link>
+        <Link to="/technical-support/change-reviews" className="skeleton-console-card">
+          <Card className="skeleton-console-card__inner">
+            <h2>Equipment change reviews</h2>
+            <p>Review approved event changes that affect equipment reservations.</p>
+            <span className="chip">TS11</span>
+          </Card>
+        </Link>
       </div>
     </div>
   )

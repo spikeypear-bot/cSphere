@@ -27,6 +27,9 @@ export type NotificationTypeName =
   | 'event_cancellation_approved'
   | 'event_cancellation_declined'
   | 'event_cancelled'
+  // TS11
+  | 'equipment_request_submitted'
+  | 'equipment_change_review'
 
 export interface NotificationDto {
   notificationId: string

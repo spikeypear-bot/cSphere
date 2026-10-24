@@ -8,6 +8,7 @@ import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import type { EventDto } from '../../types/event'
+import { EquipmentChangeReviewsPanel } from './EquipmentChangeReviewsPanel'
 import './EquipmentRequestPage.css'
 
 interface EquipmentCatalogueItem {
@@ -233,6 +234,7 @@ export function EquipmentRequestPage() {
           </Button>
         </Card>
       )}
+      {activeRequest ? <EquipmentChangeReviewsPanel eventId={event.eventId} /> : null}
     </section>
   )
 }

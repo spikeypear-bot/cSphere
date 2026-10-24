@@ -1,0 +1,73 @@
+.change-review-list__link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding: 0.6rem 0.75rem;
+  text-decoration: none;
+  color: inherit;
+}
+
+.change-review-list__name {
+  font-weight: 600;
+}
+
+.change-review-list__meta {
+  color: var(--color-text-muted, #555);
+}
+
+.change-review-chip--open {
+  background: #fff4e5;
+  color: #8a4b00;
+}
+
+.change-review-table {
+  border-collapse: collapse;
+  margin: 0.75rem 0;
+}
+
+.change-review-table th,
+.change-review-table td {
+  text-align: left;
+  padding: 0.35rem 0.75rem 0.35rem 0;
+  vertical-align: top;
+}
+
+.change-review-reservations {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.change-review-reservations li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.change-review-reservations li[data-flagged='true'] {
+  font-weight: 600;
+}
+
+.change-review-outcomes {
+  border: none;
+  padding: 0;
+  margin: 0 0 0.75rem;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.change-review-outcomes label {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+#review-note {
+  display: block;
+  width: 100%;
+  margin: 0.25rem 0 0.75rem;
+}

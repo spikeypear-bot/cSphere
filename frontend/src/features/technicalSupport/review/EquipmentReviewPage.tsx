@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Card } from '../../../components/ui/Card'
 import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
@@ -29,15 +30,31 @@ export function EquipmentReviewPage() {
   const [selectedRequest, setSelectedRequest] = useState<EquipmentRequestSummary | null>(null)
   const [reviewState, setReviewState] = useState<ReviewState | null>(null)
   const [error, setError] = useState<string | null>(null)
+  // TS11 AC3: a Technical Support notice opens this page on its request.
+  const [searchParams] = useSearchParams()
+  const linkedRequestId = searchParams.get('request')
+  const [linkedMissing, setLinkedMissing] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     fetchProcessingRequests()
-      .then((data) => { if (!cancelled) setRequests(data) })
+      .then((data) => {
+        if (cancelled) return
+        setRequests(data)
+        if (linkedRequestId) {
+          const linked = data.find((request) => request.requestId === linkedRequestId)
+          if (linked) {
+            setSelectedRequest(linked)
+            setReviewState({ requestId: linked.requestId, status: 'loading' })
+          } else {
+            setLinkedMissing(true)
+          }
+        }
+      })
       .catch(() => { if (!cancelled) setError('Could not load events with equipment requests.') })
       .finally(() => { if (!cancelled) setLoadingRequests(false) })
     return () => { cancelled = true }
-  }, [])
+  }, [linkedRequestId])
 
   useEffect(() => {
     if (!selectedRequest) return
@@ -97,6 +114,9 @@ export function EquipmentReviewPage() {
       />
 
       {error && <Notice tone="danger">{error}</Notice>}
+      {linkedMissing && (
+        <Notice tone="info">That equipment request is no longer awaiting review.</Notice>
+      )}
 
       <Card className="tech-card">
         <h2>Events with equipment requests</h2>

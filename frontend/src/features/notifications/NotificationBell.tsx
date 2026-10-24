@@ -36,6 +36,8 @@ function describe(n: NotificationDto): string {
   if (n.type === 'event_cancellation_approved') return `"${n.eventName}" has been cancelled`
   if (n.type === 'event_cancellation_declined') return `Cancellation of "${n.eventName}" was declined`
   if (n.type === 'event_cancelled') return `"${n.eventName}" has been cancelled`
+  if (n.type === 'equipment_request_submitted') return `New equipment request for "${n.eventName}"`
+  if (n.type === 'equipment_change_review') return `An approved change to "${n.eventName}" affects its equipment`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
   if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
   if (n.type === 'venue_unavailable') return `A venue booking for "${n.eventName}" is unavailable`
@@ -64,6 +66,14 @@ const STATUS_CHANGE_LABELS: Record<string, string> = {
   cancelled: JOURNEY_LABELS.CANCELLED,
   clarification_required: JOURNEY_LABELS.CLARIFICATION_REQUIRED,
 }
+
+/** Messages the server writes as a full sentence, shown without quotes. */
+const PLAIN_MESSAGE_TYPES = new Set<NotificationDto['type']>([
+  'venue_unavailable',
+  'venue_hold_expiring',
+  'equipment_request_submitted',
+  'equipment_change_review',
+])
 
 /** EO09/EO19: unread-count badge + a dropdown of every notification for the
  * signed-in user, newest first. Rendered in AppShell for any signed-in role
@@ -127,7 +137,7 @@ export function NotificationBell() {
                       {n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {n.message ? n.type === 'venue_unavailable' || n.type === 'venue_hold_expiring' ? (
+                      {n.message ? PLAIN_MESSAGE_TYPES.has(n.type) ? (
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>

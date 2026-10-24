@@ -42,6 +42,8 @@ import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
 import { technicalSupportFeatures } from './features/technicalSupport/technicalSupportFeatures'
 import { EquipmentReviewPage } from './features/technicalSupport/review/EquipmentReviewPage'
+import { ChangeReviewsPage } from './features/technicalSupport/changeReviews/ChangeReviewsPage'
+import { ChangeReviewPage } from './features/technicalSupport/changeReviews/ChangeReviewPage'
 import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
@@ -179,6 +181,8 @@ function TechnicalSupportRoutes() {
       <Route path="availability" element={<EquipmentReviewPage />} />
       <Route path="status" element={<EquipmentStatusPage />} />
       <Route path="reservations" element={<EquipmentReservationPage />} />
+      <Route path="change-reviews" element={<ChangeReviewsPage />} />
+      <Route path="change-reviews/:reviewId" element={<ChangeReviewPage />} />
     </Routes>
   )
 }
