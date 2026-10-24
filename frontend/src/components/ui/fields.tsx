@@ -77,18 +77,32 @@ interface NumberFieldProps {
   hint?: string
   error?: string
   min?: number
+  /** EO-C2: only whole numbers can be entered (no decimal point, sign or
+   * exponent), e.g. a number of people. Zero is still enterable so the
+   * form can say why it is not allowed. */
+  wholeNumber?: boolean
 }
 
-export function NumberField({ id, label, value, onChange, hint, error, min }: NumberFieldProps) {
+const NOT_WHOLE_NUMBER_KEYS = new Set(['.', ',', 'e', 'E', '+', '-'])
+
+export function NumberField({ id, label, value, onChange, hint, error, min, wholeNumber = false }: NumberFieldProps) {
   return (
     <FieldShell label={label} hint={hint} error={error} htmlFor={id}>
       <input
         id={id}
         type="number"
         min={min}
+        step={wholeNumber ? 1 : undefined}
+        inputMode={wholeNumber ? 'numeric' : undefined}
+        aria-invalid={error ? true : undefined}
         value={value ?? ''}
+        onKeyDown={(event) => {
+          if (wholeNumber && NOT_WHOLE_NUMBER_KEYS.has(event.key)) event.preventDefault()
+        }}
         onChange={(event) => {
           const raw = event.target.value
+          // A pasted decimal or negative is refused rather than rounded.
+          if (wholeNumber && raw !== '' && !/^\d+$/.test(raw)) return
           onChange(raw === '' ? null : Number(raw))
         }}
       />
@@ -107,14 +121,14 @@ interface DateTimeFieldProps {
 }
 
 /** Stores/emits a full ISO-8601 instant (matching the backend's OffsetDateTime),
- * while the visible control is a plain `datetime-local` input (no timezone
- * picker — the browser's local zone is used, which is an acceptable
- * simplification for a first slice; see docs/decision-log.md if this needs
- * revisiting). */
+ * while the visible control is a plain `datetime-local` input. EO-C2: what is
+ * typed and shown is always Singapore time, whatever zone the browser is in,
+ * so "10:00" means the same moment to the organiser, the coordinator and the
+ * venue (Singapore has no daylight saving: always GMT+8). */
 export function DateTimeField({ id, label, value, onChange, hint, error, min }: DateTimeFieldProps) {
   const localValue = value ? toDatetimeLocalValue(value) : ''
   return (
-    <FieldShell label={label} hint={hint} error={error} htmlFor={id}>
+    <FieldShell label={label} hint={hint ?? SINGAPORE_TIME_HINT} error={error} htmlFor={id}>
       <input
         id={id}
         type="datetime-local"
@@ -124,17 +138,26 @@ export function DateTimeField({ id, label, value, onChange, hint, error, min }: 
         value={localValue}
         onChange={(event) => {
           const raw = event.target.value
-          onChange(raw === '' ? null : new Date(raw).toISOString())
+          onChange(raw === '' ? null : fromSingaporeLocalValue(raw))
         }}
       />
     </FieldShell>
   )
 }
 
+export const SINGAPORE_TIME_HINT = 'Singapore time (GMT+8)'
+const SINGAPORE_OFFSET_MS = 8 * 60 * 60 * 1000
+
+/** An instant as Singapore wall-clock time, "YYYY-MM-DDTHH:mm". */
 function toDatetimeLocalValue(iso: string): string {
-  const date = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
+  const time = Date.parse(iso)
+  if (!Number.isFinite(time)) return ''
+  return new Date(time + SINGAPORE_OFFSET_MS).toISOString().slice(0, 16)
+}
+
+/** "YYYY-MM-DDTHH:mm" read as Singapore time, as an ISO instant. */
+function fromSingaporeLocalValue(local: string): string {
+  return new Date(`${local}:00+08:00`).toISOString()
 }
 
 interface CheckboxFieldProps {

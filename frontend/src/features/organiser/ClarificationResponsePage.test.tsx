@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -162,6 +162,50 @@ describe('ClarificationResponsePage (EO26)', () => {
 
     const field = (await screen.findByLabelText('Expected attendance')).closest('.clarify__field')
     expect(field).toHaveTextContent('“Is 150 the final headcount?”')
+  })
+
+  it('EO-C2 AC3, AC6 (boundary): a reply that leaves the event ending when it starts is explained next to the end and cannot be resubmitted', async () => {
+    stubApi(routes())
+    const user = userEvent.setup()
+    renderPage()
+    await user.type(await screen.findByLabelText(/Your reply to the coordinator/), 'Updated the times')
+
+    const end = screen.getByLabelText('End date & time')
+    fireEvent.change(end, { target: { value: '2027-03-10T09:00' } })
+
+    expect(end).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByText('The end date & time must be after the start date & time.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save and resubmit' })).toBeDisabled()
+  })
+
+  it("EO-C2 AC3, AC8 (failure): the server's refusal of a resubmission is shown next to the field it is about, until that field is changed", async () => {
+    stubApi(routes({
+      [`POST /api/event-requests/${ID}/resubmit`]: () => jsonResponse(422, {
+        message: 'The start date & time must be in the future.',
+        fieldErrors: { startDatetime: 'The start date & time must be in the future.' },
+      }),
+    }))
+    const user = userEvent.setup()
+    renderPage()
+    await user.type(await screen.findByLabelText(/Your reply to the coordinator/), 'Updated')
+    await user.click(screen.getByRole('button', { name: 'Save and resubmit' }))
+
+    const start = screen.getByLabelText('Start date & time')
+    expect(await screen.findAllByText('The start date & time must be in the future.')).not.toHaveLength(0)
+    expect(start).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.queryByText('Organiser home')).not.toBeInTheDocument()
+    fireEvent.change(start, { target: { value: '2027-03-11T09:00' } })
+    expect(start).not.toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('EO-C2 AC4 (boundary): the attendance field accepts whole numbers only', async () => {
+    stubApi(routes())
+    renderPage()
+    const attendance = await screen.findByLabelText('Expected attendance')
+
+    fireEvent.change(attendance, { target: { value: '120.5' } })
+
+    expect(attendance).toHaveValue(150)
   })
 
   it('says so when the request is no longer waiting for clarification', async () => {

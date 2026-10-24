@@ -13,7 +13,8 @@ import { ACCESSIBILITY_LABELS, REQUIRED_FIELD_LABELS, REQUIRED_FIELD_KEYS, type 
 import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 import { useEventRequestDraft, type DraftFields } from './useEventRequestDraft'
 import { getMissingRequiredFields, getCompletionPercent } from './eventRequestCompletion'
-import { dateRangeError } from './eventRequestValidation'
+import { hasProblems, requestFieldProblems, type RequestFieldProblems } from './eventRequestValidation'
+import { formatFieldValue } from '../../lib/fieldChanges'
 import './EventRequestWizardPage.css'
 
 const STEPS: Step[] = [
@@ -105,7 +106,17 @@ export function EventRequestWizardPage() {
   const [selectedEquipment, setSelectedEquipment] = useState<Record<string, string>>({})
   const [equipmentNotes, setEquipmentNotes] = useState('')
   const equipmentDraftInitialized = useRef(false)
-  const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
+  // EO-C2: date, time and attendance problems, checked as the organiser types,
+  // plus any the server reported on submit (e.g. the start passed meanwhile).
+  const problems = requestFieldProblems(fields)
+  const scheduleBlocked = hasProblems(problems)
+  // The server's messages are about the values it saw; one stops showing as
+  // soon as the organiser changes that field.
+  const [serverReport, setServerReport] = useState<{ values: Record<string, unknown>; errors: Record<string, string> } | null>(null)
+  const serverFieldErrors: Record<string, string> = serverReport
+    ? Object.fromEntries(Object.entries(serverReport.errors)
+      .filter(([field]) => serverReport.values[field] === fields[field as keyof DraftFields]))
+    : {}
   const invalidEquipmentQuantity = Object.values(selectedEquipment).some(
     (quantity) => !/^[1-9]\d*$/.test(quantity),
   )
@@ -156,7 +167,9 @@ export function EventRequestWizardPage() {
   }
 
   async function goToStep(nextIndex: number) {
-    if (nextIndex > stepIndex && rangeError) return
+    // Leaving the schedule step needs a valid schedule; other steps never
+    // trap the organiser away from the step where it can be fixed.
+    if (nextIndex > stepIndex && stepIndex === 1 && scheduleBlocked) return
     if (nextIndex > stepIndex && stepIndex === 3 && invalidEquipmentQuantity) return
     await save()
     setStepIndex(nextIndex)
@@ -193,7 +206,8 @@ export function EventRequestWizardPage() {
   // only ever shown as a list on the Review step, never inline on the field
   // itself, so this closes that gap (DEV11 AC17 / DEV11-TC5).
   function fieldError(field: string): string | undefined {
-    if ((field === 'startDatetime' || field === 'endDatetime') && rangeError) return rangeError
+    const problem = problems[field as keyof RequestFieldProblems] ?? serverFieldErrors[field]
+    if (problem) return problem
     return missingFields.includes(field) ? `${REQUIRED_FIELD_LABELS[field]} is required` : undefined
   }
 
@@ -215,7 +229,11 @@ export function EventRequestWizardPage() {
   }
 
   async function handleSubmit() {
-    if (rangeError || invalidEquipmentQuantity || submitting) return
+    if (invalidEquipmentQuantity || submitting) return
+    if (scheduleBlocked) {
+      setStepIndex(1)
+      return
+    }
     setSubmitError(undefined)
     setSubmitting(true)
     try {
@@ -227,6 +245,9 @@ export function EventRequestWizardPage() {
         navigate('/organiser', { state: { justSubmitted: true } })
       } else {
         setMissingFields(result.missingFields)
+        setServerReport({ values: { ...fields }, errors: result.fieldErrors })
+        // Take the organiser to the fields that need changing.
+        if (hasProblems(result.fieldErrors)) setStepIndex(1)
       }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not submit. Please try again.')
@@ -305,6 +326,7 @@ export function EventRequestWizardPage() {
             <DateTimeField
               id="startDatetime"
               label="Start date & time"
+              min={new Date().toISOString()}
               value={fields.startDatetime}
               onChange={(value) => setFields({ startDatetime: value })}
               error={fieldError('startDatetime')}
@@ -321,6 +343,8 @@ export function EventRequestWizardPage() {
               id="expectedAttendance"
               label="Expected attendance"
               min={1}
+              wholeNumber
+              hint="Whole number of people, at least 1."
               value={fields.expectedAttendance}
               onChange={(value) => setFields({ expectedAttendance: value })}
               error={fieldError('expectedAttendance')}
@@ -422,13 +446,13 @@ export function EventRequestWizardPage() {
           <ReviewStep
             fields={fields}
             missingFields={missingFields}
+            problems={{ ...serverFieldErrors, ...problems }}
             onEditStep={(index) => setStepIndex(index)}
           />
         )}
       </Card>
 
       {submitError && <p role="alert">{submitError}</p>}
-      {rangeError && stepIndex !== 1 && <p role="alert">{rangeError}</p>}
       <div className="wizard__nav">
         {stepIndex === 0 ? (
           <>
@@ -445,9 +469,9 @@ export function EventRequestWizardPage() {
           </Button>
         )}
         {stepIndex < STEPS.length - 1 ? (
-          <Button disabled={!!rangeError || (stepIndex === 3 && invalidEquipmentQuantity)} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
+          <Button disabled={(stepIndex === 1 && scheduleBlocked) || (stepIndex === 3 && invalidEquipmentQuantity)} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
         ) : (
-          <Button onClick={handleSubmit} disabled={submitting || !!rangeError || invalidEquipmentQuantity}>
+          <Button onClick={handleSubmit} disabled={submitting || scheduleBlocked || invalidEquipmentQuantity}>
             {submitting ? 'Submitting…' : 'Submit for review'}
           </Button>
         )}
@@ -459,10 +483,12 @@ export function EventRequestWizardPage() {
 function ReviewStep({
   fields,
   missingFields,
+  problems,
   onEditStep,
 }: {
   fields: ReturnType<typeof useEventRequestDraft>['fields']
   missingFields: string[]
+  problems: Record<string, string>
   onEditStep: (index: number) => void
 }) {
   // Live checklist (EO02 UX enhancement, docs/decision-log.md D17): computed
@@ -474,6 +500,16 @@ function ReviewStep({
   return (
     <div className="wizard__review">
       <ChecklistTracker missing={liveMissing} />
+
+      {hasProblems(problems) ? (
+        <div className="wizard__missing" role="alert">
+          <p>Before this can be submitted:</p>
+          <ul>
+            {Object.entries(problems).map(([field, message]) => <li key={field}>{message}</li>)}
+          </ul>
+          <Button variant="secondary" onClick={() => onEditStep(1)}>Fix schedule &amp; attendance</Button>
+        </div>
+      ) : null}
 
       {missingFields.length > 0 ? (
         <div className="wizard__missing" role="alert">
@@ -495,12 +531,12 @@ function ReviewStep({
         <SummaryRow label="Purpose" value={fields.purpose} onEdit={() => onEditStep(0)} />
         <SummaryRow
           label="Start"
-          value={fields.startDatetime && new Date(fields.startDatetime).toLocaleString()}
+          value={fields.startDatetime && `${formatFieldValue('startDatetime', fields.startDatetime)} (Singapore time)`}
           onEdit={() => onEditStep(1)}
         />
         <SummaryRow
           label="End"
-          value={fields.endDatetime && new Date(fields.endDatetime).toLocaleString()}
+          value={fields.endDatetime && `${formatFieldValue('endDatetime', fields.endDatetime)} (Singapore time)`}
           onEdit={() => onEditStep(1)}
         />
         <SummaryRow

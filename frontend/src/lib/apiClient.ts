@@ -40,14 +40,17 @@ export class ApiClientError extends Error {
   readonly missingFields: string[] | null
   readonly conflicts: VenueBookingConflict[]
   readonly unavailablePeriods: VenueUnavailabilityConflict[]
+  /** EO-C2: the message to show next to each field the server refused. */
+  readonly fieldErrors: Record<string, string> | null
 
-  constructor(message: string, status: number, missingFields: string[] | null = null, conflicts: VenueBookingConflict[] = [], unavailablePeriods: VenueUnavailabilityConflict[] = []) {
+  constructor(message: string, status: number, missingFields: string[] | null = null, conflicts: VenueBookingConflict[] = [], unavailablePeriods: VenueUnavailabilityConflict[] = [], fieldErrors: Record<string, string> | null = null) {
     super(message)
     this.name = 'ApiClientError'
     this.status = status
     this.missingFields = missingFields
     this.conflicts = conflicts
     this.unavailablePeriods = unavailablePeriods
+    this.fieldErrors = fieldErrors
   }
 
   /** The session is gone or unrenewable — the caller must log in again. */
@@ -66,6 +69,13 @@ interface ApiErrorBody {
   missingFields?: string[] | null
   conflicts?: unknown
   unavailablePeriods?: unknown
+  fieldErrors?: unknown
+}
+
+function fieldErrorsOf(value: unknown): Record<string, string> | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) return null
+  const entries = Object.entries(value).filter((entry): entry is [string, string] => typeof entry[1] === 'string')
+  return entries.length > 0 ? Object.fromEntries(entries) : null
 }
 
 function unavailabilityConflicts(value: unknown): VenueUnavailabilityConflict[] {
@@ -106,6 +116,7 @@ function failed(response: Response, json: unknown): ApiClientError {
     body.missingFields ?? null,
     bookingConflicts(body.conflicts),
     unavailabilityConflicts(body.unavailablePeriods),
+    fieldErrorsOf(body.fieldErrors),
   )
 }
 
