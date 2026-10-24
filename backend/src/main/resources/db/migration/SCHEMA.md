@@ -588,3 +588,34 @@ projector, a 15-digit IMEI-style number for a mobile Wi-Fi unit); the dev seeder
 (`DevEquipmentSeeder`) generates them at random per kind. The composite foreign keys
 `(equipment_id, serial_number)` are unchanged. A reservation naming a serial number longer than
 64 characters is refused with 400.
+
+## V35 update — equipment damage reports (TS09)
+
+The serial columns use V34's `VARCHAR(64)` length.
+
+`equipment_damage_reports` records Technical Support's report that equipment is damaged for a
+period. Columns: `report_id` (UUID PK), `equipment_id` (required FK → `equipments`),
+`serial_number` (`VARCHAR(64)`, set for a serialised unit; composite FK with `equipment_id` →
+`serialised_equipments`, skipped when null), `quantity` (≥ 1; exactly 1 when a serial is given),
+`description` (trimmed, 1–2000 characters), `period_start` (required), `period_end` (nullable =
+no known end; after the start when given), `mark_faulty` (asked for a TS03 Faulty block),
+`faulty_marked` (the block was added when the report closed), `status` (`OPEN`, `CLOSED`; `closed_at`
+set exactly when closed), `reported_by` (FK → `users`) and `reported_at`. A non-serialised report's
+`quantity` stops counting as available for its period (TS09 AC5).
+
+`equipment_damage_outcomes` has one row per event a report affects (`UNIQUE (report_id, event_id)`):
+`outcome` (`COVERED`, `REPLACED`, `SHORT`; null until decided, with `decided_by`/`decided_at`),
+`shortfall` (units the event is short; > 0 exactly when `SHORT`), `reduced_by` (non-serialised units
+taken off the event's reservations), `replacement_serial_number` (required for `REPLACED`),
+`additional_request_id` (nullable FK → `equipment_requests`, unique when set: the coordinator's
+request for this shortfall), and `resolution` (`NOTE`, `ADDITIONAL_REQUEST`) with
+`resolution_note` (1–2000 characters, required for `NOTE`), `resolved_by` and `resolved_at`. Only a
+`SHORT` outcome can be resolved.
+
+Deciding an outcome changes `equipment_logs`: a replacement updates the reservation's
+`serial_number`; covered and short outcomes delete the damaged unit's reservation; a non-serialised
+reduction lowers `quantity` (deleting the row at 0). What was decided stays on the outcome row.
+
+`notification_type` gains `equipment_damage_outcome` (needs `event_id` and `message`). The recreated
+`chk_notification_shape` keeps every V33 branch. See
+[TS09 API](../../../../../../docs/equipment-damage-api.md) and decision-log D31.
