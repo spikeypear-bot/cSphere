@@ -20,6 +20,7 @@ function timeAgo(iso: string): string {
 
 function describe(n: NotificationDto): string {
   if (n.type === 'venue_hold_expired') return `Tentative venue hold expired for "${n.eventName}"`
+  if (n.type === 'venue_hold_expiring') return `Tentative venue hold expiring soon for "${n.eventName}"`
   if (n.type === 'event_reassignment_requested') return `Reassignment requested for "${n.eventName}"`
   if (n.type === 'event_reassignment_approved') {
     return n.message ?? `"${n.eventName}" has been reassigned`
@@ -123,7 +124,7 @@ export function NotificationBell() {
                       {n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {n.message ? n.type === 'venue_unavailable' ? (
+                      {n.message ? n.type === 'venue_unavailable' || n.type === 'venue_hold_expiring' ? (
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>

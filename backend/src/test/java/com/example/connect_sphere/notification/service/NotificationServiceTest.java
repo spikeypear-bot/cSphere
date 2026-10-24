@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -26,6 +27,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("unit")
 @Tag("EO09")
 @Tag("EO19")
+@Tag("EC-C3")
 class NotificationServiceTest {
 
     @Mock
@@ -154,6 +156,27 @@ class NotificationServiceTest {
     void unreadCountDelegatesToTheRepositoryCount() {
         when(repository.countByRecipientUserIdAndReadAtIsNull(RECIPIENT)).thenReturn(3L);
         assertThat(service.unreadCount(RECIPIENT)).isEqualTo(3L);
+    }
+
+    @Test
+    @DisplayName("EC-C3 AC1 (happy): the hold reminder names the event, the venue and the expiry in Singapore time")
+    void ecC3ReminderNamesEventVenueAndSingaporeExpiry() {
+        UUID eventId = UUID.randomUUID();
+        UUID bookingId = UUID.randomUUID();
+        // 16:30 UTC on 1 March is 00:30 on 2 March in Singapore (UTC+8).
+        service.createHoldExpiringNotification(RECIPIENT, eventId, bookingId, "Alumni Gala", "Downtown Hall",
+                OffsetDateTime.parse("2027-03-01T16:30:00Z"));
+
+        org.mockito.ArgumentCaptor<Notification> captor = org.mockito.ArgumentCaptor.forClass(Notification.class);
+        verify(repository, times(1)).saveAndFlush(captor.capture());
+        Notification saved = captor.getValue();
+        assertThat(saved.getRecipientUserId()).isEqualTo(RECIPIENT);
+        assertThat(saved.getType()).isEqualTo(NotificationType.venue_hold_expiring);
+        assertThat(saved.getEventId()).isEqualTo(eventId);
+        assertThat(saved.getVenueBookingId()).isEqualTo(bookingId);
+        assertThat(saved.getEventName()).isEqualTo("Alumni Gala");
+        assertThat(saved.getMessage()).contains("Alumni Gala").contains("Downtown Hall")
+                .contains("2 Mar 2027, 12:30 AM (Singapore time)");
     }
 
     private Notification captureSaved() {

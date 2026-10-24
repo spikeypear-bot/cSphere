@@ -219,6 +219,7 @@ entity venue_booking_holds {
 	* created_by : uuid <<FK>>
 	* created_at : timestamp with time zone
 	ended_at : timestamp with time zone
+	reminded_at : timestamp with time zone
 }
 
 entity venue_bookings {
@@ -371,6 +372,7 @@ enum notification_type {
 	event_reassignment_requested
 	event_reassignment_approved
 	event_reassignment_declined
+	venue_hold_expiring
 }
 
 enum user_role {
