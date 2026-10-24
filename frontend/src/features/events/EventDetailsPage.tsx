@@ -16,6 +16,7 @@ import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
+import { SafetyDecisionSummary } from '../safetyOfficer/SafetyDecisionSummary'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
@@ -169,13 +170,7 @@ export function EventDetailsPage() {
             <>
               <Card className="event-details__history">
                 <h2>Safety Officer's review</h2>
-                <p>Current approval: {readinessState.data.approvalStatus.replace('_', ' ')}</p>
-                {readinessState.data.approvalNote ? <p>Note: {readinessState.data.approvalNote}</p> : null}
-                {readinessState.data.reviewedBy ? (
-                  <p>Reviewed by {readinessState.data.reviewedBy}
-                    {readinessState.data.reviewedAt ? ` · ${new Date(readinessState.data.reviewedAt).toLocaleString()}` : ''}
-                  </p>
-                ) : null}
+                <SafetyDecisionSummary readiness={readinessState.data} />
               </Card>
               <ReadinessChecklistPanel
                 readiness={readinessState.data}

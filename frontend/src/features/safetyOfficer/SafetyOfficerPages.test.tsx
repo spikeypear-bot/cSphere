@@ -1,3 +1,4 @@
+// @stories SO-C1 SO-C3 SO-C4 SO-C5 SO-C6 EC08
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -20,6 +21,7 @@ const EVENT = {
 }
 const READINESS: ReadinessDto = {
   eventId: EVENT_ID, approvalStatus: 'not_reviewed', approvalNote: null, reviewedBy: null, reviewedAt: null,
+  flaggedItems: [],
   completedItems: 0, totalItems: 6,
   items: [{
     itemKey: 'venue_booking', label: 'Venue booking is approved and suitable',

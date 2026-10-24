@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ActivityDto, ActivityTypeName } from '../../types/activity'
 import { FIELD_LABELS } from '../../types/eventRequest'
+import { CHECKLIST_ITEM_LABELS } from '../../features/safetyOfficer/checklistItems'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import { changedFields } from '../../lib/fieldChanges'
 import { JOURNEY_LABELS } from '../../types/status'
@@ -95,6 +96,9 @@ function askedValues(entries: ActivityDto[], index: number) {
 const CONVERSATIONAL: ActivityTypeName[] = ['clarification_requested', 'clarification_responded', 'rejected',
   'safety_changes_requested', 'safety_rejected', 'safety_review_withdrawn', 'returned_to_planning',
   'venue_booking_rejected', 'equipment_rejected']
+
+/** SO-C5/SO-C6: these entries flag readiness checklist items, not request fields. */
+const SAFETY_DECISIONS: ActivityDto['type'][] = ['safety_changes_requested', 'safety_rejected']
 
 function exactTime(iso: string) {
   return new Intl.DateTimeFormat('en-SG', {
@@ -207,11 +211,19 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
               </ul>
             ) : null}
             {entry.flaggedFields.length > 0 && questions.length === 0 ? (
-              <ul className="activity-timeline__flags" aria-label="Fields that need attention">
-                {entry.flaggedFields.map((field) => (
-                  <li key={field}>{FIELD_LABELS[field] ?? field}</li>
-                ))}
-              </ul>
+              SAFETY_DECISIONS.includes(entry.type) ? (
+                <ul className="activity-timeline__flags" aria-label="Checklist items concerned">
+                  {entry.flaggedFields.map((key) => (
+                    <li key={key}>{CHECKLIST_ITEM_LABELS[key] ?? key}</li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="activity-timeline__flags" aria-label="Fields that need attention">
+                  {entry.flaggedFields.map((field) => (
+                    <li key={field}>{FIELD_LABELS[field] ?? field}</li>
+                  ))}
+                </ul>
+              )
             ) : null}
             {entry.fromStatus && entry.toStatus ? (
               <p className="activity-timeline__status">
