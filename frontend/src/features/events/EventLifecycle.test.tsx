@@ -1,3 +1,4 @@
+// @stories EC08 EC-NEW2 EC-NEW5 EO04
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -91,7 +92,7 @@ describe('EC08 readiness, send for safety review, withdraw and confirm', () => {
       [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
       [`GET /api/events/${EVENT}/readiness`]: () => jsonResponse(200, {
         eventId: EVENT, approvalStatus: 'not_reviewed', items: [], completedItems: 0, totalItems: 0,
-        approvalNote: null, reviewedBy: null, reviewedAt: null,
+        approvalNote: null, reviewedBy: null, reviewedAt: null, flaggedItems: [],
       }),
       [`POST /api/events/${EVENT}/venue-bookings/b1/cancel`]: () => {
         cancelled = true

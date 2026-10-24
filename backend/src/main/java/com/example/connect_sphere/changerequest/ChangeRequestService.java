@@ -58,11 +58,6 @@ public class ChangeRequestService {
     static final int MAX_TEXT = 2000;
     static final String REQUEST_CHANGED_SINCE = "This request has changed since the change was asked for. "
             + "The organiser needs to withdraw it and ask again.";
-    private static final Set<EventStatus> ACTIVE_EVENT = Set.of(EventStatus.pending,
-            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested, EventStatus.safety_approved,
-            EventStatus.confirmed);
-    private static final Set<EventStatus> SAFETY_STAGES = Set.of(
-            EventStatus.awaiting_safety_review, EventStatus.safety_approved, EventStatus.confirmed);
 
     /** Who is asking: the token's role, user and organisation. */
     public record Caller(UserRole role, UUID userId, String organisation) {
@@ -228,7 +223,7 @@ public class ChangeRequestService {
             throw new ChangeRequestException.ImpactChanged(current);
         }
 
-        boolean replan = event != null && SAFETY_STAGES.contains(event.getStatus())
+        boolean replan = event != null && EventStatus.IN_OR_PAST_SAFETY_CHECK.contains(event.getStatus())
                 && changed.stream().anyMatch(ChangeFields.AFFECTS_ARRANGEMENTS::contains);
         requestRules.applyApprovedDetails(origin, event, proposed);
         change.setStatus(ChangeRequestStatus.approved);
@@ -360,7 +355,7 @@ public class ChangeRequestService {
     }
 
     private static Optional<String> inactive(EventRequest origin, Event event) {
-        if (origin.getStatus() == EventRequestStatus.approved && (event == null || !ACTIVE_EVENT.contains(event.getStatus()))) {
+        if (origin.getStatus() == EventRequestStatus.approved && (event == null || !EventStatus.ACTIVE.contains(event.getStatus()))) {
             return Optional.of("This event is no longer active, so it can no longer be changed.");
         }
         return Optional.empty();

@@ -7,7 +7,7 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
-import type { EventDto } from '../../types/event'
+import { isPlanningEditable, type EventDto } from '../../types/event'
 import { ACCESSIBILITY_LABELS, type AccessibilityFeature } from '../../types/eventRequest'
 import { venueFacilityLabels, venueLayoutLabels, type Facility, type VenueLayout } from '../../types/venue'
 import {
@@ -240,7 +240,7 @@ export function VenueBookingRequestPage() {
     ? 'This booking is no longer eligible for a replacement. Refresh the event details.'
     : replacementPending
       ? 'This booking already has a replacement request pending. Wait for Venue Staff to review it.'
-      : event.status !== 'pending' && event.status !== 'safety_changes_requested' && !(event.status === 'confirmed' && replacing)
+      : !isPlanningEditable(event.status) && !(event.status === 'confirmed' && replacing)
         ? 'Venue booking requests can only be made while the event is in Planning, except for an eligible replacement.'
         : null
 

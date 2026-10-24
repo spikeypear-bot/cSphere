@@ -40,9 +40,6 @@ import com.example.connect_sphere.user.repository.UserRepository;
 public class EventReassignmentService {
 
     private static final int MAX_TEXT = 2000;
-    private static final List<EventStatus> ACTIVE_STATUSES = List.of(
-            EventStatus.pending, EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested,
-            EventStatus.safety_approved, EventStatus.confirmed);
 
     private final EventRepository events;
     private final EventReassignmentRequestRepository requests;
@@ -248,7 +245,7 @@ public class EventReassignmentService {
     }
 
     private static void requireActive(Event event) {
-        if (!ACTIVE_STATUSES.contains(event.getStatus())) {
+        if (!EventStatus.ACTIVE.contains(event.getStatus())) {
             throw new EventReassignmentStateException("Completed or cancelled events cannot be reassigned.");
         }
     }
