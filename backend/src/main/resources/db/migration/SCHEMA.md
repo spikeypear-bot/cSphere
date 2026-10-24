@@ -578,3 +578,24 @@ logs of cancelled or completed events (decision-log D28).
 `chk_notification_shape` keeps every earlier branch, including EC-C3's `venue_hold_expiring`
 (V31) and EO03/EC-NEW3's change-request types (V32). See
 [EO07 API](../../../../../../docs/event-cancellation-api.md).
+
+### V36 — TS11 equipment change reviews and Technical Support notices
+
+`equipment_change_reviews` records an approved event change (EC-NEW3) that affected an event's
+equipment, and Technical Support's review of it. Columns: `review_id` (UUID PK), `event_id`
+(required FK → `events`), `change_request_id` (required FK → `event_change_requests`, unique: one
+review per change), `coordinator_id` (nullable FK → `users`, the coordinator at approval),
+`changed_at`, `previous_values` and `updated_values` (JSONB: `startDatetime`, `endDatetime`,
+`equipmentRequirements`), `affected_reservations` (JSONB snapshot of the reservations that no
+longer covered the event), `requirements_changed`, and the review: `outcome` (`still_suitable`,
+`needs_coordinator_action`), `outcome_note` (trimmed, 1–2000 characters), `reviewed_by` (FK →
+`users`) and `reviewed_at`. A check requires no review fields while unreviewed, a reviewer and time
+once reviewed, and a note for `needs_coordinator_action`.
+
+`notifications` gains `equipment_request_id` (FK → `equipment_requests`) and `equipment_review_id`
+(FK → `equipment_change_reviews`), each with a partial unique index on (`recipient_user_id`,
+column) so a user is told once. `notification_type` gains `equipment_request_submitted` (needs
+`event_id`, `equipment_request_id`, `message`) and `equipment_change_review` (needs `event_id`,
+`equipment_review_id`, `message`); the recreated `chk_notification_shape` keeps every V33 branch.
+See decision-log D30.
+
