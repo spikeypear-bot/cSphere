@@ -6,7 +6,7 @@ export function TechnicalSupportHomePage() {
     <div className="page">
       <div className="skeleton-console__header">
         <h1>Technical Support Staff console</h1>
-        <p className="field-hint">Check equipment availability, reserve items for events, and update operational status.</p>
+        <p className="field-hint">Check equipment availability, reserve items for events, update operational status, and report damaged equipment.</p>
       </div>
       <div className="skeleton-console__grid">
         <Link to="/technical-support/availability" className="skeleton-console-card">
@@ -31,6 +31,13 @@ export function TechnicalSupportHomePage() {
             <h2>Equipment status</h2>
             <p>View and update equipment status for a date and time period.</p>
             <span className="chip">TS03</span>
+          </Card>
+        </Link>
+        <Link to="/technical-support/damaged-equipment" className="skeleton-console-card">
+          <Card className="skeleton-console-card__inner">
+            <h2>Damaged equipment</h2>
+            <p>Report damaged equipment and decide what happens to each event that relied on it.</p>
+            <span className="chip">TS09</span>
           </Card>
         </Link>
       </div>

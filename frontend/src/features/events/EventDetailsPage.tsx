@@ -23,6 +23,7 @@ import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
+import { EquipmentDamagePanel } from './EquipmentDamagePanel'
 
 /**
  * One page per event, shared by the Organiser and the Event Coordinator. Both
@@ -164,6 +165,10 @@ export function EventDetailsPage() {
             Request equipment
           </Link>
         </Card>
+      ) : null}
+      {/* TS09: damaged equipment the event relied on; the Lead reads it only. */}
+      {role === 'coordinator' || role === 'coordinator-lead' ? (
+        <EquipmentDamagePanel eventId={event.eventId} readOnly={role !== 'coordinator'} />
       ) : null}
 
       {role === 'coordinator' ? (

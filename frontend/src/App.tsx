@@ -44,6 +44,9 @@ import { technicalSupportFeatures } from './features/technicalSupport/technicalS
 import { EquipmentReviewPage } from './features/technicalSupport/review/EquipmentReviewPage'
 import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
+import { DamageReportsPage } from './features/technicalSupport/damage/DamageReportsPage'
+import { DamageReportFormPage } from './features/technicalSupport/damage/DamageReportFormPage'
+import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
@@ -179,6 +182,10 @@ function TechnicalSupportRoutes() {
       <Route path="availability" element={<EquipmentReviewPage />} />
       <Route path="status" element={<EquipmentStatusPage />} />
       <Route path="reservations" element={<EquipmentReservationPage />} />
+      {/* TS09: damaged equipment reports and their outcomes. */}
+      <Route path="damaged-equipment" element={<DamageReportsPage />} />
+      <Route path="damaged-equipment/new" element={<DamageReportFormPage />} />
+      <Route path="damaged-equipment/:reportId" element={<DamageReportDetailPage />} />
     </Routes>
   )
 }

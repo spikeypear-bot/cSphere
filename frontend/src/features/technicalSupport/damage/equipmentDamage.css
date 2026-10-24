@@ -1,0 +1,124 @@
+/* TS09: damaged equipment reports (Technical Support) and outcomes (coordinator). */
+
+.equipment-damage__list,
+.equipment-damage__events {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.equipment-damage__report-card,
+.equipment-damage__summary,
+.equipment-damage__chosen {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.equipment-damage__report-card > div {
+  flex: 1 1 16rem;
+}
+
+.equipment-damage__report-card h2,
+.equipment-damage__event h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.equipment-damage__photo {
+  width: 6rem;
+  height: 6rem;
+  flex: 0 0 auto;
+  object-fit: cover;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+}
+
+.equipment-damage__photo--placeholder {
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+  font-size: 2rem;
+  font-weight: 600;
+}
+
+.equipment-damage__summary dl,
+.equipment-damage__event dl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 2rem;
+  margin: 0;
+}
+
+.equipment-damage__summary dt,
+.equipment-damage__event dt {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.equipment-damage__summary dd,
+.equipment-damage__event dd {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+}
+
+.equipment-damage__event {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.equipment-damage__event-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.equipment-damage__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.5rem;
+}
+
+.equipment-damage__replace {
+  display: grid;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.equipment-damage__form form {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.equipment-damage__field {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.equipment-damage__checkbox {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.equipment-damage__close {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.equipment-damage__error {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.equipment-damage__status--closed {
+  opacity: 0.7;
+}

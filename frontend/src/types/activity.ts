@@ -23,6 +23,8 @@ export type ActivityTypeName =
   | 'equipment_requested'
   | 'equipment_approved'
   | 'equipment_rejected'
+  | 'equipment_damage_outcome'
+  | 'equipment_shortfall_resolved'
   | 'sent_for_safety_review'
   | 'safety_review_withdrawn'
   | 'safety_approved'
