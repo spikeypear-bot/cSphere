@@ -172,6 +172,12 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
+		    // TS11: Technical Support's reviews of approved changes that affect
+		    // equipment. An event's outcomes are read by its assigned coordinator
+		    // (assignment checked in EquipmentChangeReviewService) and the Lead.
+		    // Must sit above the GET /api/events/** rule, which admits Organisers.
+		    .requestMatchers("/api/equipment-change-reviews", "/api/equipment-change-reviews/**").hasRole("TECHNICIAN")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-change-reviews").hasAnyRole("EC", "ECL")
 		    // SO-C3/SO-C4: the Safety Officer's checklist and decision.
 		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")

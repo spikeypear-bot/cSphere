@@ -26,9 +26,10 @@ public class EquipmentRequestService {
     private final EquipmentRequestLineRepository lines;
     private final EquipmentRepository equipment;
 
-    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
-     * Setter-injected so this service does not depend on the log; absent in
-     * plain unit tests, where nothing is announced. */
+    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder),
+     * and TS11's EquipmentRequestSubmitted. Setter-injected so this service does
+     * not depend on either listener; absent in plain unit tests, where nothing
+     * is announced. */
     private org.springframework.context.ApplicationEventPublisher changeLog;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -131,6 +132,10 @@ public class EquipmentRequestService {
         for (SubmitEquipmentRequest.Item item : requestedItems) {
             lines.save(new EquipmentRequestLine(
                     new EquipmentRequestLineId(requestId, item.equipmentId()), item.quantity()));
+        }
+        if (changeLog != null) {
+            // TS11 AC1: Technical Support are told after this commits.
+            changeLog.publishEvent(new EquipmentRequestSubmitted(requestId, eventId));
         }
         int units = requestedItems.stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_requested, coordinatorId,

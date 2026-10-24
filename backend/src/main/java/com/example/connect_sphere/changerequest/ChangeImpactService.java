@@ -181,10 +181,7 @@ public class ChangeImpactService {
             boolean timesChanged, List<ImpactItem> items) {
         if (timesChanged) {
             for (EquipmentReservationResponse r : equipment.reservationsForEvent(event.getEventId())) {
-                boolean covers = r.loanedFrom() != null && r.loanedUntil() != null
-                        && !r.loanedFrom().isAfter(proposed.startDatetime().toInstant())
-                        && !r.loanedUntil().isBefore(proposed.endDatetime().toInstant());
-                if (!covers) {
+                if (!r.covers(proposed.startDatetime().toInstant(), proposed.endDatetime().toInstant())) {
                     items.add(new ImpactItem("equipment:" + r.logId(), "equipment", ATTENTION,
                             r.equipmentName() + " is reserved for the old time",
                             r.quantity() + " reserved " + period(r.loanedFrom(), r.loanedUntil())

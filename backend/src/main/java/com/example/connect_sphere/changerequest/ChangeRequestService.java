@@ -104,6 +104,16 @@ public class ChangeRequestService {
         this.clock = clock;
     }
 
+    /** TS11: announces approved changes (ChangeApproved) to listeners that tell
+     * staff after commit. Setter-injected, like EquipmentRequestService's
+     * publisher, so plain unit tests need not supply one. */
+    private org.springframework.context.ApplicationEventPublisher published;
+
+    @Autowired(required = false)
+    void setPublisher(org.springframework.context.ApplicationEventPublisher published) {
+        this.published = published;
+    }
+
     // ---- EO03: ask ---------------------------------------------------------------
 
     @Transactional
@@ -245,6 +255,12 @@ public class ChangeRequestService {
         if (replan) {
             lifecycle.returnToPlanning(event.getEventId(), coordinator.userId(),
                     fitActivityMessage("An approved change affects the event's arrangements: " + summary));
+        }
+
+        if (published != null && origin.getEventId() != null) {
+            published.publishEvent(new ChangeApproved(saved.getChangeRequestId(), origin.getEventId(),
+                    Map.copyOf(withoutNulls(currentValues)), Map.copyOf(withoutNulls(saved.getProposedValues())),
+                    Set.copyOf(changed), saved.getDecidedAt()));
         }
 
         String name = nameOf(origin, event);
@@ -489,6 +505,17 @@ public class ChangeRequestService {
 
     private OffsetDateTime now() {
         return OffsetDateTime.now(clock);
+    }
+
+    /** Map.copyOf refuses null values; an empty field is simply absent. */
+    private static Map<String, Object> withoutNulls(Map<String, Object> values) {
+        Map<String, Object> kept = new java.util.LinkedHashMap<>();
+        values.forEach((key, value) -> {
+            if (value != null) {
+                kept.put(key, value);
+            }
+        });
+        return kept;
     }
 
     private static void afterCommit(Runnable action) {
