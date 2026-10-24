@@ -1,4 +1,4 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS03 EC08 SO-C4 EC-NEW2 EO15
+// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS03 EC08 SO-C4 SO-C6 EC-NEW2 EO15
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
 
@@ -32,7 +32,7 @@ test('a rejected request tells the organiser it was rejected and why (EC02, EC-N
   })
 })
 
-test('the Safety Officer asks for changes and the coordinator can fix and resend (EC08 AC23, AC24)', async ({ browser, request }) => {
+test('SO-C6, EC08 AC23, AC24: the Safety Officer asks for changes to named checklist items and the coordinator can fix and resend', async ({ browser, request }) => {
   test.setTimeout(180_000)
   const eventName = uniqueName('E2E Changes Fair')
   const venueName = uniqueName('E2E Harbour Room')
@@ -70,17 +70,24 @@ test('the Safety Officer asks for changes and the coordinator can fix and resend
   await expect(coordinator.getByText(/Sent for the Operational Safety Check/)).toBeVisible()
 
   const officer = await signedIn(browser, 'so1')
-  await test.step('SO-C4: the Safety Officer requests changes with a note', async () => {
+  await test.step('SO-C6 AC3, AC5: the Safety Officer requests changes with a reason and the checklist item concerned', async () => {
     await officer.goto(`/safety-officer/events/${eventId}`)
+    const requestChanges = officer.getByRole('button', { name: 'Request changes' })
     await officer.getByLabel('Note for the Event Coordinator').fill('Add a second exit marshal.')
-    await officer.getByRole('button', { name: 'Request changes' }).click()
-    await expect(officer.getByText('Current approval: changes requested')).toBeVisible()
+    await expect(requestChanges).toBeDisabled()
+    await officer.getByRole('group', { name: 'Checklist items this decision concerns' })
+      .getByRole('checkbox', { name: /^Raise: Safety, emergency/ }).check()
+    await requestChanges.click()
+    await expect(officer.getByText('Changes requested', { exact: true })).toBeVisible()
   })
 
-  await test.step('EC08 AC23: the coordinator sees Safety Changes Requested and the feedback', async () => {
+  await test.step('EC08 AC23, SO-C6 AC11: the coordinator sees Safety Changes Requested, the feedback and the item concerned', async () => {
     await coordinator.goto(`/coordinator/events/${eventId}`)
     await expect(coordinator.getByText('Safety Changes Requested').first()).toBeVisible()
     await expect(coordinator.getByText('Add a second exit marshal.').first()).toBeVisible()
+    await expect(coordinator.locator('.safety-decision').getByRole('list', { name: 'Checklist items concerned' }))
+      .toHaveText('Safety, emergency, and on-site operational arrangements are ready')
+    await expect(coordinator.locator('.readiness-item--flagged')).toHaveCount(1)
   })
 
   await test.step('EC08 AC24: after addressing it the coordinator can send it again', async () => {

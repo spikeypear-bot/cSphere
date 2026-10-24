@@ -18,7 +18,7 @@ export function ReadinessChecklistPanel({ readiness, editable, savingItem, onSav
     <Card className="safety-panel">
       <h2>Operational readiness checklist</h2>
       <p role="status">{readiness.completedItems} of {readiness.totalItems} items complete</p>
-      <ul className="readiness-list">
+      <ul className="readiness-list" aria-label="Readiness checklist">
         {readiness.items.map((item) => (
           <ReadinessItemRow
             key={`${item.itemKey}:${item.note}`}
