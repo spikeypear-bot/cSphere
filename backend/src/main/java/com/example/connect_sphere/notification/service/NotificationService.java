@@ -174,7 +174,25 @@ public class NotificationService {
         var notification = base(coordinatorId, NotificationType.venue_hold_expired, name);
         notification.setEventId(eventId);
         notification.setVenueBookingId(bookingId);
-        notification.setMessage("The tentative venue hold expired at " + expiry + ". The pending request is no longer reserved.");
+        notification.setMessage("The tentative venue hold expired at " + expiry + ". The venue is no longer held;"
+                + " the pending request is no longer reserved.");
+        repository.saveAndFlush(notification);
+    }
+
+    private static final java.time.format.DateTimeFormatter SINGAPORE_TIME = java.time.format.DateTimeFormatter
+            .ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+
+    /** EC-C3: remind the coordinator before a hold expires. Like the expiry notice it commits
+     * with the hold's reminded mark, so a failed insert leaves the hold to be reminded again. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createHoldExpiringNotification(UUID coordinatorId, UUID eventId, UUID bookingId, String eventName,
+            String venueName, OffsetDateTime expiry) {
+        var notification = base(coordinatorId, NotificationType.venue_hold_expiring, eventName);
+        notification.setEventId(eventId);
+        notification.setVenueBookingId(bookingId);
+        notification.setMessage("The tentative hold on " + venueName + " for \"" + eventName + "\" expires on "
+                + SINGAPORE_TIME.format(expiry) + " (Singapore time). Ask Venue Staff to confirm the booking before then,"
+                + " or look for an alternative venue.");
         repository.saveAndFlush(notification);
     }
 
@@ -298,7 +316,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
-            case venue_hold_expired, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
             case event_reassignment_approved, event_reassignment_declined ->

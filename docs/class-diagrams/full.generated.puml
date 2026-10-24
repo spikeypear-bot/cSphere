@@ -1136,6 +1136,7 @@ enum NotificationType {
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
 	{field} +venue_hold_expired
+	{field} +venue_hold_expiring
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -1153,6 +1154,7 @@ class NotificationNotFoundException {
 
 
 class NotificationService {
+	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
 	{field} {static} -log : Logger
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
@@ -1161,6 +1163,7 @@ class NotificationService {
 	{method} +createEventReassignmentDecisionNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
 	{method} +createEventReassignmentRequestedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createHoldExpiredNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , name : String , expiry : OffsetDateTime ) : void
+	{method} +createHoldExpiringNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , eventName : String , venueName : String , expiry : OffsetDateTime ) : void
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
@@ -1934,6 +1937,7 @@ class VenueHold {
 	{field} -eventName : String
 	{field} -expiresAt : OffsetDateTime
 	{field} -holdId : UUID
+	{field} -reminderDueAt : OffsetDateTime
 	{field} -reservedEnd : OffsetDateTime
 	{field} -reservedStart : OffsetDateTime
 	{field} -serverTime : OffsetDateTime
@@ -1962,15 +1966,23 @@ class VenueHoldExpiryJob {
 }
 
 
+class VenueHoldReminderJob {
+	{method} +remind () : void
+}
+
+
 class VenueHoldRepository {
 	{field} {static} -SELECT : String
 	{field} -clock : Clock
 	{field} -jdbc : JdbcTemplate
+	{field} -reminderLead : Duration
 	{method} +blocking ( venueId : UUID ) : List
 	{method} +bookingId ( holdId : UUID ) : UUID
+	{method} +dueForReminder () : List
 	{method} +hasActive ( bookingId : UUID ) : boolean
 	{method} +history ( bookingId : UUID ) : List
 	{method} +insert ( id : UUID , bookingId : UUID , start : OffsetDateTime , end : OffsetDateTime , expiry : OffsetDateTime , actor : UUID ) : void
+	{method} +markReminded ( holdId : UUID , now : OffsetDateTime ) : boolean
 	{method} +now () : OffsetDateTime
 	{method} +overdue () : List
 	{method} +requireActive ( holdId : UUID , bookingId : UUID ) : void
@@ -1985,6 +1997,7 @@ class VenueHoldService {
 	{method} +expire ( holdId : UUID ) : void
 	{method} +history ( bookingId : UUID ) : List
 	{method} +release ( holdId : UUID , actor : UUID ) : VenueHold
+	{method} +remind ( holdId : UUID ) : boolean
 }
 
 
@@ -2372,6 +2385,8 @@ VenueHoldController --> VenueHoldService : service
 VenueHoldController --> VenueBookingService : bookings
 VenueHoldExpiryJob --> VenueHoldRepository : holds
 VenueHoldExpiryJob --> VenueHoldService : service
+VenueHoldReminderJob --> VenueHoldRepository : holds
+VenueHoldReminderJob --> VenueHoldService : service
 VenueHoldService --> EventRepository : events
 VenueHoldService --> NotificationService : notifications
 VenueHoldService --> VenueRepository : venues

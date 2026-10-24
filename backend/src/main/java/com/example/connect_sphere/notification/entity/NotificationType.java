@@ -3,6 +3,8 @@ package com.example.connect_sphere.notification.entity;
 /** Mirrors the Postgres `notification_type` enum (V12 migration). */
 public enum NotificationType {
     venue_hold_expired,
+    /** EC-C3 (V31): the coordinator reminded that a tentative hold expires soon. */
+    venue_hold_expiring,
     status_change,
     coordinator_assignment,
     /** EC01: sent to the owning organisation's Event Organisers. */
@@ -25,10 +27,10 @@ public enum NotificationType {
     event_reassignment_requested,
     event_reassignment_approved,
     event_reassignment_declined,
-    /** EO03 (V31): an organiser asked for a change; sent to the coordinator, or the Leads if unassigned. */
+    /** EO03 (V32): an organiser asked for a change; sent to the coordinator, or the Leads if unassigned. */
     change_request_submitted,
-    /** EO03 (V31): the organiser withdrew it. */
+    /** EO03 (V32): the organiser withdrew it. */
     change_request_withdrawn,
-    /** EC-NEW3 (V31): the coordinator approved or rejected it; sent to the organiser. */
+    /** EC-NEW3 (V32): the coordinator approved or rejected it; sent to the organiser. */
     change_request_decided
 }

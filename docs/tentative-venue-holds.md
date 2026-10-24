@@ -66,6 +66,46 @@ staff member for traceability. Events created outside the request workflow have
 no request timeline, consistent with existing activity behaviour; their hold
 attempt history is still retained.
 
+## Expiry reminders (EC-C3)
+
+The event's coordinator is reminded once before each hold expires, so they can
+press for confirmation or look for another venue.
+
+- **Window.** `venue.holds.reminder-lead` (ISO-8601 duration, default `PT24H`,
+  in `application.properties`; environment `VENUE_HOLDS_REMINDER_LEAD`). A hold
+  is due when it is active, its booking is pending, its event is neither
+  cancelled nor completed, and `now < expires_at <= now + lead` — a hold exactly
+  at the edge is due. A hold placed with less time left than the lead is due at
+  the next run; one that has already expired gets only the expiry notice.
+- **Job.** `VenueHoldReminderJob` runs on the expiry job's schedule
+  (`venue.holds.expiry-delay-ms`, default 30000) and processes up to 100 due
+  holds per run, each in its own transaction. Failures are logged and retried.
+- **Once per hold.** V31 adds `venue_booking_holds.reminded_at`.
+  `VenueHoldService.remind` takes the same event-then-venue locks as expiry,
+  re-checks the hold, sets `reminded_at` with a conditional update and writes the
+  `venue_hold_expiring` notification in the same transaction. Repeated or
+  concurrent runs send one reminder; a failed insert rolls back the mark so the
+  next run retries. A new hold on the same booking is a new attempt with its own
+  reminder. Nothing else changes: hold, booking and event keep their state.
+- **Recipient.** The event's coordinator at send time (`events.coordinator_id`),
+  so after a reassignment the previous coordinator receives no reminders or
+  expiry notices for that event.
+- **Message.** Names the event, the venue and the expiry in Singapore time
+  (e.g. "2 Mar 2027, 4:00 AM (Singapore time)") and links to
+  `/coordinator/events/{eventId}/venue-booking`. The bell titles it "Tentative
+  venue hold expiring soon for "{event}"". There is no notification when a hold
+  is converted (out of scope).
+- **Screen.** Each hold DTO carries `reminderDueAt` (expiry minus the lead). The
+  coordinator's venue booking page marks an active hold **Expiring soon** once
+  server time reaches it, timed from `serverTime` like the expiry deadline. An
+  expired hold shows **Expired** and never as an approved booking.
+- **Expiry notice.** The existing VS-C3 notice (above) now also says the venue
+  is no longer held.
+
+Covered by `VenueHoldReminderFlowTest` (real PostgreSQL, mutable server clock),
+`NotificationServiceTest`, `NotificationLinkTest`, `HoldStatus.test.tsx` and
+`NotificationBell.test.tsx`.
+
 ## API and security
 
 | Operation | Endpoint | Access |

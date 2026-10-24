@@ -46,7 +46,8 @@ ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
     OR (type::text = 'coordinator_assignment' AND coordinator_name IS NOT NULL AND is_reassignment IS NOT NULL)
     OR (type::text IN ('clarification_requested', 'clarification_responded') AND message IS NOT NULL)
     OR (type::text IN ('venue_booking_requested', 'venue_booking_cancelled', 'venue_unavailable',
-        'venue_timing_changed', 'venue_timing_conflict', 'venue_hold_expired') AND venue_booking_id IS NOT NULL)
+        'venue_timing_changed', 'venue_timing_conflict', 'venue_hold_expired', 'venue_hold_expiring')
+        AND venue_booking_id IS NOT NULL)
     OR (type::text IN ('event_confirmed', 'event_returned_to_planning', 'event_safety_approved') AND event_id IS NOT NULL)
     OR (type::text IN ('event_reassignment_requested', 'event_reassignment_approved',
         'event_reassignment_declined') AND event_id IS NOT NULL AND message IS NOT NULL)

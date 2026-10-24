@@ -165,7 +165,7 @@ class ChangeImpactServiceTest {
         hall.setStatus(VenueBookingStatus.pending);
         when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(hall));
         when(holds.history(hall.getBookingId())).thenReturn(List.of(new VenueHold(UUID.randomUUID(), hall.getBookingId(),
-                hall.getVenueId(), event.getEventId(), "Town Hall", START, END, END.plusDays(3), "active", UUID.randomUUID(),
+                hall.getVenueId(), event.getEventId(), "Town Hall", START, END, END.plusDays(3), null, "active", UUID.randomUUID(),
                 START.minusDays(1), null, START.minusDays(1))));
 
         List<ImpactItem> items = service.assess(event, proposal(START, END.plusMinutes(1), 150, List.of(), null),

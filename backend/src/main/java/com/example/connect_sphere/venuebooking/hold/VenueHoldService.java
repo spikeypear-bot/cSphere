@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.EventChange;
+import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venueavailability.AvailabilityService;
 import com.example.connect_sphere.venueavailability.AvailabilityModels.Settings;
@@ -107,6 +109,20 @@ public class VenueHoldService {
         var event=events.findById(b.getEventId()).orElseThrow();
         notifications.createHoldExpiredNotification(event.getCoordinatorId(),b.getEventId(),bookingId,event.getEventName(),hold.expiresAt());
         announce(b,ActivityType.venue_hold_expired,hold.createdBy(),"System: tentative hold automatically expired at "+hold.expiresAt()+".");
+    }
+    /** EC-C3: same locks as expiry, re-checked under them. Only reminded_at changes; the notification shares the
+     * transaction, so a failed send leaves the hold unreminded for the next run. Returns whether a reminder was sent. */
+    @Transactional
+    public boolean remind(UUID holdId) {
+        UUID bookingId=holds.bookingId(holdId);
+        var b=lock(bookingId);
+        var event=events.findById(b.getEventId()).orElseThrow();
+        if (event.getStatus()==EventStatus.cancelled || event.getStatus()==EventStatus.completed || event.getCoordinatorId()==null) return false;
+        var hold=holds.history(bookingId).stream().filter(h->h.holdId().equals(holdId)).findFirst().orElseThrow();
+        if (!hold.status().equals("active") || !holds.markReminded(holdId,holds.now())) return false;
+        String venue=venues.findById(b.getVenueId()).map(Venue::getVenueAddress).orElse("the venue");
+        notifications.createHoldExpiringNotification(event.getCoordinatorId(),b.getEventId(),bookingId,event.getEventName(),venue,hold.expiresAt());
+        return true;
     }
     private void announce(VenueBookingRecord b, ActivityType type, UUID actor, String text) {
         publisher.publishEvent(new EventChange(b.getEventId(),type,actor,text));

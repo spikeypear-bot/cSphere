@@ -151,6 +151,32 @@ and expiry timestamps. The calendar contains confirmed occupancy only. `ec1`
 can inspect both attempts and the creation/release/conversion Change log. After
 scenario 1 expires, that separate booking supplies a real **Expired** example.
 
+## 5. Expiry reminder (EC-C3)
+
+With the default 24-hour lead, every seeded hold already expires within the
+window, so it is reminded at the next run. As `ec1`, within about 30 seconds of
+seeding, expect one **Tentative venue hold expiring soon for "…"** notification
+per active hold. Its text names the event, the venue and the expiry in Singapore
+time; clicking it opens the event's venue booking page, where the hold shows its
+expiry and an **Expiring soon** badge. Waiting longer must not produce a second
+reminder for the same hold. When it expires, expect the separate expiry notice
+(scenario 1, step 6) and the hold to show **Expired**, never approved.
+
+To see a hold wait until it enters the window, start the backend with a short
+lead and place a hold that expires later than that:
+
+```powershell
+$env:VENUE_HOLDS_REMINDER_LEAD = 'PT2M'
+docker compose up -d --build backend
+./backend/dev/seed/vsc3-seed.ps1 -LocalDev -ExpiryMinutes 5
+```
+
+For the **Live expiry** hold, expect no reminder and no badge for the first three minutes, then one reminder
+within about 30 seconds of the hold entering its last two minutes. Remove the
+variable (`Remove-Item Env:VENUE_HOLDS_REMINDER_LEAD`) and rebuild to return to
+the 24-hour default. To check reassignment, have `ecl1` reassign the event to
+`ec2` before the hold enters the window: only `ec2` is reminded.
+
 ## Automated checks
 
 Run tests against a disposable/local test database, not a shared dataset. For
@@ -158,8 +184,8 @@ example, use a separately created `csphere_vsc3_test` database on the Compose DB
 
 ```powershell
 docker compose exec -T db createdb -U postgres csphere_vsc3_test
-docker compose run --rm -e SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/csphere_vsc3_test backend-test test '-Dtest=VenueHoldFlowTest,VenueBookingApprovalTest,VenueBookingRequestFlowTest,VenueUnavailabilityTest,VenueTimingWorkflowTest,ActivityServiceTest'
-npm --prefix frontend test -- src/features/venueStaff/VenueHoldPanel.test.tsx src/features/venueStaff/VenueSchedulePage.test.tsx
+docker compose run --rm -e SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/csphere_vsc3_test backend-test test '-Dtest=VenueHoldFlowTest,VenueHoldReminderFlowTest,VenueBookingApprovalTest,VenueBookingRequestFlowTest,VenueUnavailabilityTest,VenueTimingWorkflowTest,ActivityServiceTest'
+npm --prefix frontend test -- src/features/venueStaff/VenueHoldPanel.test.tsx src/features/venueStaff/HoldStatus.test.tsx src/features/venueStaff/VenueSchedulePage.test.tsx
 ```
 
 Create the test database only once; an already-existing-database error simply

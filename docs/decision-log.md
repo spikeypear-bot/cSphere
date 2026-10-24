@@ -344,6 +344,32 @@ Therefore:
 
 **No database migration.**
 
+### D27 — IS212 Week 10: guidance plus enforcement for AI agents
+
+2026-10-23, branch `chore/week10-agent-guardrails`. Week 10 (Agentic AI and the Software Team) distinguishes guidance (instruction files) from enforcement (tests, CI, branch protection), and shows an agent PR (#57) that deleted an assertion while CI stayed green.
+
+**Already in place:**
+- Guidance for every tool: `AI_Context.md`, plus `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` and `.github/copilot-instructions.md` pointing to it.
+- Enforcement of traceability: the `traceability` job.
+
+**Added:**
+1. **`test-protection.py`, in the `traceability` job, on pull requests.** It fails a PR that deletes an existing test file, or leaves one with fewer tests or fewer assertions than on the base branch. It lists every changed existing test file, with before and after counts, on the run summary for reviewers.
+   - It is deliberately looser than the lecture's example, which fails on *any* change to an existing test. Our tests legitimately change with the behaviour they check (ECL-C7 and EC-NEW5 both edited existing tests). The weakening that matters is a removed test or assertion.
+   - A deliberate removal is approved by a reviewer adding the `tests-reviewed` label: the slides' named human approval gate. Pull-request runs now also trigger on labelling.
+   - Checked against the last 30 commits of `main`, ECL-C7 and EC-NEW5: no false failures. Removing one assertion or one test is caught.
+   - **Not caught:** an assertion replaced by a weaker one, or a test rewritten to match a misread AC. These stay with human review against the ACs.
+2. **PR template** with the five Week 10 questions (delegated, constrained, evidence, review needed, accountable) in an "AI assistance" section, alongside the team's existing PR headings.
+3. **`AI_Context.md`:**
+   - a "Working with AI agents" section: the guidance-to-enforcement map, a delegation dial for our task types, review-capacity rules, the four kinds of agent-era debt, and the CFO request;
+   - Definition of Done lines for accountability and test protection;
+   - the header no longer says "for Claude Code" (harness debt: the file serves every tool).
+
+**Team action:** add `traceability` (now including test protection) to `main`'s required checks; otherwise it only warns.
+
+**No database migration.**
+
+## Awaiting Team Confirmation
+
 ### D28 — EO-C2: a request must describe a real, future event (supersedes the 22 Sep date-range rule)
 
 2026-10-24, branch `feat/eo-c2-request-date-validation`. While writing EO03's ACs we found that EO02 accepted a request that:
@@ -402,7 +428,7 @@ Everything else in that entry stands:
 
 2026-10-24, branch `feat/eo03-ecnew3-change-requests`. The organiser asks to change a submitted request or its event (EO03), and the assigned coordinator decides it (EC-NEW3). This is Week 4 core feature "Event Change Requests" and Week 1 step 12: *"The Event Coordinator determines whether those changes affect venue, equipment, technical-support, registration, or other arrangements."*
 
-**Data (V31).** A new table, `event_change_requests`, modelled on EC-C1's `event_reassignment_requests`.
+**Data (V32).** A new table, `event_change_requests`, modelled on EC-C1's `event_reassignment_requests`.
 - **Why not V3's `request_type 'A'`:** a second `event_requests` row per event would break `findByEventId` (the change log, timelines and ECL-C7 access all rely on one request per event), and it would appear in coordinators' review queues as a new request.
 - **What a row holds:** the changeable fields before and after, as JSON, so the comparison survives later edits; the reason; the decision; and the impacts acknowledged.
 - **One pending change per request**, enforced by a partial unique index, so two simultaneous submissions cannot both succeed.
@@ -450,7 +476,7 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 - **Frontend:** `ChangeRequests.test.tsx` (26).
 - **E2E:** `change-requests.spec.ts`.
 
-**Migration:** V31 (new table, three notification types, notification constraint re-declared with them added).
+**Migration:** V32 (new table, three notification types, notification constraint re-declared with them added).
 
 ## Awaiting Team Confirmation
 

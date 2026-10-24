@@ -17,7 +17,7 @@ import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.Setter;
 
-/** EO03/EC-NEW3 (V31): an organiser's request to change a request or its
+/** EO03/EC-NEW3 (V32): an organiser's request to change a request or its
  * event, and the coordinator's decision. Values are the changeable fields
  * as JSON (the same keys as SaveEventRequestRequest). */
 @Entity

@@ -543,3 +543,14 @@ booking is automatically made into a hold. Conversion updates the same booking,
 and re-holding retains older attempts. `venue_hold_expired` notifications require
 a booking reference; prior notification-shape branches remain intact. See
 [workflow, APIs and verification](../../../../../../docs/tentative-venue-holds.md).
+
+## V31 update — hold expiry reminders (EC-C3)
+
+`venue_booking_holds` adds nullable `reminded_at` (`timestamptz`): when the
+coordinator was reminded that this hold attempt is about to expire. `NULL` means
+no reminder has been sent; it is set in the same transaction as the reminder
+notification, so a failed send leaves it `NULL` for the next run to retry. A new
+hold attempt on the same booking is a new row with its own `reminded_at`.
+Notification type `venue_hold_expiring` requires a booking reference; V30's other
+notification-shape branches are kept unchanged. See
+[hold reminders](../../../../../../docs/tentative-venue-holds.md#expiry-reminders-ec-c3).
