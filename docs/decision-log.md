@@ -424,6 +424,60 @@ Everything else in that entry stands:
 
 **No database migration.**
 
+### D29 — EO03 + EC-NEW3: event change requests, decided against their real impact
+
+2026-10-24, branch `feat/eo03-ecnew3-change-requests`. The organiser asks to change a submitted request or its event (EO03), and the assigned coordinator decides it (EC-NEW3). This is Week 4 core feature "Event Change Requests" and Week 1 step 12: *"The Event Coordinator determines whether those changes affect venue, equipment, technical-support, registration, or other arrangements."*
+
+**Data (V32).** A new table, `event_change_requests`, modelled on EC-C1's `event_reassignment_requests`.
+- **Why not V3's `request_type 'A'`:** a second `event_requests` row per event would break `findByEventId` (the change log, timelines and ECL-C7 access all rely on one request per event), and it would appear in coordinators' review queues as a new request.
+- **What a row holds:** the changeable fields before and after, as JSON, so the comparison survives later edits; the reason; the decision; and the impacts acknowledged.
+- **One pending change per request**, enforced by a partial unique index, so two simultaneous submissions cannot both succeed.
+- **Notifications:** three new types (submitted, withdrawn, decided). Their link `/change-requests/{requestId}` opens the reader's own console, since the same notification can go to a coordinator or to the Leads.
+
+**Rules.**
+- **The proposal** is checked by the same rules as submitting a request (EO02 completeness, EO-C2 dates and attendance, 422 per field), and checked again at decision time.
+- **"Changed" means changed in meaning**, using the change log's comparison (EC-NEW5): offsets, list order, spaces and `150` vs `150.0` are not changes. A request that changes nothing is refused.
+- **When it can be asked:**
+  - allowed for a Submitted request, or an event in Planning, Awaiting Safety Review, Safety Changes Requested, Safety Approved or Confirmed;
+  - refused once the event has started (start ≤ now);
+  - refused for drafts (edit directly) and while a clarification is open (reply instead).
+- **Who:**
+  - organisers by organisation (AU04);
+  - the assigned coordinator decides (ECL-C7);
+  - before assignment, the Leads are told and the request waits for the coordinator they assign;
+  - a pending change follows a reassignment;
+  - the Lead reads everything, read-only.
+- **Approval applies every field at once**, to the request and its event, under row locks. When an event in Awaiting Safety Review, Safety Approved or Confirmed has its date, time, attendance, venue or equipment requirements, accessibility or facilities changed, it returns to Planning (`EventLifecycleService.returnToPlanning`, EC08).
+
+**Impact (`ChangeImpactService`).** Recalculated on every view from live data, using the system's own checks:
+- `AvailabilityService` for clashes, unavailability, operational issues and opening hours, each with that booking's own setup and turnaround;
+- `VenueSuitability` on the event as it would be, for capacity, accessibility and facilities;
+- hold and equipment-reservation windows;
+- the safety consequence.
+
+Every "attention" item has a stable key, and the coordinator must acknowledge each one. If the impact has changed since they looked, approval is refused (409) and the new impact is shown. The acknowledged items are kept as **follow-ups** on the event page.
+
+**Found while testing:** since VS-C2, every booking stores its own window, so a booking does not follow the event's new time. The impact therefore:
+- checks a whole-event booking **at the new time** (could it move there?) and flags it *"booked for the old time; nothing is moved automatically"*;
+- leaves a part-day (EC-C2) booking in its window and flags it to be checked;
+- treats pending booking requests as non-reserving, consistent with the rest of the system.
+
+**Story gaps (raise in the Sheet):**
+- **EO07 (cancellation) is not built.** EO03 AC6 (no change while a cancellation is pending) and AC7 (close on cancellation) wait for it.
+- **Registrations (AT01) are not built.** EO03 AC19 and EC-NEW3 AC22 wait for them.
+- **EC-NEW3 AC40** (Venue Staff and Technical Support told of approved changes) is VS17's and TS11's work.
+- **EC-NEW3 AC9** said pending booking requests clash. They do not reserve anything anywhere else in the system, so they are not counted here either.
+
+**Evidence:**
+- **Backend:**
+  - `ChangeRequestFlowTest` (16, real PostgreSQL), covering the boundaries: meets vs one minute over, extending into the next booking's setup, closing time, overnight, capacity at the limit;
+  - `ChangeRequestNotificationFlowTest` (2, committed);
+  - `ChangeRequestServiceTest`, `ChangeImpactServiceTest` and `ChangeFieldsTest` (24, unit, fixed clock).
+- **Frontend:** `ChangeRequests.test.tsx` (26).
+- **E2E:** `change-requests.spec.ts`.
+
+**Migration:** V32 (new table, three notification types, notification constraint re-declared with them added).
+
 ## Awaiting Team Confirmation
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?

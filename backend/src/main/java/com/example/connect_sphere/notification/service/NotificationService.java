@@ -223,6 +223,19 @@ public class NotificationService {
         }
     }
 
+    /** EO03/EC-NEW3: a change request was submitted, withdrawn or decided. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createChangeRequestNotifications(List<UUID> recipientUserIds, NotificationType type,
+            UUID eventRequestId, UUID eventId, String eventName, String message) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, type, eventName);
+            notification.setEventRequestId(eventRequestId);
+            notification.setEventId(eventId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -312,6 +325,10 @@ public class NotificationService {
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
             case event_confirmed -> null;
+            // EO03/EC-NEW3: the coordinator, or the Lead while unassigned, gets the
+            // same link; the page sends each reader to their own console.
+            case change_request_submitted, change_request_withdrawn, change_request_decided ->
+                    "/change-requests/" + n.getEventRequestId();
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();

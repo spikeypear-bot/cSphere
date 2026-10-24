@@ -8,6 +8,7 @@ import { JourneyStatusBadge, StatusFilter } from '../../components/ui/JourneySta
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { useVenueRead } from '../venueStaff/useVenueRead'
+import type { ChangeRequestView } from '../../types/changeRequest'
 import './AssignedEventsPage.css'
 
 /** EC09: the signed-in coordinator's active events, in the server's order (soonest first). */
@@ -15,6 +16,9 @@ export function AssignedEventsPage() {
   // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
   const { data: events, error, loading, retry } = useVenueRead<EventDto[]>('/events/assigned', true)
   const refreshing = loading && events !== undefined
+  // EC-NEW3 AC4: pending change requests on this coordinator's events.
+  const { data: changes } = useVenueRead<ChangeRequestView[]>('/change-requests', true)
+  const changeByEvent = new Map((changes ?? []).filter((c) => c.eventId).map((c) => [c.eventId!, c]))
   // EC-NEW2: filter by the same status everyone sees.
   const [filter, setFilter] = useState<string | null>(null)
   const statuses = (events ?? []).flatMap((e) => (e.journeyStatus ? [e.journeyStatus] : []))
@@ -46,11 +50,16 @@ export function AssignedEventsPage() {
           <p className="field-hint" role="status">
             {events.length === 1 ? '1 event is' : `${events.length} events are`} assigned to you.
           </p>
+          {changeByEvent.size > 0 ? (
+            <p className="field-hint" role="status">
+              {changeByEvent.size === 1 ? '1 change request is' : `${changeByEvent.size} change requests are`} waiting for your decision.
+            </p>
+          ) : null}
           <StatusFilter statuses={statuses} selected={filter} onChange={setFilter} label="Filter my events by status" />
           <ul className="assigned-events__grid">
             {shown.map((event) => (
               <li key={event.eventId}>
-                <AssignedEventCard event={event} />
+                <AssignedEventCard event={event} change={changeByEvent.get(event.eventId)} />
               </li>
             ))}
           </ul>
@@ -60,7 +69,7 @@ export function AssignedEventsPage() {
   )
 }
 
-function AssignedEventCard({ event }: { event: EventDto }) {
+function AssignedEventCard({ event, change }: { event: EventDto; change?: ChangeRequestView }) {
   return (
     <Card className="assigned-events__card">
       <div className="assigned-events__card-head">
@@ -72,6 +81,10 @@ function AssignedEventCard({ event }: { event: EventDto }) {
         )}
       </div>
       <p className="assigned-events__organisation">{event.organisation}</p>
+      {change ? (
+        <Link className="change-request__status change-request__status--pending"
+          to={`/coordinator/change-requests/${change.changeRequestId}`}>Change requested · review</Link>
+      ) : null}
       <dl className="assigned-events__facts">
         <div>
           <dt>When (Singapore time)</dt>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -204,6 +205,8 @@ export function RequestReviewPage() {
       {request.journeyStatus ? <JourneyStepper status={request.journeyStatus} /> : <StatusTimeline status={request.status} />}
 
       {notice ? <Notice>{notice}</Notice> : null}
+
+      <ChangeRequestPanel requestId={request.requestId} />
 
       <div className="split-layout">
         <div className="request-review__main">

@@ -121,6 +121,8 @@ NFRs (VERIFIED, customer briefing §8, INFERRED into concrete stories on the bac
 
 **Event request dates and attendance (EO-C2, D28).** A request can only be submitted, resubmitted or approved when its start is strictly in the future, its end is strictly after its start (compared as moments), and at least 1 person is expected. Drafts stay saveable. Organiser dates are entered and shown in Singapore time. The server's 422 carries `fieldErrors` (field → message), and the frontend mirrors the same wording in `eventRequestValidation.ts`. Decimals for whole-number JSON fields are refused globally (`accept-float-as-int=false`).
 
+**Event change requests (EO03/EC-NEW3, D29).** A change to a submitted request or its event is a row in `event_change_requests` (one pending per request), never an edit. The proposal is checked by the same rules as submitting. The coordinator decides against `ChangeImpactService`'s live impact and must acknowledge every "attention" key. Approval applies all fields at once and returns a safety-stage event to Planning when arrangements are affected. Bookings keep their own windows (VS-C2): nothing is moved automatically, and moves are left as follow-ups.
+
 ## Data / Domain Model — VERIFIED from `backend/src/main/resources/db/migration/`
 
 Authoritative reference: `backend/src/main/resources/db/migration/SCHEMA.md` (hand-written schema dictionary) and `V2__init_tables.sql`. Do not re-derive this from memory — read those files.

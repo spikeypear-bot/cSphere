@@ -816,6 +816,48 @@ public class EventRequestService {
         };
     }
 
+    // ---- EO03 / EC-NEW3: change requests reuse the request's own rules ----------
+
+    /** The request's changeable details as they are now. */
+    public static SaveEventRequestRequest detailsOf(EventRequest e) {
+        return new SaveEventRequestRequest(e.getEventName(), e.getPurpose(), e.getDescription(),
+                e.getStartDatetime(), e.getEndDatetime(), e.getExpectedAttendance(), e.getVenueRequirements(),
+                e.getEquipmentRequirements(), e.getAccessibilityNeeds() == null ? List.of() : List.copyOf(e.getAccessibilityNeeds()),
+                e.getRequiredFacilities() == null ? List.of()
+                        : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
+                e.getRegistrationNeeds());
+    }
+
+    /** EO03: proposed details must be submittable exactly as a new request is
+     * (EO02 completeness, EO-C2 dates and attendance). Touches nothing. */
+    public void requireValidDetails(SaveEventRequestRequest details) {
+        EventRequest candidate = new EventRequest();
+        applyFields(candidate, details);
+        requireSubmittable(candidate);
+    }
+
+    /** EC-NEW3: apply approved details to the request and, once it has one, its
+     * event, in the caller's transaction (both rows already locked). */
+    public void applyApprovedDetails(EventRequest request, Event event, SaveEventRequestRequest details) {
+        applyFields(request, details);
+        request.setUpdatedAt(OffsetDateTime.now(clock));
+        repository.save(request);
+        if (event != null) {
+            event.setEventName(request.getEventName());
+            event.setPurpose(request.getPurpose());
+            event.setDescription(request.getDescription());
+            event.setStartDatetime(request.getStartDatetime());
+            event.setEndDatetime(request.getEndDatetime());
+            event.setExpectedAttendance(request.getExpectedAttendance());
+            event.setVenueRequirements(request.getVenueRequirements());
+            event.setEquipmentRequirements(request.getEquipmentRequirements());
+            event.setAccessibilityNeeds(request.getAccessibilityNeeds().stream().map(Enum::name).toList());
+            event.setRequiredFacilities(request.getRequiredFacilities() == null ? List.of() : request.getRequiredFacilities());
+            event.setRegistrationNeeds(request.getRegistrationNeeds());
+            eventRepository.save(event);
+        }
+    }
+
     private void applyFields(EventRequest entity, SaveEventRequestRequest request) {
         entity.setEventName(request.eventName());
         entity.setPurpose(request.purpose());

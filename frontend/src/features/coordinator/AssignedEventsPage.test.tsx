@@ -146,8 +146,11 @@ describe('AssignedEventsPage (EC09 my events)', () => {
 
     const card = await cardFor('Offsite')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
-    // The exact URL, no query string, and no body: whose list it is comes from the token alone.
-    expect(calls.map((call) => `${call.method} ${call.url}`)).toEqual(['GET /api/events/assigned'])
-    expect(calls[0].body).toBeUndefined()
+    // Exact URLs, no query string, and no body: whose list it is comes from the token alone.
+    // (EC-NEW3 adds the coordinator's own pending change requests, read the same way.)
+    expect(calls.map((call) => `${call.method} ${call.url}`).sort())
+      .toEqual(['GET /api/change-requests', 'GET /api/events/assigned'])
+    expect(calls.every((call) => call.body === undefined)).toBe(true)
+    expect(calls.some((call) => call.url.includes('?'))).toBe(false)
   })
 })

@@ -64,6 +64,10 @@ const TITLES: Record<ActivityTypeName, string> = {
   event_reassignment_requested: 'requested event reassignment',
   event_reassignment_approved: 'approved event reassignment',
   event_reassignment_declined: 'declined event reassignment',
+  change_requested: 'asked to change the event',
+  change_request_withdrawn: 'withdrew a change request',
+  change_approved: 'approved a change to the event',
+  change_rejected: 'rejected a change to the event',
 }
 
 /** Venue entries move through booking statuses, not request statuses. */
