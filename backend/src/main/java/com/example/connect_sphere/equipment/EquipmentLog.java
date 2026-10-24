@@ -57,4 +57,17 @@ public class EquipmentLog {
     public String getSerialNumber() { return serialNumber; }
     public Instant getLoanedFrom() { return loanedFrom; }
     public Instant getLoanedUntil() { return loanedUntil; }
+
+    /** TS09 AC10: the same reservation, now held by another unit of the kind. */
+    public void replaceUnit(String replacementSerialNumber) {
+        this.serialNumber = replacementSerialNumber;
+    }
+
+    /** TS09 AC11: fewer units of a non-serialised kind for this reservation. */
+    public void reduceBy(int units) {
+        if (units < 0 || units > quantity) {
+            throw new IllegalArgumentException("Cannot reduce " + quantity + " by " + units);
+        }
+        this.quantity -= units;
+    }
 }

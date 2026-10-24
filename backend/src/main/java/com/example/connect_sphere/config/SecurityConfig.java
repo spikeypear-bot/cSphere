@@ -172,6 +172,15 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
+		    // TS09: Technical Support report damaged equipment and decide each
+		    // affected event. The event's assigned coordinator reads and resolves
+		    // its shortfalls; the Lead reads any (ECL-C7). Which event is the
+		    // assignment check in EventEquipmentDamageService. Must sit above the
+		    // GET /api/events/** rule below, which would let an Organiser read it.
+		    .requestMatchers("/api/equipment-damage-reports", "/api/equipment-damage-reports/**").hasRole("TECHNICIAN")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-damage").hasAnyRole("EC", "ECL")
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-damage/*/resolve").hasRole("EC")
+		    .requestMatchers("/api/events/*/equipment-damage", "/api/events/*/equipment-damage/**").denyAll()
 		    // SO-C3/SO-C4: the Safety Officer's checklist and decision.
 		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")
