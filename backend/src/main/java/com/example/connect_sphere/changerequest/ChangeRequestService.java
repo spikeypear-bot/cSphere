@@ -56,6 +56,8 @@ import com.example.connect_sphere.user.repository.UserRepository;
 public class ChangeRequestService {
 
     static final int MAX_TEXT = 2000;
+    static final String REQUEST_CHANGED_SINCE = "This request has changed since the change was asked for. "
+            + "The organiser needs to withdraw it and ask again.";
     private static final Set<EventStatus> ACTIVE_EVENT = Set.of(EventStatus.pending,
             EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested, EventStatus.safety_approved,
             EventStatus.confirmed);
@@ -151,7 +153,7 @@ public class ChangeRequestService {
                     "This event already has a change request waiting for a decision.");
         }
         activity.record(new ActivityService.Entry(requestId, origin.getEventId(), ActivityType.change_requested,
-                organiser.userId(), reason + " — " + ChangeFields.describe(changes), null, null, null, null,
+                organiser.userId(), fitActivityMessage(reason + " — " + ChangeFields.describe(changes)), null, null, null, null,
                 ChangeFields.changedValues(changes)));
 
         UUID coordinator = coordinatorOf(origin, event);
@@ -207,12 +209,18 @@ public class ChangeRequestService {
         notDecidable(origin, event).ifPresent(why -> {
             throw new ChangeRequestException.State(why);
         });
+        // The proposal is a full copy of the details as they were when it was asked for. If
+        // the request has changed since (e.g. a clarification answered), applying it would
+        // silently undo those edits, so the organiser must withdraw and ask again.
+        Map<String, Object> currentValues = ChangeFields.valuesOf(EventRequestService.detailsOf(origin));
+        if (!ChangeFields.changes(change.getOriginalValues(), currentValues).isEmpty()) {
+            throw new ChangeRequestException.State(REQUEST_CHANGED_SINCE);
+        }
         SaveEventRequestRequest proposed = ChangeFields.detailsOf(change.getProposedValues());
         // Re-checked now: a proposed start may have passed while it waited.
         requestRules.requireValidDetails(proposed);
 
-        List<FieldChange> changes = ChangeFields.changes(
-                ChangeFields.valuesOf(EventRequestService.detailsOf(origin)), change.getProposedValues());
+        List<FieldChange> changes = ChangeFields.changes(currentValues, change.getProposedValues());
         Set<String> changed = fields(changes);
         List<ImpactItem> current = impact.assess(event, proposed, changed);
         Set<String> confirmed = acknowledged == null ? Set.of() : new HashSet<>(acknowledged);
@@ -232,11 +240,11 @@ public class ChangeRequestService {
         ChangeRequest saved = changeRequests.save(change);
         String summary = ChangeFields.describe(changes);
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
-                ActivityType.change_approved, coordinator.userId(), "Approved: " + summary, null, null, null, null,
+                ActivityType.change_approved, coordinator.userId(), fitActivityMessage("Approved: " + summary), null, null, null, null,
                 ChangeFields.changedValues(changes)));
         if (replan) {
             lifecycle.returnToPlanning(event.getEventId(), coordinator.userId(),
-                    "An approved change affects the event's arrangements: " + summary);
+                    fitActivityMessage("An approved change affects the event's arrangements: " + summary));
         }
 
         String name = nameOf(origin, event);
@@ -263,7 +271,7 @@ public class ChangeRequestService {
         change.setDecisionReason(reason);
         ChangeRequest saved = changeRequests.save(change);
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
-                ActivityType.change_rejected, coordinator.userId(), "Rejected: " + reason, null, null, null));
+                ActivityType.change_rejected, coordinator.userId(), fitActivityMessage("Rejected: " + reason), null, null, null));
         String name = nameOf(origin, event);
         afterCommit(() -> notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
                 NotificationType.change_request_decided, origin.getRequestId(), origin.getEventId(), name,
@@ -463,6 +471,20 @@ public class ChangeRequestService {
             throw new InvalidMessageException("This can be at most " + MAX_TEXT + " characters.");
         }
         return text;
+    }
+
+    /** A timeline entry's message holds at most MAX_TEXT characters (V13's
+     * chk_activity_message_length). A reason plus the field summary can be longer,
+     * so the end is cut off rather than failing the whole action. */
+    static String fitActivityMessage(String message) {
+        if (message.length() <= MAX_TEXT) {
+            return message;
+        }
+        int end = MAX_TEXT - 1;
+        if (Character.isHighSurrogate(message.charAt(end - 1))) {
+            end--;
+        }
+        return message.substring(0, end) + "…";
     }
 
     private OffsetDateTime now() {

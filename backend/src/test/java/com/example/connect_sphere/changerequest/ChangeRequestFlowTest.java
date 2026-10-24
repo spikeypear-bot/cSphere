@@ -505,4 +505,81 @@ class ChangeRequestFlowTest {
         approve("ec1", id, List.of()).andExpect(status().isForbidden());
         approve("ec2", id, List.of()).andExpect(status().isOk());
     }
+
+    private String timelineMessage(UUID requestId, String type) {
+        return jdbc.queryForObject("SELECT message FROM event_request_activity WHERE request_id = ? AND activity_type = ? "
+                + "ORDER BY occurred_at DESC LIMIT 1", String.class, requestId, type);
+    }
+
+    @Test
+    @DisplayName("EO03 AC12, EC-NEW3 AC25, AC38 (boundary): a 2,000-character reason or rejection reason, and approving a long description, are saved with the timeline entry cut to 2,000 characters")
+    void longTimelineMessagesAreCutToFit() throws Exception {
+        UUID eventId = flow.approvedEvent("eo1", "ec1", FlowSupport.requestBody("Long Gala", 150, "none"));
+        UUID requestId = requestOf(eventId);
+
+        // Reason (2,000) + " — " + field summary is over the timeline's 2,000-character limit.
+        ask("eo1", requestId, "y".repeat(2000), details("Long Gala", "09:00", "12:00", 160))
+                .andExpect(status().isCreated());
+        sync();
+        String asked = timelineMessage(requestId, "change_requested");
+        assertThat(asked).hasSize(2000).startsWith("y".repeat(1999)).endsWith("…");
+        UUID first = jdbc.queryForObject("SELECT change_request_id FROM event_change_requests WHERE request_id = ? "
+                + "AND status = 'pending'", UUID.class, requestId);
+
+        // "Rejected: " + a 2,000-character reason.
+        mvc.perform(post("/api/change-requests/" + first + "/reject").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"" + "n".repeat(2000) + "\"}"))
+                .andExpect(status().isOk());
+        sync();
+        assertThat(timelineMessage(requestId, "change_rejected")).hasSize(2000).startsWith("Rejected: n").endsWith("…");
+
+        // "Approved: Description: All hands → " + a 2,500-character description.
+        String longDescription = "d".repeat(2500);
+        UUID second = asked(requestId, details("Long Gala", "09:00", "12:00", 150)
+                .replace("\"All hands\"", "\"" + longDescription + "\""));
+        approve("ec1", second, attention(second)).andExpect(status().isOk());
+        sync();
+        assertThat(timelineMessage(requestId, "change_approved")).hasSize(2000).startsWith("Approved: Description:").endsWith("…");
+        assertThat(eventField(eventId, "description")).isEqualTo(longDescription);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 AC29, AC31 (conflict): a change cannot be approved once the request has changed since it was asked for, so a clarification's edits are never undone and nothing is applied")
+    void approvalRefusedWhenRequestChangedSinceAsked() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Moved Gala", 150, "none"));
+        UUID id = asked(requestId, details("Moved Gala", "09:00", "12:00", 200));
+
+        // While the change waits, a clarification is asked and answered with a later start.
+        mvc.perform(post("/api/event-requests/" + requestId + "/clarifications").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"Can it start later?\",\"flaggedFields\":[]}"))
+                .andExpect(status().isOk());
+        mvc.perform(post("/api/event-requests/" + requestId + "/resubmit").with(flow.as("eo1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"response\":\"Moved to 10:00.\",\"details\":" + details("Moved Gala", "10:00", "12:00", 150) + "}"))
+                .andExpect(status().isOk());
+        sync();
+
+        approve("ec1", id, List.of()).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This request has changed since the change was asked for. "
+                        + "The organiser needs to withdraw it and ask again."));
+        sync();
+        // Nothing applied: the clarification's start stays, the attendance is not changed, the change still waits.
+        assertThat(jdbc.queryForObject("SELECT start_datetime = '" + DAY + "10:00:00+08:00'::timestamptz "
+                + "FROM event_requests WHERE request_id = ?", Boolean.class, requestId)).isTrue();
+        assertThat(jdbc.queryForObject("SELECT expected_attendance FROM event_requests WHERE request_id = ?",
+                Integer.class, requestId)).isEqualTo(150);
+        assertThat(view(id, "eo1").get("status").asString()).isEqualTo("pending");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM event_request_activity WHERE request_id = ? "
+                + "AND activity_type = 'change_approved'", Integer.class, requestId)).isZero();
+
+        // Withdrawn and asked again from the current details, it can be approved.
+        withdraw(id);
+        UUID again = asked(requestId, details("Moved Gala", "10:00", "12:00", 200));
+        approve("ec1", again, attention(again)).andExpect(status().isOk());
+        sync();
+        assertThat(jdbc.queryForObject("SELECT expected_attendance FROM event_requests WHERE request_id = ?",
+                Integer.class, requestId)).isEqualTo(200);
+        assertThat(jdbc.queryForObject("SELECT start_datetime = '" + DAY + "10:00:00+08:00'::timestamptz "
+                + "FROM event_requests WHERE request_id = ?", Boolean.class, requestId)).isTrue();
+    }
 }
