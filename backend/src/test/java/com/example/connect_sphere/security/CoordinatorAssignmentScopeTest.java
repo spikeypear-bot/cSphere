@@ -50,6 +50,7 @@ import jakarta.persistence.EntityManager;
 @Tag("ELC-C5")
 @Tag("AU04")
 @Tag("EO07")
+@Tag("TS11")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -139,6 +140,8 @@ class CoordinatorAssignmentScopeTest {
                 post(event + "/safety-review/withdraw").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"Not mine\"}"),
                 post(event + "/confirm"),
+                // Technical Support's review outcomes for the event (TS11 AC12)
+                get(event + "/equipment-change-reviews"),
                 // Cancellation requests: read, approve, decline (EO07)
                 get(event + "/cancellation-requests"),
                 post(event + "/cancellation-requests/" + UUID.randomUUID() + "/approve")
