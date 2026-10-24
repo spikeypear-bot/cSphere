@@ -1,5 +1,6 @@
 package com.example.connect_sphere.eventrequest.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -10,6 +11,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -65,7 +67,10 @@ public class EventRequestService {
     private final UserRepository userRepository;
     private final NotificationService notificationService;
     private final ActivityService activityService;
+    /** EO-C2: "in the future" is judged against this clock, so tests can pin "now". */
+    private final Clock clock;
 
+    @Autowired
     public EventRequestService(
             EventRequestRepository repository,
             EventRequestMapper mapper,
@@ -73,6 +78,19 @@ public class EventRequestService {
             UserRepository userRepository,
             NotificationService notificationService,
             ActivityService activityService) {
+        this(repository, mapper, eventRepository, userRepository, notificationService, activityService,
+                Clock.systemUTC());
+    }
+
+    public EventRequestService(
+            EventRequestRepository repository,
+            EventRequestMapper mapper,
+            EventRepository eventRepository,
+            UserRepository userRepository,
+            NotificationService notificationService,
+            ActivityService activityService,
+            Clock clock) {
+        this.clock = clock;
         this.repository = repository;
         this.mapper = mapper;
         this.eventRepository = eventRepository;
@@ -262,10 +280,12 @@ public class EventRequestService {
         EventRequest entity = repository.findById(requestId)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
         requireAssigned(coordinatorId, entity);
+        Map<String, String> problems = scheduleProblems(entity);
         return new EventRequestReviewDto(
                 mapper.toDto(entity),
                 missingRequiredFields(entity),
-                scheduleValid(entity),
+                problems.isEmpty(),
+                problems,
                 activityService.timeline(requestId, UserRole.ec));
     }
 
@@ -458,10 +478,12 @@ public class EventRequestService {
         EventRequest entity = repository.findById(requestId)
                 .filter(request -> request.getStatus() != EventRequestStatus.draft)
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
+        Map<String, String> problems = scheduleProblems(entity);
         return new EventRequestReviewDto(
                 mapper.toDto(entity),
                 missingRequiredFields(entity),
-                scheduleValid(entity),
+                problems.isEmpty(),
+                problems,
                 activityService.timeline(requestId, UserRole.ec));
     }
 
@@ -674,20 +696,52 @@ public class EventRequestService {
         }
     }
 
-    /** EO02's submission rules, shared by submit, resubmit and approve. */
-    private static void requireSubmittable(EventRequest entity) {
+    /** EO02's submission rules (completeness) and EO-C2's (a real, future
+     * event), shared by submit, resubmit and approve, so a request that has
+     * become invalid since it was sent cannot be approved either. */
+    private void requireSubmittable(EventRequest entity) {
         List<String> missing = missingRequiredFields(entity);
         if (!missing.isEmpty()) {
             throw new IncompleteEventRequestException(missing);
         }
-        if (!scheduleValid(entity)) {
-            throw new InvalidEventRequestScheduleException();
+        Map<String, String> problems = scheduleProblems(entity);
+        if (!problems.isEmpty()) {
+            throw new InvalidEventRequestScheduleException(problems);
         }
     }
 
-    private static boolean scheduleValid(EventRequest entity) {
-        return entity.getStartDatetime() == null || entity.getEndDatetime() == null
-                || !entity.getEndDatetime().isBefore(entity.getStartDatetime());
+    /**
+     * EO-C2: every reason the date, time or expected attendance cannot
+     * describe a real event, keyed by the field to show it next to, in the
+     * form's order. Instants are compared as moments, so the same time in
+     * another offset is the same time. Missing values are EO02's
+     * missingRequiredFields, not reported twice here.
+     * <ul>
+     * <li>The start must be strictly after now: an event starting this very
+     * minute has already started.</li>
+     * <li>The end must be strictly after the start: an event has a duration.
+     * It may fall on a later date (overnight events are valid requests; venue
+     * operating hours are checked when a venue is booked).</li>
+     * <li>At least one person must be expected. Whole numbers are guaranteed
+     * by the column type and the request body (decimals are refused before
+     * this point).</li>
+     * </ul>
+     */
+    private Map<String, String> scheduleProblems(EventRequest entity) {
+        Map<String, String> problems = new LinkedHashMap<>();
+        OffsetDateTime start = entity.getStartDatetime();
+        OffsetDateTime end = entity.getEndDatetime();
+        if (start != null && !start.toInstant().isAfter(clock.instant())) {
+            problems.put("startDatetime", "The start date & time must be in the future.");
+        }
+        if (start != null && end != null && !end.toInstant().isAfter(start.toInstant())) {
+            problems.put("endDatetime", "The end date & time must be after the start date & time.");
+        }
+        Integer attendance = entity.getExpectedAttendance();
+        if (attendance != null && attendance < 1) {
+            problems.put("expectedAttendance", "Expected attendance must be at least 1.");
+        }
+        return problems;
     }
 
     /** Trimmed, 1-2000 characters, or an InvalidMessageException carrying a
@@ -760,6 +814,48 @@ public class EventRequestService {
             case rejected -> "Rejected";
             case cancelled -> "Cancelled";
         };
+    }
+
+    // ---- EO03 / EC-NEW3: change requests reuse the request's own rules ----------
+
+    /** The request's changeable details as they are now. */
+    public static SaveEventRequestRequest detailsOf(EventRequest e) {
+        return new SaveEventRequestRequest(e.getEventName(), e.getPurpose(), e.getDescription(),
+                e.getStartDatetime(), e.getEndDatetime(), e.getExpectedAttendance(), e.getVenueRequirements(),
+                e.getEquipmentRequirements(), e.getAccessibilityNeeds() == null ? List.of() : List.copyOf(e.getAccessibilityNeeds()),
+                e.getRequiredFacilities() == null ? List.of()
+                        : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
+                e.getRegistrationNeeds());
+    }
+
+    /** EO03: proposed details must be submittable exactly as a new request is
+     * (EO02 completeness, EO-C2 dates and attendance). Touches nothing. */
+    public void requireValidDetails(SaveEventRequestRequest details) {
+        EventRequest candidate = new EventRequest();
+        applyFields(candidate, details);
+        requireSubmittable(candidate);
+    }
+
+    /** EC-NEW3: apply approved details to the request and, once it has one, its
+     * event, in the caller's transaction (both rows already locked). */
+    public void applyApprovedDetails(EventRequest request, Event event, SaveEventRequestRequest details) {
+        applyFields(request, details);
+        request.setUpdatedAt(OffsetDateTime.now(clock));
+        repository.save(request);
+        if (event != null) {
+            event.setEventName(request.getEventName());
+            event.setPurpose(request.getPurpose());
+            event.setDescription(request.getDescription());
+            event.setStartDatetime(request.getStartDatetime());
+            event.setEndDatetime(request.getEndDatetime());
+            event.setExpectedAttendance(request.getExpectedAttendance());
+            event.setVenueRequirements(request.getVenueRequirements());
+            event.setEquipmentRequirements(request.getEquipmentRequirements());
+            event.setAccessibilityNeeds(request.getAccessibilityNeeds().stream().map(Enum::name).toList());
+            event.setRequiredFacilities(request.getRequiredFacilities() == null ? List.of() : request.getRequiredFacilities());
+            event.setRegistrationNeeds(request.getRegistrationNeeds());
+            eventRepository.save(event);
+        }
     }
 
     private void applyFields(EventRequest entity, SaveEventRequestRequest request) {

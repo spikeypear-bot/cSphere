@@ -16,7 +16,7 @@ import {
   type EventRequestDto,
   type SaveEventRequestRequest,
 } from '../../types/eventRequest'
-import { dateRangeError } from './eventRequestValidation'
+import { hasProblems, requestFieldProblems, type RequestFieldProblems } from './eventRequestValidation'
 import './ClarificationResponsePage.css'
 import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 
@@ -65,6 +65,7 @@ export function ClarificationResponsePage() {
   const [busy, setBusy] = useState<'save' | 'resubmit' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [missing, setMissing] = useState<string[]>([])
+  const [serverFieldErrors, setServerFieldErrors] = useState<Record<string, string>>({})
   const [saved, setSaved] = useState(false)
 
   useEffect(() => {
@@ -104,16 +105,21 @@ export function ClarificationResponsePage() {
   const flagged = question?.flaggedFields ?? []
   const fieldQuestions = question?.fieldQuestions ?? {}
   const ordered = [...FIELD_ORDER].sort((a, b) => Number(flagged.includes(b)) - Number(flagged.includes(a)))
-  const rangeError = dateRangeError(fields.startDatetime, fields.endDatetime)
+  // EO-C2: a resubmission must still describe a real, future event.
+  const problems = requestFieldProblems(fields)
+  const scheduleBlocked = hasProblems(problems)
   const responseLength = response.trim().length
 
   function setFields(patch: Partial<Fields>) {
     setFieldsState((prev) => (prev ? { ...prev, ...patch } : prev))
     setSaved(false)
+    // A server message is about the values it saw: editing a field clears it.
+    setServerFieldErrors((prev) => Object.fromEntries(Object.entries(prev).filter(([key]) => !(key in patch))))
   }
 
   function errorFor(field: string) {
-    if ((field === 'startDatetime' || field === 'endDatetime') && rangeError) return rangeError
+    const problem = problems[field as keyof RequestFieldProblems] ?? serverFieldErrors[field]
+    if (problem) return problem
     return missing.includes(field) ? `${FIELD_LABELS[field]} is required` : undefined
   }
 
@@ -145,6 +151,7 @@ export function ClarificationResponsePage() {
       navigate('/organiser', { state: { justResubmitted: true } })
     } catch (err) {
       if (err instanceof ApiClientError && err.missingFields) setMissing(err.missingFields)
+      if (err instanceof ApiClientError && err.fieldErrors) setServerFieldErrors(err.fieldErrors)
       setError(err instanceof ApiClientError ? err.message : 'The request could not be resubmitted.')
     } finally {
       setBusy(null)
@@ -160,7 +167,7 @@ export function ClarificationResponsePage() {
         return <DateTimeField id={id} label={label} value={fields![field]} error={errorFor(field)}
           onChange={(v) => setFields({ [field]: v })} />
       case 'expectedAttendance':
-        return <NumberField id={id} label={label} min={1} value={fields!.expectedAttendance} error={errorFor(field)}
+        return <NumberField id={id} label={label} min={1} wholeNumber value={fields!.expectedAttendance} error={errorFor(field)}
           onChange={(v) => setFields({ expectedAttendance: v })} />
       case 'accessibilityNeeds':
         return <ChipGroup label={label} options={ACCESSIBILITY_OPTIONS} labels={ACCESSIBILITY_LABELS}
@@ -238,7 +245,7 @@ export function ClarificationResponsePage() {
               placeholder="e.g. Confirmed 120 attendees and moved the end time to 5pm." />
             <span className={responseLength > MAX_RESPONSE ? 'field-error' : 'field-hint'}>{responseLength}/{MAX_RESPONSE}</span>
             {error ? <p role="alert" className="error-text">{error}</p> : null}
-            <Button disabled={busy !== null || responseLength === 0 || responseLength > MAX_RESPONSE || Boolean(rangeError)}
+            <Button disabled={busy !== null || responseLength === 0 || responseLength > MAX_RESPONSE || scheduleBlocked}
               onClick={() => void handleResubmit()}>
               {busy === 'resubmit' ? 'Resubmitting…' : 'Save and resubmit'}
             </Button>

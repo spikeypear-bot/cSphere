@@ -555,7 +555,7 @@ Notification type `venue_hold_expiring` requires a booking reference; V30's othe
 notification-shape branches are kept unchanged. See
 [hold reminders](../../../../../../docs/tentative-venue-holds.md#expiry-reminders-ec-c3).
 
-## V32 update — event cancellation requests (EO07)
+## V33 update — event cancellation requests (EO07)
 
 `event_cancellation_requests` records an Event Organiser's request to cancel an approved event,
 decided by the event's currently assigned Event Coordinator. Columns:
@@ -575,7 +575,6 @@ logs of cancelled or completed events (decision-log D28).
 `notification_type` gains `event_cancellation_requested`, `event_cancellation_approved`,
 `event_cancellation_declined`, `event_cancelled` (each needs `event_id` and `message`) and
 `request_cancelled` (needs `event_request_id` and `message`). The recreated
-`chk_notification_shape` keeps every earlier branch and also lists EC-C3's `venue_hold_expiring`
-(V31, built in parallel) in the booking-reference branch; the check compares `type::text`, so it
-is valid before that enum value exists. See
+`chk_notification_shape` keeps every earlier branch, including EC-C3's `venue_hold_expiring`
+(V31) and EO03/EC-NEW3's change-request types (V32). See
 [EO07 API](../../../../../../docs/event-cancellation-api.md).

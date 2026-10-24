@@ -71,6 +71,17 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
   })
 
+  it("EO-C2 AC3 (conflict): says exactly why the date blocks approval, e.g. the event's start has passed", async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({}, {
+      scheduleValid: false, scheduleProblems: { startDatetime: 'The start date & time must be in the future.' },
+    })) })
+    renderPage()
+
+    expect(await screen.findByText('The start date & time must be in the future.')).toBeInTheDocument()
+    expect(screen.queryByText('The end date & time is before the start')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
+  })
+
   it('asking about missing details pre-flags them, each with its own question box', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({ purpose: null }, { missingFields: ['purpose'] })) })
     const user = userEvent.setup()

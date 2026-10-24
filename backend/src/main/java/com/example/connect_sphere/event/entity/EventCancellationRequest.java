@@ -13,7 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * EO07 (V32): an Event Organiser's request to cancel an approved event, and
+ * EO07 (V33): an Event Organiser's request to cancel an approved event, and
  * the assigned Event Coordinator's decision on it. Its own class rather than
  * fields on {@link Event}: an event can be asked about more than once (a
  * declined request may be followed by another, AC9), and each request carries

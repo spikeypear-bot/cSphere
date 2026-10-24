@@ -40,10 +40,8 @@ ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'event_cancellation_decline
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'event_cancelled';
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'request_cancelled';
 
--- Recreated from V30's version with the EO07 branches added. It also lists
--- 'venue_hold_expiring' (EC-C3, added to the enum by V31, built in parallel):
--- the check compares type::text, so naming a value the enum does not have yet
--- is valid, and whichever of V31/V32 runs last keeps both stories' branches.
+-- Recreated from V32's version (which includes EC-C3's 'venue_hold_expiring'
+-- from V31 and EO03/EC-NEW3's change-request types) with the EO07 branches added.
 ALTER TABLE notifications DROP CONSTRAINT chk_notification_shape;
 ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
     (type::text = 'status_change' AND new_status IS NOT NULL)
@@ -57,5 +55,7 @@ ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
         'event_reassignment_declined') AND event_id IS NOT NULL AND message IS NOT NULL)
     OR (type::text IN ('event_cancellation_requested', 'event_cancellation_approved',
         'event_cancellation_declined', 'event_cancelled') AND event_id IS NOT NULL AND message IS NOT NULL)
+    OR (type::text IN ('change_request_submitted', 'change_request_withdrawn', 'change_request_decided')
+        AND event_request_id IS NOT NULL AND message IS NOT NULL)
     OR (type::text = 'request_cancelled' AND event_request_id IS NOT NULL AND message IS NOT NULL)
 );

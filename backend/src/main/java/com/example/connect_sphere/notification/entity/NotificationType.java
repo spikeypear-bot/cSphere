@@ -27,17 +27,23 @@ public enum NotificationType {
     event_reassignment_requested,
     event_reassignment_approved,
     event_reassignment_declined,
-    /** EO07 (V32): the assigned coordinator told the organiser cancelled a
+    /** EO03 (V32): an organiser asked for a change; sent to the coordinator, or the Leads if unassigned. */
+    change_request_submitted,
+    /** EO03 (V32): the organiser withdrew it. */
+    change_request_withdrawn,
+    /** EC-NEW3 (V32): the coordinator approved or rejected it; sent to the organiser. */
+    change_request_decided,
+    /** EO07 (V33): the assigned coordinator told the organiser cancelled a
      * request under review, with the reason. */
     request_cancelled,
-    /** EO07 (V32): the assigned coordinator told the organiser asked for the
+    /** EO07 (V33): the assigned coordinator told the organiser asked for the
      * event to be cancelled, with the reason. */
     event_cancellation_requested,
-    /** EO07 (V32): the organiser told their event was cancelled as asked. */
+    /** EO07 (V33): the organiser told their event was cancelled as asked. */
     event_cancellation_approved,
-    /** EO07 (V32): the organiser told the coordinator declined, and why. */
+    /** EO07 (V33): the organiser told the coordinator declined, and why. */
     event_cancellation_declined,
-    /** EO07 (V32): Venue Staff / Technical Support told an event they had
+    /** EO07 (V33): Venue Staff / Technical Support told an event they had
      * arrangements for is cancelled. */
     event_cancelled
 }

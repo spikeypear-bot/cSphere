@@ -82,7 +82,8 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(InvalidEventRequestScheduleException.class)
     public ResponseEntity<ApiError> handleInvalidSchedule(InvalidEventRequestScheduleException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
+                .body(ApiError.fieldErrors(ex.getMessage(), ex.getFieldErrors()));
     }
 
     @ExceptionHandler(MissingOrganisationException.class)
