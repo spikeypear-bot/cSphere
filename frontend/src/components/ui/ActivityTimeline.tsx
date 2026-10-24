@@ -6,6 +6,7 @@ import { formatRelativeTime } from '../../lib/relativeTime'
 import { changedFields } from '../../lib/fieldChanges'
 import { JOURNEY_LABELS } from '../../types/status'
 import './ActivityTimeline.css'
+import { formatSingaporeDateTime } from '../../lib/singaporeTime'
 
 const ROLE_LABELS: Record<string, string> = {
   ec: 'Event Coordinator',
@@ -100,12 +101,7 @@ const CONVERSATIONAL: ActivityTypeName[] = ['clarification_requested', 'clarific
 /** SO-C5/SO-C6: these entries flag readiness checklist items, not request fields. */
 const SAFETY_DECISIONS: ActivityDto['type'][] = ['safety_changes_requested', 'safety_rejected']
 
-function exactTime(iso: string) {
-  return new Intl.DateTimeFormat('en-SG', {
-    timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  }).format(new Date(iso))
-}
+const exactTime = formatSingaporeDateTime
 
 /**
  * The request's audit trail and change log (EC01/EC02/EO26, EC-NEW5), oldest

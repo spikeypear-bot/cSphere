@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.Clock;
 import java.time.OffsetDateTime;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -53,7 +54,8 @@ class ReadinessServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new ReadinessService(events, itemStates, reviews, users, eventRequests, notifications, lifecycle);
+        service = new ReadinessService(events, itemStates, reviews, users, eventRequests, notifications, lifecycle,
+                Clock.systemUTC());
         event = new Event();
         event.setEventId(EVENT_ID);
         event.setEventName("Town Hall");

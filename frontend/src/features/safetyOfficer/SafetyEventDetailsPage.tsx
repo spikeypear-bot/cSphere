@@ -4,7 +4,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
+import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../types/event'
 import type { VenueDto } from '../../types/venue'
 import type { EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { useSafetyData } from './useSafetyData'
@@ -96,8 +96,7 @@ export function SafetyEventDetailsPage() {
 
   // EC08: the checklist can be worked on until a decision is made; a
   // decision is possible once the coordinator has sent the event for review.
-  const checklistEditable = event.status === 'pending' || event.status === 'awaiting_safety_review'
-    || event.status === 'safety_changes_requested'
+  const checklistEditable = isPlanningEditable(event.status) || event.status === 'awaiting_safety_review'
   const awaitingDecision = event.status === 'awaiting_safety_review'
   const noteGiven = reviewNote.trim() !== ''
   const canSendBack = noteGiven && flaggedItems.length > 0
@@ -182,7 +181,7 @@ export function SafetyEventDetailsPage() {
           <h2>Safety approval</h2>
           <h3>{awaitingDecision && readiness.approvalStatus !== 'not_reviewed' ? 'Previous decision' : 'Latest decision'}</h3>
           <SafetyDecisionSummary readiness={readiness} />
-          {event.status === 'pending' || event.status === 'safety_changes_requested' ? (
+          {isPlanningEditable(event.status) ? (
             <p role="status">Waiting for the Event Coordinator to send this event for its safety check.
               You can work on the checklist in the meantime.</p>
           ) : null}

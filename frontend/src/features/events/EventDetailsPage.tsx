@@ -9,7 +9,7 @@ import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
-import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
+import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
@@ -77,7 +77,7 @@ export function EventDetailsPage() {
   const journey = event.journeyStatus ?? null
   // Planning-stage edits (venues, equipment) stay open while changes are
   // requested by the Safety Officer, matching EventStatus.isPlanningEditable.
-  const planning = event.status === 'pending' || event.status === 'safety_changes_requested'
+  const planning = isPlanningEditable(event.status)
 
   return (
     <div className="page">

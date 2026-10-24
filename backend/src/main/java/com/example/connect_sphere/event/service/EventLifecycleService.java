@@ -358,8 +358,7 @@ public class EventLifecycleService {
             return false;
         }
         EventStatus stored = event.getStatus();
-        if (stored != EventStatus.awaiting_safety_review && stored != EventStatus.safety_approved
-                && stored != EventStatus.confirmed) {
+        if (!EventStatus.IN_OR_PAST_SAFETY_CHECK.contains(stored)) {
             return false;
         }
         JourneyStatus from = statuses.journeyOf(event);
