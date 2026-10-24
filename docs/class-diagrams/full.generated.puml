@@ -190,8 +190,10 @@ class StatusView {
 
 
 class ApiError {
+	{field} -fieldErrors : Map<String, String>
 	{field} -message : String
 	{field} -missingFields : List<String>
+	{method}  {static} +fieldErrors ( message : String , fieldErrors : Map ) : ApiError
 	{method}  {static} +missingFields ( message : String , missingFields : List ) : ApiError
 	{method}  {static} +of ( message : String ) : ApiError
 }
@@ -913,6 +915,7 @@ class EventRequestDto {
 
 class EventRequestReviewDto {
 	{field} -missingFields : List<String>
+	{field} -scheduleProblems : Map<String, String>
 	{field} -scheduleValid : boolean
 }
 
@@ -1020,6 +1023,7 @@ class EventRequestService {
 	{field} {static} ~FLAGGABLE_FIELDS : Set<String>
 	{field} {static} ~MAX_MESSAGE_LENGTH : int
 	{field} {static} -REQUEST_TYPE_CREATION : char
+	{field} -clock : Clock
 	{method} +approve ( actingCoordinatorId : UUID , requestId : UUID ) : EventRequestDto
 	{method} +assignCoordinator ( leadId : UUID , requestId : UUID , coordinatorUserId : UUID ) : EventRequestDto
 	{method} +assignedRequests () : List
@@ -1058,6 +1062,7 @@ class InvalidCoordinatorException {
 
 
 class InvalidEventRequestScheduleException {
+	{field} -fieldErrors : Map<String, String>
 }
 
 
