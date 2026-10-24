@@ -31,6 +31,11 @@ function describe(n: NotificationDto): string {
   if (n.type === 'change_request_submitted') return `Change requested for "${n.eventName}"`
   if (n.type === 'change_request_withdrawn') return `Change request withdrawn for "${n.eventName}"`
   if (n.type === 'change_request_decided') return n.message ?? `Your change request for "${n.eventName}" was decided`
+  if (n.type === 'request_cancelled') return `The organiser cancelled the request "${n.eventName}"`
+  if (n.type === 'event_cancellation_requested') return `Cancellation requested for "${n.eventName}"`
+  if (n.type === 'event_cancellation_approved') return `"${n.eventName}" has been cancelled`
+  if (n.type === 'event_cancellation_declined') return `Cancellation of "${n.eventName}" was declined`
+  if (n.type === 'event_cancelled') return `"${n.eventName}" has been cancelled`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
   if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
   if (n.type === 'venue_unavailable') return `A venue booking for "${n.eventName}" is unavailable`

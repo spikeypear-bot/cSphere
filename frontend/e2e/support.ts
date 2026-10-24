@@ -124,3 +124,41 @@ export async function leadAssigns(page: Page, requestId: string) {
   await page.getByRole('button', { name: 'Assign request' }).click()
   await expect(page.getByText(/assigned to ec1/i).first()).toBeVisible()
 }
+
+/** Test data, not the journey: an event of eo1's coordinated by ec1, taken all
+ * the way to Confirmed through the API (request, assignment, approval, venue
+ * booking and its approval, safety review with a completed checklist,
+ * confirmation). Each step is the real endpoint each role would use, so the
+ * event is genuinely Confirmed. Returns the event's id. */
+export async function confirmedEventByApi(request: APIRequestContext, eventName: string, venueId: string,
+  startDatetime: string, endDatetime: string): Promise<string> {
+  const tokens = {
+    eo: await apiToken(request, 'eo1'), ecl: await apiToken(request, 'ecl1'), ec: await apiToken(request, 'ec1'),
+    vs: await apiToken(request, 'vs1'), so: await apiToken(request, 'so1'),
+  }
+  const call = async (method: 'post' | 'patch', path: string, token: string, data?: object) => {
+    const result = await request[method](path, { headers: { Authorization: `Bearer ${token}` }, data: data ?? {} })
+    expect(result.ok(), `${method.toUpperCase()} ${path}: ${result.status()} ${await result.text()}`).toBeTruthy()
+    return result.json()
+  }
+  const draft = await call('post', '/api/event-requests', tokens.eo, { eventName, purpose: 'Cancellation journey',
+    startDatetime, endDatetime, expectedAttendance: 120, venueRequirements: 'Theatre seating',
+    accessibilityNeeds: ['none'], requiredFacilities: [], registrationNeeds: false })
+  await call('post', `/api/event-requests/${draft.requestId}/submit`, tokens.eo)
+  const people = await apiGet<{ userId: string; username: string }[]>(request, tokens.ecl,
+    '/api/event-requests/unassigned/coordinators')
+  const ec1 = people.find((person) => person.username === 'ec1')!
+  await call('post', `/api/event-requests/unassigned/${draft.requestId}/assign`, tokens.ecl, { coordinatorUserId: ec1.userId })
+  const event = await call('post', `/api/event-requests/${draft.requestId}/approve`, tokens.ec)
+  const booking = await call('post', `/api/events/${event.eventId}/venue-bookings`, tokens.ec, { venueId })
+  await call('patch', `/api/venue-bookings/${booking.bookingId}/approve`, tokens.vs)
+  await call('post', `/api/events/${event.eventId}/safety-review`, tokens.ec)
+  const readiness = await apiGet<{ items: { itemKey: string }[] }>(request, tokens.so,
+    `/api/safety/events/${event.eventId}/readiness`)
+  for (const item of readiness.items) {
+    await call('patch', `/api/safety/events/${event.eventId}/readiness/items/${item.itemKey}`, tokens.so, { checked: true })
+  }
+  await call('post', `/api/safety/events/${event.eventId}/approval`, tokens.so, { decision: 'approve' })
+  await call('post', `/api/events/${event.eventId}/confirm`, tokens.ec)
+  return event.eventId as string
+}
