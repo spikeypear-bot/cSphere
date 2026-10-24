@@ -56,7 +56,8 @@ public class EquipmentReservationService {
                 .toList();
     }
 
-    // The formula: total − reserved elsewhere (overlapping) − blocked units (Faulty/Unavailable).
+    // The formula: total − reserved elsewhere (overlapping) − blocked units (Faulty/Unavailable)
+    // − damaged units of a non-serialised kind (TS09 AC5).
     private int availableQuantity(UUID equipmentId, Instant start, Instant end) {
         Equipment equipment = equipmentRepository.findById(equipmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
@@ -70,7 +71,10 @@ public class EquipmentReservationService {
                 .distinct()
                 .count();
 
-        return Math.max(0, equipment.getQuantity() - reservedElsewhere - (int) blockedUnits);
+        int damaged = Boolean.TRUE.equals(equipment.getSerialised())
+                ? 0 : equipmentRepository.damagedQuantity(equipmentId, start, end);
+
+        return Math.max(0, equipment.getQuantity() - reservedElsewhere - (int) blockedUnits - damaged);
     }
 
     // AC 5-9: reserve equipment for an event.
