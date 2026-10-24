@@ -29,3 +29,8 @@
 .safety-decision__items { margin: 0; padding-left: 1.25rem; }
 .readiness-item--flagged { border-left: 3px solid var(--accent); padding-left: 0.75rem; background: var(--accent-soft); }
 .readiness-item__flag { color: var(--accent-strong); font-size: 0.85rem; font-weight: 600; margin: 0.35rem 0 0 1.5rem; }
+.safety-panel h3 { margin: 0.75rem 0 0.4rem; font-size: 1rem; }
+.safety-flags { border: 1px solid var(--hairline); border-radius: var(--radius-sm); margin: 0.75rem 0; padding: 0.6rem 0.9rem 0.8rem; display: grid; gap: 0.45rem; }
+.safety-flags legend { font-weight: 600; padding: 0 0.3rem; }
+.safety-flags .field-hint { margin: 0; }
+.safety-flags__option { display: flex; align-items: flex-start; gap: 0.55rem; }
