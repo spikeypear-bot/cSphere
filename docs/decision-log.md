@@ -158,6 +158,8 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | Endpoint | Rule | Rationale |
   | --- | --- | --- |
   | `POST /api/auth/login\|refresh\|logout` | `permitAll` | Each carries its own credential; already implemented (D19). |
+  | `/api/venue-bookings/{id}/requirement-reviews`, `/api/venue-bookings/{id}/requirement-reviews/**` | `hasRole('VS')` | VS17 booking review history and decisions; existing role-wide staff access, no ownership table. |
+  | `GET /api/events/{id}/venue-reviews` | `hasRole('EC')` plus current event assignment check | VS17 coordinator outcome visibility; historical assignment does not grant access. |
   | `GET /api/venues`, `GET /api/venues/{id}` | `authenticated()` | Organisers browse venues when planning; Coordinators search them against requirements (EC04). Read is not Venue-Staff-only. |
   | `GET /api/venues/search` | `hasRole('EC')` | EC04's date/time, capacity and facility search is a Coordinator workflow; server-side availability excludes overlapping confirmed bookings. Per D12, free-text operating information is displayed but not parsed into opening-hour availability. |
   | `POST /api/venues`, `PUT /api/venues/{id}` | `hasAnyRole('EC','VS')` | Catalogue authoring is VS07/VS18; widened to Coordinators per open question 1 below. |
@@ -628,3 +630,31 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - **ER diagram:** `EntityRelationshipDiagramTest` writes `docs/er-diagrams/schema.generated.puml` from Postgres's catalog after the Flyway migrations: every table and column (`*` NOT NULL, `<<PK>>`, `<<FK>>`), the Postgres enum types, and a crow's-foot line per foreign key (`|o` when the key columns are unique, `o|` when they are nullable). `flyway_schema_history` and the mock tables are left out. The schema queries are shared with the domain diagram in `DatabaseSchema`. It supersedes the hand-written Mermaid diagram in `SCHEMA.md` as the complete picture; that one stays as a curated overview.
 - **Consequences:** Every backend test run rewrites the `.puml` files. After each merge, CI's `commit-diagrams` job commits any change to `main` as `github-actions[bot]`; on a PR, `backend-build` only lists what will change. Only `commit-diagrams` has `contents: write`, and it runs git alone, not the tests or Maven plugins, so the code under test never holds a token that can push. Nobody regenerates or commits the diagrams by hand. This replaced the first version, which failed any PR whose committed diagrams differed from the regenerated ones: a PR then went stale, and failed, every time another class-changing PR merged first, and fixing it needed Docker locally. The trade-off is that a PR's diagram changes show on `main` a few minutes after merge rather than in the PR's diff. A push made with the workflow's own token starts no new run, so the commit does not loop. The old file is kept as `docs/class-diagram.stale.puml` for reference and is no longer updated.
 - **Follow-ups (code, not diagram — need their own stories):** `Event`/`VenueEvent` and `VenueBooking`/`VenueBookingRecord` map the same tables; most links are UUID fields rather than object references; `Venue` and `Event` store layouts, facilities and accessibility needs as `List<String>` although `VenueLayout`, `Facility` and `AccessibilityFeature` enums exist (so those enums sit unconnected on the diagram), and `EventSafetyReview.reviewStatus` is a `String`; most entities have no behaviour beyond accessors. VS-C3's tentative hold is a JDBC-read record (`VenueHold`, with `status` as a `String`), not an entity, so the domain diagram shows it as a value type with UUID attributes rather than relationship lines; `venue_booking_holds`'s foreign keys are in the schema itself.
+
+## VS17 — transactional booking requirement reviews (24 October 2026)
+
+- User-confirmed story ID VS17; VS15 remains the calendar. This slice covers
+  approved-change tracking and notifications, not review outcome UI or final seeds.
+- Reuse EO/EC original/proposed requirements and the approval audit transaction.
+  Persist per-booking snapshots and in-app notifications in that transaction,
+  following existing hold notifications. No new delivery infrastructure.
+- Preserve explicit and legacy effective booking windows; never move reservations
+  automatically. Keep existing impact acknowledgements and safety re-planning.
+- Recipients follow existing role-wide VS access; venue ownership is not modelled.
+  No new organiser layout field or booking status. See
+  [design and verification scope](venue-requirement-changes.md).
+
+## VS17 — booking review outcomes and UI (24 October 2026)
+
+- V35 adds audited, immutable outcomes (`suitable` / `action_required`) to V34's
+  reviews. This is review state, not a new booking approval/status system.
+- Venue Staff review each approved change and booking separately. The current
+  assigned coordinator sees and is notified of the outcome. An action-required
+  outcome needs a comment. Review state and notification read state are independent.
+- Reuse existing suitability and availability checks at actual booked times,
+  excluding only the current booking, with its saved setup/turnaround. Staff cannot
+  mark a booking suitable while live checks report attention. Written layout and
+  venue requirements remain staff judgement, with no new organiser fields.
+- Decision, audit and notification are one transaction. Locks follow event →
+  venue → review. No reservations, booking statuses, event/safety lifecycle or
+  equipment periods change. See [workflow and verification](venue-requirement-changes.md).

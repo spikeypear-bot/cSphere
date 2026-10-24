@@ -31,6 +31,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 /** What happened, in words, with the actor as the subject. */
 const TITLES: Record<ActivityTypeName, string> = {
+  venue_requirements_reviewed: 'reviewed changed venue requirements',
   submitted: 'submitted the request',
   coordinator_assigned: 'assigned an Event Coordinator',
   coordinator_reassigned: 'reassigned the Event Coordinator',

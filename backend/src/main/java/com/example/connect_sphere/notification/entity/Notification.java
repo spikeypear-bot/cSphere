@@ -87,6 +87,10 @@ public class Notification {
     @Column(name = "venue_booking_id")
     private UUID venueBookingId;
 
+    /** VS17: deduplication and historical review reference. */
+    @Column(name = "requirement_review_id")
+    private UUID requirementReviewId;
+
     public Notification() {
     }
 }

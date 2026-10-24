@@ -1,4 +1,4 @@
-// @stories VS02 VS03 VS04 VS09 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 VS02 VS03 VS04 VS09 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -18,6 +18,10 @@ const booking: VenueBookingDto = { bookingId: 'b1', status: 'pending',
 }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function page(path = '/venue-staff/catalogue') {
+  // VS17 adds a separate review read; existing scenarios have no requirement changes.
+  const originalFetch = globalThis.fetch
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/requirement-reviews')
+    ? Promise.resolve(response([])) : originalFetch(input, init))
   render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/venue-staff/catalogue" element={<VenueCataloguePage />} />
     <Route path="/venue-staff/catalogue/:venueId" element={<VenueDetailsPage />} />
@@ -720,4 +724,64 @@ it('refreshes after a lost rejection response and displays the committed reason'
   expect(screen.getByLabelText('Status: rejected')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Reject Booking' })).not.toBeInTheDocument()
   expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
+})
+
+
+it('VS03 (happy): immediate approval shows only approval confirmation and never an empty tentative hold container', async () => {
+  let status: VenueBookingDto['status'] = 'pending'
+  vi.stubGlobal('fetch', vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+    if (init?.method === 'PATCH') status = 'approved'
+    return response({ ...booking, status, holds: [] })
+  }))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  await screen.findByRole('button', { name: 'Approve Booking' })
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Approve Booking' }))
+  expect(screen.getByRole('heading', { name: 'Confirm booking approval' })).toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
+  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(screen.queryByRole('heading', { name: 'Confirm booking approval' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+})
+
+it('VS-C3 (happy): the tentative hold confirmation opens explicitly, closes on cancel and closes when switching to approve or reject', async () => {
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/venues')
+    ? response([booking.venue]) : response({ ...booking, holds: [] })))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  await userEvent.click(await screen.findByRole('button', { name: 'Put on Tentative Hold' }))
+  const hold = screen.getByRole('region', { name: 'Tentative venue hold' })
+  expect(within(hold).getByLabelText('Hold expiry (Singapore time)')).toBeInTheDocument()
+  await userEvent.click(within(hold).getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Put on Tentative Hold' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Approve Booking' }))
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Confirm booking approval' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Put on Tentative Hold' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Reject Booking' }))
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+  expect(screen.getByRole('heading', { name: 'Confirm booking rejection' })).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))
+  expect(screen.queryByRole('heading', { name: 'Confirm booking rejection' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
+})
+
+
+it.each([
+  ['Approve Booking', 'Confirm booking approval'],
+  ['Reject Booking', 'Confirm booking rejection'],
+  ['Put on Tentative Hold', 'Tentative Venue Hold'],
+])('VS17 (cross-cutting): %s shows its panel before Venue Information, which directly precedes the detail layout', async (action, title) => {
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input).endsWith('/venues')
+    ? response([booking.venue]) : response({ ...booking, holds: [] })))
+  page('/venue-staff/bookings/b1?from=booking-approvals')
+  await userEvent.click(await screen.findByRole('button', { name: action }))
+  const panelHeading = await screen.findByRole('heading', { name: title })
+  const informationHeading = screen.getByRole('heading', { name: 'Venue Information' })
+  expect(panelHeading.compareDocumentPosition(informationHeading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  const approvalSection = informationHeading.closest('.booking-approval')!
+  expect(approvalSection.lastElementChild).toBe(informationHeading.closest('.booking-details-page__section-header'))
+  expect(approvalSection.nextElementSibling).toHaveClass('booking-detail-layout')
 })

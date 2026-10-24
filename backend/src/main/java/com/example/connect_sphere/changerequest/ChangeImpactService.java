@@ -94,8 +94,77 @@ public class ChangeImpactService {
         return items;
     }
 
+    @Transactional(readOnly = true)
+    public List<ImpactItem> assessBooking(Event event, VenueBookingRecord booking) {
+        List<ImpactItem> items = new ArrayList<>();
+        venueImpact(event, event, booking, false, items, false);
+        OffsetDateTime start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
+        OffsetDateTime end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
+        if (start.isBefore(event.getStartDatetime()) || end.isAfter(event.getEndDatetime())) {
+            items.add(new ImpactItem("venue:" + booking.getBookingId() + ":schedule", "venue", ATTENTION,
+                    "Reserved times differ from the current event schedule",
+                    "Reserved " + period(start, end) + "; event " + period(event.getStartDatetime(), event.getEndDatetime())
+                    + ". Check this booking's part in the event. Reservations have not moved."));
+        }
+        items.add(new ImpactItem("venue:" + booking.getBookingId() + ":manual", "venue", "manual",
+                "Check layout and venue requirement text",
+                "Compare the written requirements with supported layouts and the booking's part in the event. These need staff judgement."));
+        return items;
+    }
+
+    public record BookingSummary(List<ImpactItem> checks, String venueRequirements, List<String> supportedLayouts,
+            OffsetDateTime occupiedStart, OffsetDateTime occupiedEnd) {}
+
+    /** VS17: explicit results for every evaluated check, without interpreting layout text. */
+    @Transactional(readOnly = true)
+    public BookingSummary bookingSummary(Event event, VenueBookingRecord booking, List<ImpactItem> assessed) {
+        Venue venue = venues.findById(booking.getVenueId()).orElseThrow();
+        var fit = VenueSuitability.of(event, venue);
+        var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
+        var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
+        var durations = new Settings(booking.getSetupDurationMinutes(), booking.getTurnaroundDurationMinutes());
+        var occupied = EffectivePeriod.of(start,end,durations);
+        var clashes = availability.conflictsForBooking(venue.getVenueId(),booking.getBookingId(),start,end,durations);
+        var rows = new ArrayList<ImpactItem>();
+        rows.add(result("capacity", "Capacity", fit.capacityOk(), fit.capacityOk()
+                ? "Fits " + fit.expectedAttendance() + " attendees (capacity " + fit.capacity() + ")"
+                : fit.expectedAttendance() + " attendees exceed capacity " + fit.capacity()));
+        rows.add(result("accessibility", "Accessibility", fit.missingAccessibility().isEmpty(),
+                fit.missingAccessibility().isEmpty() ? "Requirements met" : "Missing: " + fit.missingAccessibilityLabels()));
+        rows.add(result("facilities", "Required facilities", fit.facilitiesOk(),
+                fit.facilitiesOk() ? "Available" : "Missing: " + fit.missingFacilityLabels()));
+        var hours = assessed.stream().filter(i -> i.key().endsWith(":hours")).findFirst();
+        rows.add(result("hours", "Operating hours", hours.isEmpty(), hours.map(ImpactItem::detail).orElse("Within opening hours")));
+        var booked = clashes.stream().filter(c -> !"hold".equals(c.status())).toList();
+        rows.add(result("clash", "Booking conflicts", booked.isEmpty(), booked.isEmpty() ? "None"
+                : String.join("; ", booked.stream().map(c -> period(c.effectiveStart(),c.effectiveEnd())).toList()) + ", including setup and turnaround"));
+        var unavailable = assessed.stream().filter(i -> i.key().endsWith(":unavailable")).findFirst();
+        rows.add(result("unavailable", "Unavailable periods", unavailable.isEmpty(), unavailable.map(ImpactItem::detail).orElse("None")));
+        var held = clashes.stream().filter(c -> "hold".equals(c.status())).toList();
+        var coverage = assessed.stream().filter(i -> i.key().endsWith(":hold")).findFirst();
+        rows.add(result("hold", "Tentative holds", held.isEmpty() && coverage.isEmpty(),
+                !held.isEmpty() ? "Conflicting hold: " + String.join("; ",held.stream().map(c -> period(c.effectiveStart(),c.effectiveEnd())).toList())
+                : coverage.map(ImpactItem::detail).orElse("No conflicts")));
+        var issue = assessed.stream().filter(i -> i.key().endsWith(":issue")).findFirst();
+        rows.add(result("issue", "Operational issues", issue.isEmpty(), issue.map(ImpactItem::detail).orElse("None")));
+        if (assessed.stream().anyMatch(i -> i.key().endsWith(":schedule"))) {
+            rows.add(result("schedule", "Event schedule", false, "Reserved " + period(start,end)
+                    + "; event " + period(event.getStartDatetime(),event.getEndDatetime())));
+        }
+        return new BookingSummary(rows,event.getVenueRequirements(),List.copyOf(venue.getSupportedLayouts()),occupied.start(),occupied.end());
+    }
+
+    private static ImpactItem result(String key, String title, boolean ok, String detail) {
+        return new ImpactItem(key,"venue",ok ? OK : ATTENTION,title,detail);
+    }
+
     private void venueImpact(Event event, Event after, VenueBookingRecord booking, boolean timesChanged,
             List<ImpactItem> items) {
+        venueImpact(event, after, booking, timesChanged, items, true);
+    }
+
+    private void venueImpact(Event event, Event after, VenueBookingRecord booking, boolean timesChanged,
+            List<ImpactItem> items, boolean excludeEvent) {
         Venue venue = venues.findById(booking.getVenueId()).orElse(null);
         if (venue == null) {
             return;
@@ -125,7 +194,7 @@ public class ChangeImpactService {
                             + "Check it still suits the new schedule."));
         }
         var clashes = availability.conflictsForBooking(venue.getVenueId(), booking.getBookingId(), start, end, durations)
-                .stream().filter(c -> !event.getEventId().equals(c.eventId())).toList();
+                .stream().filter(c -> !excludeEvent || !event.getEventId().equals(c.eventId())).toList();
         if (!clashes.isEmpty()) {
             // Another event's name is never shown to a coordinator (ECL-C7).
             items.add(new ImpactItem(key + "clash", "venue", ATTENTION, name + " is booked by another event then",

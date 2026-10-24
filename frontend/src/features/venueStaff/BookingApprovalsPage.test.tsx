@@ -1,4 +1,4 @@
-// @stories VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -21,6 +21,10 @@ const booking: VenueBookingDto = {
 }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function page(role = 'venue-staff', path = '/venue-staff/booking-approvals') {
+  // VS17 has its own review read; these queue fixtures have no approved changes.
+  const originalFetch = globalThis.fetch
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/requirement-reviews')
+    ? Promise.resolve(response([])) : originalFetch(input, init))
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
     accessToken: 'access-1', refreshToken: 'refresh-1', username: 'vs1', role, organisation: 'ConnectSphere',
   }))

@@ -284,6 +284,40 @@ public class NotificationService {
         }
     }
 
+    /** VS17: database notification and review commit with approval, like hold expiry. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createVenueRequirementChangedNotifications(List<UUID> recipients,
+            com.example.connect_sphere.changerequest.VenueRequirementReview review, String changes) {
+        for (UUID recipient : recipients) {
+            var notification = base(recipient, NotificationType.venue_requirement_changed, review.getEventName());
+            notification.setRequirementReviewId(review.getReviewId());
+            notification.setVenueBookingId(review.getBookingId());
+            notification.setEventId(review.getEventId());
+            notification.setCoordinatorName(review.getCoordinatorName());
+            notification.setCoordinatorEmail(review.getCoordinatorEmail());
+            notification.setOccurredAt(review.getApprovedAt());
+            notification.setMessage("Review required for " + review.getVenueAddress() + " (venue " + review.getVenueId()
+                    + ", booking " + review.getBookingId() + "). Approved at " + SINGAPORE_TIME.format(review.getApprovedAt())
+                    + " (Singapore time). " + changes + ". Reserved " + SINGAPORE_TIME.format(review.getReservedStart())
+                    + " to " + SINGAPORE_TIME.format(review.getReservedEnd()) + " (Singapore time), with "
+                    + review.getSetupDurationMinutes() + " minutes setup and " + review.getTurnaroundDurationMinutes()
+                    + " minutes turnaround. Coordinator: " + review.getCoordinatorName() + " (" + review.getCoordinatorEmail()
+                    + "). Review the venue requirements; reservations have not been moved.");
+            repository.saveAndFlush(notification);
+        }
+    }
+
+    /** VS17: notify the current assigned coordinator in the outcome transaction. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createVenueRequirementReviewedNotification(UUID coordinator,
+            com.example.connect_sphere.changerequest.VenueRequirementReview review, String message) {
+        if (coordinator == null) return;
+        var n=base(coordinator,NotificationType.venue_requirement_reviewed,review.getEventName());
+        n.setEventId(review.getEventId()); n.setVenueBookingId(review.getBookingId());
+        n.setRequirementReviewId(review.getReviewId()); n.setMessage(message);
+        repository.saveAndFlush(n);
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -364,7 +398,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
-            case venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested ->
                     "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
@@ -381,7 +415,7 @@ public class NotificationService {
                     "/change-requests/" + n.getEventRequestId();
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
-            case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
+            case venue_requirement_changed, venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
             case status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()
                     : n.getEventRequestId() != null

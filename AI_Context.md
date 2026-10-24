@@ -509,3 +509,13 @@ Do not assume:
 - That a field, entity, API, or business-status enum exists without inspecting `SCHEMA.md`/the migrations and the approved backlog.
 - That "Developer", "Scrum Master", or "Product Owner" are application user roles — they are backlog-modelling categories for technical/process stories only (see "Users" above).
 - That the Sprint Backlog Status shown in the spreadsheet (e.g. a story marked "Done" or "In Progress") is automatically reflected in the actual repository — cross-check against real commits/branches before relying on it (a known discrepancy exists as of 2026-09-12; see `docs/decision-log.md`).
+
+## VS17 — approved venue requirement notifications (24 October 2026)
+
+VS17 is user-confirmed; VS15 remains the venue calendar. Approved venue-related
+event changes now snapshot each active booking's requirements and create staff
+notifications atomically with approval (V34). Existing EO/EC activity history,
+semantic comparisons and impact checks are reused. V35 now adds immutable review outcomes, staff booking
+page history/indicator, current suitability checks, and assignment-scoped coordinator
+outcome visibility and notifications. Review actions do not change reservations. See `docs/venue-requirement-changes.md` for
+scope, access limitations, transaction behaviour and outstanding source verification.

@@ -86,9 +86,11 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
       try { await onChanged() } catch { setError(previous => previous + ' Latest booking details could not be retrieved.') }
     } finally { setBusy(false) }
   }
+  const showConfirmation = currentPending && (!!active || creationOpen)
+  if (!showConfirmation && currentHolds.length === 0) return null
   return <section className="venue-hold-panel" aria-label="Tentative venue hold" aria-busy={busy}>
-    <h2>Tentative Venue Hold</h2>
-    <BookingDecisionPanel>
+    <h2>{showConfirmation ? 'Tentative Venue Hold' : 'Venue hold history'}</h2>
+    {showConfirmation && <BookingDecisionPanel>
       <p>A hold temporarily reserves the full occupied period, including setup and turnaround, until its expiry.</p>
       {booking?.timing && <dl className="venue-hold-panel__summary"><div><dt>Venue Occupied (SGT)</dt>
         <dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd></div></dl>}
@@ -106,14 +108,15 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
         </div>
         <div className="booking-approval__actions venue-hold-panel__actions">
           <Button type="submit" disabled={busy}>Place tentative hold</Button>
-          {onCancel && <Button type="button" variant="secondary" disabled={busy} onClick={onCancel}>Cancel</Button>}
+          {onCancel && <Button type="button" variant="secondary" disabled={busy} onClick={() => { setError(''); setSuccess(''); setExpiry(''); setConflicts([]); setPeriods([]); onCancel() }}>Cancel</Button>}
         </div>
       </form>}
       {active && currentPending && <div className="booking-approval__actions venue-hold-panel__actions">
         <Button variant="secondary" disabled={busy} onClick={() => void act('release')}>Release Hold</Button>
         <Button disabled={busy} onClick={() => void act('convert')}>Convert Hold to Approved Booking</Button>
       </div>}
-      {!active && currentPending && !creationOpen && <p>Choose <strong>Put on Tentative Hold</strong> above to reserve this request temporarily.</p>}
+    </BookingDecisionPanel>}
+    {!showConfirmation && success && <Notice>{success}</Notice>}
       {currentHolds.length > 0 && <ul className="venue-hold-panel__history" aria-label="Hold history">{currentHolds.map(h => <li key={h.holdId}>
         <strong className="venue-card-preview__tag booking-status-tag" data-booking-status={h.status === 'active' && !expired.has(h.holdId) ? 'tentative' : h.status === 'converted' ? 'approved' : undefined}>
           {expired.has(h.holdId) && h.status === 'active' ? 'Expired' : h.status[0].toUpperCase() + h.status.slice(1)}
@@ -124,6 +127,5 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
           <div><dt>Created (SGT)</dt><dd>{formatEventDateTime(h.createdAt)}</dd></div>
         </dl>
       </li>)}</ul>}
-    </BookingDecisionPanel>
   </section>
 }

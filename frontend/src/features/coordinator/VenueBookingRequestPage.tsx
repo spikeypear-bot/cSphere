@@ -1,3 +1,4 @@
+import { VenueRequirementReviews } from '../venueStaff/VenueRequirementReviews'
 import { HoldStatus } from '../venueStaff/HoldStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -400,6 +401,7 @@ export function VenueBookingRequestPage() {
             </>
           )}
 
+          <VenueRequirementReviews key={event.eventId} eventId={event.eventId} />
           {bookings.length > 0 ? (
             <Card className="venue-request__history">
             <div className="venue-request__history-heading">

@@ -1,5 +1,5 @@
 import { useRef, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -14,6 +14,12 @@ import { validMinutes } from '../../lib/bookingTiming'
 
 export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   const navigate = useNavigate()
+  const location = useLocation()
+  const origin = (location.state as { returnTo?: unknown } | null)?.returnTo
+  const returnTo = initialVenue && typeof origin === 'string'
+    && /^\/venue-staff\/(?:catalogue(?:[/?#]|$)|bookings\/)/.test(origin)
+    && !/\/edit(?:[?#]|$)/.test(origin)
+    ? origin : '/venue-staff/catalogue'
   const busy = useRef(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -64,13 +70,13 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
         await apiClient.post<VenueDto>('/venues', { ...form, venueAddress: form.venueAddress.trim(),
           operatingInformation: form.operatingInformation.trim(), additionalInformation: form.additionalInformation?.trim() || null })
       }
-      navigate('/venue-staff/catalogue', { replace: true, state: { venueSaved: true, venueUpdated: !!initialVenue } })
+      navigate(returnTo, { replace: true, state: { venueSaved: true, venueUpdated: !!initialVenue } })
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Could not save the venue. Please try again.')
     } finally { busy.current = false; setSaving(false) }
   }
   return <div className="feature-skeleton venue-form">
-    <Link to="/venue-staff/catalogue">← Venue catalogue</Link>
+    <Link to={returnTo}>{returnTo === '/venue-staff/catalogue' ? '← Venue catalogue' : '← Back'}</Link>
     <PageHeader title={initialVenue ? 'Edit Venue' : 'Add Venue'}
       description="Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional." />
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
@@ -113,7 +119,7 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
       <TextField id="additionalInformation" label="Additional information (optional)" placeholder="e.g. Use the entrance on Level 2." multiline value={form.additionalInformation ?? ''} onChange={v => change('additionalInformation', v)} />
       {error && <div className="field"><p className="field-error" role="alert">{error}</p></div>}
       <div className="feature-skeleton__actions"><Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save venue'}</Button>
-        {!saving && <Link className="button button--secondary" to="/venue-staff/catalogue">Cancel</Link>}</div>
+        {!saving && <Link className="button button--secondary" to={returnTo}>Cancel</Link>}</div>
     </form></Card>
   </div>
 }

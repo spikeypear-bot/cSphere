@@ -51,7 +51,7 @@
 .booking-timings-panel label { font-weight: 600; }
 .booking-timings-panel fieldset > p { margin: 0; }
 .booking-timings-panel button { justify-self: start; }
-.booking-approval { margin-bottom: 1rem; }
+.booking-approval { margin: 0; }
 .booking-approval__error { overflow-wrap: anywhere; }
 .booking-conflict-card { padding: 1rem 1.25rem; margin-bottom: 1rem; }
 .booking-conflict-card__fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem 1.5rem; margin: 0; }
@@ -104,3 +104,17 @@
 .venue-hold-panel .notice { margin-top: 1rem; }
 .venue-hold-panel .notice > p:first-child { margin-top: 0; }
 .venue-hold-panel .notice > :last-child { margin-bottom: 0; }
+
+/* The shared page supplies section spacing via flex gap. Avoid stacking
+   wrapper margins on top of it, including header-only completed bookings. */
+.booking-approval > .booking-details-page__section-header:last-child,
+.booking-details-page > .booking-details-page__section-header {
+  margin-bottom: 0;
+}
+.booking-details-page > .venue-hold-panel,
+.booking-details-page > .venue-reviews,
+.booking-details-page > .booking-rejection-details {
+  margin-block: 0;
+}
+
+.booking-approval > .booking-details-page__section-header:not(:first-child) { margin-top: 1.25rem; }

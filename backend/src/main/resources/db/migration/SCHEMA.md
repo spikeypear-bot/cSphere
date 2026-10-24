@@ -578,3 +578,26 @@ logs of cancelled or completed events (decision-log D28).
 `chk_notification_shape` keeps every earlier branch, including EC-C3's `venue_hold_expiring`
 (V31) and EO03/EC-NEW3's change-request types (V32). See
 [EO07 API](../../../../../../docs/event-cancellation-api.md).
+
+## V34 update — venue requirement reviews (VS17)
+
+`venue_requirement_reviews` snapshots each active booking affected by an approved
+event change, including supported venue requirements before/after, approval and
+coordinator identity/contact, event/venue labels, booking window and durations.
+`status` is initially `pending`, separate from booking status and notification
+read state. `(change_request_id, booking_id)` is unique. Notifications gain a
+`requirement_review_id` FK and unique review/recipient index; the new
+`venue_requirement_changed` type requires review, event, booking and message.
+All earlier notification shape branches remain intact. See
+[VS17 design](../../../../../../docs/venue-requirement-changes.md).
+
+## V35 update — venue requirement review outcomes (VS17)
+
+Review statuses extend to `suitable` and `action_required`. The latter requires a
+nonblank comment (maximum 2000 characters); both require reviewed_by (user FK),
+reviewer_name, reviewed_at and reviewed_checks (JSON snapshot). A database trigger
+preserves historical snapshot fields and prevents deleting reviews or overwriting
+decided outcomes. New `venue_requirement_reviewed` notifications reference the
+review, booking and event; previous notification constraint branches are retained.
+Outcomes, review audit and notification share a transaction; no booking/event,
+hold or equipment status/window changes are performed by review actions.

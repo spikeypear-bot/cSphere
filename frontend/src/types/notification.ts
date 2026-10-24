@@ -5,6 +5,8 @@ export type NotificationTypeName =
   | 'coordinator_assignment'
   | 'clarification_requested'
   | 'clarification_responded'
+  | 'venue_requirement_reviewed'
+  | 'venue_requirement_changed'
   | 'venue_booking_requested'
   | 'venue_booking_cancelled'
   | 'venue_unavailable'

@@ -2,6 +2,8 @@ package com.example.connect_sphere.notification.entity;
 
 /** Mirrors the Postgres `notification_type` enum (V12 migration). */
 public enum NotificationType {
+    venue_requirement_reviewed,
+    venue_requirement_changed,
     venue_hold_expired,
     /** EC-C3 (V31): the coordinator reminded that a tentative hold expires soon. */
     venue_hold_expiring,

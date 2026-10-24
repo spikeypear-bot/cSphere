@@ -78,20 +78,21 @@ public class ChangeRequestService {
     private final NotificationService notifications;
     private final UserRepository users;
     private final Clock clock;
+    private final VenueRequirementChangeService venueRequirements;
 
     @Autowired
     public ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
             EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
             ChangeImpactService impact, ActivityService activity, NotificationService notifications,
-            UserRepository users) {
+            UserRepository users, VenueRequirementChangeService venueRequirements) {
         this(changeRequests, requests, events, requestRules, lifecycle, impact, activity, notifications, users,
-                Clock.systemUTC());
+                Clock.systemUTC(), venueRequirements);
     }
 
     ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
             EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
             ChangeImpactService impact, ActivityService activity, NotificationService notifications,
-            UserRepository users, Clock clock) {
+            UserRepository users, Clock clock, VenueRequirementChangeService venueRequirements) {
         this.changeRequests = changeRequests;
         this.requests = requests;
         this.events = events;
@@ -102,6 +103,7 @@ public class ChangeRequestService {
         this.notifications = notifications;
         this.users = users;
         this.clock = clock;
+        this.venueRequirements = venueRequirements;
     }
 
     // ---- EO03: ask ---------------------------------------------------------------
@@ -230,6 +232,8 @@ public class ChangeRequestService {
 
         boolean replan = event != null && SAFETY_STAGES.contains(event.getStatus())
                 && changed.stream().anyMatch(ChangeFields.AFFECTS_ARRANGEMENTS::contains);
+        OffsetDateTime oldStart = event == null ? null : event.getStartDatetime();
+        OffsetDateTime oldEnd = event == null ? null : event.getEndDatetime();
         requestRules.applyApprovedDetails(origin, event, proposed);
         change.setStatus(ChangeRequestStatus.approved);
         change.setDecidedBy(coordinator.userId());
@@ -238,6 +242,7 @@ public class ChangeRequestService {
                 .map(i -> Map.of("key", i.key(), "area", i.area(), "title", i.title(), "detail", i.detail()))
                 .toList());
         ChangeRequest saved = changeRequests.save(change);
+        venueRequirements.approved(saved, event, oldStart, oldEnd);
         String summary = ChangeFields.describe(changes);
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
                 ActivityType.change_approved, coordinator.userId(), fitActivityMessage("Approved: " + summary), null, null, null, null,

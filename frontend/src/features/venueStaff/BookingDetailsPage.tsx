@@ -1,3 +1,4 @@
+import { VenueRequirementReviews } from './VenueRequirementReviews'
 import { useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { apiClient } from '../../lib/apiClient'
@@ -50,11 +51,6 @@ export function BookingDetailsPage() {
               {data.alternativeArrangement?.trim() && <><dt>Alternative Arrangement:</dt><dd>{data.alternativeArrangement}</dd></>}
             </dl>}
           </BookingDecisionPanel>}
-        {!loading && !error && data.bookingId === bookingId
-          ? <BookingApproval key={`${bookingId}:${timingRevision}`} booking={data} onApproved={replaceData} onUnavailable={failRead}
-              conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts}
-              onHoldRequested={() => setHoldFormFor(data.bookingId)} />
-          : <div className="booking-details-page__section-header"><BookingInformationHeading /></div>}
         {!loading && !error && <VenueHoldPanel key={data.bookingId} bookingId={data.bookingId} booking={data}
           pending={data.status === 'pending'} initialHolds={data.holds ?? NO_HOLDS} creationOpen={holdFormFor === data.bookingId}
           onCancel={() => setHoldFormFor(null)} onCreated={() => setHoldFormFor(null)} onConflicts={setConflicts}
@@ -63,6 +59,13 @@ export function BookingDetailsPage() {
             const current = await apiClient.get<VenueBookingDto>(`/venue-bookings/${data.bookingId}`, { cache: 'no-store' })
             replaceData(current)
           }} />}
+        <VenueRequirementReviews key={`reviews:${data.bookingId}`} bookingId={data.bookingId} />
+        {!loading && !error && data.bookingId === bookingId
+          ? <BookingApproval key={`${bookingId}:${timingRevision}`} booking={data} onApproved={replaceData} onUnavailable={failRead}
+              conflicts={conflicts} unavailablePeriods={unavailablePeriods} onConflicts={setConflicts}
+              onDecisionStarted={() => setHoldFormFor(null)}
+              onHoldRequested={() => setHoldFormFor(data.bookingId)} />
+          : <div className="booking-details-page__section-header"><BookingInformationHeading /></div>}
         <div className="booking-detail-layout">
           <section aria-labelledby="venue-information-heading">
             <VenueDetailsPanel venue={data.venue} />

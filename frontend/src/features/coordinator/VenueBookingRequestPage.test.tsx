@@ -1,4 +1,4 @@
-// @stories EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -117,6 +117,7 @@ const OPTIONS = [
 
 function routes(bookings: unknown[] = [], post?: (body: unknown) => Response) {
   return {
+    [`GET /api/events/${EVENT}/venue-reviews`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
     [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, OPTIONS),
     [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, bookings),
