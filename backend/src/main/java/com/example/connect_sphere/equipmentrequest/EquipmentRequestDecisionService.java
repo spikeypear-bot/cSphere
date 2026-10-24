@@ -106,6 +106,9 @@ public class EquipmentRequestDecisionService {
         }
 
         request.decide(requestedStatus, rejectReason);
+        if (requestedStatus == EquipmentRequestStatus.approved && shortfalls != null) {
+            shortfalls.onRequestApproved(requestId);
+        }
         announce(request.getEventId(), requestedStatus == EquipmentRequestStatus.approved
                         ? com.example.connect_sphere.activity.entity.ActivityType.equipment_approved
                         : com.example.connect_sphere.activity.entity.ActivityType.equipment_rejected, null,
@@ -115,23 +118,39 @@ public class EquipmentRequestDecisionService {
         return EquipmentRequestDetailsResponse.from(request, lines.findByIdRequestId(requestId));
     }
 
+    /** TS06. With TS09, an event can have more than one approved request, so
+     * the event's reservations must cover this request <em>and</em> what it is
+     * still owed by the approved ones (their lines less any recorded
+     * shortfall). With a single request this is just its own quantity. */
     private void requireAllItemsReserved(EquipmentRequest request, Instant eventStart, Instant eventEnd) {
         List<EquipmentLog> eventReservations = reservations.findByEventId(request.getEventId());
         for (EquipmentRequestLine line : lines.findByIdRequestId(request.getId())) {
+            UUID equipmentId = line.getId().getEquipmentId();
             int reserved = eventReservations.stream()
-                    .filter(reservation -> reservation.getEquipmentId()
-                            .equals(line.getId().getEquipmentId()))
+                    .filter(reservation -> reservation.getEquipmentId().equals(equipmentId))
                     .filter(reservation -> !reservation.getLoanedFrom().isAfter(eventStart)
                             && !reservation.getLoanedUntil().isBefore(eventEnd))
                     .mapToInt(EquipmentLog::getQuantity)
                     .sum();
-            if (reserved < line.getQuantity()) {
+            int owedElsewhere = shortfalls == null ? 0
+                    : shortfalls.need(request.getEventId(), equipmentId, null);
+            int required = line.getQuantity() + owedElsewhere;
+            if (reserved < required) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "Cannot approve: only " + reserved + " of " + line.getQuantity()
+                        "Cannot approve: only " + reserved + " of " + required
                                 + " " + line.getEquipment().getName()
                                 + " are reserved for the full event period.");
             }
         }
+    }
+
+    /** TS09: shortfalls and what approved requests are still owed. Setter-injected
+     * like the change log; absent in plain unit tests (one request, no shortfall). */
+    private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
+        this.shortfalls = shortfalls;
     }
 }

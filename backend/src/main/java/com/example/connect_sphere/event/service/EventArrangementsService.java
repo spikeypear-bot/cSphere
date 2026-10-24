@@ -111,16 +111,36 @@ public class EventArrangementsService {
     }
 
     /** Approved equipment only, merged by item so the organiser sees one line
-     * per piece of equipment. */
+     * per piece of equipment. TS09: less any shortfall recorded after
+     * equipment was reported damaged; an item with nothing left is not shown. */
     private List<OrganiserArrangementsDto.Equipment> equipmentOf(Event event) {
         Map<String, Integer> quantities = new LinkedHashMap<>();
+        Map<String, java.util.UUID> ids = new LinkedHashMap<>();
         equipmentRequests.findByEventId(event.getEventId()).stream()
                 .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
                 .flatMap(r -> equipmentLines.findByIdRequestId(r.getId()).stream())
-                .forEach((EquipmentRequestLine line) -> quantities.merge(
-                        line.getEquipment().getName(), line.getQuantity(), Integer::sum));
+                .forEach((EquipmentRequestLine line) -> {
+                    quantities.merge(line.getEquipment().getName(), line.getQuantity(), Integer::sum);
+                    if (shortfalls != null) {
+                        ids.putIfAbsent(line.getEquipment().getName(), line.getId().getEquipmentId());
+                    }
+                });
+        if (shortfalls != null) {
+            ids.forEach((name, equipmentId) -> quantities.computeIfPresent(name,
+                    (n, quantity) -> quantity - shortfalls.recordedShortfall(event.getEventId(), equipmentId)));
+        }
         return quantities.entrySet().stream()
+                .filter(e -> e.getValue() > 0)
                 .map(e -> new OrganiserArrangementsDto.Equipment(e.getKey(), e.getValue())).toList();
+    }
+
+    /** TS09: recorded equipment shortfalls. Setter-injected so existing
+     * constructions of this service keep working; absent in plain unit tests. */
+    private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
+        this.shortfalls = shortfalls;
     }
 
     private static List<String> copy(List<?> values) {
