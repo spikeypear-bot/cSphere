@@ -1,6 +1,7 @@
 package com.example.connect_sphere.safety;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -17,6 +18,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
@@ -241,5 +243,23 @@ class SafetyDecisionFlowTest {
         assertThat(jdbc.queryForObject("SELECT review_status FROM event_safety_reviews WHERE event_id = ?",
                 String.class, eventId)).isEqualTo("changes_requested");
         assertThat(safetyDecisionEntries(eventId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC5, SO-C6 AC5 (negative): the database itself refuses an item that is not on the checklist")
+    void theDatabaseRefusesAnItemNotOnTheChecklist() throws Exception {
+        UUID eventId = eventAwaitingReview();
+        decide("so1", eventId, "request_changes", "Add a marshal", List.of("safety_operations")).andExpect(status().isOk());
+        sync();
+
+        // Every real key, and none, are allowed.
+        assertThat(jdbc.update("UPDATE event_safety_reviews SET flagged_items = ARRAY['venue_booking', 'capacity_facilities', "
+                + "'accessibility', 'equipment', 'registration', 'safety_operations'] WHERE event_id = ?", eventId)).isEqualTo(1);
+        assertThat(jdbc.update("UPDATE event_safety_reviews SET flagged_items = '{}' WHERE event_id = ?", eventId)).isEqualTo(1);
+        // Last: a refused statement aborts the test's transaction.
+        assertThatThrownBy(() -> jdbc.update("UPDATE event_safety_reviews SET flagged_items = ARRAY['safety_operations', 'parking'] "
+                + "WHERE event_id = ?", eventId))
+                .isInstanceOf(DataIntegrityViolationException.class)
+                .hasMessageContaining("chk_safety_review_flagged_items");
     }
 }

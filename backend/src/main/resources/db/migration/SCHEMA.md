@@ -262,7 +262,7 @@ decision overwrites this row; the event's timeline keeps every decision.
 | `note` | `VARCHAR(2000)` | no | | Review note: optional for an approval, required (1–2,000 characters after trimming, checked by `ReadinessService`) for a rejection or a request for changes |
 | `reviewed_by` | `UUID` | no | FK → `users` | Safety Officer who made the latest decision |
 | `reviewed_at` | `TIMESTAMPTZ` | no | | Time of the latest decision |
-| `flagged_items` | `TEXT[]` | no | | V34: readiness checklist item keys (`event_readiness_items.item_key`) the rejection or request for changes concerns, in checklist order; at least one for those decisions, none for an approval (checked by `ReadinessService`). Default `{}` |
+| `flagged_items` | `TEXT[]` | no | | V34: readiness checklist item keys (`event_readiness_items.item_key`) the rejection or request for changes concerns, in checklist order; at least one for those decisions, none for an approval (checked by `ReadinessService`). Default `{}`. `chk_safety_review_flagged_items` allows only the six checklist keys |
 
 ---
 
@@ -589,6 +589,8 @@ logs of cancelled or completed events (decision-log D28).
 the readiness checklist items (SO-C3) a rejection or a request for changes
 concerns, so the coordinator sees what to fix. `ReadinessService` requires at
 least one known item for those decisions and none for an approval; reviews made
-before V34 keep an empty list. The decision's timeline entry
+before V34 keep an empty list. `chk_safety_review_flagged_items` also limits the
+column to the six checklist keys, so a row written outside the service cannot
+hold an unknown item; adding a checklist item means updating that constraint. The decision's timeline entry
 (`event_request_activity.flagged_fields`) holds the same keys. See
 decision-log D30.

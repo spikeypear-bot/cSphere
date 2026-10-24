@@ -6,3 +6,10 @@
 -- migration have none.
 ALTER TABLE event_safety_reviews
     ADD COLUMN flagged_items TEXT[] NOT NULL DEFAULT '{}';
+
+-- Only the six checklist keys, even when a row is written outside
+-- ReadinessService. Adding a checklist item means updating this list.
+ALTER TABLE event_safety_reviews
+    ADD CONSTRAINT chk_safety_review_flagged_items CHECK (flagged_items <@ ARRAY[
+        'venue_booking', 'capacity_facilities', 'accessibility',
+        'equipment', 'registration', 'safety_operations']::text[]);
