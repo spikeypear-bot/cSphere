@@ -10,10 +10,13 @@ import java.util.UUID;
 @Embeddable
 public class SerialisedEquipmentId implements Serializable {
 
+    /** Column length of every serial_number column (V34, TS09). */
+    public static final int MAX_SERIAL_NUMBER_LENGTH = 64;
+
     @Column(name = "equipment_id")
     private UUID equipmentId;
 
-    @Column(name = "serial_number")
+    @Column(name = "serial_number", length = MAX_SERIAL_NUMBER_LENGTH)
     private String serialNumber;
 
     protected SerialisedEquipmentId() {}

@@ -84,6 +84,12 @@ public class EquipmentReservationService {
         if (req.quantity() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "quantity must be at least 1");
         }
+        // TS09: serial numbers are stored as VARCHAR(64) (V34).
+        int maxSerial = SerialisedEquipmentId.MAX_SERIAL_NUMBER_LENGTH;
+        if (req.serialNumber() != null && req.serialNumber().length() > maxSerial) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "serialNumber must be at most " + maxSerial + " characters");
+        }
 
         Equipment equipment = equipmentRepository.findForUpdate(req.equipmentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));

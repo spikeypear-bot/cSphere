@@ -28,7 +28,7 @@ public class EquipmentLog {
     private String technicalRequirements;
 
     // Set only when reserving a specific serialised unit; null for quantity-only reservations.
-    @Column(name = "serial_number")
+    @Column(name = "serial_number", length = SerialisedEquipmentId.MAX_SERIAL_NUMBER_LENGTH)
     private String serialNumber;
 
     @Column(name = "loaned_from", nullable = false)

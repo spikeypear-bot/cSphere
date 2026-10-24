@@ -324,7 +324,7 @@ Individual physical units of high-value equipment. Only used where `equipments.s
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `equipment_id` | `UUID` | no | PK, FK → `equipments` | Which kind of equipment |
-| `serial_number` | `VARCHAR(255)` | no | PK | Serial, unique only within an `equipment_id` |
+| `serial_number` | `VARCHAR(64)` | no | PK | Serial, unique only within an `equipment_id` |
 | `status` | `equipment_status` | no | | Condition/availability of this unit |
 
 **Primary key:** `(equipment_id, serial_number)` — serials are only assumed unique per equipment kind.
@@ -369,7 +369,7 @@ from; `equipment_requests` records intent, this records reality.
 | `equipment_id` | `UUID` | no | FK → `equipments` | Equipment kind |
 | `quantity` | `INTEGER` | no | | Units issued. `1` for a serialised unit |
 | `technical_requirements` | `TEXT` | yes | | Free-text notes |
-| `serial_number` | `VARCHAR(255)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
+| `serial_number` | `VARCHAR(64)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
 | `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
 | `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
 
@@ -578,3 +578,13 @@ logs of cancelled or completed events (decision-log D28).
 `chk_notification_shape` keeps every earlier branch, including EC-C3's `venue_hold_expiring`
 (V31) and EO03/EC-NEW3's change-request types (V32). See
 [EO07 API](../../../../../../docs/event-cancellation-api.md).
+
+## V34 update — serial number length (TS09)
+
+`serialised_equipments.serial_number`, `equipment_logs.serial_number` and
+`equipment_status_periods.serial_number` are `VARCHAR(64)` (were `VARCHAR(255)`). Serial numbers
+are short codes whose format depends on the equipment kind (e.g. `EPS-EBU04-7K2Q9M` for a
+projector, a 15-digit IMEI-style number for a mobile Wi-Fi unit); the dev seeder
+(`DevEquipmentSeeder`) generates them at random per kind. The composite foreign keys
+`(equipment_id, serial_number)` are unchanged. A reservation naming a serial number longer than
+64 characters is refused with 400.
