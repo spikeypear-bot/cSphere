@@ -212,6 +212,54 @@ public class NotificationService {
         createEventReassignmentNotifications(recipientUserIds, eventId, eventName, type, message);
     }
 
+    /** EO07: tell the assigned coordinator the organiser cancelled a request
+     * they were reviewing, and why. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createRequestCancelledNotification(UUID coordinatorId, UUID eventRequestId, String eventName,
+            String reason) {
+        Notification notification = base(coordinatorId, NotificationType.request_cancelled, eventName);
+        notification.setEventRequestId(eventRequestId);
+        notification.setReason(reason);
+        notification.setMessage(reason);
+        saveBestEffort(notification);
+    }
+
+    /** EO07: tell the assigned coordinator the organiser asked for the event
+     * to be cancelled, with the reason, for them to decide. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventCancellationRequestedNotification(UUID coordinatorId, UUID eventId, String eventName,
+            String reason) {
+        Notification notification = base(coordinatorId, NotificationType.event_cancellation_requested, eventName);
+        notification.setEventId(eventId);
+        notification.setReason(reason);
+        notification.setMessage(reason);
+        saveBestEffort(notification);
+    }
+
+    /** EO07: tell the organiser the outcome of their cancellation request:
+     * {@code event_cancellation_approved} or {@code event_cancellation_declined}
+     * (the message then carries the coordinator's reason). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventCancellationDecisionNotification(UUID organiserId, UUID eventId, String eventName,
+            NotificationType type, String message) {
+        Notification notification = base(organiserId, type, eventName);
+        notification.setEventId(eventId);
+        notification.setMessage(message);
+        saveBestEffort(notification);
+    }
+
+    /** EO07: tell the staff with arrangements for an event that it is cancelled. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEventCancelledNotifications(List<UUID> recipientUserIds, UUID eventId, String eventName,
+            String message) {
+        for (UUID recipient : recipientUserIds) {
+            Notification notification = base(recipient, NotificationType.event_cancelled, eventName);
+            notification.setEventId(eventId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -317,20 +365,22 @@ public class NotificationService {
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
             case venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
-            case event_returned_to_planning, event_safety_approved -> "/coordinator/events/" + n.getEventId();
+            case event_returned_to_planning, event_safety_approved, event_cancellation_requested ->
+                    "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
             case event_reassignment_approved, event_reassignment_declined ->
                     "/coordinator/events/" + n.getEventId() + "/reassignment-request";
             // Sent to Venue Staff and Technical Support alike; neither has an
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
-            case event_confirmed -> null;
+            case event_confirmed, event_cancelled -> null;
+            case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();
             // EO03/EC-NEW3: the coordinator, or the Lead while unassigned, gets the
             // same link; the page sends each reader to their own console.
             case change_request_submitted, change_request_withdrawn, change_request_decided ->
                     "/change-requests/" + n.getEventRequestId();
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
-            case clarification_responded -> "/coordinator/requests/" + n.getEventRequestId();
+            case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
             case status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()

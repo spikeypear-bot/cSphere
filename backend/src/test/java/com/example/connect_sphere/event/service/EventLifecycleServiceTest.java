@@ -63,6 +63,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("EC08")
 @Tag("EC-NEW2")
 @Tag("ECL-C7")
+@Tag("EO07")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
@@ -407,6 +408,19 @@ class EventLifecycleServiceTest {
                 eq("Town Hall"), eq("confirmed"), isNull());
         verify(notifications).createEventConfirmedNotifications(eq(List.of(VS_USER, TECH_USER)),
                 eq(event.getEventId()), eq("Town Hall"), any());
+    }
+
+    @Test
+    @DisplayName("EC08 (boundary): the confirmation notice gives the event's date in Singapore time, even for an event before 8 am")
+    void confirmationNoticeUsesTheSingaporeDate() {
+        Event event = readyEvent(EventStatus.safety_approved);
+        // 7:00 am on 10 Mar in Singapore is still 9 Mar in UTC, which is how Postgres returns it.
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-09T23:00:00Z"));
+
+        service.confirm(COORDINATOR, event.getEventId());
+
+        verify(notifications).createEventConfirmedNotifications(eq(List.of(VS_USER)), eq(event.getEventId()),
+                eq("Town Hall"), eq("Town Hall is confirmed for 2027-03-10."));
     }
 
     @Test

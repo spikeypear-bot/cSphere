@@ -1,4 +1,4 @@
-// @stories EO09 EO19 EC-C3
+// @stories EO09 EO19 EC-C3 EO07
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -210,5 +210,76 @@ describe('NotificationBell — EO09/EO19', () => {
     expect(screen.getByText(reminder.message)).toBeInTheDocument()
     await user.click(screen.getByText('Tentative venue hold expiring soon for "Alumni Homecoming"'))
     expect(await screen.findByText('Venue booking page')).toBeInTheDocument()
+  })
+})
+
+describe('EO07 NotificationBell — cancellation notifications', () => {
+  beforeEach(() => {
+    window.localStorage.clear()
+    seedSession()
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  function stubList(list: unknown[]) {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/notifications') return jsonResponse(200, list)
+      if (url === '/api/notifications/unread-count') return jsonResponse(200, { count: list.length })
+      throw new Error(`Unexpected fetch: ${url}`)
+    }))
+  }
+
+  const base = { ...STATUS_CHANGE_NOTIFICATION, eventName: 'Town Hall', newStatus: null }
+
+  it('EO07 AC2, AC7 (happy): the coordinator sees a cancelled request and a cancellation request, each with the organiser\'s reason', async () => {
+    stubList([
+      { ...base, notificationId: 'c1', type: 'request_cancelled', eventId: null, message: 'Budget withdrawn',
+        linkPath: '/coordinator/requests/req-1' },
+      { ...base, notificationId: 'c2', type: 'event_cancellation_requested', message: 'Venue flooded',
+        linkPath: '/coordinator/events/event-1' },
+    ])
+    const user = userEvent.setup()
+    renderBell()
+
+    await user.click(await screen.findByLabelText(/Notifications/))
+
+    expect(await screen.findByText('The organiser cancelled the request "Town Hall"')).toBeInTheDocument()
+    expect(screen.getByText('“Budget withdrawn”')).toBeInTheDocument()
+    expect(screen.getByText('Cancellation requested for "Town Hall"')).toBeInTheDocument()
+    expect(screen.getByText('“Venue flooded”')).toBeInTheDocument()
+  })
+
+  it('EO07 AC10 (happy): the organiser sees the outcome, with the coordinator\'s reason when it was declined', async () => {
+    stubList([
+      { ...base, notificationId: 'o1', type: 'event_cancellation_approved',
+        message: 'Town Hall has been cancelled as you asked.' },
+      { ...base, notificationId: 'o2', type: 'event_cancellation_declined',
+        message: 'Cancellation declined: Deposit is non-refundable' },
+    ])
+    const user = userEvent.setup()
+    renderBell()
+
+    await user.click(await screen.findByLabelText(/Notifications/))
+
+    expect(await screen.findByText('"Town Hall" has been cancelled')).toBeInTheDocument()
+    expect(screen.getByText('Cancellation of "Town Hall" was declined')).toBeInTheDocument()
+    expect(screen.getByText('“Cancellation declined: Deposit is non-refundable”')).toBeInTheDocument()
+  })
+
+  it('EO07 AC10 (happy): Venue Staff and Technical Support see that the event is cancelled', async () => {
+    stubList([{ ...base, notificationId: 's1', type: 'event_cancelled', linkPath: null,
+      message: 'Town Hall (2027-03-10) has been cancelled. Its venue bookings and equipment are no longer needed.' }])
+    const user = userEvent.setup()
+    renderBell()
+
+    await user.click(await screen.findByLabelText(/Notifications/))
+
+    expect(await screen.findByText('"Town Hall" has been cancelled')).toBeInTheDocument()
+    expect(screen.getByText(/no longer needed/)).toBeInTheDocument()
   })
 })

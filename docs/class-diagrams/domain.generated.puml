@@ -25,12 +25,16 @@ enum ActivityType {
 	{field} +equipment_approved
 	{field} +equipment_rejected
 	{field} +equipment_requested
+	{field} +event_cancellation_declined
+	{field} +event_cancellation_requested
+	{field} +event_cancelled
 	{field} +event_completed
 	{field} +event_confirmed
 	{field} +event_reassignment_approved
 	{field} +event_reassignment_declined
 	{field} +event_reassignment_requested
 	{field} +rejected
+	{field} +request_cancelled
 	{field} +returned_to_planning
 	{field} +safety_approved
 	{field} +safety_changes_requested
@@ -234,6 +238,25 @@ class Event <<Entity>>  {
 }
 
 
+class EventCancellationRequest <<Entity>>  {
+	{field} +cancellationRequestId : UUID {id}
+	{field} +decidedAt : OffsetDateTime
+	{field} +decidedBy : UUID
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +reason : String
+	{field} +requestedAt : OffsetDateTime
+	{field} +requesterUserId : UUID
+}
+
+
+enum EventCancellationStatus {
+	{field} +approved
+	{field} +declined
+	{field} +pending
+}
+
+
 class EventReassignmentRequest <<Entity>>  {
 	{field} +decidedAt : OffsetDateTime
 	{field} +decisionReason : String
@@ -321,12 +344,17 @@ enum NotificationType {
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +event_cancellation_approved
+	{field} +event_cancellation_declined
+	{field} +event_cancellation_requested
+	{field} +event_cancelled
 	{field} +event_confirmed
 	{field} +event_reassignment_approved
 	{field} +event_reassignment_declined
 	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
+	{field} +request_cancelled
 	{field} +status_change
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
@@ -542,6 +570,7 @@ EquipmentRequest --> "1" EquipmentRequestStatus : status
 EquipmentRequestLine "0..*" --> "1" Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
 Event --> "1" EventStatus : status
+EventCancellationRequest --> "1" EventCancellationStatus : status
 EventReassignmentRequest --> "1" EventReassignmentStatus : status
 EventRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
 EventRequest --> "1" EventRequestStatus : status
@@ -562,6 +591,9 @@ EquipmentLog "0..*" --> "1" Event : eventId
 EquipmentRequestLine "0..*" --> "1" EquipmentRequest : id.requestId
 EquipmentRequest "0..*" --> "1" Event : eventId
 EquipmentStatusPeriod "0..*" --> "1" SerialisedEquipment : equipmentId, serialNumber
+EventCancellationRequest "0..*" --> "0..1" User : decidedBy
+EventCancellationRequest "0..*" --> "1" Event : eventId
+EventCancellationRequest "0..*" --> "1" User : requesterUserId
 ChangeRequest "0..*" --> "0..1" User : decidedBy
 ChangeRequest "0..*" --> "0..1" Event : eventId
 ChangeRequest "0..*" --> "1" EventRequest : requestId

@@ -56,6 +56,19 @@ entity equipments {
 	* equipment_type : character(1)
 }
 
+entity event_cancellation_requests {
+	* cancellation_request_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* requester_user_id : uuid <<FK>>
+	* reason : text
+	* status : text
+	* requested_at : timestamp with time zone
+	decided_by : uuid <<FK>>
+	decided_at : timestamp with time zone
+	decision_reason : text
+}
+
 entity event_change_requests {
 	* change_request_id : uuid <<PK>>
 	--
@@ -393,6 +406,11 @@ enum notification_type {
 	change_request_submitted
 	change_request_withdrawn
 	change_request_decided
+	event_cancellation_requested
+	event_cancellation_approved
+	event_cancellation_declined
+	event_cancelled
+	request_cancelled
 }
 
 enum user_role {
@@ -420,6 +438,9 @@ equipment_request_equipments }o--|| equipments : equipment_id
 equipment_request_equipments }o--|| equipment_requests : request_id
 equipment_requests }o--|| events : event_id
 equipment_status_periods }o--|| serialised_equipments : equipment_id, serial_number
+event_cancellation_requests }o--o| users : decided_by
+event_cancellation_requests }o--|| events : event_id
+event_cancellation_requests }o--|| users : requester_user_id
 event_change_requests }o--o| users : decided_by
 event_change_requests }o--o| events : event_id
 event_change_requests }o--|| event_requests : request_id

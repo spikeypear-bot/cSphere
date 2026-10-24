@@ -1,9 +1,11 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS03 EC08 SO-C4 EC-NEW2 EO15
+// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS03 EC08 SO-C4 EC-NEW2 EO15 EO07
 import { expect, test } from '@playwright/test'
-import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
+import { apiGet, apiToken, confirmedEventByApi, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest,
+  uniqueName } from './support.ts'
 
-// IS212 Week 9 / rubric "failure scenarios": the two ways the core journey
-// most often turns back, checked through the browser.
+// IS212 Week 9 / rubric "failure scenarios": the ways the core journey most
+// often turns back, checked through the browser: a rejection, a safety
+// change request, and (EO07) an event cancelled at the organiser's request.
 
 test('a rejected request tells the organiser it was rejected and why (EC02, EC-NEW2 AC3)', async ({ browser, request }) => {
   test.setTimeout(120_000)
@@ -87,5 +89,60 @@ test('the Safety Officer asks for changes and the coordinator can fix and resend
     const panel = coordinator.getByRole('region', { name: 'Ready for confirmation?' })
     await panel.getByRole('button', { name: 'Send for safety review' }).click()
     await expect(coordinator.getByText('Awaiting Safety Review').first()).toBeVisible()
+  })
+})
+
+test('EO07: organiser requests cancellation of a confirmed event, coordinator approves, organiser sees Cancelled', async ({ browser, request }) => {
+  test.setTimeout(120_000)
+  const eventName = uniqueName('E2E Cancelled Gala')
+  const venueId = await createVenue(request, uniqueName('E2E Pier Hall'))
+  // Test data, not the journey: a Confirmed event (EC08) to cancel.
+  const eventId = await confirmedEventByApi(request, eventName, venueId, '2027-09-07T09:00:00+08:00',
+    '2027-09-07T12:00:00+08:00')
+
+  const organiser = await signedIn(browser, 'eo1')
+  await test.step('EO07 AC3, AC6: the organiser asks for cancellation; the event stays Confirmed while it waits', async () => {
+    await organiser.goto(`/organiser/events/${eventId}`)
+    await expect(organiser.getByText('Confirmed').first()).toBeVisible()
+    await organiser.getByRole('button', { name: 'Request cancellation' }).click()
+    await organiser.getByLabel('Reason for cancelling').fill('Our keynote speaker has withdrawn.')
+    await organiser.getByRole('button', { name: 'Send cancellation request' }).click()
+    const card = organiser.getByRole('region', { name: 'Cancellation requested' })
+    await expect(card.getByText("Awaiting the coordinator's decision.", { exact: false })).toBeVisible()
+    await expect(card.getByText('Our keynote speaker has withdrawn.')).toBeVisible()
+    await expect(organiser.getByRole('button', { name: 'Request cancellation' })).toHaveCount(0)
+    await expect(organiser.getByText('Confirmed').first()).toBeVisible()
+  })
+
+  const coordinator = await signedIn(browser, 'ec1')
+  await test.step('EO07 AC7: the assigned coordinator is notified and sees the request with its reason', async () => {
+    await coordinator.goto('/coordinator')
+    await coordinator.getByRole('button', { name: /Notifications/ }).click()
+    await expect(coordinator.getByText(`Cancellation requested for "${eventName}"`).first()).toBeVisible()
+    await coordinator.goto(`/coordinator/events/${eventId}`)
+    const card = coordinator.getByRole('region', { name: 'Cancellation requested' })
+    await expect(card.getByText('Our keynote speaker has withdrawn.')).toBeVisible()
+  })
+
+  await test.step('EO07 AC8: the coordinator approves; the event is Cancelled and its venue booking released', async () => {
+    const card = coordinator.getByRole('region', { name: 'Cancellation requested' })
+    await card.getByRole('button', { name: 'Approve cancellation' }).click()
+    await card.getByRole('button', { name: 'Cancel the event' }).click()
+    await expect(coordinator.getByRole('region', { name: 'Cancellation requested' })).toHaveCount(0)
+    await expect(coordinator.getByText('Cancelled').first()).toBeVisible()
+    const token = await apiToken(request, 'ec1')
+    await expect.poll(async () => (await apiGet<{ status: string }[]>(request, token,
+      `/api/events/${eventId}/venue-bookings`)).map((b) => b.status)).toEqual(['cancelled'])
+  })
+
+  await test.step('EO07 AC10, AC11: the organiser is told, sees Cancelled, and the change log shows it as Major', async () => {
+    await organiser.goto('/organiser')
+    await organiser.getByRole('button', { name: /Notifications, \d+ unread/ }).click()
+    await organiser.getByText(`"${eventName}" has been cancelled`).first().click()
+    await expect(organiser).toHaveURL(new RegExp(`/organiser/events/${eventId}`))
+    await expect(organiser.getByText('Cancelled').first()).toBeVisible()
+    await expect(organiser.getByRole('button', { name: 'Request cancellation' })).toHaveCount(0)
+    const log = organiser.getByRole('region', { name: 'Change log' })
+    await expect(log).toContainText('Our keynote speaker has withdrawn.')
   })
 })
