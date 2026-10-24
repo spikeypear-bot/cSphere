@@ -300,6 +300,7 @@ enum NotificationType {
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
 	{field} +venue_hold_expired
+	{field} +venue_hold_expiring
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -478,6 +479,7 @@ class VenueHold {
 	{field} -eventName : String
 	{field} -expiresAt : OffsetDateTime
 	{field} -holdId : UUID
+	{field} -reminderDueAt : OffsetDateTime
 	{field} -reservedEnd : OffsetDateTime
 	{field} -reservedStart : OffsetDateTime
 	{field} -serverTime : OffsetDateTime

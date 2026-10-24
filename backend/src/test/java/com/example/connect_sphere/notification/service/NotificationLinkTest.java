@@ -6,11 +6,13 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
@@ -32,6 +34,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("EO26")
 @Tag("EC03")
 @Tag("EO19")
+@Tag("EC-C3")
 class NotificationLinkTest {
 
     @Mock private NotificationRepository repository;
@@ -92,6 +95,20 @@ class NotificationLinkTest {
                 .containsOnly("/venue-staff/bookings/" + BOOKING);
         assertThat(sent).filteredOn(n -> n.type().equals("venue_booking_cancelled"))
                 .extracting(NotificationDto::reason).containsExactly("Wrong venue");
+    }
+
+    @Test
+    @DisplayName("EC-C3 AC1 (happy): a hold expiry reminder opens the coordinator's venue booking page for that event")
+    void aHoldReminderOpensTheEventsVenueBookingPage() {
+        service.createHoldExpiringNotification(UUID.randomUUID(), EVENT, BOOKING, "Town Hall", "Downtown Hall",
+                OffsetDateTime.parse("2027-03-01T00:00:00Z"));
+
+        ArgumentCaptor<Notification> saved = ArgumentCaptor.forClass(Notification.class);
+        verify(repository).saveAndFlush(saved.capture());
+        when(repository.findByRecipientUserIdOrderByOccurredAtDesc(any())).thenReturn(List.of(saved.getValue()));
+        NotificationDto sent = service.list(UUID.randomUUID()).get(0);
+        assertThat(sent.type()).isEqualTo("venue_hold_expiring");
+        assertThat(sent.linkPath()).isEqualTo("/coordinator/events/" + EVENT + "/venue-booking");
     }
 
     @Test
