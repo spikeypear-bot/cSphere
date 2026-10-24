@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -24,6 +25,8 @@ export interface EventRequestReview {
   request: EventRequestDto
   missingFields: string[]
   scheduleValid: boolean
+  /** EO-C2: why the date, time or attendance blocks approval, per field. */
+  scheduleProblems?: Record<string, string>
   timeline: ActivityDto[]
 }
 
@@ -120,6 +123,10 @@ export function RequestReviewPage() {
   if (!review) return <p>Loading…</p>
 
   const { request, missingFields, scheduleValid, timeline } = review
+  const scheduleProblems = review.scheduleProblems ?? {}
+  // Older responses carry only the flag; say what it meant then.
+  const scheduleMessages = Object.keys(scheduleProblems).length > 0 ? Object.entries(scheduleProblems)
+    : scheduleValid ? [] : [['endDatetime', 'The end date & time is before the start']]
   const isOpen = request.status === 'pending'
   const waiting = request.status === 'clarification_required'
   const ready = missingFields.length === 0 && scheduleValid
@@ -199,6 +206,8 @@ export function RequestReviewPage() {
 
       {notice ? <Notice>{notice}</Notice> : null}
 
+      <ChangeRequestPanel requestId={request.requestId} />
+
       <div className="split-layout">
         <div className="request-review__main">
           {isOpen ? (
@@ -210,10 +219,12 @@ export function RequestReviewPage() {
                   <p><strong>This request cannot proceed to planning yet.</strong></p>
                   <ul>
                     {missingFields.map((f) => <li key={f}>{FIELD_LABELS[f] ?? f} is missing</li>)}
-                    {!scheduleValid ? <li>The end date &amp; time is before the start</li> : null}
+                    {scheduleMessages.map(([field, message]) => <li key={field}>{message}</li>)}
                   </ul>
                   <Button variant="secondary" onClick={() => startClarification(
-                    [...missingFields, ...(scheduleValid ? [] : ['startDatetime', 'endDatetime'])])}>
+                    [...missingFields, ...(scheduleMessages.length > 0
+                      ? (Object.keys(scheduleProblems).length > 0 ? Object.keys(scheduleProblems) : ['startDatetime', 'endDatetime'])
+                      : [])])}>
                     Ask the organiser about these
                   </Button>
                 </>

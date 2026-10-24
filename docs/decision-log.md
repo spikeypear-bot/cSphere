@@ -370,6 +370,116 @@ Therefore:
 
 ## Awaiting Team Confirmation
 
+### D28 — EO-C2: a request must describe a real, future event (supersedes the 22 Sep date-range rule)
+
+2026-10-24, branch `feat/eo-c2-request-date-validation`. While writing EO03's ACs we found that EO02 accepted a request that:
+- ends at the moment it starts;
+- is dated in the past;
+- expects 0 or a negative number of attendees.
+
+The server also **silently truncated a decimal attendance** (`150.5` was saved as `150`).
+
+EO02's ACs never required otherwise, so, following the Week 7 *Guide to Managing Changes* (Scenario 2, a new requirement), EO02 stays Done and the new story **EO-C2** (Sprint 4) carries the rules. This supersedes the "Organiser request date-range validation (2026-09-22)" entry below on two points:
+- **equal start and end times** are now refused;
+- **past dates** are now refused.
+
+Everything else in that entry stands:
+- drafts stay saveable;
+- invalid inputs are kept, never cleared;
+- the server answers 422 before changing status or `updatedAt`;
+- a submission first saves the current fields.
+
+**Rules.** One server method, `EventRequestService.scheduleProblems`, is used by submit, resubmit (EO26) and approve (EC02). So a request whose start passes while it waits cannot be approved either: the coordinator's review lists why (`scheduleProblems`). The rules:
+- **Start:** must be strictly after now. An event starting this very minute has already started.
+- **End:** must be strictly after the start, compared as moments. `10:00+08:00` and `02:00Z` are the same moment, so that pair has no duration. An end on a later date is valid; venue operating hours are checked later, when a venue is booked.
+- **Attendance:** at least 1.
+
+"Now" comes from an injected `Clock`, so the boundaries are tested exactly: now, and one minute either side.
+
+**One message per field.**
+- `ApiError` gains `fieldErrors` (omitted when empty). A 422 says what is wrong with each field, in the form's order, and the page shows each message next to its field.
+- The frontend checks the same rules as the organiser types, using the server's own wording (`eventRequestValidation.ts`).
+- Server messages stay visible until the organiser changes that field.
+- When the server refuses, for example because the start passed while the page was open, the wizard returns to the schedule step.
+
+**Whole numbers, everywhere.** `spring.jackson.deserialization.accept-float-as-int=false`: a decimal sent for any whole-number field (attendance, quantities, capacities) is refused with 400 instead of being silently rounded.
+- This is global on purpose, because silent truncation is wrong for every such field.
+- The full backend suite (584 unit, 557 integration) passed with it.
+- The attendance input accepts digits only, so a decimal or sign cannot be typed or pasted.
+
+**Singapore time.** `DateTimeField` now reads and shows Singapore time (GMT+8, no daylight saving), whatever the browser's zone, and says so under each date field. The review step labels times "(Singapore time)". This replaces the earlier "browser-local time" note: an organiser abroad now types the event's local time, not their own.
+
+**Evidence:**
+- **Backend:** `EventRequestSubmissionRulesTest` (unit, fixed clock), and `RequestSubmissionRulesFlowTest` (integration: API bypass, decimals, resubmission, approval after the start has passed).
+- **Frontend:**
+  - `eventRequestValidation.test.ts`;
+  - `EventRequestDateRules.test.tsx`, which covers Singapore-time entry, attendance input, the server's per-field refusal, and the clock passing the start on the review step;
+  - EO-C2 cases in the wizard, clarification and coordinator review tests.
+
+  These run in both UTC and Singapore time.
+- **E2E:** `request-rules.spec.ts`.
+- All 8 ACs have automated tests named by AC number.
+
+**Known limit:** shared test fixtures (`FlowSupport`, E2E helpers) use fixed 2027 dates. They will need moving forward before mid-2027; EO-C2's own tests use dates relative to now.
+
+**No database migration.**
+
+### D29 — EO03 + EC-NEW3: event change requests, decided against their real impact
+
+2026-10-24, branch `feat/eo03-ecnew3-change-requests`. The organiser asks to change a submitted request or its event (EO03), and the assigned coordinator decides it (EC-NEW3). This is Week 4 core feature "Event Change Requests" and Week 1 step 12: *"The Event Coordinator determines whether those changes affect venue, equipment, technical-support, registration, or other arrangements."*
+
+**Data (V32).** A new table, `event_change_requests`, modelled on EC-C1's `event_reassignment_requests`.
+- **Why not V3's `request_type 'A'`:** a second `event_requests` row per event would break `findByEventId` (the change log, timelines and ECL-C7 access all rely on one request per event), and it would appear in coordinators' review queues as a new request.
+- **What a row holds:** the changeable fields before and after, as JSON, so the comparison survives later edits; the reason; the decision; and the impacts acknowledged.
+- **One pending change per request**, enforced by a partial unique index, so two simultaneous submissions cannot both succeed.
+- **Notifications:** three new types (submitted, withdrawn, decided). Their link `/change-requests/{requestId}` opens the reader's own console, since the same notification can go to a coordinator or to the Leads.
+
+**Rules.**
+- **The proposal** is checked by the same rules as submitting a request (EO02 completeness, EO-C2 dates and attendance, 422 per field), and checked again at decision time.
+- **"Changed" means changed in meaning**, using the change log's comparison (EC-NEW5): offsets, list order, spaces and `150` vs `150.0` are not changes. A request that changes nothing is refused.
+- **When it can be asked:**
+  - allowed for a Submitted request, or an event in Planning, Awaiting Safety Review, Safety Changes Requested, Safety Approved or Confirmed;
+  - refused once the event has started (start ≤ now);
+  - refused for drafts (edit directly) and while a clarification is open (reply instead).
+- **Who:**
+  - organisers by organisation (AU04);
+  - the assigned coordinator decides (ECL-C7);
+  - before assignment, the Leads are told and the request waits for the coordinator they assign;
+  - a pending change follows a reassignment;
+  - the Lead reads everything, read-only.
+- **Approval applies every field at once**, to the request and its event, under row locks. When an event in Awaiting Safety Review, Safety Approved or Confirmed has its date, time, attendance, venue or equipment requirements, accessibility or facilities changed, it returns to Planning (`EventLifecycleService.returnToPlanning`, EC08).
+
+**Impact (`ChangeImpactService`).** Recalculated on every view from live data, using the system's own checks:
+- `AvailabilityService` for clashes, unavailability, operational issues and opening hours, each with that booking's own setup and turnaround;
+- `VenueSuitability` on the event as it would be, for capacity, accessibility and facilities;
+- hold and equipment-reservation windows;
+- the safety consequence.
+
+Every "attention" item has a stable key, and the coordinator must acknowledge each one. If the impact has changed since they looked, approval is refused (409) and the new impact is shown. The acknowledged items are kept as **follow-ups** on the event page.
+
+**Found while testing:** since VS-C2, every booking stores its own window, so a booking does not follow the event's new time. The impact therefore:
+- checks a whole-event booking **at the new time** (could it move there?) and flags it *"booked for the old time; nothing is moved automatically"*;
+- leaves a part-day (EC-C2) booking in its window and flags it to be checked;
+- treats pending booking requests as non-reserving, consistent with the rest of the system.
+
+**Story gaps (raise in the Sheet):**
+- **EO07 (cancellation) is not built.** EO03 AC6 (no change while a cancellation is pending) and AC7 (close on cancellation) wait for it.
+- **Registrations (AT01) are not built.** EO03 AC19 and EC-NEW3 AC22 wait for them.
+- **EC-NEW3 AC40** (Venue Staff and Technical Support told of approved changes) is VS17's and TS11's work.
+- **EC-NEW3 AC9** said pending booking requests clash. They do not reserve anything anywhere else in the system, so they are not counted here either.
+
+**Evidence:**
+- **Backend:**
+  - `ChangeRequestFlowTest` (16, real PostgreSQL), covering the boundaries: meets vs one minute over, extending into the next booking's setup, closing time, overnight, capacity at the limit;
+  - `ChangeRequestNotificationFlowTest` (2, committed);
+  - `ChangeRequestServiceTest`, `ChangeImpactServiceTest` and `ChangeFieldsTest` (24, unit, fixed clock).
+- **Frontend:** `ChangeRequests.test.tsx` (26).
+- **E2E:** `change-requests.spec.ts`.
+
+**Migration:** V32 (new table, three notification types, notification constraint re-declared with them added).
+
+## Awaiting Team Confirmation
+
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
 - **Raised by:** repository/backlog inspection, 2026-09-12.
 - **Context:** Backlog `Estimation` sheet: 310 total points ÷ 4 sprints = 77.5 planned velocity/sprint. Actual (Done-only) velocity to date: 8 points. The Week 3 course slide deck's own worked example uses a velocity of 15 for a comparably-sized team — 77.5 is roughly 5× that.
@@ -421,6 +531,8 @@ Therefore:
 
 
 ## Organiser request date-range validation (2026-09-22)
+
+> **Superseded in part by D28 (EO-C2, 24 Oct 2026):** equal start and end times and past dates are now refused, and times are entered in Singapore time. The rest of this entry stands.
 
 End must be on or after start, comparing full instants. Equal timestamps, same-day
 events, matching times on successive days, and past dates are allowed. No

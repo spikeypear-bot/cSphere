@@ -9,8 +9,10 @@ endlegend
 
 
 class ApiError {
+	{field} -fieldErrors : Map<String, String>
 	{field} -message : String
 	{field} -missingFields : List<String>
+	{method}  {static} +fieldErrors ( message : String , fieldErrors : Map ) : ApiError
 	{method}  {static} +missingFields ( message : String , missingFields : List ) : ApiError
 	{method}  {static} +of ( message : String ) : ApiError
 }

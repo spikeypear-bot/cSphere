@@ -112,10 +112,14 @@ public class ActivityService {
         Map<String, Object> lastCaptured = null;
         UUID eventId = null;
         for (RequestActivity a : rows) {
+            boolean changeEntry = CHANGE_ENTRIES.contains(a.getActivityType());
             boolean major = a.getActivityType().major()
                     || (a.getActivityType() == ActivityType.clarification_responded
-                            && changesImportantField(lastCaptured, a.getFieldValues()));
-            if (a.getFieldValues() != null) {
+                            && changesImportantField(lastCaptured, a.getFieldValues()))
+                    || (changeEntry && touchesImportantField(a.getFieldValues()));
+            // Change entries carry only the changed fields, so they never stand in
+            // for the request's full values that a later reply is compared with.
+            if (a.getFieldValues() != null && !changeEntry) {
                 lastCaptured = a.getFieldValues();
             }
             if (a.getEventId() != null) {
@@ -158,7 +162,17 @@ public class ActivityService {
         return false;
     }
 
-    static boolean sameValue(Object a, Object b) {
+    /** EO03/EC-NEW3: a requested or approved change is Major when it changes
+     * one of Week 4's important fields; its entry carries the changed fields. */
+    private static final java.util.Set<ActivityType> CHANGE_ENTRIES =
+            java.util.EnumSet.of(ActivityType.change_requested, ActivityType.change_approved);
+
+    static boolean touchesImportantField(Map<String, Object> changed) {
+        return changed != null && IMPORTANT_FIELDS.stream().anyMatch(changed::containsKey);
+    }
+
+    /** Public for EO03, which judges "nothing changed" by the same meaning. */
+    public static boolean sameValue(Object a, Object b) {
         if (isEmpty(a) && isEmpty(b)) {
             return true;
         }

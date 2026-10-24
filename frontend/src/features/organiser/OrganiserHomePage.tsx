@@ -12,6 +12,7 @@ import { useSession } from '../../lib/sessionContext'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import type { ActivityDto } from '../../types/activity'
 import type { EventRequestDto } from '../../types/eventRequest'
+import type { ChangeRequestView } from '../../types/changeRequest'
 import { getCompletionPercent } from './eventRequestCompletion'
 import { organiserExtraFeatures } from './organiserExtraFeatures'
 import './OrganiserHomePage.css'
@@ -19,6 +20,12 @@ import './OrganiserHomePage.css'
 /** EO15: "view my event requests and their statuses". The scoping happens on
  * the server, from the access token's `organisation` claim (D20) — the value
  * read here is for display only, and nothing is sent with the request. */
+/** EO03 AC2-AC4: Submitted, Under Review, or an event still being planned or confirmed. */
+function changeable(request: EventRequestDto): boolean {
+  if (request.status !== 'pending' && request.status !== 'approved') return false
+  return !['COMPLETED', 'CANCELLED'].includes(request.journeyStatus?.code ?? '')
+}
+
 export function OrganiserHomePage() {
   const { organisation } = useSession()
   const [requests, setRequests] = useState<EventRequestDto[] | null>(null)
@@ -36,6 +43,16 @@ export function OrganiserHomePage() {
   useEffect(() => {
     if (justSubmitted || justResubmitted) navigate('.', { replace: true, state: null })
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  // EO03 AC30: which requests have a change waiting (one call for the list).
+  const [pendingChanges, setPendingChanges] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    let cancelled = false
+    apiClient.get<ChangeRequestView[]>('/change-requests')
+      .then((views) => { if (!cancelled) setPendingChanges(new Set(views.map((v) => v.requestId))) })
+      .catch(() => { /* the list still works without the badges */ })
+    return () => { cancelled = true }
   }, [])
 
   useEffect(() => {
@@ -108,6 +125,14 @@ export function OrganiserHomePage() {
                 {request.status === 'clarification_required' ? <LatestQuestion requestId={request.requestId} /> : null}
               </div>
               <StatusBadge status={request.status} journey={request.journeyStatus} />
+              {pendingChanges.has(request.requestId) ? (
+                <Link className="change-request__status change-request__status--pending"
+                  to={`/organiser/requests/${request.requestId}/changes`}>Change requested</Link>
+              ) : changeable(request) ? (
+                <Link className="button button--ghost" to={`/organiser/requests/${request.requestId}/change`}>
+                  Request a change
+                </Link>
+              ) : null}
               {request.status === 'draft' ? (
                 <Link className="button button--secondary" to={`/organiser/requests/${request.requestId}`}>
                   Continue editing

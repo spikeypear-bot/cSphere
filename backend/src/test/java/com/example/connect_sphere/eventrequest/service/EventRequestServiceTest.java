@@ -51,6 +51,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("unit")
 @Tag("EO01")
 @Tag("EO02")
+@Tag("EO-C2")
 @Tag("EO09")
 @Tag("EO19")
 @Tag("ELC-C6")
@@ -635,14 +636,20 @@ class EventRequestServiceTest {
         org.mockito.Mockito.verify(repository, org.mockito.Mockito.never()).save(any());
     }
 
+    /** Superseded by EO-C2 (decision log D28): equal instants and past dates
+     * were allowed by the 22 Sep 2026 date-range decision; both are now refused. */
     @Test
-    void equalInstantsWithDifferentOffsetsAndPastDatesCanBeSubmitted() {
+    void equalInstantsWithDifferentOffsetsAndPastDatesAreRefused() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
         existing.setStartDatetime(java.time.OffsetDateTime.parse("2020-09-22T09:00:00Z"));
         existing.setEndDatetime(java.time.OffsetDateTime.parse("2020-09-22T17:00:00+08:00"));
         when(repository.findById(id)).thenReturn(Optional.of(existing));
-        assertThat(service.submit(ORG, CREATED_BY, id).status()).isEqualTo(EventRequestStatus.pending);
+        assertThatThrownBy(() -> service.submit(ORG, CREATED_BY, id))
+                .isInstanceOf(InvalidEventRequestScheduleException.class)
+                .satisfies(e -> assertThat(((InvalidEventRequestScheduleException) e).getFieldErrors())
+                        .containsOnlyKeys("startDatetime", "endDatetime"));
+        assertThat(existing.getStatus()).isEqualTo(EventRequestStatus.draft);
     }
 
     private static EventRequest draftEntity(UUID id, String organisation) {

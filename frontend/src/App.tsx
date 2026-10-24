@@ -21,6 +21,9 @@ import { EquipmentRequestPage } from './features/coordinator/EquipmentRequestPag
 import { ActiveEventsPage } from './features/coordinatorLead/ActiveEventsPage'
 import { CoordinatorAssignmentsPage } from './features/coordinatorLead/CoordinatorAssignmentsPage'
 import { EventReassignmentRequestsPage } from './features/coordinatorLead/EventReassignmentRequestsPage'
+import { ChangeRequestFormPage } from './features/changeRequests/ChangeRequestFormPage'
+import { ChangeRequestRedirect, ChangeRequestsPage } from './features/changeRequests/ChangeRequestsPage'
+import { ChangeRequestReviewPage } from './features/changeRequests/ChangeRequestReviewPage'
 import { CoordinatorLeadHomePage } from './features/coordinatorLead/CoordinatorLeadHomePage'
 import { coordinatorLeadFeatures } from './features/coordinatorLead/coordinatorLeadFeatures'
 import { IncomingRequestReviewPage } from './features/coordinatorLead/IncomingRequestReviewPage'
@@ -86,6 +89,9 @@ function OrganiserRoutes() {
       <Route path="requests/new" element={<EventRequestWizardPage />} />
       <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
       <Route path="requests/:requestId/respond" element={<ClarificationResponsePage />} />
+      <Route path="requests/:requestId/change" element={<ChangeRequestFormPage />} />
+      <Route path="events/:eventId/change" element={<ChangeRequestFormPage />} />
+      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
       <Route path="events/:eventId" element={<EventDetailsPage />} />
       {skeletonRoutes(organiserExtraFeatures)}
     </Routes>
@@ -105,6 +111,8 @@ function CoordinatorRoutes() {
       <Route path="requests/:requestId" element={<RequestReviewPage />} />
       <Route path="events/:eventId" element={<EventDetailsPage />} />
       <Route path="events/:eventId/reassignment-request" element={<EventReassignmentRequestPage />} />
+      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+      <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
       <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
       <Route path="venue-search" element={<VenueSearchPage />} />
       <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
@@ -130,6 +138,8 @@ function CoordinatorLeadRoutes() {
       {/* ECL-C4: every assigned active event, for workload before assigning. */}
       <Route path="active-events" element={<ActiveEventsPage />} />
       <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
+      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+      <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
       {skeletonRoutes(coordinatorLeadFeatures)}
     </Routes>
   )
@@ -217,6 +227,8 @@ function AppRoutes() {
       <Route path="/technical-support/*" element={<TechnicalSupportRoutes />} />
       <Route path="/attendee/*" element={<AttendeeRoutes />} />
       <Route path="/safety-officer/*" element={<SafetyOfficerRoutes />} />
+      {/* EO03/EC-NEW3: notification links; opens the reader's own console. */}
+      <Route path="/change-requests/:requestId" element={<ChangeRequestRedirect />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   )

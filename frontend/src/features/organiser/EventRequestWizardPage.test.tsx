@@ -1,3 +1,4 @@
+// @stories EO01 EO02 EO-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,6 +7,13 @@ import { SessionProvider } from '../../lib/session'
 import { EventRequestWizardPage } from './EventRequestWizardPage'
 
 const DRAFT_ID = '11111111-1111-1111-1111-111111111111'
+
+/** A date `days` from today at `time`, as the Singapore wall-clock value a
+ * datetime-local input holds (EO-C2: times are entered in Singapore time). */
+function singaporeLocal(days: number, time: string): string {
+  const day = new Date(Date.now() + 8 * 3_600_000 + days * 86_400_000).toISOString().slice(0, 10)
+  return `${day}T${time}`
+}
 
 function seedSession() {
   window.localStorage.setItem(
@@ -66,7 +74,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     window.localStorage.clear()
   })
 
-  it('preserves invalid selections, blocks Next, and clears errors after correcting the range', async () => {
+  it('EO-C2 AC1, AC6 (boundary): preserves invalid selections, blocks Next, and clears errors after correcting the range', async () => {
     vi.stubGlobal('fetch', vi.fn(async (_url, init) => jsonResponse(200, {
       ...JSON.parse(init.body), requestId: DRAFT_ID, status: 'draft',
     })))
@@ -75,16 +83,21 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     await user.click(screen.getByRole('button', { name: 'Next' }))
     const start = screen.getByLabelText('Start date & time')
     const end = screen.getByLabelText('End date & time')
-    fireEvent.change(start, { target: { value: '2020-09-22T09:00' } })
-    fireEvent.change(end, { target: { value: '2020-09-23T09:00' } })
+    fireEvent.change(start, { target: { value: singaporeLocal(30, '09:00') } })
+    fireEvent.change(end, { target: { value: singaporeLocal(31, '09:00') } })
     expect(screen.getByRole('button', { name: 'Next' })).toBeEnabled()
-    fireEvent.change(start, { target: { value: '2020-09-24T09:00' } })
-    expect(start).toHaveValue('2020-09-24T09:00')
-    expect(end).toHaveValue('2020-09-23T09:00')
+    // Moving the start after the end keeps both selections and explains why.
+    fireEvent.change(start, { target: { value: singaporeLocal(32, '09:00') } })
+    expect(start).toHaveValue(singaporeLocal(32, '09:00'))
+    expect(end).toHaveValue(singaporeLocal(31, '09:00'))
     expect(end).toHaveAttribute('aria-invalid', 'true')
-    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('End date & time must be on or after')
+    expect(screen.getAllByRole('alert')[0]).toHaveTextContent('The end date & time must be after the start date & time.')
     expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
-    fireEvent.change(end, { target: { value: '2020-09-24T09:00' } })
+    // EO-C2: an end equal to the start is no duration, so still refused.
+    fireEvent.change(end, { target: { value: singaporeLocal(32, '09:00') } })
+    expect(end).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    fireEvent.change(end, { target: { value: singaporeLocal(32, '11:00') } })
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
     expect(screen.getByLabelText('Venue requirements')).toBeInTheDocument()
