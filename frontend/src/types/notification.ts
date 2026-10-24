@@ -21,6 +21,12 @@ export type NotificationTypeName =
   | 'change_request_submitted'
   | 'change_request_withdrawn'
   | 'change_request_decided'
+  // EO07
+  | 'request_cancelled'
+  | 'event_cancellation_requested'
+  | 'event_cancellation_approved'
+  | 'event_cancellation_declined'
+  | 'event_cancelled'
 
 export interface NotificationDto {
   notificationId: string

@@ -94,6 +94,12 @@ public class EquipmentRequestDecisionService {
 
         Event event = events.findById(request.getEventId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Event not found"));
+        // EO07 AC12: a cancelled or finished event takes no further equipment action.
+        if (event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.cancelled
+                || event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.completed) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "This event has been cancelled or has finished, so its equipment request can no longer be reviewed.");
+        }
         if (requestedStatus == EquipmentRequestStatus.approved) {
             requireAllItemsReserved(request, event.getStartDatetime().toInstant(),
                     event.getEndDatetime().toInstant());

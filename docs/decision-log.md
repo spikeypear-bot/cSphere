@@ -176,7 +176,11 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `POST /api/event-requests/{id}/resubmit`, `GET /api/event-requests/{id}/timeline` | `hasRole('EO')` (blanket rule) **plus organisation scoping** | EO26 (D21). |
   | `GET /api/events/{id}/timeline` | `hasAnyRole('EO','EC')` (existing events rule) **plus organisation or assignment check** | D21: the event's whole journey, filtered by role. |
   | `GET /api/events/{id}/venue-options`, `GET\|POST /api/events/{id}/venue-bookings` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus assignment check** | EC03 (D21). |
+  | `GET /api/events/assigned` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus scoping to the token's `sub`** | EC09 (Week 7 customer change 5). The caller's own `pending` and `confirmed` events, across all organisations, soonest start first. The coordinator is always the token's subject — there is no parameter to ask for another coordinator's list. The Lead's all-coordinators view is a separate story (ECL-C4). |
   | `GET /api/events/assigned` | `hasRole('EC')`, placed **above** `GET /api/events/**` **plus scoping to the token's `sub`** | EC09 (Week 7 customer change 5). The caller's own `pending` and `confirmed` events, across all organisations, soonest start first. The coordinator is always the token's subject — there is no parameter to ask for another coordinator's list. The Lead's all-coordinators view is a separate story (ELC-C4). |
+  | `POST /api/event-requests/{id}/cancel`, `POST /api/event-requests/{id}/cancellation-request` | `hasRole('EO')` (blanket `/api/event-requests/**` rule) **plus organisation scoping from the token claim** | EO07 (D28). Cancel a request before approval; request cancellation of its event after. Another organisation's request is 404. |
+  | `GET /api/events/{id}/cancellation-requests` | `hasAnyRole('EO','EC','ECL')`, placed **above** `GET /api/events/**` **plus organisation or assignment check in the service** | EO07 (D28). The owning organisation's organisers, the assigned coordinator (403 otherwise, D25) and the Lead (read-only oversight). |
+  | `POST /api/events/{id}/cancellation-requests/{cid}/approve\|decline` | `hasRole('EC')` **plus assignment check first in the service** | EO07 (D28). Only the event's current coordinator decides; the Lead and other coordinators are refused (403). Each has a row in `CoordinatorAssignmentScopeTest`. |
   | `/swagger-ui/**`, `/v3/api-docs/**` | dev profile only, or accept 401 | springdoc is on the classpath; under `anyRequest().authenticated()` the docs page 401s, and a browser navigation cannot attach a Bearer token. |
 
 - **Open for the team to settle:**
@@ -367,6 +371,27 @@ Therefore:
 **Team action:** add `traceability` (now including test protection) to `main`'s required checks; otherwise it only warns.
 
 **No database migration.**
+
+### D28 — EO07: two-stage event cancellation; cancelled and completed events release their equipment
+
+2026-10-24, branch `feat/eo07-event-cancellation`. Approved by the user with EO07's 14 acceptance criteria before it was built.
+
+**D1 — Two stages, decided by how far the request has got.**
+- *Before approval* (request `pending` — shown Submitted or Under Review — or `clarification_required`): nothing has been arranged, so the organiser cancels the request **at once**. `event_requests.status` becomes `cancelled`; the assigned coordinator, if any, is told.
+- *After approval* (event `pending`, `awaiting_safety_review`, `safety_changes_requested`, `safety_approved` or `confirmed` — Planning to Confirmed): venues, equipment and staff may already be committed, so the organiser **requests** cancellation and the event's **currently assigned** coordinator approves or declines it (declining needs a reason). The event keeps its status and arrangements until then.
+- Modelled on EC-C1's reassignment requests (V30): a new `event_cancellation_requests` table (V33), one pending per event by a partial unique index, row locks so decisions act on the current state. The pending request belongs to the event, so after a reassignment (ELC-C5/ECL-C7) the new coordinator decides it.
+- Approving goes through `EventLifecycleService.cancel`, the only place `events.status` becomes `cancelled` (D22): pending and approved venue bookings become `cancelled` and their active holds are released (VS-C3); the event row and its history are kept.
+- Every step is a **Major** change-log entry (EC-NEW5: `docs/test-cases/sprint3-ecnew5.md` already expected event cancellation to be Major).
+
+**D2 — Cancelled and completed events stop holding equipment.** `equipment_logs` has no status, and `EquipmentLogRepository`'s overlap queries counted every log, so a cancelled event would have kept its equipment forever. They now join `events` and ignore logs of `cancelled` or `completed` events, as venue availability already ignores bookings of cancelled events. Logs are not deleted: they are the record of what was reserved. A cancelled event's still-processing equipment request is also hidden from Technical Support's queue and can no longer be reviewed or reserved for (409).
+
+**Out of scope here.** D3: withdrawing a pending cancellation request. D4: telling registered attendees (AT09).
+
+**Backlog follow-up.** EC-NEW3 (Jillian) should cover only EO03 change requests; the coordinator's decision on a *cancellation* request is built here as part of EO07.
+
+**Evidence:** `EventCancellationServiceTest`, `EventLifecycleCancellationTest`, `EventCancellationNotificationTest` (unit); `EventCancellationFlowTest`, `CancelledEventEquipmentAvailabilityTest`, `CoordinatorAssignmentScopeTest`, `NewEndpointRoleAccessTest` (integration); `CancelRequest.test.tsx`, `EventCancellation.test.tsx`, `NotificationBell.test.tsx`; the EO07 journey in `frontend/e2e/failure-paths.spec.ts`. API: `docs/event-cancellation-api.md`.
+
+**Migration:** V33 (V31 is EC-C3's and V32 is EO03/EC-NEW3's, built in parallel). V33 recreates `chk_notification_shape` from V32's version, keeping EC-C3's `venue_hold_expiring` and the change-request types, and adds the EO07 branches.
 
 ## Awaiting Team Confirmation
 

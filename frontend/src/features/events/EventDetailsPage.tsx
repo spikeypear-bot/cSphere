@@ -11,6 +11,7 @@ import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
 import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
+import { EventCancellationPanel } from './EventCancellationPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
@@ -149,6 +150,8 @@ export function EventDetailsPage() {
         <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
+      {/* EO07: the organiser asks for cancellation; the assigned coordinator decides. */}
+      <EventCancellationPanel event={event} role={role} onChanged={() => setReloadToken((n) => n + 1)} />
 
       {role === 'coordinator' ? <VenueBookingCard eventId={event.eventId} planning={planning}
         active={event.status !== 'completed' && event.status !== 'cancelled'}

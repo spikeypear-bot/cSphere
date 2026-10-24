@@ -42,12 +42,16 @@ enum ActivityType {
 	{field} +equipment_approved
 	{field} +equipment_rejected
 	{field} +equipment_requested
+	{field} +event_cancellation_declined
+	{field} +event_cancellation_requested
+	{field} +event_cancelled
 	{field} +event_completed
 	{field} +event_confirmed
 	{field} +event_reassignment_approved
 	{field} +event_reassignment_declined
 	{field} +event_reassignment_requested
 	{field} +rejected
+	{field} +request_cancelled
 	{field} +returned_to_planning
 	{field} +safety_approved
 	{field} +safety_changes_requested
@@ -360,6 +364,8 @@ class ApiExceptionHandler {
 	{method} +handleAccessDenied ( ex : AccessDeniedException ) : ResponseEntity
 	{method} +handleAuthenticationFailure ( ex : AuthenticationException ) : ResponseEntity
 	{method} +handleEquipmentRequestState ( ex : EquipmentRequestStateException ) : ResponseEntity
+	{method} +handleEventCancellationNotFound ( ex : EventCancellationNotFoundException ) : ResponseEntity
+	{method} +handleEventCancellationState ( ex : EventCancellationStateException ) : ResponseEntity
 	{method} +handleEventLifecycle ( ex : EventLifecycleException ) : ResponseEntity
 	{method} +handleEventLifecycleValidation ( ex : EventLifecycleValidationException ) : ResponseEntity
 	{method} +handleEventNotFound ( ex : EventNotFoundException ) : ResponseEntity
@@ -657,6 +663,7 @@ class EquipmentRequestLineResponse {
 
 
 interface EquipmentRequestRepository {
+	{method}  {abstract} +eventClosed ( eventId : UUID ) : boolean
 	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
 	{method}  {abstract} +findByEventIdForUpdate ( eventId : UUID ) : List
 	{method}  {abstract} +findByStatus ( status : EquipmentRequestStatus ) : List
@@ -716,6 +723,15 @@ class UpdateEquipmentRequestStatus {
 }
 
 
+class EventCancellationController {
+	{method} +approve ( jwt : Jwt , eventId : UUID , cancellationRequestId : UUID , body : CancellationReasonRequest ) : EventCancellationRequestDto
+	{method} +cancelRequest ( jwt : Jwt , requestId : UUID , body : CancellationReasonRequest ) : EventRequestDto
+	{method} +decline ( jwt : Jwt , eventId : UUID , cancellationRequestId : UUID , body : CancellationReasonRequest ) : EventCancellationRequestDto
+	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
+	{method} +requestCancellation ( jwt : Jwt , requestId : UUID , body : CancellationReasonRequest ) : EventCancellationRequestDto
+}
+
+
 class EventController {
 	{method} +arrangements ( jwt : Jwt , id : UUID ) : OrganiserArrangementsDto
 	{method} +assignedEvents ( jwt : Jwt ) : List
@@ -739,6 +755,11 @@ class EventReassignmentController {
 }
 
 
+class CancellationReasonRequest {
+	{field} -reason : String
+}
+
+
 class CoordinatorEventsDto {
 	{field} -coordinatorId : UUID
 	{field} -coordinatorName : String
@@ -758,6 +779,19 @@ class CreateEventReassignmentRequest {
 class DecideEventReassignmentRequest {
 	{field} -coordinatorUserId : UUID
 	{field} -reason : String
+}
+
+
+class EventCancellationRequestDto {
+	{field} -cancellationRequestId : UUID
+	{field} -decidedAt : OffsetDateTime
+	{field} -decidedByName : String
+	{field} -decisionReason : String
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -reason : String
+	{field} -requestedAt : OffsetDateTime
+	{field} -requesterName : String
 }
 
 
@@ -881,6 +915,25 @@ class Event <<Entity>>  {
 }
 
 
+class EventCancellationRequest <<Entity>>  {
+	{field} +cancellationRequestId : UUID {id}
+	{field} +decidedAt : OffsetDateTime
+	{field} +decidedBy : UUID
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +reason : String
+	{field} +requestedAt : OffsetDateTime
+	{field} +requesterUserId : UUID
+}
+
+
+enum EventCancellationStatus {
+	{field} +approved
+	{field} +declined
+	{field} +pending
+}
+
+
 class EventReassignmentRequest <<Entity>>  {
 	{field} +decidedAt : OffsetDateTime
 	{field} +decisionReason : String
@@ -910,6 +963,13 @@ enum EventStatus {
 }
 
 
+interface EventCancellationRequestRepository {
+	{method}  {abstract} +existsByEventIdAndStatus ( eventId : UUID , status : EventCancellationStatus ) : boolean
+	{method}  {abstract} +findByEventIdOrderByRequestedAtDesc ( eventId : UUID ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
 interface EventReassignmentRequestRepository {
 	{method}  {abstract} +existsByEventIdAndStatus ( eventId : UUID , status : EventReassignmentStatus ) : boolean
 	{method}  {abstract} +findByEventIdOrderByRequestedAtDesc ( eventId : UUID ) : List
@@ -932,13 +992,34 @@ class EventArrangementsService {
 }
 
 
+class EventCancellationNotFoundException {
+}
+
+
+class EventCancellationService {
+	{field} {static} ~MAX_TEXT : int
+	{field} -clock : Clock
+	{method} +approve ( coordinatorId : UUID , eventId : UUID , cancellationRequestId : UUID , note : String ) : EventCancellationRequestDto
+	{method} +cancelRequest ( organisation : String , organiserId : UUID , requestId : UUID , rawReason : String ) : EventRequestDto
+	{method} +decline ( coordinatorId : UUID , eventId : UUID , cancellationRequestId : UUID , rawReason : String ) : EventCancellationRequestDto
+	{method} +forEvent ( viewerRole : UserRole , organisation : String , viewerId : UUID , eventId : UUID ) : List
+	{method} +requestCancellation ( organisation : String , organiserId : UUID , requestId : UUID , rawReason : String ) : EventCancellationRequestDto
+}
+
+
+class EventCancellationStateException {
+}
+
+
 class EventLifecycleException {
 }
 
 
 class EventLifecycleService {
 	{field} {static} ~MAX_TEXT : int
+	{field} {static} -SINGAPORE : ZoneId
 	{field} -clock : Clock
+	{method} +cancel ( actorId : UUID , eventId : UUID , message : String ) : Cancellation
 	{method} +confirm ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
 	{method} +onVenueBecameUnavailable ( change : VenueBecameUnavailable ) : void
 	{method} +readiness ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
@@ -946,6 +1027,12 @@ class EventLifecycleService {
 	{method} +returnToPlanning ( eventId : UUID , actorId : UUID , reason : String ) : boolean
 	{method} +sendForSafetyReview ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
 	{method} +withdrawFromSafetyReview ( coordinatorId : UUID , eventId : UUID , reason : String ) : EventReadinessDto
+}
+
+
+class EventLifecycleService.Cancellation {
+	{field} -cancelledBookingIds : List<UUID>
+	{field} -staffNotified : List<UUID>
 }
 
 
@@ -1294,12 +1381,17 @@ enum NotificationType {
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +event_cancellation_approved
+	{field} +event_cancellation_declined
+	{field} +event_cancellation_requested
+	{field} +event_cancelled
 	{field} +event_confirmed
 	{field} +event_reassignment_approved
 	{field} +event_reassignment_declined
 	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
+	{field} +request_cancelled
 	{field} +status_change
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
@@ -1328,11 +1420,15 @@ class NotificationService {
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
+	{method} +createEventCancellationDecisionNotification ( organiserId : UUID , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
+	{method} +createEventCancellationRequestedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
+	{method} +createEventCancelledNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createEventConfirmedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createEventReassignmentDecisionNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
 	{method} +createEventReassignmentRequestedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createHoldExpiredNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , name : String , expiry : OffsetDateTime ) : void
 	{method} +createHoldExpiringNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , eventName : String , venueName : String , expiry : OffsetDateTime ) : void
+	{method} +createRequestCancelledNotification ( coordinatorId : UUID , eventRequestId : UUID , eventName : String , reason : String ) : void
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
@@ -2421,6 +2517,7 @@ EquipmentRequestService --> EquipmentRequestLineRepository : lines
 EquipmentRequestService --> EquipmentRequestRepository : requests
 EquipmentRequestService --> EventRepository : events
 SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
+EventCancellationController --> EventCancellationService : service
 EventController --> EventArrangementsService : arrangements
 EventController --> EventLifecycleService : lifecycle
 EventController --> EventService : service
@@ -2428,6 +2525,7 @@ EventController --> EventRequestService : eventRequestService
 EventReassignmentController --> EventReassignmentService : service
 CoordinatorEventsDto --> "0..*" CoordinatorEventsDto.HeldEvent : events
 CoordinatorEventsDto.HeldEvent --> EventDto : event
+EventCancellationRequestDto --> EventCancellationStatus : status
 EventDto --> StatusView : journeyStatus
 EventReadinessDto --> "0..*" EventReadinessDto.Item : items
 EventReadinessDto --> StatusView : journeyStatus
@@ -2436,6 +2534,7 @@ OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Equipment : equipme
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Venue : venues
 OrganiserArrangementsDto --> StatusView : journeyStatus
 Event --> EventStatus : status
+EventCancellationRequest --> EventCancellationStatus : status
 EventReassignmentRequest --> EventReassignmentStatus : status
 EventArrangementsService --> JourneyStatusResolver : statuses
 EventArrangementsService --> EquipmentRequestLineRepository : equipmentLines
@@ -2445,6 +2544,16 @@ EventArrangementsService --> UserRepository : users
 EventArrangementsService --> VenueRepository : venues
 EventArrangementsService --> AvailabilityService : availability
 EventArrangementsService --> VenueBookingRecordRepository : bookings
+EventCancellationService --> "0..*" JourneyStatus : CANCELLABLE
+EventCancellationService --> ActivityService : activity
+EventCancellationService --> JourneyStatusResolver : statuses
+EventCancellationService --> EventCancellationRequestRepository : cancellations
+EventCancellationService --> EventRepository : events
+EventCancellationService --> EventLifecycleService : lifecycle
+EventCancellationService --> EventRequestMapper : requestMapper
+EventCancellationService --> EventRequestRepository : eventRequests
+EventCancellationService --> NotificationService : notifications
+EventCancellationService --> UserRepository : users
 EventLifecycleService --> ActivityService : activity
 EventLifecycleService --> JourneyStatusResolver : statuses
 EventLifecycleService --> EquipmentRequestRepository : equipmentRequests
@@ -2453,6 +2562,7 @@ EventLifecycleService --> EventRequestRepository : eventRequests
 EventLifecycleService --> NotificationService : notifications
 EventLifecycleService --> UserRepository : users
 EventLifecycleService --> AvailabilityService : availability
+EventLifecycleService --> VenueHoldService : holds
 EventLifecycleService --> VenueBookingRecordRepository : bookings
 EventReassignmentService --> "0..*" EventStatus : ACTIVE_STATUSES
 EventReassignmentService --> ActivityService : activity

@@ -559,6 +559,30 @@ Notification type `venue_hold_expiring` requires a booking reference; V30's othe
 notification-shape branches are kept unchanged. See
 [hold reminders](../../../../../../docs/tentative-venue-holds.md#expiry-reminders-ec-c3).
 
+## V33 update — event cancellation requests (EO07)
+
+`event_cancellation_requests` records an Event Organiser's request to cancel an approved event,
+decided by the event's currently assigned Event Coordinator. Columns:
+`cancellation_request_id` (UUID PK), `event_id` (required FK → `events`), `requester_user_id`
+(required FK → `users`), `reason` (trimmed, 1–2000 characters), `status` (`pending`, `approved`,
+`declined`), `requested_at`, `decided_by` (nullable FK → `users`), `decided_at` and
+`decision_reason` (trimmed, 1–2000 characters when present). A consistency check requires a
+pending row to have no decision, an approved row a decider and time, and a declined row a decider,
+time and reason. A partial unique index permits one pending request per event. Rows are never
+deleted, and the event row itself is kept when it is cancelled (`events.status = 'cancelled'`).
+
+A request cancelled before approval needs no row here: `event_requests.status` becomes
+`cancelled`. Cancelling an event sets its pending and approved `venue_bookings` to `cancelled` and
+releases their active holds; `equipment_logs` rows are kept, and equipment availability ignores
+logs of cancelled or completed events (decision-log D28).
+
+`notification_type` gains `event_cancellation_requested`, `event_cancellation_approved`,
+`event_cancellation_declined`, `event_cancelled` (each needs `event_id` and `message`) and
+`request_cancelled` (needs `event_request_id` and `message`). The recreated
+`chk_notification_shape` keeps every earlier branch, including EC-C3's `venue_hold_expiring`
+(V31) and EO03/EC-NEW3's change-request types (V32). See
+[EO07 API](../../../../../../docs/event-cancellation-api.md).
+
 ## V34 update — safety decisions name checklist items (SO-C5, SO-C6)
 
 `event_safety_reviews` adds `flagged_items` (`TEXT[]`, not null, default `{}`):
@@ -566,5 +590,5 @@ the readiness checklist items (SO-C3) a rejection or a request for changes
 concerns, so the coordinator sees what to fix. `ReadinessService` requires at
 least one known item for those decisions and none for an approval; reviews made
 before V34 keep an empty list. The decision's timeline entry
-(`event_request_activity.flagged_fields`) holds the same keys. V33 is left for
-EO07 (event cancellation requests), built in parallel. See decision-log D30.
+(`event_request_activity.flagged_fields`) holds the same keys. See
+decision-log D30.

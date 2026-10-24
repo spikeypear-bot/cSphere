@@ -146,6 +146,9 @@ public class SecurityConfig{
 		    // This rule decides *whether* a caller reaches the endpoint. *Which
 		    // rows* they see is the token's organisation claim, read in
 		    // EventRequestController — the filter chain sees the URL, not the row.
+		    // EO07: POST /api/event-requests/*/cancel and /*/cancellation-request
+		    // are the organiser's and fall under this rule too; which request is
+		    // the organisation check in EventCancellationService.
 		    .requestMatchers("/api/event-requests/**").hasRole("EO")
 		    // Organisers need the catalogue to choose equipment for a request;
 		    // Coordinators and technicians use it for availability and requests.
@@ -197,6 +200,15 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.GET, "/api/events/assigned").hasRole("EC")
 		    // ECL-C7: the Lead's overview of every coordinator's active events.
 		    .requestMatchers(HttpMethod.GET, "/api/events/by-coordinator").hasRole("ECL")
+		    // EO07: an event's cancellation requests. The owning organisation's
+		    // organisers, the assigned coordinator and the Lead (read-only);
+		    // which event is the organisation/assignment check in
+		    // EventCancellationService.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/cancellation-requests").hasAnyRole("EO", "EC", "ECL")
+		    // EO07: only the event's assigned coordinator decides (assignment
+		    // checked first in EventCancellationService, D25); the Lead reads.
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/cancellation-requests/*/approve",
+			    "/api/events/*/cancellation-requests/*/decline").hasRole("EC")
 		    // ECL-C7: the Lead may read any event (details, timeline) for
 		    // oversight; every coordinator action above stays EC-only.
 		    .requestMatchers(HttpMethod.GET, "/api/events/**").hasAnyRole("EO", "EC", "ECL")

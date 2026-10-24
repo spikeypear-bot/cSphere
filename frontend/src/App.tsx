@@ -18,6 +18,7 @@ import { VenueBookingRequestPage } from './features/coordinator/VenueBookingRequ
 import { VenueSearchPage } from './features/coordinator/VenueSearchPage'
 import { OperationalIssuesPage } from './features/coordinator/OperationalIssuesPage'
 import { EquipmentRequestPage } from './features/coordinator/EquipmentRequestPage'
+import { ActiveEventsPage } from './features/coordinatorLead/ActiveEventsPage'
 import { CoordinatorAssignmentsPage } from './features/coordinatorLead/CoordinatorAssignmentsPage'
 import { EventReassignmentRequestsPage } from './features/coordinatorLead/EventReassignmentRequestsPage'
 import { ChangeRequestFormPage } from './features/changeRequests/ChangeRequestFormPage'
@@ -134,6 +135,8 @@ function CoordinatorLeadRoutes() {
       {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
       <Route path="events/:eventId" element={<EventDetailsPage />} />
       <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
+      {/* ECL-C4: every assigned active event, for workload before assigning. */}
+      <Route path="active-events" element={<ActiveEventsPage />} />
       <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
       <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
       <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />

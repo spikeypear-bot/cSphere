@@ -1,0 +1,46 @@
+/* ECL-C4: the Lead's active events. Cards reuse LeadRequestCard.css. */
+.active-events__empty {
+  padding: 1.5rem;
+  color: var(--ink-soft);
+}
+
+.active-events__error {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.active-events__error p {
+  margin: 0;
+}
+
+.active-events__controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.active-events__coordinator {
+  min-width: min(100%, 14rem);
+}
+
+.active-events__group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.active-events__group h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.active-events__count {
+  font-size: 0.85rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
