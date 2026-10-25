@@ -46,9 +46,9 @@ public enum NotificationType {
     /** EO07 (V33): Venue Staff / Technical Support told an event they had
      * arrangements for is cancelled. */
     event_cancelled,
-    /** TS11 (V36): Technical Support told a coordinator submitted an equipment request. */
+    /** TS11 (V41): Technical Support told a coordinator submitted an equipment request. */
     equipment_request_submitted,
-    /** TS11 (V36): Technical Support told an approved event change affects an
+    /** TS11 (V41): Technical Support told an approved event change affects an
      * event's equipment, and asked to review it. */
     equipment_change_review
 }

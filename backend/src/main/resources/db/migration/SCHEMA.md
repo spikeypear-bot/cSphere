@@ -595,7 +595,7 @@ hold an unknown item; adding a checklist item means updating that constraint. Th
 (`event_request_activity.flagged_fields`) holds the same keys. See
 decision-log D30.
 
-### V36 — TS11 equipment change reviews and Technical Support notices
+## V41 update — TS11 equipment change reviews and Technical Support notices
 
 `equipment_change_reviews` records an approved event change (EC-NEW3) that affected an event's
 equipment, and Technical Support's review of it. Columns: `review_id` (UUID PK), `event_id`
@@ -612,6 +612,17 @@ once reviewed, and a note for `needs_coordinator_action`.
 (FK → `equipment_change_reviews`), each with a partial unique index on (`recipient_user_id`,
 column) so a user is told once. `notification_type` gains `equipment_request_submitted` (needs
 `event_id`, `equipment_request_id`, `message`) and `equipment_change_review` (needs `event_id`,
-`equipment_review_id`, `message`); the recreated `chk_notification_shape` keeps every V33 branch.
-See decision-log D30.
+`equipment_review_id`, `message`); the recreated `chk_notification_shape` keeps every V33 branch
+(V34–V36 do not touch `notification_type` or the constraint). See decision-log D34.
+
+V41 was written as V36 and renumbered when `main` (V34–V36) was merged in; V37–V40 are reserved
+for the TS09 console branch. **Merge note:** TS09's damage-report migration (V38 once renumbered)
+also recreates `chk_notification_shape`, from V33's version. Whichever of TS11 (V41) and TS09
+merges second must rebuild the constraint with both sets of branches: TS11's
+`equipment_request_submitted` and `equipment_change_review` (above) and TS09's
+`equipment_damage_outcome` (needs `event_id` and `message`). Flyway applies V38 before V41, so
+V41's version is the one that stands. If TS09 merges first, add the `equipment_damage_outcome`
+branch to V41 before TS11 merges. If TS11 merges first, TS09 needs a further migration after V41
+that adds it, and its V37–V40 would then be older than an already-applied V41, which Flyway refuses
+by default (`outOfOrder` is off), so merging TS09 first is the simpler order.
 

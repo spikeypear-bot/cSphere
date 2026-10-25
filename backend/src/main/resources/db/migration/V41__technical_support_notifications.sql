@@ -1,8 +1,11 @@
 -- TS11: Technical Support are told when a coordinator submits an equipment
 -- request (AC1) and when an approved event change affects an event's
 -- equipment (AC4), and record a review of each such change (AC11-AC14).
--- V34 and V35 are TS09's, built in parallel; the gap is intentional and the
--- team renumbers at merge.
+-- Renumbered from V36 at the merge of main (V34-V36 there); V37-V40 are
+-- reserved for the TS09 console branch.
+-- chk_notification_shape below is recreated here and in TS09's damage-report
+-- migration: whichever merges second must keep the other's branches
+-- (TS09 adds equipment_damage_outcome: event_id and message). Decision-log D34.
 
 -- One row per approved change that affected an event's equipment. The values
 -- are kept here, not read back from the event, so a later change does not
@@ -50,7 +53,7 @@ CREATE UNIQUE INDEX idx_one_equipment_review_notice
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'equipment_request_submitted';
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'equipment_change_review';
 
--- Recreated from V33's version with the TS11 branches added.
+-- Recreated from V33's version (V34-V36 do not change it) with the TS11 branches added.
 ALTER TABLE notifications DROP CONSTRAINT chk_notification_shape;
 ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
     (type::text = 'status_change' AND new_status IS NOT NULL)

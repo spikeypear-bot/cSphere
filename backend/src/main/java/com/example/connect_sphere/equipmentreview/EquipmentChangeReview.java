@@ -18,7 +18,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * TS11 (V36): an approved event change that affected the event's equipment,
+ * TS11 (V41): an approved event change that affected the event's equipment,
  * and Technical Support's review of it. The values and affected reservations
  * are snapshots taken at approval, so a later change cannot overwrite them
  * (AC9). No outcome yet means the event is flagged as needing review (AC14).
