@@ -8,6 +8,41 @@ Line ends: }o zero or many, |o zero or one, || exactly one
 Postgres enum types are listed on their own; columns name them as their type
 endlegend
 
+entity equipment_damage_outcomes {
+	* outcome_id : uuid <<PK>>
+	--
+	* report_id : uuid <<FK>>
+	* event_id : uuid <<FK>>
+	outcome : text
+	* shortfall : integer
+	* reduced_by : integer
+	replacement_serial_number : character varying(64)
+	decided_by : uuid <<FK>>
+	decided_at : timestamp with time zone
+	additional_request_id : uuid <<FK>>
+	resolution : text
+	resolution_note : text
+	resolved_by : uuid <<FK>>
+	resolved_at : timestamp with time zone
+}
+
+entity equipment_damage_reports {
+	* report_id : uuid <<PK>>
+	--
+	* equipment_id : uuid <<FK>>
+	serial_number : character varying(64) <<FK>>
+	* quantity : integer
+	* description : text
+	* period_start : timestamp with time zone
+	period_end : timestamp with time zone
+	* block_applied : boolean
+	* status : text
+	* reported_by : uuid <<FK>>
+	* reported_at : timestamp with time zone
+	closed_at : timestamp with time zone
+	block_status : text
+}
+
 entity equipment_logs {
 	* log_id : uuid <<PK>>
 	--
@@ -15,7 +50,7 @@ entity equipment_logs {
 	* equipment_id : uuid <<FK>>
 	* quantity : integer
 	technical_requirements : text
-	serial_number : character varying(255) <<FK>>
+	serial_number : character varying(64) <<FK>>
 	* loaned_from : timestamp with time zone
 	* loaned_until : timestamp with time zone
 }
@@ -40,7 +75,7 @@ entity equipment_status_periods {
 	* status_period_id : uuid <<PK>>
 	--
 	* equipment_id : uuid <<FK>>
-	* serial_number : character varying(255) <<FK>>
+	* serial_number : character varying(64) <<FK>>
 	* status : equipment_status
 	* period_start : timestamp with time zone
 	period_end : timestamp with time zone
@@ -235,7 +270,7 @@ entity refresh_tokens {
 
 entity serialised_equipments {
 	* equipment_id : uuid <<PK>> <<FK>>
-	* serial_number : character varying(255) <<PK>>
+	* serial_number : character varying(64) <<PK>>
 	--
 	* status : equipment_status
 }
@@ -424,6 +459,7 @@ enum notification_type {
 	event_cancellation_declined
 	event_cancelled
 	request_cancelled
+	equipment_damage_outcome
 }
 
 enum user_role {
@@ -444,6 +480,14 @@ enum venue_booking_status {
 	cancelled
 }
 
+equipment_damage_outcomes }o--o| equipment_requests : additional_request_id
+equipment_damage_outcomes }o--o| users : decided_by
+equipment_damage_outcomes }o--|| events : event_id
+equipment_damage_outcomes }o--|| equipment_damage_reports : report_id
+equipment_damage_outcomes }o--o| users : resolved_by
+equipment_damage_reports }o--|| equipments : equipment_id
+equipment_damage_reports }o--o| serialised_equipments : equipment_id, serial_number
+equipment_damage_reports }o--|| users : reported_by
 equipment_logs }o--|| equipments : equipment_id
 equipment_logs }o--o| serialised_equipments : equipment_id, serial_number
 equipment_logs }o--|| events : event_id

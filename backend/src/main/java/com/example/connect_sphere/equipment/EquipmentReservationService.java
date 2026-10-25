@@ -2,8 +2,10 @@ package com.example.connect_sphere.equipment;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestLine;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
@@ -21,6 +23,7 @@ public class EquipmentReservationService {
     private final EquipmentLogRepository logRepository;
     private final EquipmentRequestLineRepository requestLineRepository;
     private final EquipmentRequestRepository requestRepository;
+    private final EquipmentAvailabilityService availability;
 
     public EquipmentReservationService(
             EquipmentRepository equipmentRepository,
@@ -28,13 +31,15 @@ public class EquipmentReservationService {
             EquipmentStatusPeriodRepository statusPeriodRepository,
             EquipmentLogRepository logRepository,
             EquipmentRequestLineRepository requestLineRepository,
-            EquipmentRequestRepository requestRepository) {
+            EquipmentRequestRepository requestRepository,
+            EquipmentAvailabilityService availability) {
         this.equipmentRepository = equipmentRepository;
         this.unitRepository = unitRepository;
         this.statusPeriodRepository = statusPeriodRepository;
         this.logRepository = logRepository;
         this.requestLineRepository = requestLineRepository;
         this.requestRepository = requestRepository;
+        this.availability = availability;
     }
 
     // AC 3 + 4: what's available, and how much, for a period.
@@ -44,33 +49,17 @@ public class EquipmentReservationService {
             UUID requestId, Instant start, Instant end) {
         requireValidPeriod(start, end);
 
-        return requestLineRepository.findByIdRequestId(requestId).stream()
-                .map(line -> {
-                    Equipment equipment = line.getEquipment();
-                    int available = availableQuantity(equipment.getId(), start, end);
-                    return new EquipmentAvailabilityResponse(
-                            equipment.getId(), equipment.getName(),
-                            Boolean.TRUE.equals(equipment.getSerialised()),
-                            equipment.getQuantity(), available);
-                })
+        List<Equipment> kinds = requestLineRepository.findByIdRequestId(requestId).stream()
+                .map(EquipmentRequestLine::getEquipment)
                 .toList();
-    }
-
-    // The formula: total − reserved elsewhere (overlapping) − blocked units (Faulty/Unavailable).
-    private int availableQuantity(UUID equipmentId, Instant start, Instant end) {
-        Equipment equipment = equipmentRepository.findById(equipmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
-
-        int reservedElsewhere = logRepository.findOverlappingForEquipment(equipmentId, start, end)
-                .stream().mapToInt(EquipmentLog::getQuantity).sum();
-
-        long blockedUnits = statusPeriodRepository.findOverlapping(start, end).stream()
-                .filter(p -> p.getEquipmentId().equals(equipmentId))
-                .map(EquipmentStatusPeriod::getSerialNumber)
-                .distinct()
-                .count();
-
-        return Math.max(0, equipment.getQuantity() - reservedElsewhere - (int) blockedUnits);
+        // D32: the shared calculation (reserved, blocked and damaged units), one set of queries.
+        Map<UUID, EquipmentAvailabilityService.Availability> available = availability.forEquipment(kinds, start, end);
+        return kinds.stream()
+                .map(equipment -> new EquipmentAvailabilityResponse(
+                        equipment.getId(), equipment.getName(),
+                        Boolean.TRUE.equals(equipment.getSerialised()),
+                        equipment.getQuantity(), available.get(equipment.getId()).availableQuantity()))
+                .toList();
     }
 
     // AC 5-9: reserve equipment for an event.
@@ -130,9 +119,11 @@ public class EquipmentReservationService {
         }
     }
 
-    // AC 6: refuse a quantity greater than what's available.
+    // AC 6: refuse a quantity greater than what's available. TS09 AC5: this
+    // now reads the shared calculation, so damaged quantities are excluded
+    // the same way they are for the availability check above.
     private void reserveByQuantity(Equipment equipment, ReserveEquipmentRequest req) {
-        int available = availableQuantity(equipment.getId(), req.start(), req.end());
+        int available = availability.forEquipment(equipment, req.start(), req.end()).availableQuantity();
         if (req.quantity() > available) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Only " + available + " of " + equipment.getName() + " available for that period");

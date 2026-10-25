@@ -22,7 +22,7 @@ public class EquipmentStatusPeriod {
     @Column(name = "equipment_id", nullable = false)
     private UUID equipmentId;
 
-    @Column(name = "serial_number", nullable = false)
+    @Column(name = "serial_number", nullable = false, length = SerialisedEquipmentId.MAX_SERIAL_NUMBER_LENGTH)
     private String serialNumber;
 
     @Enumerated(EnumType.STRING)

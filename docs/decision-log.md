@@ -163,6 +163,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `POST /api/venues`, `PUT /api/venues/{id}` | `hasAnyRole('EC','VS')` | Catalogue authoring is VS07/VS18; widened to Coordinators per open question 1 below. |
   | `/api/event-requests/**` | `hasRole('EO')` **plus organisation scoping from the token claim** | EO01/EO02/EO15. Narrowed from `hasAnyRole('EO','EC')` — see open question 2. |
   | `GET /api/equipment/catalogue` | `hasAnyRole('EO','TECHNICIAN','EC')` | Organisers select equipment types for requests; Technical Support and Coordinators use the catalogue for availability/request workflows. |
+  | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
   | Other `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
   | `POST`, `DELETE /api/equipment/**` | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. |
   | `PATCH /api/equipment-requests/{id}/status` | `hasRole('TECHNICIAN')` | TS06 decision; approval additionally requires sufficient reservations covering the full event period. |
@@ -502,6 +503,40 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 - **E2E:** `change-requests.spec.ts`.
 
 **Migration:** V32 (new table, three notification types, notification constraint re-declared with them added).
+
+### D31 — TS09: damaged equipment, decided per affected event; an open shortfall allows an additional request
+
+2026-10-25, branch `feat/ts09-damaged-equipment-reports`. Technical Support report damaged equipment, decide what happens to each event that relied on it, and the event's coordinator deals with any shortfall. D30 is SO-C5/SO-C6's (on main), and TS11's entry is D34 on its own branch.
+
+**Data (V38).** Two tables: `equipment_damage_reports` (one per damaged serialised unit, or per damaged quantity of a non-serialised kind) and `equipment_damage_outcomes` (one per affected event). See `SCHEMA.md` § V38.
+
+**Rules.**
+- **Who is affected (AC6, AC7):** events from Planning to Confirmed that have not ended, whose **approved** request lists the kind, and that hold a reservation the damage touches. Events whose request is still processing are left to TS01/TS06's normal review. For a non-serialised kind, an event is affected only when, at some moment in the period, reservations exceed the owned quantity less every damaged quantity. The period is split at each reservation and damage boundary, so reservations that never overlap are not added together.
+- **What Technical Support can decide (AC9–AC12):**
+  - serialised: **Covered** (the event's other full-period reservations still cover its need; the damaged unit's reservation is released), **Replaced** (the same reservation moves to a unit that is not Faulty or Unavailable, not reserved and not reported damaged anywhere in its window), or **Short by N** (no replacement; the damaged unit's reservation is released). A serialised outcome is final.
+  - non-serialised: **Reduce** an event's reservations by 0 or more units; Covered or Short follows from what is left. Reductions can be added to while the report is open, until the coordinator has acted on the shortfall.
+- **Closing (AC15):** every active affected event has an outcome and, for a non-serialised kind, reservations no longer exceed the working units. A report that affects no event closes when it is saved.
+- **Faulty (AC4):** TS03 refuses to block a unit committed to an event, so the Faulty block is added when the report closes, once no event still holds the unit. `faulty_marked` records whether it was.
+- **Availability (AC5):** a non-serialised report's quantity is subtracted from availability (TS01, TS02) for its period. Serialised damage goes through the Faulty block.
+- **Locks (AC14):** every TS09 action locks the equipment kind's row first, as TS02 and TS03 do, then the report, so the same unit or remaining stock cannot be handed to two overlapping reservations.
+- **Back to Planning (AC18):** an outcome becoming Short calls `EventLifecycleService.returnToPlanning`, which only moves events that were awaiting review, safety-approved or confirmed.
+- **Who is told (AC16, AC17):** the assigned coordinator gets `equipment_damage_outcome` after commit, linking to the event page; the timeline entry `equipment_damage_outcome` (Major) and `equipment_shortfall_resolved` are internal (audience EC, so also the Lead), not the organiser's.
+
+**How a shortfall changes what an event is owed (`EquipmentShortfallLedger`).** An event's need for a kind is what its approved requests asked for, less every shortfall recorded against it. Read by:
+- **EC07 (AC19, AC21):** a request carrying `shortfallOutcomeId` is allowed beside the approved one while that shortfall is open and has no request awaiting review or approved; an event still has at most one processing request. Without it, EC07's rule is unchanged.
+- **TS06:** approving a request now requires the event's full-period reservations to cover this request **plus** what the approved ones are still owed. With one request and no shortfall that is the old rule. Approving a shortfall's request resolves it (`ADDITIONAL_REQUEST`).
+- **EO04:** approved quantities less recorded shortfalls; an item with nothing left is not shown.
+- **AC20:** the coordinator can instead accept the shortfall with a note (`NOTE`); not while its additional request awaits review.
+
+**Deviations from the ACs as drafted (raise in the Sheet):**
+- AC1 says the end "cannot be before the start"; an end **equal** to the start is also refused (a zero-length period would block nothing), matching TS03 and VS13.
+- EC08 is unchanged: an open shortfall does not block sending for safety review. Add an AC to EC08 if the team wants that.
+- Equipment logs are deleted or reduced when a reservation is released; what was decided stays on the outcome row (D28 kept logs because cancellation must not lose history; here the outcome row is that history).
+
+**Evidence:**
+- **Backend:** `EquipmentDamageFlowTest` (27, real PostgreSQL), `EquipmentDamageRoleAccessTest` (41), `EquipmentDamageServiceTest` (4, unit), `DamageImpactTest` (3, unit).
+
+**Migration:** V38 (two tables, one notification type, notification constraint re-declared with it added).
 
 ## Awaiting Team Confirmation
 
