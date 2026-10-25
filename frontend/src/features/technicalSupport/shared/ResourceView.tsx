@@ -5,11 +5,13 @@ import '../technicalSupport.css'
 
 /** The three states every console read shows the same way: loading, an
  * error with Try again, and empty. `children` renders the loaded data. */
-export function ResourceView<T>({ resource, loadingText, errorText, emptyText, isEmpty, children }: {
+export function ResourceView<T>({ resource, loadingText, errorText, emptyText, emptyClassName = 'field-hint', isEmpty, children }: {
   resource: Resource<T>
   loadingText: string
   errorText: string
   emptyText: string
+  /** How the empty message is styled; a hint by default. */
+  emptyClassName?: string
   isEmpty: (data: T) => boolean
   children: (data: T) => ReactNode
 }) {
@@ -22,6 +24,6 @@ export function ResourceView<T>({ resource, loadingText, errorText, emptyText, i
     )
   }
   if (resource.loading || resource.data === null) return <p role="status">{loadingText}</p>
-  if (isEmpty(resource.data)) return <p className="field-hint">{emptyText}</p>
+  if (isEmpty(resource.data)) return <p className={emptyClassName}>{emptyText}</p>
   return <>{children(resource.data)}</>
 }

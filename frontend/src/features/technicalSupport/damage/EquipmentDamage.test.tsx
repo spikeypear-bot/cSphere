@@ -73,8 +73,8 @@ describe('TS09 Technical Support reports damaged equipment', () => {
   it('TS09 AC1 (happy): the console dashboard links to faulty equipment, where damage is reported', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     renderAt('/technical-support')
-    expect(screen.getByRole('link', { name: 'Faulty equipment' })).toHaveAttribute('href', '/technical-support/faulty')
-    expect(await screen.findByText('No equipment is out of action.')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'View all faulty equipment' })).toHaveAttribute('href', '/technical-support/faulty')
+    expect(await screen.findByText('No equipment out of action.')).toBeInTheDocument()
   })
 
   it('TS09 AC6, AC15 (happy): lists reports newest first with how many events still need a decision', async () => {

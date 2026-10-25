@@ -10,8 +10,9 @@ import { TechnicalSupportDashboardPage } from './TechnicalSupportDashboardPage'
 const REQUESTS = 'GET /api/equipment-requests?status=processing'
 const PERIODS = 'GET /api/equipment/status-periods?current=true'
 const REPORTS = 'GET /api/equipment-damage-reports'
-// "Today → tomorrow" for a clock fixed at 10 March 2027, 15:30 local time.
-const NOW = new Date(2027, 2, 10, 15, 30)
+// Wednesday 10 March 2027, 3:30 pm in Singapore (event times are shown in
+// Singapore time). "Today → tomorrow" is that local day.
+const NOW = new Date('2027-03-10T07:30:00Z')
 const CATALOGUE = `GET /api/equipment/catalogue?from=${encodeURIComponent(new Date(2027, 2, 10).toISOString())}&to=${encodeURIComponent(new Date(2027, 2, 11).toISOString())}`
 
 function request(n: number, extra: Record<string, unknown> = {}) {
@@ -25,8 +26,8 @@ function request(n: number, extra: Record<string, unknown> = {}) {
   }
 }
 
-function period(id: string, start: string, status = 'Faulty') {
-  return { id, equipmentId: 'eq-proj', equipmentName: 'Projector', serialNumber: `PJ-${id}`, status, start, end: null }
+function period(id: string, start: string, status = 'Faulty', end: string | null = null) {
+  return { id, equipmentId: 'eq-proj', equipmentName: 'Projector', serialNumber: `PJ-${id}`, status, start, end }
 }
 
 function report(id: string, periodStart: string, status: 'OPEN' | 'CLOSED' = 'OPEN') {
@@ -42,6 +43,8 @@ const kind = (name: string, total: number, reserved: number, out: number, availa
   reservedQuantity: reserved, outOfActionQuantity: out, availableQuantity: available,
 })
 
+const line = (equipmentName: string, quantity: number) => ({ equipmentId: `eq-${equipmentName}`, equipmentName, quantity })
+
 function renderDashboard() {
   return render(
     <MemoryRouter initialEntries={['/technical-support']}>
@@ -54,9 +57,10 @@ function renderDashboard() {
   )
 }
 
-const cardOf = (title: string) => screen.getByRole('link', { name: title }).closest('.card') as HTMLElement
+const panel = (title: string) => screen.getByRole('region', { name: title })
+const rowsOf = async (list: string) => within(await screen.findByRole('list', { name: list })).getAllByRole('listitem')
 
-describe('TS09 Technical Support dashboard', () => {
+describe('TS09 Technical Support front page', () => {
   beforeEach(() => {
     seedSession('technical-support')
     vi.useFakeTimers({ toFake: ['Date'] })
@@ -69,13 +73,43 @@ describe('TS09 Technical Support dashboard', () => {
     window.localStorage.clear()
   })
 
-  it('TS09 TS01 (happy): Incoming requests shows the five most urgent with requester and items, each linking to its request', async () => {
+  it('TS09 (happy): greets the signed-in user by time of day and sums up the requests to handle and equipment out of action', async () => {
+    stubApi({
+      [REQUESTS]: () => jsonResponse(200, [1, 2, 3, 4, 5, 6].map((n) => request(n))),
+      [PERIODS]: () => jsonResponse(200, [period('1', '2027-03-08T00:00:00Z')]),
+      [REPORTS]: () => jsonResponse(200, [report('rep-open', '2027-03-09T00:00:00Z'), report('rep-closed', '2027-03-09T00:00:00Z', 'CLOSED')]),
+      [CATALOGUE]: () => jsonResponse(200, []),
+    })
+    renderDashboard()
+
+    expect(screen.getByRole('heading', { level: 1, name: 'Good afternoon, tech1' })).toBeInTheDocument()
+    expect(screen.getByText('Checking what needs your attention…')).toBeInTheDocument()
+    // Every request awaiting review counts, not only the five shown; closed reports do not.
+    expect(await screen.findByText('6 requests to handle · 2 items out of action')).toBeInTheDocument()
+  })
+
+  it('TS09 (boundary): the summary uses the singular for one, and leaves out a part that could not be loaded', async () => {
+    stubApi({
+      [REQUESTS]: () => jsonResponse(200, [request(1)]),
+      [PERIODS]: () => jsonResponse(500, { message: 'Blocks down' }),
+      [REPORTS]: () => jsonResponse(200, []),
+      [CATALOGUE]: () => jsonResponse(200, []),
+    })
+    renderDashboard()
+
+    expect(await screen.findByText('1 request to handle')).toBeInTheDocument()
+    expect(screen.queryByText(/out of action/)).not.toBeInTheDocument()
+    expect(within(panel('Faulty equipment')).getByRole('alert')).toHaveTextContent('Blocks down')
+  })
+
+  it('TS09 TS01 (happy): Requests to handle shows the five most urgent as whole-row links with when, requester and items', async () => {
     stubApi({
       [REQUESTS]: () => jsonResponse(200, [
-        request(1, { isShortfallRequest: true }),
-        request(2, { requestedBy: null, items: [] }),
-        request(3), request(4),
-        request(5, { items: [{ equipmentId: 'a', equipmentName: 'Projector', quantity: 2 }, { equipmentId: 'b', equipmentName: 'Microphone', quantity: 1 }] }),
+        request(1, { isShortfallRequest: true, eventStart: '2027-03-10T09:00:00Z', eventEnd: '2027-03-10T12:00:00Z' }),
+        request(2, { requestedBy: null, items: [], eventStart: '2027-03-11T01:00:00Z', eventEnd: '2027-03-11T04:00:00Z' }),
+        request(3, { eventStart: '2027-03-10T10:00:00Z', eventEnd: '2027-03-10T17:00:00Z' }),
+        request(4, { items: [line('Projector', 2), line('Webcam', 1), line('Laptop', 3), line('Tripod', 1), line('Ring Light', 2)] }),
+        request(5, { items: [line('Projector', 2), line('Webcam', 1), line('Laptop', 3)] }),
         request(6),
       ]),
       [PERIODS]: () => jsonResponse(200, []),
@@ -84,24 +118,34 @@ describe('TS09 Technical Support dashboard', () => {
     })
     renderDashboard()
 
-    const rows = within(await screen.findByRole('list', { name: 'Incoming requests' })).getAllByRole('listitem')
-    // Top five in the server's order (soonest first); the sixth is left for the list page.
-    expect(rows.map((row) => within(row).getByRole('link').textContent)).toEqual(['Event 1', 'Event 2', 'Event 3', 'Event 4', 'Event 5'])
-    expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/technical-support/requests/req-1')
-    expect(rows[0]).toHaveTextContent('Shortfall')
+    const rows = await rowsOf('Requests to handle')
+    // Top five in the server's order (soonest first), one link per row named after the event.
+    expect(rows.map((row) => within(row).getByRole('link').getAttribute('href'))).toEqual(
+      [1, 2, 3, 4, 5].map((n) => `/technical-support/requests/req-${n}`),
+    )
+    expect(within(rows[0]).getByRole('link', { name: 'Event 1' })).toHaveAccessibleDescription(/Shortfall/)
+    expect(rows[0]).toHaveTextContent('Today, 5:00 pm – 8:00 pm')
     expect(rows[0]).toHaveTextContent('ec1 · 2 × Projector')
+    expect(within(rows[0]).getByText('Shortfall')).toHaveClass('tech-badge')
+    expect(rows[1]).toHaveTextContent('Tomorrow, 9:00 am – 12:00 pm')
     expect(rows[1]).toHaveTextContent('No coordinator assigned · No itemised equipment')
     expect(rows[1]).not.toHaveTextContent('Shortfall')
-    expect(rows[4]).toHaveTextContent('2 × Projector, 1 × Microphone')
-    expect(screen.getByRole('link', { name: 'Incoming requests' })).toHaveAttribute('href', '/technical-support/requests')
+    expect(rows[2]).toHaveTextContent('Today, 6:00 pm – Tomorrow, 1:00 am')
+    expect(rows[3]).toHaveTextContent('Fri 12 Mar, 9:00 am – 12:00 pm')
+    expect(rows[3]).toHaveTextContent('2 × Projector, 1 × Webcam, 3 × Laptop +2 more')
+    expect(rows[4]).toHaveTextContent('2 × Projector, 1 × Webcam, 3 × Laptop')
+    expect(rows[4]).not.toHaveTextContent('more')
+    expect(screen.queryByRole('link', { name: 'Event 6' })).not.toBeInTheDocument()
+    expect(within(panel('Requests to handle')).getByRole('link', { name: 'View all equipment requests' }))
+      .toHaveAttribute('href', '/technical-support/requests')
   })
 
-  it('TS09 TS03 (happy): Faulty equipment merges current blocks with open reports, newest first, without closed reports', async () => {
+  it('TS09 TS03 (happy): Faulty equipment merges current blocks with open reports, newest first, each row opening its page', async () => {
     stubApi({
       [REQUESTS]: () => jsonResponse(200, []),
       [PERIODS]: () => jsonResponse(200, [
         period('1', '2027-03-08T00:00:00Z'),
-        period('2', '2027-03-01T00:00:00Z', 'Unavailable'),
+        period('2', '2027-03-01T00:00:00Z', 'Unavailable', '2027-03-15T01:00:00Z'),
         period('3', '2027-02-01T00:00:00Z'),
         period('4', '2027-01-01T00:00:00Z'),
       ]),
@@ -114,41 +158,54 @@ describe('TS09 Technical Support dashboard', () => {
     })
     renderDashboard()
 
-    const rows = within(await screen.findByRole('list', { name: 'Faulty equipment' })).getAllByRole('listitem')
-    expect(rows.map((row) => within(row).getByRole('link').textContent)).toEqual([
-      'HDMI Cable · 3 units', 'Projector · PJ-1', 'Projector · PJ-2', 'Projector · PJ-3', 'HDMI Cable · 3 units',
+    const rows = await rowsOf('Faulty equipment')
+    expect(rows.map((row) => within(row).getByRole('link').getAttribute('href'))).toEqual([
+      '/technical-support/faulty/reports/rep-new',
+      '/technical-support/inventory/eq-proj',
+      '/technical-support/inventory/eq-proj',
+      '/technical-support/inventory/eq-proj',
+      '/technical-support/faulty/reports/rep-old',
     ])
-    expect(within(rows[0]).getByRole('link')).toHaveAttribute('href', '/technical-support/faulty/reports/rep-new')
+    expect(within(rows[0]).getByRole('link', { name: 'HDMI Cable' })).toBeInTheDocument()
     expect(rows[0]).toHaveTextContent('Damage report')
-    expect(within(rows[1]).getByRole('link')).toHaveAttribute('href', '/technical-support/inventory/eq-proj')
-    expect(rows[1]).toHaveTextContent('Faulty')
-    expect(rows[1]).toHaveTextContent('until further notice')
+    expect(rows[0]).toHaveTextContent('3 units · Until Sat 20 Mar')
+    expect(within(rows[0]).getByRole('img', { name: 'HDMI Cable' })).toHaveAttribute('src')
+    expect(within(rows[1]).getByRole('link', { name: 'Projector' })).toHaveAccessibleDescription(/Faulty/)
+    expect(rows[1]).toHaveTextContent('PJ-1 · No end date')
     expect(rows[2]).toHaveTextContent('Unavailable')
-    expect(screen.queryByRole('link', { name: /rep-closed/ })).not.toBeInTheDocument()
-    expect(screen.getByRole('link', { name: 'Faulty equipment' })).toHaveAttribute('href', '/technical-support/faulty')
+    expect(rows[2]).toHaveTextContent('PJ-2 · Until Mon 15 Mar')
+    expect(within(panel('Faulty equipment')).getByRole('link', { name: 'View all faulty equipment' }))
+      .toHaveAttribute('href', '/technical-support/faulty')
   })
 
-  it("TS09 (happy): Inventory sums today's catalogue window and names what has none left", async () => {
+  it("TS09 (happy): Equipment today shows units available out of the total and the kinds with the fewest left", async () => {
     const calls = stubApi({
       [REQUESTS]: () => jsonResponse(200, []),
       [PERIODS]: () => jsonResponse(200, []),
       [REPORTS]: () => jsonResponse(200, []),
-      [CATALOGUE]: () => jsonResponse(200, [kind('Projector', 6, 2, 1, 3), kind('Webcam', 4, 4, 0, 0), kind('Laptop', 10, 0, 2, 8)]),
+      [CATALOGUE]: () => jsonResponse(200, [
+        kind('Projector', 6, 2, 1, 3), kind('Webcam', 4, 4, 0, 0), kind('Laptop', 10, 0, 2, 8),
+        kind('Tripod', 5, 2, 0, 3), kind('Speaker', 2, 1, 0, 1), kind('Mixer', 12, 0, 0, 12), kind('Badge', 30, 0, 0, 30),
+      ]),
     })
     renderDashboard()
 
-    const card = cardOf('Inventory')
-    expect(await within(card).findByText('Kinds')).toBeInTheDocument()
-    expect(within(card).getByText('Kinds').nextSibling).toHaveTextContent('3')
-    expect(within(card).getByText('Units available today').nextSibling).toHaveTextContent('11')
-    expect(within(card).getByText('Reserved').nextSibling).toHaveTextContent('6')
-    expect(within(card).getByText('Out of action').nextSibling).toHaveTextContent('3')
-    expect(card).toHaveTextContent('None left today: Webcam')
+    const today = panel('Equipment today')
+    expect(await within(today).findByText(/units available/)).toHaveTextContent('57 of 69 units available')
+    const rows = within(within(today).getByRole('list', { name: 'Lowest today' })).getAllByRole('listitem')
+    // Fewest left first; equal counts by name; only five.
+    expect(rows.map((row) => row.querySelector('.row-link__title')?.textContent))
+      .toEqual(['Webcam', 'Speaker', 'Projector', 'Tripod', 'Laptop'])
+    expect(rows[0]).toHaveTextContent('0 left')
+    expect(within(rows[0]).getByText('0 left')).toHaveClass('tech-left--none')
+    expect(rows[2]).toHaveTextContent('3 left')
+    expect(within(rows[2]).getByRole('link', { name: 'Projector' })).toHaveAccessibleDescription('3 left')
+    expect(within(rows[2]).getByRole('link')).toHaveAttribute('href', '/technical-support/inventory/eq-Projector?from=2027-03-10&to=2027-03-10')
     expect(calls.some((call) => `GET ${call.url}` === CATALOGUE)).toBe(true)
-    expect(screen.getByRole('link', { name: 'Inventory' })).toHaveAttribute('href', '/technical-support/inventory')
+    expect(within(today).getByRole('link', { name: 'View inventory' })).toHaveAttribute('href', '/technical-support/inventory')
   })
 
-  it('TS09 (boundary): each card says when it has nothing to show', async () => {
+  it('TS09 (boundary): each block says when it has nothing to show', async () => {
     stubApi({
       [REQUESTS]: () => jsonResponse(200, []),
       [PERIODS]: () => jsonResponse(200, []),
@@ -157,13 +214,15 @@ describe('TS09 Technical Support dashboard', () => {
     })
     renderDashboard()
 
-    expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
-    expect(await screen.findByText('No equipment is out of action.')).toBeInTheDocument()
-    expect(await screen.findByText('The equipment catalogue is empty.')).toBeInTheDocument()
+    expect(await within(panel('Requests to handle')).findByText('Nothing to handle right now.')).toBeInTheDocument()
+    expect(await within(panel('Faulty equipment')).findByText('No equipment out of action.')).toBeInTheDocument()
+    expect(await within(panel('Equipment today')).findByText('The equipment catalogue is empty.')).toBeInTheDocument()
+    expect(screen.getByText('0 requests to handle · 0 items out of action')).toBeInTheDocument()
     expect(screen.queryByRole('list', { name: 'Faulty equipment' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Requests to handle' })).not.toBeInTheDocument()
   })
 
-  it('TS09 (failure): a card that cannot load says so, and Try again reloads only that card', async () => {
+  it('TS09 (failure): a block that cannot load says so, and Try again reloads only that block', async () => {
     const tries = { requests: 0, periods: 0, catalogue: 0 }
     stubApi({
       [REQUESTS]: () => (++tries.requests === 1 ? jsonResponse(500, { message: 'Requests down' }) : jsonResponse(200, [request(1)])),
@@ -176,19 +235,21 @@ describe('TS09 Technical Support dashboard', () => {
 
     const alerts = await screen.findAllByRole('alert')
     expect(alerts).toHaveLength(3)
-    expect(within(cardOf('Incoming requests')).getByRole('alert')).toHaveTextContent('The requests could not be loaded. Requests down')
-    expect(within(cardOf('Faulty equipment')).getByRole('alert')).toHaveTextContent('Faulty equipment could not be loaded. Blocks down')
-    expect(within(cardOf('Inventory')).getByRole('alert')).toHaveTextContent('The inventory could not be loaded. Stock down')
+    expect(within(panel('Requests to handle')).getByRole('alert')).toHaveTextContent('The requests could not be loaded. Requests down')
+    expect(within(panel('Faulty equipment')).getByRole('alert')).toHaveTextContent('Faulty equipment could not be loaded. Blocks down')
+    expect(within(panel('Equipment today')).getByRole('alert')).toHaveTextContent('The inventory could not be loaded. Stock down')
+    expect(screen.getByText('Some of what needs your attention could not be loaded.')).toBeInTheDocument()
 
-    await user.click(within(cardOf('Incoming requests')).getByRole('button', { name: 'Try again' }))
+    await user.click(within(panel('Requests to handle')).getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('link', { name: 'Event 1' })).toBeInTheDocument()
     expect(tries).toEqual({ requests: 2, periods: 1, catalogue: 1 })
     expect(screen.getAllByRole('alert')).toHaveLength(2)
 
-    await user.click(within(cardOf('Faulty equipment')).getByRole('button', { name: 'Try again' }))
-    expect(await screen.findByRole('link', { name: 'Projector · PJ-1' })).toBeInTheDocument()
-    await user.click(within(cardOf('Inventory')).getByRole('button', { name: 'Try again' }))
-    expect(await within(cardOf('Inventory')).findByText('Units available today')).toBeInTheDocument()
+    await user.click(within(panel('Faulty equipment')).getByRole('button', { name: 'Try again' }))
+    expect(await within(panel('Faulty equipment')).findByRole('link', { name: 'Projector' })).toBeInTheDocument()
+    expect(screen.getByText('1 request to handle · 1 item out of action')).toBeInTheDocument()
+    await user.click(within(panel('Equipment today')).getByRole('button', { name: 'Try again' }))
+    expect(await within(panel('Equipment today')).findByText(/units available/)).toHaveTextContent('3 of 6 units available')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })

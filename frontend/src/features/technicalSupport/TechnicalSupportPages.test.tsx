@@ -63,7 +63,7 @@ describe('Technical Support UI integration', () => {
       'href', '/technical-support/inventory',
     )
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
-    expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
+    expect(await screen.findByText('Nothing to handle right now.')).toBeInTheDocument()
   })
 
   it('selects an equipment request, reserves it, and shows the saved event reservation', async () => {

@@ -92,7 +92,7 @@ describe('App routing — role consoles', () => {
     signInAs('technical-support', 'tech1', 'ConnectSphere')
     renderApp('/technical-support')
 
-    expect(await screen.findByRole('heading', { name: 'Technical Support Staff console' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening), tech1$/ })).toBeInTheDocument()
     const nav = screen.getByRole('navigation', { name: 'Technical Support' })
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
     const requestsLink = within(nav).getByRole('link', { name: 'Equipment requests' })
@@ -179,7 +179,7 @@ describe('App routing — role consoles', () => {
     ['coordinator', 'ec1', /Event Coordinator console/i],
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
-    ['technical-support', 'ts1', /Technical Support Staff console/i],
+    ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /Attendee console/i],
   ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
     const fetched: string[] = []

@@ -369,3 +369,185 @@ h2.row-link__title {
     height: 3.5rem;
   }
 }
+
+/* The front page (dashboard): a work queue in three blocks. Requests span
+ * the full width; faulty equipment and today's stock sit side by side. */
+.tech-home {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.tech-home__wide {
+  grid-column: 1 / -1;
+}
+
+.tech-panel {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.tech-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.tech-panel__head h2 {
+  font-size: 1.05rem;
+}
+
+.tech-panel__action {
+  flex-shrink: 0;
+  padding: 0.35rem 0.6rem;
+  font-size: 0.85rem;
+  color: var(--accent-strong);
+}
+
+.tech-panel__action:hover {
+  background: var(--accent-soft);
+}
+
+.tech-panel__action:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Room for a few rows while loading, so the page does not jump. */
+.tech-panel__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-height: 7rem;
+  padding: 0.5rem;
+}
+
+.tech-panel__body > [role='status'],
+.tech-panel__body > .tech-load-error {
+  padding: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.tech-empty {
+  margin: 0.25rem;
+  padding: 1.75rem 1rem;
+  border: 1px dashed var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.tech-queue {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.tech-queue > li + li {
+  border-top: 1px solid var(--hairline);
+}
+
+.tech-queue__row {
+  padding: 0.75rem;
+  border-radius: var(--radius-sm);
+}
+
+.tech-queue > li + li .tech-queue__row:focus-visible {
+  outline-offset: -2px;
+}
+
+.tech-queue__row .equipment-damage__photo {
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: var(--radius-sm);
+  font-size: 1.1rem;
+}
+
+.tech-queue__row--compact {
+  padding-block: 0.5rem;
+}
+
+.tech-queue__row--compact .equipment-damage__photo {
+  width: 2.25rem;
+  height: 2.25rem;
+  font-size: 0.95rem;
+}
+
+/* When, then who and what: one line on a wide screen, wrapping below. */
+.tech-queue__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 1.25rem;
+}
+
+.tech-queue__when {
+  color: var(--ink);
+  font-weight: 500;
+}
+
+.tech-nowrap {
+  white-space: nowrap;
+}
+
+.tech-today__total {
+  margin: 0;
+  padding: 0.5rem 0.75rem 0;
+  color: var(--ink-soft);
+}
+
+.tech-today__total strong {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+}
+
+.tech-today__heading {
+  margin: 0;
+  padding: 0 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.row-link__aside {
+  flex-shrink: 0;
+}
+
+.tech-left {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tech-left--none {
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .tech-home {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .tech-panel__head {
+    padding: 0.875rem 1rem 0.625rem;
+  }
+
+  .tech-queue__row {
+    padding: 0.75rem 0.5rem;
+  }
+}
