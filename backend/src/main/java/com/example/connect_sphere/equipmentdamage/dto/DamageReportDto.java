@@ -16,7 +16,9 @@ public record DamageReportDto(
         String description,
         Instant periodStart,
         Instant periodEnd,
+        /** Kept for older clients: {@code blockStatus} is FAULTY. */
         boolean markFaulty,
+        /** Kept for older clients: a FAULTY block was added on close. */
         boolean faultyMarked,
         String status,
         UUID reportedBy,
@@ -25,7 +27,11 @@ public record DamageReportDto(
         Instant closedAt,
         /** AC15: every affected event has an outcome (and, non-serialised, stock is no longer over-committed). */
         boolean canClose,
-        List<AffectedEvent> affectedEvents) {
+        List<AffectedEvent> affectedEvents,
+        /** V37: FAULTY, UNAVAILABLE or null — the TS03 block asked for on close. */
+        String blockStatus,
+        /** V37: that block was added when the report closed. */
+        boolean blockApplied) {
 
     public record AffectedEvent(
             UUID outcomeId,

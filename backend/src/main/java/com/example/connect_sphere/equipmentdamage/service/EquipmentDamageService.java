@@ -24,7 +24,6 @@ import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentLog;
 import com.example.connect_sphere.equipment.EquipmentLogRepository;
 import com.example.connect_sphere.equipment.EquipmentRepository;
-import com.example.connect_sphere.equipment.EquipmentStatus;
 import com.example.connect_sphere.equipment.EquipmentStatusPeriodRepository;
 import com.example.connect_sphere.equipment.EquipmentStatusService;
 import com.example.connect_sphere.equipment.SerialisedEquipmentId;
@@ -32,6 +31,7 @@ import com.example.connect_sphere.equipment.SerialisedEquipmentRepository;
 import com.example.connect_sphere.equipmentdamage.dto.DamageReportDto;
 import com.example.connect_sphere.equipmentdamage.dto.DecideOutcomeRequest;
 import com.example.connect_sphere.equipmentdamage.dto.ReportDamageRequest;
+import com.example.connect_sphere.equipmentdamage.entity.DamageBlockStatus;
 import com.example.connect_sphere.equipmentdamage.entity.DamageOutcome;
 import com.example.connect_sphere.equipmentdamage.entity.DamageReportStatus;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome;
@@ -121,6 +121,7 @@ public class EquipmentDamageService {
         if (input.periodEnd() != null && !input.periodEnd().isAfter(input.periodStart())) {
             throw badRequest("The end must be after the start.");
         }
+        DamageBlockStatus block = input.requestedBlock();
         Equipment kind = equipment.findForUpdate(input.equipmentId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found."));
 
@@ -141,8 +142,8 @@ public class EquipmentDamageService {
             if (serial != null && !serial.isEmpty()) {
                 throw badRequest(kind.getName() + " is not tracked by serial number. Give how many units are damaged.");
             }
-            if (input.wantsFaulty()) {
-                throw badRequest("Only a serialised unit can be marked Faulty.");
+            if (block != null) {
+                throw badRequest("Only a serialised unit can be marked Faulty or Unavailable.");
             }
             if (input.quantity() == null || input.quantity() < 1) {
                 throw badRequest("Give how many units are damaged (at least 1).");
@@ -162,7 +163,7 @@ public class EquipmentDamageService {
         report.setDescription(description);
         report.setPeriodStart(input.periodStart());
         report.setPeriodEnd(input.periodEnd());
-        report.setMarkFaulty(input.wantsFaulty());
+        report.setBlockStatus(block);
         report.setStatus(DamageReportStatus.OPEN);
         report.setReportedBy(technicianId);
         report.setReportedAt(now());
@@ -182,7 +183,16 @@ public class EquipmentDamageService {
 
     @Transactional(readOnly = true)
     public List<DamageReportDto> list() {
-        return reports.findAllByOrderByReportedAtDesc().stream()
+        return list(null);
+    }
+
+    /** Every report, newest first; with {@code equipmentId}, only that kind's (D32). */
+    @Transactional(readOnly = true)
+    public List<DamageReportDto> list(UUID equipmentId) {
+        List<EquipmentDamageReport> found = equipmentId == null
+                ? reports.findAllByOrderByReportedAtDesc()
+                : reports.findByEquipmentIdOrderByReportedAtDesc(equipmentId);
+        return found.stream()
                 .map(report -> toDto(report, kindOf(report)))
                 .toList();
     }
@@ -405,15 +415,18 @@ public class EquipmentDamageService {
                 .count();
     }
 
-    /** AC4: the Faulty block (TS03) is added once no event still holds the
-     * unit, since TS03 refuses to block a committed unit. */
+    /** AC4: the block asked for (TS03 Faulty or Unavailable, V37) is added
+     * once no event still holds the unit, since TS03 refuses to block a
+     * committed unit. It goes through TS03's own service, so its overlap
+     * rules apply unchanged. */
     private void close(EquipmentDamageReport report) {
-        if (report.isMarkFaulty() && report.isSerialised()
+        DamageBlockStatus block = report.getBlockStatus();
+        if (block != null && report.isSerialised()
                 && logs.findOverlappingForUnit(report.getEquipmentId(), report.getSerialNumber(),
                         report.getPeriodStart(), DamageImpact.endOf(report)).isEmpty()) {
-            statusService.addPeriod(report.getEquipmentId(), report.getSerialNumber(), EquipmentStatus.FAULTY,
+            statusService.addPeriod(report.getEquipmentId(), report.getSerialNumber(), block.equipmentStatus(),
                     report.getPeriodStart(), report.getPeriodEnd());
-            report.setFaultyMarked(true);
+            report.setBlockApplied(true);
         }
         report.setStatus(DamageReportStatus.CLOSED);
         report.setClosedAt(now());
@@ -433,11 +446,13 @@ public class EquipmentDamageService {
         boolean fits = report.isSerialised() || !open
                 || impact.overCommitted(kind, report.getPeriodStart(), DamageImpact.endOf(report)).isEmpty();
         String reporter = users.findById(report.getReportedBy()).map(User::getUsername).orElse(null);
+        DamageBlockStatus block = report.getBlockStatus();
         return new DamageReportDto(report.getReportId(), kind.getId(), kind.getName(), report.isSerialised(),
                 report.getSerialNumber(), report.getQuantity(), report.getDescription(), report.getPeriodStart(),
-                report.getPeriodEnd(), report.isMarkFaulty(), report.isFaultyMarked(), report.getStatus().name(),
+                report.getPeriodEnd(), block == DamageBlockStatus.FAULTY,
+                block == DamageBlockStatus.FAULTY && report.isBlockApplied(), report.getStatus().name(),
                 report.getReportedBy(), reporter, report.getReportedAt(), report.getClosedAt(),
-                open && allDecided && fits, affected);
+                open && allDecided && fits, affected, name(block), report.isBlockApplied());
     }
 
     private DamageReportDto.AffectedEvent affectedEvent(EquipmentDamageReport report, Equipment kind,

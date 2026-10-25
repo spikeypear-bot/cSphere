@@ -18,6 +18,9 @@ public interface EquipmentDamageReportRepository extends JpaRepository<Equipment
 
     List<EquipmentDamageReport> findAllByOrderByReportedAtDesc();
 
+    /** D32: one kind's reports, newest first. */
+    List<EquipmentDamageReport> findByEquipmentIdOrderByReportedAtDesc(UUID equipmentId);
+
     /** Which kind a report is about, without loading it (it is loaded locked afterwards). */
     @Query("select r.equipmentId from EquipmentDamageReport r where r.reportId = :id")
     Optional<UUID> equipmentIdOf(@Param("id") UUID id);

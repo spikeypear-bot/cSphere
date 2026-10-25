@@ -49,13 +49,15 @@ public class EquipmentDamageReport {
     @Column(name = "period_end")
     private Instant periodEnd;
 
-    /** AC4: Technical Support asked for the unit to be marked Faulty (TS03). */
-    @Column(name = "mark_faulty", nullable = false)
-    private boolean markFaulty;
+    /** AC4 (V37): the TS03 block Technical Support asked for on the damaged
+     * unit, Faulty or Unavailable; null when none was asked for. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "block_status")
+    private DamageBlockStatus blockStatus;
 
-    /** Whether the Faulty block was actually added when the report closed. */
-    @Column(name = "faulty_marked", nullable = false)
-    private boolean faultyMarked;
+    /** Whether that block was actually added when the report closed. */
+    @Column(name = "block_applied", nullable = false)
+    private boolean blockApplied;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
