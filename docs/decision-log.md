@@ -509,7 +509,7 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 
 ### D31 — TS09: damaged equipment, decided per affected event; an open shortfall allows an additional request
 
-2026-10-25, branch `feat/ts09-damaged-equipment-reports`. Technical Support report damaged equipment, decide what happens to each event that relied on it, and the event's coordinator deals with any shortfall. D30 is TS11's (built in parallel); the gap is intentional.
+2026-10-25, branch `feat/ts09-damaged-equipment-reports`. Technical Support report damaged equipment, decide what happens to each event that relied on it, and the event's coordinator deals with any shortfall. D30 is SO-C5/SO-C6's (on main), and TS11's entry is D34 on its own branch.
 
 **Data (V38).** Two tables: `equipment_damage_reports` (one per damaged serialised unit, or per damaged quantity of a non-serialised kind) and `equipment_damage_outcomes` (one per affected event). See `SCHEMA.md` § V38.
 
