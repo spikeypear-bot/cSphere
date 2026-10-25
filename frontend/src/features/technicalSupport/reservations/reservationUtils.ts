@@ -1,4 +1,39 @@
 import { ApiError } from './reservationApi'
+import type { EquipmentReservation, RequestLine } from './reservation.types'
+
+/** TS06: how many units of a kind are reserved for the event's whole period.
+ * A reservation that starts late or ends early does not count. */
+export function reservedForEventPeriod(
+  reservations: EquipmentReservation[],
+  equipmentId: string,
+  eventStart: string,
+  eventEnd: string,
+): number {
+  const start = new Date(eventStart).getTime()
+  const end = new Date(eventEnd).getTime()
+  return reservations
+    .filter((reservation) => reservation.equipmentId === equipmentId
+      && new Date(reservation.loanedFrom).getTime() <= start
+      && new Date(reservation.loanedUntil).getTime() >= end)
+    .reduce((total, reservation) => total + reservation.quantity, 0)
+}
+
+/** TS06: approval needs every requested quantity reserved for the whole event. */
+export function everyLineReserved(
+  lines: RequestLine[],
+  reservations: EquipmentReservation[],
+  eventStart: string,
+  eventEnd: string,
+): boolean {
+  return lines.every((line) =>
+    reservedForEventPeriod(reservations, line.equipmentId, eventStart, eventEnd) >= line.quantity)
+}
+
+/** "2 × Projector, 1 × Microphone" — a request's items on one line. */
+export function summariseItems(items: RequestLine[] | undefined): string {
+  if (!items || items.length === 0) return 'No itemised equipment'
+  return items.map((item) => `${item.quantity} × ${item.equipmentName}`).join(', ')
+}
 
 // Turns a raw error into the message shown to the user (AC 9).
 export function describeReserveError(error: unknown): string {
