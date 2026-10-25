@@ -111,6 +111,16 @@ entity event_reassignment_requests {
 	decision_reason : text
 }
 
+entity event_registrations {
+	* registration_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* attendee_name : text
+	* reference : text
+	* registered_at : timestamp with time zone
+	* status : text
+}
+
 entity event_request_activity {
 	* activity_id : uuid <<PK>>
 	--
@@ -188,6 +198,8 @@ entity events {
 	first_confirmed_at : timestamp with time zone
 	confirmed_at : timestamp with time zone
 	confirmed_by : uuid <<FK>>
+	registration_capacity : integer
+	registration_opens_at : timestamp with time zone
 }
 
 entity notifications {
@@ -450,6 +462,7 @@ event_readiness_items }o--|| events : event_id
 event_readiness_items }o--o| users : updated_by
 event_reassignment_requests }o--|| events : event_id
 event_reassignment_requests }o--|| users : requester_user_id
+event_registrations }o--|| events : event_id
 event_request_activity }o--|| users : actor_user_id
 event_request_activity }o--o| events : event_id
 event_request_activity }o--|| event_requests : request_id
