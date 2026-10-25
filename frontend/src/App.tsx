@@ -39,13 +39,20 @@ import { BookingApprovalsPage } from './features/venueStaff/BookingApprovalsPage
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
-import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
-import { technicalSupportFeatures } from './features/technicalSupport/technicalSupportFeatures'
-import { EquipmentReviewPage } from './features/technicalSupport/review/EquipmentReviewPage'
+import { AppShell as ConsoleShell } from './components/layout/AppShell'
+import { technicalSupportNav } from './features/technicalSupport/technicalSupportNav'
+import { LegacyRedirect, LegacyReportRedirect, LegacyRequestRedirect } from './features/technicalSupport/LegacyRedirects'
+import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
+import { EquipmentRequestsPage } from './features/technicalSupport/requests/EquipmentRequestsPage'
+import { EquipmentRequestDetailPage } from './features/technicalSupport/requests/EquipmentRequestDetailPage'
+import { InventoryPage } from './features/technicalSupport/inventory/InventoryPage'
+import { EquipmentDetailPage } from './features/technicalSupport/inventory/EquipmentDetailPage'
+import { FaultyEquipmentPage } from './features/technicalSupport/faulty/FaultyEquipmentPage'
+import { ReportProblemPage } from './features/technicalSupport/faulty/ReportProblemPage'
+import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
+// TS11: review pages still use the old page shell (no console nav entry yet; see D34 follow-up).
 import { ChangeReviewsPage } from './features/technicalSupport/changeReviews/ChangeReviewsPage'
 import { ChangeReviewPage } from './features/technicalSupport/changeReviews/ChangeReviewPage'
-import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
-import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
@@ -173,17 +180,30 @@ function TechnicalSupportRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<TechnicalSupportHomePage />} />
-      {skeletonRoutes(
-        technicalSupportFeatures.filter((feature) => feature.path !== 'availability' && feature.path !== 'status' && feature.path !== 'reservations'),
-      )}
-      <Route path="availability" element={<EquipmentReviewPage />} />
-      <Route path="status" element={<EquipmentStatusPage />} />
-      <Route path="reservations" element={<EquipmentReservationPage />} />
-      <Route path="change-reviews" element={<ChangeReviewsPage />} />
-      <Route path="change-reviews/:reviewId" element={<ChangeReviewPage />} />
-    </Routes>
+    <ConsoleShell navLabel="Technical Support" items={technicalSupportNav}>
+      <Routes>
+        <Route index element={<TechnicalSupportDashboardPage />} />
+        {/* TS01/TS02/TS06: one page per request. */}
+        <Route path="requests" element={<EquipmentRequestsPage />} />
+        <Route path="requests/:requestId" element={<EquipmentRequestDetailPage />} />
+        {/* TS03 blocks and TS09 damage reports, reported through one form. */}
+        <Route path="faulty" element={<FaultyEquipmentPage />} />
+        <Route path="faulty/new" element={<ReportProblemPage />} />
+        <Route path="faulty/reports/:reportId" element={<DamageReportDetailPage />} />
+        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="inventory/:equipmentId" element={<EquipmentDetailPage />} />
+        {/* TS11: no console nav entry yet, reached by notification link (D34 follow-up). */}
+        <Route path="change-reviews" element={<ChangeReviewsPage />} />
+        <Route path="change-reviews/:reviewId" element={<ChangeReviewPage />} />
+        {/* The routes before the rework, kept so old links still work. */}
+        <Route path="availability" element={<LegacyRequestRedirect />} />
+        <Route path="reservations" element={<LegacyRequestRedirect />} />
+        <Route path="status" element={<LegacyRedirect to="/technical-support/inventory" />} />
+        <Route path="damaged-equipment" element={<LegacyRedirect to="/technical-support/faulty" />} />
+        <Route path="damaged-equipment/new" element={<LegacyRedirect to="/technical-support/faulty/new" />} />
+        <Route path="damaged-equipment/:reportId" element={<LegacyReportRedirect />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

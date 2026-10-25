@@ -328,7 +328,7 @@ Individual physical units of high-value equipment. Only used where `equipments.s
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `equipment_id` | `UUID` | no | PK, FK → `equipments` | Which kind of equipment |
-| `serial_number` | `VARCHAR(255)` | no | PK | Serial, unique only within an `equipment_id` |
+| `serial_number` | `VARCHAR(64)` | no | PK | Serial, unique only within an `equipment_id` |
 | `status` | `equipment_status` | no | | Condition/availability of this unit |
 
 **Primary key:** `(equipment_id, serial_number)` — serials are only assumed unique per equipment kind.
@@ -373,9 +373,10 @@ from; `equipment_requests` records intent, this records reality.
 | `equipment_id` | `UUID` | no | FK → `equipments` | Equipment kind |
 | `quantity` | `INTEGER` | no | | Units issued. `1` for a serialised unit |
 | `technical_requirements` | `TEXT` | yes | | Free-text notes |
-| `serial_number` | `VARCHAR(255)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
+| `serial_number` | `VARCHAR(64)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
 | `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
 | `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
+| `spare` | `BOOLEAN` | no | | V40. `true` for an extra unit held beyond the requested quantity; default `false` |
 
 **Foreign keys:** `(equipment_id, serial_number)` is a *composite* FK to `serialised_equipments`,
 so a log row cannot cite a serial belonging to a different equipment kind. Because
@@ -595,6 +596,79 @@ hold an unknown item; adding a checklist item means updating that constraint. Th
 (`event_request_activity.flagged_fields`) holds the same keys. See
 decision-log D30.
 
+## V37 update — serial number length (TS09)
+
+`serialised_equipments.serial_number`, `equipment_logs.serial_number` and
+`equipment_status_periods.serial_number` are `VARCHAR(64)` (were `VARCHAR(255)`). Serial numbers
+are short codes whose format depends on the equipment kind (e.g. `EPS-EBU04-7K2Q9M` for a
+projector, a 15-digit IMEI-style number for a mobile Wi-Fi unit); the dev seeder
+(`DevEquipmentSeeder`) generates them at random per kind. The composite foreign keys
+`(equipment_id, serial_number)` are unchanged. A reservation naming a serial number longer than
+64 characters is refused with 400.
+
+## V38 update — equipment damage reports (TS09)
+
+The serial columns use V37's `VARCHAR(64)` length.
+
+`equipment_damage_reports` records Technical Support's report that equipment is damaged for a
+period. Columns: `report_id` (UUID PK), `equipment_id` (required FK → `equipments`),
+`serial_number` (`VARCHAR(64)`, set for a serialised unit; composite FK with `equipment_id` →
+`serialised_equipments`, skipped when null), `quantity` (≥ 1; exactly 1 when a serial is given),
+`description` (trimmed, 1–2000 characters), `period_start` (required), `period_end` (nullable =
+no known end; after the start when given), `mark_faulty` (asked for a TS03 Faulty block),
+`faulty_marked` (the block was added when the report closed), `status` (`OPEN`, `CLOSED`; `closed_at`
+set exactly when closed), `reported_by` (FK → `users`) and `reported_at`. A non-serialised report's
+`quantity` stops counting as available for its period (TS09 AC5).
+
+`equipment_damage_outcomes` has one row per event a report affects (`UNIQUE (report_id, event_id)`):
+`outcome` (`COVERED`, `REPLACED`, `SHORT`; null until decided, with `decided_by`/`decided_at`),
+`shortfall` (units the event is short; > 0 exactly when `SHORT`), `reduced_by` (non-serialised units
+taken off the event's reservations), `replacement_serial_number` (required for `REPLACED`),
+`additional_request_id` (nullable FK → `equipment_requests`, unique when set: the coordinator's
+request for this shortfall), and `resolution` (`NOTE`, `ADDITIONAL_REQUEST`) with
+`resolution_note` (1–2000 characters, required for `NOTE`), `resolved_by` and `resolved_at`. Only a
+`SHORT` outcome can be resolved.
+
+Deciding an outcome changes `equipment_logs`: a replacement updates the reservation's
+`serial_number`; covered and short outcomes delete the damaged unit's reservation; a non-serialised
+reduction lowers `quantity` (deleting the row at 0). What was decided stays on the outcome row.
+
+`notification_type` gains `equipment_damage_outcome` (needs `event_id` and `message`). The recreated
+`chk_notification_shape` keeps every V33 branch. See
+[TS09 API](../../../../../../docs/equipment-damage-api.md) and decision-log D31.
+
+## V39 update — damage report block status (TS09)
+
+A damage report can now ask for the damaged unit to be blocked
+as **Unavailable** as well as Faulty (TS03's two block statuses):
+
+- `equipment_damage_reports.block_status` (`text`, nullable; `FAULTY` or `UNAVAILABLE`): the TS03 block to
+  add when the report closes. Back-filled to `FAULTY` where `mark_faulty` was true, then
+  `mark_faulty` is dropped (V38's check tying `faulty_marked` to it goes with it).
+- `faulty_marked` is renamed `block_applied`: the requested block was added on close.
+- `chk_damage_block_serialised`: a block needs a serialised unit (`serial_number` set).
+  `chk_damage_block_applied`: `block_applied` only when a block was asked for.
+
+The API reads and returns only `blockStatus`/`blockApplied` (the earlier `markFaulty`/`faultyMarked`
+fields were removed before release). See [TS09 API](../../../../../../docs/equipment-damage-api.md)
+and decision-log D32.
+
+## V40 update — spare reservations (TS02)
+
+`equipment_logs.spare` (`BOOLEAN NOT NULL DEFAULT false`) marks a
+reservation as a **spare**: an extra unit held beyond what the event's requests ask for.
+
+- TS02 refuses a reservation that would take the event's non-spare reservations of a kind (those
+  overlapping the new window) above the quantity requested. The excess must be reserved as spare.
+- Spares still count as reserved everywhere else: availability (they hold stock), TS06's "everything is
+  reserved" check and TS09's "covered by spare".
+- A serialised unit is always one row with its serial; a serialised kind reserved without serials gets
+  free, working units picked by the server.
+- Existing rows are back-filled `false` by the default.
+
+See [TS09 API](../../../../../../docs/equipment-damage-api.md) § Technical Support console and
+decision-log D33.
+
 ## V41 update — TS11 equipment change reviews and Technical Support notices
 
 `equipment_change_reviews` records an approved event change (EC-NEW3) that affected an event's
@@ -615,14 +689,7 @@ column) so a user is told once. `notification_type` gains `equipment_request_sub
 `equipment_review_id`, `message`); the recreated `chk_notification_shape` keeps every V33 branch
 (V34–V36 do not touch `notification_type` or the constraint). See decision-log D34.
 
-V41 was written as V36 and renumbered when `main` (V34–V36) was merged in; V37–V40 are reserved
-for the TS09 console branch. **Merge note:** TS09's damage-report migration (V38 once renumbered)
-also recreates `chk_notification_shape`, from V33's version. Whichever of TS11 (V41) and TS09
-merges second must rebuild the constraint with both sets of branches: TS11's
-`equipment_request_submitted` and `equipment_change_review` (above) and TS09's
-`equipment_damage_outcome` (needs `event_id` and `message`). Flyway applies V38 before V41, so
-V41's version is the one that stands. If TS09 merges first, add the `equipment_damage_outcome`
-branch to V41 before TS11 merges. If TS11 merges first, TS09 needs a further migration after V41
-that adds it, and its V37–V40 would then be older than an already-applied V41, which Flyway refuses
-by default (`outOfOrder` is off), so merging TS09 first is the simpler order.
-
+V41 was written as V36 and renumbered twice: first when `main` (V34–V36) was merged in, then again
+to make room for TS09's V37–V40, which merged into `main` first. `chk_notification_shape` is
+recreated here from V38's version (TS09's), keeping its `equipment_damage_outcome` branch and
+adding TS11's two.

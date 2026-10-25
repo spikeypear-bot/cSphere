@@ -31,6 +31,15 @@
   background: var(--accent-strong);
 }
 
+.button--success {
+  background: var(--success);
+  color: var(--panel);
+}
+
+.button--success:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
 .button--secondary {
   background: transparent;
   border-color: var(--hairline-strong);

@@ -5,12 +5,25 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../../test/apiStubs'
+import { requestPageRoutes } from '../../../test/requestPageStubs'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { EquipmentChangeReviewsPanel } from '../../coordinator/EquipmentChangeReviewsPanel'
-import { EquipmentReviewPage } from '../review/EquipmentReviewPage'
+import { LegacyRequestRedirect } from '../LegacyRedirects'
+import { EquipmentRequestDetailPage } from '../requests/EquipmentRequestDetailPage'
 import { ChangeReviewPage } from './ChangeReviewPage'
 import { ChangeReviewsPage } from './ChangeReviewsPage'
 import type { ChangeReviewDetail } from './changeReview.types'
+
+function request(id: string, extra: Record<string, unknown> = {}) {
+  return {
+    requestId: id, eventId: `event-${id}`, eventName: id === 'request-1' ? 'Town Hall' : `Event ${id}`,
+    eventStart: OPEN_REVIEW.eventStart, eventEnd: OPEN_REVIEW.eventEnd,
+    technicalRequirement: 'Stage left', status: 'processing', organisationName: 'Acme Pte Ltd',
+    requestedBy: { userId: 'u-1', name: 'ec1' }, isShortfallRequest: false,
+    items: [{ equipmentId: 'eq-proj', equipmentName: 'Projector', quantity: 2 }], eventStatus: 'PLANNING',
+    ...extra,
+  }
+}
 
 const OPEN_REVIEW: ChangeReviewDetail = {
   reviewId: 'review-1',
@@ -44,7 +57,9 @@ function renderAt(path: string) {
         <Routes>
           <Route path="/technical-support/change-reviews" element={<ChangeReviewsPage />} />
           <Route path="/technical-support/change-reviews/:reviewId" element={<ChangeReviewPage />} />
-          <Route path="/technical-support/availability" element={<EquipmentReviewPage />} />
+          {/* The link the server sends still goes through this redirect to the request page. */}
+          <Route path="/technical-support/availability" element={<LegacyRequestRedirect />} />
+          <Route path="/technical-support/requests/:requestId" element={<EquipmentRequestDetailPage />} />
           <Route path="/coordinator/events/:eventId" element={<EquipmentChangeReviewsPanel eventId="event-1" />} />
           <Route path="/bell" element={<NotificationBell />} />
         </Routes>
@@ -88,32 +103,26 @@ describe('TS11 Technical Support equipment notices and change reviews', () => {
     expect(screen.getByText(/^Town Hall, 10 Mar 2027, 9:00 AM .* Requested: 2 × Projector\.$/)).toBeInTheDocument()
   })
 
-  it('TS11 AC3 (happy): a request notice opens the TS01 review on that request', async () => {
-    stubApi({
-      'GET /api/equipment-requests/processing': () => jsonResponse(200, [
-        { requestId: 'request-0', eventId: 'event-0', eventName: 'Other Fair', eventStart: OPEN_REVIEW.eventStart,
-          eventEnd: OPEN_REVIEW.eventEnd, technicalRequirement: '' },
-        { requestId: 'request-1', eventId: 'event-1', eventName: 'Town Hall', eventStart: OPEN_REVIEW.eventStart,
-          eventEnd: OPEN_REVIEW.eventEnd, technicalRequirement: 'Stage left' },
-      ]),
-      'GET /api/equipment-requests/request-1/lines': () => jsonResponse(200, []),
-      [`GET /api/equipment/requests/request-1/availability?start=${encodeURIComponent(new Date(OPEN_REVIEW.eventStart).toISOString())}&end=${encodeURIComponent(new Date(OPEN_REVIEW.eventEnd).toISOString())}`]:
-        () => jsonResponse(200, []),
-      [`GET /api/equipment/units?start=${encodeURIComponent(new Date(OPEN_REVIEW.eventStart).toISOString())}&end=${encodeURIComponent(new Date(OPEN_REVIEW.eventEnd).toISOString())}`]:
-        () => jsonResponse(200, []),
-    })
+  it('TS11 AC3 (happy): a request notice opens the request on the Technical Support request page', async () => {
+    stubApi(requestPageRoutes(request('request-1'), {
+      requests: () => [request('request-0', { eventName: 'Other Fair', technicalRequirement: '' }), request('request-1')],
+      lines: () => [],
+      reservations: () => [],
+      availability: () => [],
+    }))
     renderAt('/technical-support/availability?request=request-1')
 
-    expect(await screen.findByRole('heading', { name: 'Town Hall' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /Town Hall/ })).toHaveAttribute('aria-pressed', 'true')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
     expect(screen.getByText('Stage left')).toBeInTheDocument()
   })
 
-  it('TS11 AC3 (negative): a notice for a request no longer awaiting review says so', async () => {
-    stubApi({ 'GET /api/equipment-requests/processing': () => jsonResponse(200, []) })
+  it('TS11 AC3 (negative): a notice for a request no longer in the list says so', async () => {
+    stubApi({ 'GET /api/equipment-requests?status=all': () => jsonResponse(200, []) })
     renderAt('/technical-support/availability?request=request-9')
 
-    expect(await screen.findByText('That equipment request is no longer awaiting review.')).toBeInTheDocument()
+    expect(await screen.findByText(
+      'This equipment request could not be found. It may belong to an event that was cancelled or has finished.',
+    )).toBeInTheDocument()
   })
 
   it('TS11 AC10 (happy): the review shows what changed and flags the reservation that no longer covers the event', async () => {

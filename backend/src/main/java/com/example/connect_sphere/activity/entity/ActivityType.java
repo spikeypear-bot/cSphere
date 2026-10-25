@@ -76,6 +76,12 @@ public enum ActivityType {
     equipment_approved(Set.of(UserRole.ec)),
     /** EC-NEW5/TS06: Technical Support rejected it, with the reason. */
     equipment_rejected(Set.of(UserRole.ec)),
+    /** TS09: equipment this event relied on was reported damaged; the message
+     * says what Technical Support decided (covered, replaced, or short).
+     * Internal, so not the organiser's. Major: arrangements changed. */
+    equipment_damage_outcome(Set.of(UserRole.ec), true),
+    /** TS09 AC20: the coordinator accepted an equipment shortfall, with a note. */
+    equipment_shortfall_resolved(Set.of(UserRole.ec)),
     /** EC08: arrangements complete; handed to the Safety Officer. Internal. */
     sent_for_safety_review(Set.of(UserRole.ec)),
     /** EC08: the coordinator took the event back before a safety decision. */

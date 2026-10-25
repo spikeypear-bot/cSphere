@@ -260,6 +260,16 @@ public class NotificationService {
         }
     }
 
+    /** TS09 AC16: tell the assigned coordinator the outcome for their event. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEquipmentDamageOutcomeNotification(UUID coordinatorId, UUID eventId, String eventName,
+            String message) {
+        Notification notification = base(coordinatorId, NotificationType.equipment_damage_outcome, eventName);
+        notification.setEventId(eventId);
+        notification.setMessage(message);
+        saveBestEffort(notification);
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -399,7 +409,8 @@ public class NotificationService {
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
             case venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
-            case event_returned_to_planning, event_safety_approved, event_cancellation_requested ->
+            case event_returned_to_planning, event_safety_approved, event_cancellation_requested,
+                    equipment_damage_outcome ->
                     "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
             case event_reassignment_approved, event_reassignment_declined ->

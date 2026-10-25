@@ -3,7 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { fetchEventChangeReviews } from '../technicalSupport/changeReviews/changeReviewApi'
 import { OUTCOME_LABELS, type ChangeReviewSummary } from '../technicalSupport/changeReviews/changeReview.types'
-import { formatMoment } from '../technicalSupport/reservations/reservationUtils'
+import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 
 type State =
   | { status: 'loading' }
@@ -39,7 +39,7 @@ export function EquipmentChangeReviewsPanel({ eventId }: { eventId: string }) {
         <ul>
           {state.reviews.map((review) => (
             <li key={review.reviewId}>
-              Change approved {formatMoment(review.changedAt)}:{' '}
+              Change approved {formatEventDateTime(review.changedAt)}:{' '}
               {review.needsReview ? (
                 <strong>Awaiting Technical Support review</strong>
               ) : (

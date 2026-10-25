@@ -4,7 +4,7 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
-import { formatMoment } from '../reservations/reservationUtils'
+import { formatEventDateTime } from '../../venueStaff/formatEventDateTime'
 import { fetchChangeReviews } from './changeReviewApi'
 import { OUTCOME_LABELS, type ChangeReviewSummary } from './changeReview.types'
 import '../technicalSupport.css'
@@ -55,7 +55,7 @@ export function ChangeReviewsPage() {
               <li key={review.reviewId}>
                 <Link to={`/technical-support/change-reviews/${review.reviewId}`} className="change-review-list__link">
                   <span className="change-review-list__name">{review.eventName}</span>
-                  <span className="change-review-list__meta">Changed {formatMoment(review.changedAt)}</span>
+                  <span className="change-review-list__meta">Changed {formatEventDateTime(review.changedAt)}</span>
                   <span className={review.needsReview ? 'chip change-review-chip--open' : 'chip'}>
                     {review.needsReview ? 'Needs review' : OUTCOME_LABELS[review.outcome ?? 'still_suitable']}
                   </span>

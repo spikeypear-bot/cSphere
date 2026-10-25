@@ -34,7 +34,22 @@ public interface EquipmentStatusPeriodRepository
             @Param("start") Instant start,
             @Param("end") Instant end);
 
+    // D35: the same overlap rule for one kind's units.
+    @Query("""
+            select p from EquipmentStatusPeriod p
+            where p.equipmentId = :equipmentId
+              and p.periodStart < :end
+              and (p.periodEnd is null or p.periodEnd > :start)
+            """)
+    List<EquipmentStatusPeriod> findOverlappingForEquipment(
+            @Param("equipmentId") UUID equipmentId,
+            @Param("start") Instant start,
+            @Param("end") Instant end);
+
     // Spring writes this query for us from the method name.
     List<EquipmentStatusPeriod> findByEquipmentIdAndSerialNumberOrderByPeriodStartAsc(
             UUID equipmentId, String serialNumber);
+
+    // D32: every block of one kind's units, for its detail page.
+    List<EquipmentStatusPeriod> findByEquipmentIdOrderByPeriodStartAsc(UUID equipmentId);
 }

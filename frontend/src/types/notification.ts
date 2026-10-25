@@ -27,6 +27,8 @@ export type NotificationTypeName =
   | 'event_cancellation_approved'
   | 'event_cancellation_declined'
   | 'event_cancelled'
+  // TS09
+  | 'equipment_damage_outcome'
   // TS11
   | 'equipment_request_submitted'
   | 'equipment_change_review'

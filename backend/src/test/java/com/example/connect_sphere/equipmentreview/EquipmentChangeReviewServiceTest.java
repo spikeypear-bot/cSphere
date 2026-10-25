@@ -74,7 +74,7 @@ class EquipmentChangeReviewServiceTest {
         when(events.findById(event.getEventId())).thenReturn(Optional.of(event));
         when(reservations.reservationsForEvent(event.getEventId())).thenReturn(List.of(new EquipmentReservationResponse(
                 logId, event.getEventId(), UUID.randomUUID(), "Mic", 2, null,
-                Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T04:00:00Z"))));
+                Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T04:00:00Z"), null, false)));
     }
 
     private void refused(OutcomeRequest request, HttpStatus status) {

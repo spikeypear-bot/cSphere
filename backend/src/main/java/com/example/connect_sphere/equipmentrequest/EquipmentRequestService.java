@@ -37,6 +37,15 @@ public class EquipmentRequestService {
         this.changeLog = changeLog;
     }
 
+    /** TS09: open equipment shortfalls. Setter-injected like the change log;
+     * absent in plain unit tests, where no request is for a shortfall. */
+    private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
+        this.shortfalls = shortfalls;
+    }
+
     private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
             String message) {
         if (changeLog != null) {
@@ -86,7 +95,18 @@ public class EquipmentRequestService {
             throw new EquipmentRequestStateException(
                     "Equipment can only be requested while the event is in Planning.");
         }
-        if (requests.findByEventId(eventId).stream()
+        // TS09 AC19, AC21: an open equipment shortfall allows an additional
+        // request alongside the approved one, but never a second one awaiting
+        // review. Without one, EC07's rule applies unchanged.
+        com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome shortfall = null;
+        if (input != null && input.shortfallOutcomeId() != null && shortfalls != null) {
+            shortfall = shortfalls.requireOpenShortfall(eventId, input.shortfallOutcomeId());
+            if (requests.findByEventId(eventId).stream()
+                    .anyMatch(request -> request.getStatus() == EquipmentRequestStatus.processing)) {
+                throw new EquipmentRequestStateException(
+                        "This event already has an equipment request awaiting review.");
+            }
+        } else if (requests.findByEventId(eventId).stream()
                 .anyMatch(request -> request.getStatus() != EquipmentRequestStatus.rejected)) {
             throw new EquipmentRequestStateException(
                     "This event already has an equipment request awaiting review or already approved.");
@@ -136,6 +156,9 @@ public class EquipmentRequestService {
         if (changeLog != null) {
             // TS11 AC1: Technical Support are told after this commits.
             changeLog.publishEvent(new EquipmentRequestSubmitted(requestId, eventId));
+        }
+        if (shortfall != null) {
+            shortfalls.linkAdditionalRequest(shortfall, requestId);
         }
         int units = requestedItems.stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_requested, coordinatorId,

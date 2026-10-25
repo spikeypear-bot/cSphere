@@ -1,6 +1,7 @@
 package com.example.connect_sphere.equipment;
 
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -25,6 +26,20 @@ public interface EquipmentLogRepository extends JpaRepository<EquipmentLog, UUID
             """)
     List<EquipmentLog> findOverlappingForEquipment(
             @Param("equipmentId") UUID equipmentId,
+            @Param("start") Instant start,
+            @Param("end") Instant end);
+
+    // The same overlap rule for several kinds at once (one query for the
+    // catalogue's availability, D32).
+    @Query(nativeQuery = true, value = """
+            select l.* from equipment_logs l
+            join events e on e.event_id = l.event_id
+            where l.equipment_id in (:equipmentIds)
+              and l.loaned_from < :end and l.loaned_until > :start
+              and e.status not in ('cancelled', 'completed')
+            """)
+    List<EquipmentLog> findOverlappingForEquipments(
+            @Param("equipmentIds") Collection<UUID> equipmentIds,
             @Param("start") Instant start,
             @Param("end") Instant end);
 

@@ -2,10 +2,9 @@
 -- request (AC1) and when an approved event change affects an event's
 -- equipment (AC4), and record a review of each such change (AC11-AC14).
 -- Renumbered from V36 at the merge of main (V34-V36 there); V37-V40 are
--- reserved for the TS09 console branch.
--- chk_notification_shape below is recreated here and in TS09's damage-report
--- migration: whichever merges second must keep the other's branches
--- (TS09 adds equipment_damage_outcome: event_id and message). Decision-log D34.
+-- TS09's (already merged). chk_notification_shape is recreated here from
+-- V38's version (TS09's), keeping its equipment_damage_outcome branch and
+-- adding TS11's two. Decision-log D34.
 
 -- One row per approved change that affected an event's equipment. The values
 -- are kept here, not read back from the event, so a later change does not
@@ -53,7 +52,7 @@ CREATE UNIQUE INDEX idx_one_equipment_review_notice
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'equipment_request_submitted';
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'equipment_change_review';
 
--- Recreated from V33's version (V34-V36 do not change it) with the TS11 branches added.
+-- Recreated from V38's version (V34-V37, V39-V40 do not change it) with the TS11 branches added.
 ALTER TABLE notifications DROP CONSTRAINT chk_notification_shape;
 ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
     (type::text = 'status_change' AND new_status IS NOT NULL)
@@ -70,6 +69,7 @@ ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
     OR (type::text IN ('change_request_submitted', 'change_request_withdrawn', 'change_request_decided')
         AND event_request_id IS NOT NULL AND message IS NOT NULL)
     OR (type::text = 'request_cancelled' AND event_request_id IS NOT NULL AND message IS NOT NULL)
+    OR (type::text = 'equipment_damage_outcome' AND event_id IS NOT NULL AND message IS NOT NULL)
     OR (type::text = 'equipment_request_submitted' AND event_id IS NOT NULL AND equipment_request_id IS NOT NULL
         AND message IS NOT NULL)
     OR (type::text = 'equipment_change_review' AND event_id IS NOT NULL AND equipment_review_id IS NOT NULL

@@ -9,10 +9,12 @@ endlegend
 
 
 class ApiError {
+	{field} -equipmentId : UUID
 	{field} -fieldErrors : Map<String, String>
 	{field} -message : String
 	{field} -missingFields : List<String>
 	{method}  {static} +fieldErrors ( message : String , fieldErrors : Map ) : ApiError
+	{method}  {static} +forEquipment ( message : String , equipmentId : UUID ) : ApiError
 	{method}  {static} +missingFields ( message : String , missingFields : List ) : ApiError
 	{method}  {static} +of ( message : String ) : ApiError
 }

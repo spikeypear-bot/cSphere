@@ -36,6 +36,8 @@ function describe(n: NotificationDto): string {
   if (n.type === 'event_cancellation_approved') return `"${n.eventName}" has been cancelled`
   if (n.type === 'event_cancellation_declined') return `Cancellation of "${n.eventName}" was declined`
   if (n.type === 'event_cancelled') return `"${n.eventName}" has been cancelled`
+  // TS09: the outcome itself is the message, shown under the title.
+  if (n.type === 'equipment_damage_outcome') return `Damaged equipment affects "${n.eventName}"`
   if (n.type === 'equipment_request_submitted') return `New equipment request for "${n.eventName}"`
   if (n.type === 'equipment_change_review') return `An approved change to "${n.eventName}" affects its equipment`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`

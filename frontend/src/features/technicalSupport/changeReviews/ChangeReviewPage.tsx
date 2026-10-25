@@ -5,7 +5,7 @@ import { Card } from '../../../components/ui/Card'
 import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
-import { formatMoment } from '../reservations/reservationUtils'
+import { formatEventDateTime } from '../../venueStaff/formatEventDateTime'
 import { fetchChangeReview, recordOutcome } from './changeReviewApi'
 import { OUTCOME_LABELS, type ChangeReviewDetail, type ComparedValues, type ReviewOutcome } from './changeReview.types'
 import '../technicalSupport.css'
@@ -20,7 +20,7 @@ type State =
 
 function shown(value: string | null, time: boolean): string {
   if (value === null) return 'None'
-  return time ? formatMoment(value) : value
+  return time ? formatEventDateTime(value) : value
 }
 
 function Comparison({ previous, updated }: { previous: ComparedValues; updated: ComparedValues }) {
@@ -117,9 +117,9 @@ export function ChangeReviewPage() {
           <Card className="tech-card">
             <h2>{state.review.eventName}</h2>
             <p>
-              Now {formatMoment(state.review.eventStart)} – {formatMoment(state.review.eventEnd)}.
+              Now {formatEventDateTime(state.review.eventStart)} – {formatEventDateTime(state.review.eventEnd)}.
               {' '}Coordinator: {state.review.coordinatorName ?? 'not assigned'}.
-              {' '}Change approved {formatMoment(state.review.changedAt)}.
+              {' '}Change approved {formatEventDateTime(state.review.changedAt)}.
             </p>
             <Comparison previous={state.review.previous} updated={state.review.updated} />
             {state.review.requirementsChanged && (
@@ -137,7 +137,7 @@ export function ChangeReviewPage() {
                   <li key={r.logId} data-flagged={r.flagged}>
                     <span>
                       {r.quantity} × {r.equipmentName}{r.serialNumber ? ` (${r.serialNumber})` : ''}
-                      {' '}— {formatMoment(r.loanedFrom)} to {formatMoment(r.loanedUntil)}
+                      {' '}— {formatEventDateTime(r.loanedFrom)} to {formatEventDateTime(r.loanedUntil)}
                     </span>
                     {r.flagged && <span className="chip change-review-chip--open">Needs review: no longer covers the event</span>}
                   </li>
@@ -180,7 +180,7 @@ export function ChangeReviewPage() {
               <Notice tone="success">
                 {OUTCOME_LABELS[state.review.outcome ?? 'still_suitable']}
                 {state.review.reviewedByName ? ` — reviewed by ${state.review.reviewedByName}` : ''}
-                {state.review.reviewedAt ? ` on ${formatMoment(state.review.reviewedAt)}` : ''}.
+                {state.review.reviewedAt ? ` on ${formatEventDateTime(state.review.reviewedAt)}` : ''}.
                 {state.review.outcomeNote ? ` ${state.review.outcomeNote}` : ''}
               </Notice>
             )}

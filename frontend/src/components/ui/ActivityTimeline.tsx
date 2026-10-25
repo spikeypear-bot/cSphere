@@ -55,6 +55,8 @@ const TITLES: Record<ActivityTypeName, string> = {
   equipment_requested: 'requested equipment',
   equipment_approved: 'approved the equipment request',
   equipment_rejected: 'rejected the equipment request',
+  equipment_damage_outcome: 'reported damaged equipment and decided the outcome',
+  equipment_shortfall_resolved: 'accepted an equipment shortfall',
   sent_for_safety_review: 'sent the event for its Operational Safety Check',
   safety_review_withdrawn: 'withdrew the event from safety review',
   safety_approved: 'approved the Operational Safety Check',
@@ -96,7 +98,7 @@ function askedValues(entries: ActivityDto[], index: number) {
 /** Entries whose message is a conversation turn, shown as a speech bubble. */
 const CONVERSATIONAL: ActivityTypeName[] = ['clarification_requested', 'clarification_responded', 'rejected',
   'safety_changes_requested', 'safety_rejected', 'safety_review_withdrawn', 'returned_to_planning',
-  'venue_booking_rejected', 'equipment_rejected']
+  'venue_booking_rejected', 'equipment_rejected', 'equipment_shortfall_resolved']
 
 /** SO-C5/SO-C6: these entries flag readiness checklist items, not request fields. */
 const SAFETY_DECISIONS: ActivityDto['type'][] = ['safety_changes_requested', 'safety_rejected']

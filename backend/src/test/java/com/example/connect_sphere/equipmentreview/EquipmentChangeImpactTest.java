@@ -24,7 +24,7 @@ class EquipmentChangeImpactTest {
 
     private static EquipmentReservationResponse reserved(String from, String until) {
         return new EquipmentReservationResponse(UUID.randomUUID(), UUID.randomUUID(), UUID.randomUUID(), "Mic", 2,
-                null, Instant.parse(from), Instant.parse(until));
+                null, Instant.parse(from), Instant.parse(until), null, false);
     }
 
     @Test

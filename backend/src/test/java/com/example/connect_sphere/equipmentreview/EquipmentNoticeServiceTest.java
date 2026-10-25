@@ -68,7 +68,7 @@ class EquipmentNoticeServiceTest {
                 Set.of("startDatetime", "endDatetime"), OffsetDateTime.parse("2027-02-28T10:30+08:00"));
         when(reservations.reservationsForEvent(event.getEventId())).thenReturn(List.of(new EquipmentReservationResponse(
                 UUID.randomUUID(), event.getEventId(), UUID.randomUUID(), "Projector", 1, "PJ-001",
-                Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T04:00:00Z"))));
+                Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T04:00:00Z"), null, false)));
     }
 
     private void request(EquipmentRequestStatus status) {
