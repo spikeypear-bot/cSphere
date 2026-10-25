@@ -476,7 +476,7 @@ class EquipmentBatchReservationFlowTest {
 
         mvc.perform(post("/api/equipment-damage-reports").with(flow.as("ts1"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"equipmentId\":\"%s\",\"serialNumber\":\"PJ-1\",\"description\":\"Lamp failed\",\"periodStart\":\"2027-03-09T00:00:00Z\",\"periodEnd\":null}"
+                        .content("{\"equipmentId\":\"%s\",\"serialNumber\":\"PJ-1\",\"description\":\"Lamp failed\",\"periodStart\":\"2027-03-09T00:00:00Z\",\"periodEnd\":null,\"blockStatus\":\"FAULTY\"}"
                                 .formatted(projectors)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.affectedEvents.length()").value(1))

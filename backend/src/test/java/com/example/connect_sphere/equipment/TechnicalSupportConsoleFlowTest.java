@@ -304,7 +304,7 @@ class TechnicalSupportConsoleFlowTest {
         UUID original = request(eventId, projectors, 1, null);
         reserve(eventId, projectors, 1, "PJ-1", MARCH_10);
         decideRequest(original, "{\"status\":\"approved\"}");
-        JsonNode report = flow.read(report(unitReport(projectors, "PJ-1", "2027-03-01T00:00:00Z", null, ""))
+        JsonNode report = flow.read(report(unitReport(projectors, "PJ-1", "2027-03-01T00:00:00Z", null, ",\"blockStatus\":\"FAULTY\""))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString());
         sync();
         String outcomeId = report.get("affectedEvents").get(0).get("outcomeId").asString();
@@ -359,8 +359,8 @@ class TechnicalSupportConsoleFlowTest {
     void damageReportsFilterByEquipment() throws Exception {
         UUID first = projectors("PJ-1");
         UUID second = projectors("PJ-1");
-        report(unitReport(first, "PJ-1", "2027-04-01T00:00:00Z", null, "")).andExpect(status().isCreated());
-        report(unitReport(second, "PJ-1", "2027-04-01T00:00:00Z", null, "")).andExpect(status().isCreated());
+        report(unitReport(first, "PJ-1", "2027-04-01T00:00:00Z", null, ",\"blockStatus\":\"FAULTY\"")).andExpect(status().isCreated());
+        report(unitReport(second, "PJ-1", "2027-04-01T00:00:00Z", null, ",\"blockStatus\":\"FAULTY\"")).andExpect(status().isCreated());
         sync();
 
         JsonNode filtered = getJson("/api/equipment-damage-reports", "ts1", "equipmentId", first.toString());

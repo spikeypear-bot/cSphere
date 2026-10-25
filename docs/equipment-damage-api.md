@@ -22,7 +22,7 @@ Errors use the usual `ApiError` shape (`{"message": "..."}`): 400 invalid input,
 
 - Serialised kind: `serialNumber` required (an existing unit); `quantity` omitted or 1.
 - Non-serialised kind: `quantity` from 1 to the quantity owned; no `serialNumber`; no `blockStatus`.
-- `blockStatus` (V39): `FAULTY`, `UNAVAILABLE` (any case) or omitted/null — the TS03 block put on the unit when the report closes. Any other value (including `AVAILABLE`) is 400.
+- `blockStatus` (V39): `FAULTY` or `UNAVAILABLE` (any case) — the TS03 block put on the unit when the report closes. **Required for a serialised unit** (missing → 400 "Choose whether the unit is Faulty or Unavailable."); refused for a non-serialised kind. Any other value (including `AVAILABLE`) is 400.
 - `description` 1–2000 characters after trimming. `periodEnd` optional, and after `periodStart` when given.
 - A report affecting no event is returned already `CLOSED`.
 
@@ -54,7 +54,7 @@ Returns a **report**:
 - `spareCovers`: serialised and undecided only; the event still has enough without the damaged unit.
 - `active`: false once the event is cancelled or over; it then needs no outcome.
 - `outcome`: `null` (undecided), `COVERED`, `REPLACED` or `SHORT`. `resolution`: `NOTE` or `ADDITIONAL_REQUEST`.
-- `blockStatus`: the block asked for (`FAULTY`, `UNAVAILABLE` or `null`); `blockApplied`: it was added when the report closed.
+- `blockStatus`: the block asked for (`FAULTY` or `UNAVAILABLE` for a unit, `null` for a quantity); `blockApplied`: it was added when the report closed.
 
 ### `GET /api/equipment-damage-reports` → 200
 

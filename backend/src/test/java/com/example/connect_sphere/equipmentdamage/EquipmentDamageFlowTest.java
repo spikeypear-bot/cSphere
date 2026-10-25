@@ -172,7 +172,8 @@ class EquipmentDamageFlowTest {
     private static String unitReport(UUID equipmentId, String serial, String description, String from, String until,
             String blockStatus) {
         return "{\"equipmentId\":\"%s\",\"serialNumber\":%s,\"description\":%s,\"periodStart\":%s,\"periodEnd\":%s,\"blockStatus\":%s}"
-                .formatted(equipmentId, quote(serial), quote(description), quote(from), quote(until), quote(blockStatus));
+                .formatted(equipmentId, quote(serial), quote(description), quote(from), quote(until),
+                        quote(blockStatus == null ? "FAULTY" : blockStatus));
     }
 
     private static String quantityReport(UUID equipmentId, Integer quantity, String from, String until) {
@@ -333,6 +334,18 @@ class EquipmentDamageFlowTest {
         report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-03-01T00:00:01Z", null))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.periodEnd").value("2027-03-01T00:00:01Z"));
+    }
+
+    @Test
+    @DisplayName("TS09 AC4 (negative): a serialised unit must be reported Faulty or Unavailable, and nothing is saved")
+    void aSerialisedReportNeedsABlock() throws Exception {
+        UUID projectors = projectors("PJ-1");
+
+        report("{\"equipmentId\":\"%s\",\"serialNumber\":\"PJ-1\",\"description\":\"Cracked\",\"periodStart\":\"%s\"}"
+                .formatted(projectors, DAMAGED_FROM))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose whether the unit is Faulty or Unavailable."));
+        assertThat(reportsFor(projectors)).isZero();
     }
 
     @Test

@@ -137,6 +137,10 @@ public class EquipmentDamageService {
             if (!units.existsById(new SerialisedEquipmentId(kind.getId(), serial))) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment unit not found.");
             }
+            // A damaged unit must stay out of use once the report closes (D35).
+            if (block == null) {
+                throw badRequest("Choose whether the unit is Faulty or Unavailable.");
+            }
             quantity = 1;
         } else {
             if (serial != null && !serial.isEmpty()) {

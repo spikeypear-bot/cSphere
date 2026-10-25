@@ -633,7 +633,7 @@ The check returns the first reason a unit is not free, and each caller words its
 
 Each rule is one targeted query: `findOverlappingForUnit` for blocks and reservations, and a native `exists` on `equipment_damage_reports` for damage.
 
-**Why open only.** A report closes once every affected event has an outcome. At that point any block it asked for is a TS03 status period, which the first rule already checks. A closed report that asked for no block means Technical Support chose not to block the unit. If closed reports still counted, a closed report with no end date would make its unit unreservable for good, with no way to undo it. Before D35, TS09's replacement refused a unit with *any* overlapping report, open or closed. It now follows the same open-only rule.
+**Why open only.** A report closes once every affected event has an outcome. At that point any block it asked for is a TS03 status period, which the first rule already checks. A serialised report must ask for a block (Faulty or Unavailable; a report without one is refused with 400, user decision 2026-10-25), so a closed serialised report always leaves its unit blocked through TS03 once no event holds it. If closed reports still counted, a closed report with no end date would make its unit unreservable for good, with no way to undo it. Before D35, TS09's replacement refused a unit with *any* overlapping report, open or closed. It now follows the same open-only rule.
 
 **Not changed.** Availability counts (D32) still count only blocked serialised units as out of action. A unit with an open report is usually reserved by the event the report affects, so it is already counted there, and counting it again would understate stock. Non-serialised damage is still counted by quantity (TS09 AC5).
 

@@ -15,7 +15,8 @@ import com.example.connect_sphere.equipmentdamage.entity.DamageBlockStatus;
  * {@code periodEnd} is optional: no end means the damage runs on.
  *
  * <p>{@code blockStatus} ({@code FAULTY} or {@code UNAVAILABLE}) asks for a
- * TS03 block on the unit when the report closes.
+ * TS03 block on the unit when the report closes. It is required for a
+ * serialised unit and refused for a non-serialised kind.
  */
 public record ReportDamageRequest(
         UUID equipmentId,
