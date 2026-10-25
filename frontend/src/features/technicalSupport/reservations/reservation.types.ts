@@ -69,6 +69,19 @@ export interface EquipmentReservation {
   loanedUntil: string
   /** Added with the console (D32); older fixtures leave it out. */
   eventName?: string
+  /** D33: an extra unit held beyond what the event requested. */
+  spare?: boolean
+}
+
+/** D33: one line of POST /api/equipment/reservations/batch. */
+export interface BatchReserveLine {
+  equipmentId: string
+  /** Units towards the request. */
+  quantity: number
+  /** Extra units, marked spare. */
+  spare: number
+  /** Serialised kinds: one per unit, the requested ones first. */
+  serialNumbers?: string[]
 }
 
 // Values from <input type="datetime-local">, e.g. "2026-09-25T09:00"

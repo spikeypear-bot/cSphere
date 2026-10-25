@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
+import { requestPageRoutes } from '../../test/requestPageStubs'
 import { AppShell } from '../../components/layout/AppShell'
 import { technicalSupportNav } from './technicalSupportNav'
 import { TechnicalSupportDashboardPage } from './dashboard/TechnicalSupportDashboardPage'
@@ -19,8 +20,6 @@ const eventEnd = '2027-03-10T12:00:00+08:00'
 const localStart = toLocalInputValue(eventStart)
 const localEnd = toLocalInputValue(eventEnd)
 const localToIso = (value: string) => new Date(value).toISOString()
-// TS01's unit check runs on the same request page as TS02/TS06.
-const unitsUrl = `/api/equipment/units?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
 
 function renderRoutes(path: string) {
   return render(
@@ -66,7 +65,7 @@ describe('Technical Support UI integration', () => {
     expect(await screen.findByText('Nothing to handle right now.')).toBeInTheDocument()
   })
 
-  it('selects an equipment request, reserves it, and shows the saved event reservation', async () => {
+  it('TS02 (happy): one button reserves every remaining unit, and the saved reservation is listed for the event', async () => {
     const request = {
       requestId: 'request-1',
       eventId: 'event-1',
@@ -75,14 +74,6 @@ describe('Technical Support UI integration', () => {
       eventEnd: eventEnd,
       technicalRequirement: 'Presentation equipment',
       status: 'processing',
-    }
-    const line = { equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 1 }
-    const availability = {
-      equipmentId: 'projector-1',
-      equipmentName: 'Projector',
-      serialised: false,
-      totalQuantity: 4,
-      availableQuantity: 3,
     }
     const reservation = {
       logId: 'log-1',
@@ -93,33 +84,46 @@ describe('Technical Support UI integration', () => {
       serialNumber: null,
       loanedFrom: localToIso(localStart),
       loanedUntil: localToIso(localEnd),
+      spare: false,
     }
-    const availabilityUrl = `/api/equipment/requests/request-1/availability?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
-    const routes = {
-      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
-      [`GET ${unitsUrl}`]: () => jsonResponse(200, []),
-      'GET /api/equipment-requests/request-1/lines': () => jsonResponse(200, [line]),
-      'GET /api/equipment/events/event-1/reservations': () => jsonResponse(200, [reservation]),
-      [`GET ${availabilityUrl}`]: () => jsonResponse(200, [availability]),
-      'POST /api/equipment/reservations': () => jsonResponse(201, reservation),
-    }
-    const calls = stubApi(routes)
+    const saved: unknown[] = []
+    const calls = stubApi({
+      ...requestPageRoutes(request, {
+        requests: () => [request],
+        lines: () => [{ equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 1 }],
+        reservations: () => [...saved],
+        availability: () => [{
+          equipmentId: 'projector-1', equipmentName: 'Projector', serialised: false,
+          totalQuantity: 4, availableQuantity: saved.length ? 2 : 3,
+        }],
+      }),
+      'POST /api/equipment/reservations/batch': () => {
+        saved.push(reservation)
+        return jsonResponse(201, [reservation])
+      },
+    })
     const user = userEvent.setup()
     renderRoutes('/technical-support/requests/request-1')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
-    expect(await screen.findByText('Projector: 1 needed')).toBeInTheDocument()
-    expect(await screen.findByText('Projector: 3 of 4 available')).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Equipment'), 'projector-1')
-    await user.click(screen.getByRole('button', { name: 'Reserve' }))
+    const row = await screen.findByRole('row', { name: /Projector/ })
+    expect(row).toHaveTextContent('Projector')
+    expect(screen.getByLabelText('Reserve now: Projector')).toHaveValue(1)
+    const reserve = screen.getByRole('button', { name: 'Reserve all remaining (1 unit)' })
+    expect(reserve).toBeEnabled()
+    await user.click(reserve)
 
-    expect(await screen.findByText(/Reserved 1 × Projector/)).toHaveAttribute('role', 'status')
-    expect(screen.getAllByText(/1 × Projector/)).toHaveLength(2)
+    const done = await screen.findByText('Reserved 1 unit for this event.')
+    expect(done).toHaveAttribute('role', 'status')
+    expect(done).toHaveFocus()
+    expect(await screen.findByText('✓ Reserved')).toBeInTheDocument()
+    expect(within(screen.getByRole('region', { name: 'Reserved for this event' })).getByText('1 unit')).toBeInTheDocument()
     const post = calls.find(call => call.method === 'POST')
-    expect(post?.body).toMatchObject({
+    expect(post?.body).toEqual({
       eventId: 'event-1',
-      equipmentId: 'projector-1',
-      quantity: 1,
+      start: localToIso(localStart),
+      end: localToIso(localEnd),
+      lines: [{ equipmentId: 'projector-1', quantity: 1, spare: 0 }],
     })
     expect(new Headers(post?.headers).get('Authorization')).toBe('Bearer access-1')
     expect(calls.filter(call => call.method === 'GET').every(
@@ -127,7 +131,7 @@ describe('Technical Support UI integration', () => {
     )).toBe(true)
   })
 
-  it('shows reservation coverage and saves a rejection reason without changing reservations', async () => {
+  it('TS06 (failure): shows reservation coverage, keeps the reason when saving a rejection fails, then saves it without changing reservations', async () => {
     const request = {
       requestId: 'request-1',
       eventId: 'event-1',
@@ -147,22 +151,17 @@ describe('Technical Support UI integration', () => {
       loanedFrom: localToIso(localStart),
       loanedUntil: localToIso(localEnd),
     }
-    const availabilityUrl = `/api/equipment/requests/request-1/availability?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
     let decisionAttempts = 0
     const calls = stubApi({
-      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
-      [`GET ${unitsUrl}`]: () => jsonResponse(200, []),
-      'GET /api/equipment-requests/request-1/lines': () => jsonResponse(200, [
-        { equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 2 },
-      ]),
-      'GET /api/equipment/events/event-1/reservations': () => jsonResponse(200, [reservation]),
-      [`GET ${availabilityUrl}`]: () => jsonResponse(200, [{
-        equipmentId: 'projector-1',
-        equipmentName: 'Projector',
-        serialised: false,
-        totalQuantity: 4,
-        availableQuantity: 3,
-      }]),
+      ...requestPageRoutes(request, {
+        requests: () => [request],
+        lines: () => [{ equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 2 }],
+        reservations: () => [reservation],
+        availability: () => [{
+          equipmentId: 'projector-1', equipmentName: 'Projector', serialised: false,
+          totalQuantity: 4, availableQuantity: 3,
+        }],
+      }),
       'PATCH /api/equipment-requests/request-1/status': () => {
         decisionAttempts += 1
         if (decisionAttempts === 1) return jsonResponse(409, { message: 'Decision could not be saved.' })
@@ -180,23 +179,28 @@ describe('Technical Support UI integration', () => {
     renderRoutes('/technical-support/requests/request-1')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
-    expect(await screen.findByText('Projector: 1 of 2 reserved')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Save approved decision' })).toBeDisabled()
-    await user.selectOptions(screen.getByLabelText('Decision'), 'rejected')
-    await user.type(screen.getByLabelText('Reason for rejection'), 'Only one unit can be provided.')
-    const saveButton = screen.getByRole('button', { name: 'Save rejected decision' })
+    expect(await screen.findByText('1 item still needs reserving')).toBeInTheDocument()
+    const row = screen.getByRole('row', { name: /Projector/ })
+    expect(within(row).getAllByRole('cell').map((cell) => cell.textContent).slice(0, 3)).toEqual(['2', '1', '3'])
+    expect(screen.getByRole('button', { name: 'Approve request' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Reject…' }))
+    const reason = screen.getByLabelText('Reason for rejection')
+    expect(reason).toHaveFocus()
+    expect(screen.getByRole('button', { name: 'Reject request' })).toBeDisabled()
+    await user.type(reason, 'Only one unit can be provided.')
+    const saveButton = screen.getByRole('button', { name: 'Reject request' })
     await user.click(saveButton)
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Decision could not be saved.')
-    expect(screen.getByLabelText('Decision')).toHaveValue('rejected')
-    expect(screen.queryByText('Status:')).not.toBeInTheDocument()
-    expect(screen.getByText('Current status:')).toBeInTheDocument()
-    expect(screen.getByText('processing')).toBeInTheDocument()
+    expect(screen.getByLabelText('Reason for rejection')).toHaveValue('Only one unit can be provided.')
+    expect(screen.queryByText('This request was rejected.')).not.toBeInTheDocument()
+    expect(screen.getByText('Awaiting review')).toBeInTheDocument()
     await user.click(saveButton)
 
-    expect(await screen.findByText('Status:')).toBeInTheDocument()
-    expect(screen.getByText('rejected')).toBeInTheDocument()
-    expect(screen.getByText(/1 × Projector/)).toBeInTheDocument()
+    expect(await screen.findByText('This request was rejected.')).toBeInTheDocument()
+    expect(screen.getByText('Reason: Only one unit can be provided.')).toBeInTheDocument()
+    expect(screen.getByText('Rejected', { selector: '.tech-badge' })).toBeInTheDocument()
+    expect(screen.queryByLabelText('Reserve now: Projector')).not.toBeInTheDocument()
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
     const patch = calls.find((call) => call.method === 'PATCH')
     expect(patch?.body).toEqual({
@@ -205,7 +209,7 @@ describe('Technical Support UI integration', () => {
     })
   })
 
-  it('approves the request when all requested equipment is reserved for the event period', async () => {
+  it('TS06 (happy): approves the request when all requested equipment is reserved for the event period', async () => {
     const request = {
       requestId: 'request-2',
       eventId: 'event-2',
@@ -225,21 +229,16 @@ describe('Technical Support UI integration', () => {
       loanedFrom: localToIso(localStart),
       loanedUntil: localToIso(localEnd),
     }
-    const availabilityUrl = `/api/equipment/requests/request-2/availability?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
     const calls = stubApi({
-      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
-      [`GET ${unitsUrl}`]: () => jsonResponse(200, []),
-      'GET /api/equipment-requests/request-2/lines': () => jsonResponse(200, [
-        { equipmentId: 'screen-1', equipmentName: 'Screen', quantity: 2 },
-      ]),
-      'GET /api/equipment/events/event-2/reservations': () => jsonResponse(200, [reservation]),
-      [`GET ${availabilityUrl}`]: () => jsonResponse(200, [{
-        equipmentId: 'screen-1',
-        equipmentName: 'Screen',
-        serialised: false,
-        totalQuantity: 4,
-        availableQuantity: 2,
-      }]),
+      ...requestPageRoutes(request, {
+        requests: () => [request],
+        lines: () => [{ equipmentId: 'screen-1', equipmentName: 'Screen', quantity: 2 }],
+        reservations: () => [reservation],
+        availability: () => [{
+          equipmentId: 'screen-1', equipmentName: 'Screen', serialised: false,
+          totalQuantity: 4, availableQuantity: 2,
+        }],
+      }),
       'PATCH /api/equipment-requests/request-2/status': () => jsonResponse(200, {
         requestId: 'request-2',
         eventId: 'event-2',
@@ -253,12 +252,13 @@ describe('Technical Support UI integration', () => {
     renderRoutes('/technical-support/requests/request-2')
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Planning Meeting' })).toBeInTheDocument()
-    expect(await screen.findByText('Screen: 2 of 2 reserved')).toBeInTheDocument()
-    await user.click(screen.getByRole('button', { name: 'Save approved decision' }))
+    expect(await screen.findByText('✓ Everything requested is reserved')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Nothing to reserve' })).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Approve request' }))
 
-    expect(await screen.findByText('Status:')).toBeInTheDocument()
-    expect(screen.getByText('approved')).toBeInTheDocument()
-    expect(screen.getByText(/2 × Screen/)).toBeInTheDocument()
+    expect(await screen.findByText('✓ This request was approved.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Approve request' })).not.toBeInTheDocument()
+    expect(screen.getByText('2 units')).toBeInTheDocument()
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
       status: 'approved',
     })

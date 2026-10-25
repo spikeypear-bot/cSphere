@@ -1,29 +1,28 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { Card } from '../../../components/ui/Card'
-import { Notice } from '../../../components/ui/Notice'
-import { PageHeader } from '../../../components/ui/PageHeader'
-import { DecisionSection } from '../reservations/DecisionSection'
-import { ReservationsSection } from '../reservations/ReservationsSection'
-import { ReserveSection } from '../reservations/ReserveSection'
-import type { EquipmentRequestStatus, EquipmentRequestSummary } from '../reservations/reservation.types'
-import { fetchEquipmentRequests } from '../reservations/reservationApi'
-import { useRequestPlanning } from '../reservations/useRequestPlanning'
-import { RequestAvailabilitySection } from '../review/RequestAvailabilitySection'
+import { DecisionCard } from '../reservations/DecisionCard'
+import { buildRows } from '../reservations/fulfilment'
+import { ReserveCard } from '../reservations/ReserveCard'
+import type { EquipmentRequestStatus, EquipmentRequestSummary, TimePeriod } from '../reservations/reservation.types'
+import { fetchEquipmentRequests, toIso } from '../reservations/reservationApi'
+import { toLocalInputValue } from '../reservations/reservationUtils'
+import { useFulfilment } from '../reservations/useFulfilment'
 import { TS } from '../shared/faultyEquipment'
+import { describeWhen, requesterName } from '../shared/format'
 import { ResourceView } from '../shared/ResourceView'
 import { useResource } from '../shared/useResource'
-import { RequestBadges, RequestFacts } from './RequestFacts'
+import { RequestBadges } from './RequestFacts'
 import '../technicalSupport.css'
+import '../reservations/fulfilment.css'
 
-/** One equipment request, start to finish on one page: TS01's availability
- * check, TS02's reserve form and saved reservations, and TS06's decision. */
+/** One equipment request on one page: a compact summary, the table that
+ * reserves its equipment (TS01 availability, TS02, D33) and TS06's decision. */
 export function EquipmentRequestDetailPage() {
   const { requestId = '' } = useParams<{ requestId: string }>()
   // There is no single-request read: the "all" list is the same shape and
   // already scoped to Technical Support (D32).
   const requests = useResource(() => fetchEquipmentRequests('all'), requestId)
-  const [decided, setDecided] = useState<{ requestId: string; status: EquipmentRequestStatus } | null>(null)
+  const [decided, setDecided] = useState<{ requestId: string; status: EquipmentRequestStatus; reason: string | null } | null>(null)
 
   return (
     <ResourceView resource={requests} loadingText="Loading equipment request…"
@@ -32,12 +31,14 @@ export function EquipmentRequestDetailPage() {
       isEmpty={(list) => !list.some((r) => r.requestId === requestId)}>
       {(list) => {
         const found = list.find((r) => r.requestId === requestId)!
-        const request = decided?.requestId === requestId ? { ...found, status: decided.status } : found
+        const mine = decided?.requestId === requestId ? decided : null
+        const request = mine ? { ...found, status: mine.status } : found
         return (
           <RequestWorkspace
             key={request.requestId}
             request={request}
-            onDecided={(status) => setDecided({ requestId, status })}
+            rejectReason={mine?.reason ?? null}
+            onDecided={(status, reason) => setDecided({ requestId, status, reason })}
           />
         )
       }}
@@ -45,47 +46,73 @@ export function EquipmentRequestDetailPage() {
   )
 }
 
-function RequestWorkspace({ request, onDecided }: {
+function RequestWorkspace({ request, rejectReason, onDecided }: {
   request: EquipmentRequestSummary
-  onDecided: (status: EquipmentRequestStatus) => void
+  rejectReason: string | null
+  onDecided: (status: EquipmentRequestStatus, reason: string | null) => void
 }) {
-  // Bumped after a reservation or a decision: every section reloads.
+  // Bumped after a reservation or a decision: the figures reload.
   const [reloadKey, setReloadKey] = useState(0)
-  const planning = useRequestPlanning(request, reloadKey)
+  const [period, setPeriod] = useState<TimePeriod>(() => ({
+    start: toLocalInputValue(request.eventStart),
+    end: toLocalInputValue(request.eventEnd),
+  }))
+  const periodValid = period.start !== '' && period.end !== '' && period.end > period.start
+  const fulfilment = useFulfilment(request, period, periodValid, reloadKey)
+  const data = fulfilment.data
+  const rows = useMemo(() => (data && periodValid ? buildRows({
+    lines: data.lines,
+    availability: data.availability,
+    eventReservations: data.reservations,
+    units: data.units,
+    kindReservations: data.kindReservations,
+    eventId: request.eventId,
+    eventStart: request.eventStart,
+    eventEnd: request.eventEnd,
+    window: { from: toIso(period.start), to: toIso(period.end) },
+  }) : null), [data, periodValid, period, request.eventId, request.eventStart, request.eventEnd])
   const reload = () => setReloadKey((n) => n + 1)
 
   return (
-    <section className="page">
-      <PageHeader
-        eyebrow="Equipment request"
-        title={request.eventName}
-        actions={<Link className="button button--secondary" to={`${TS}/requests`}>All requests</Link>}
-      />
-      <Card className="tech-card">
-        <div className="tech-heading-row">
-          <h2>Request</h2>
-          <RequestBadges request={request} />
+    <section className="page request-page">
+      <Link className="request-page__back" to={`${TS}/requests`}><span aria-hidden="true">‹ </span>All requests</Link>
+      <header className="card tech-card request-head">
+        <div className="request-head__title">
+          <p className="field-hint">Equipment request</p>
+          <h1>{request.eventName}</h1>
+          <span className="request-head__badges"><RequestBadges request={request} /></span>
         </div>
-        <RequestFacts request={request} />
-        {request.technicalRequirement ? <p>{request.technicalRequirement}</p> : null}
-        <h3>Requirements</h3>
-        <ul>
-          {planning.lines.map((line) => (
-            <li key={line.equipmentId}>{line.equipmentName}: {line.quantity} needed</li>
-          ))}
-        </ul>
-      </Card>
-      {planning.error && <Notice tone="danger">{planning.error}</Notice>}
-      <RequestAvailabilitySection request={request} reloadKey={reloadKey} />
-      <ReserveSection request={request} reloadKey={reloadKey} onReserved={reload} />
-      <ReservationsSection reservations={planning.reservations} />
-      <DecisionSection
+        <dl className="request-head__facts">
+          <div><dt>When</dt><dd>{describeWhen(request.eventStart, request.eventEnd)}</dd></div>
+          <div><dt>Organisation</dt><dd>{request.organisationName ?? 'Not recorded'}</dd></div>
+          <div><dt>Requested by</dt><dd>{requesterName(request.requestedBy)}</dd></div>
+        </dl>
+        {request.technicalRequirement ? (
+          <p className="request-head__note"><span>Technical note</span>{request.technicalRequirement}</p>
+        ) : null}
+      </header>
+
+      <ReserveCard
         request={request}
-        lines={planning.lines}
-        reservations={planning.reservations}
-        ready={planning.loaded}
-        onDecided={(updated) => {
-          onDecided(updated.status)
+        rows={rows}
+        lines={data?.lines ?? []}
+        reservations={data?.reservations ?? []}
+        loaded={fulfilment.loaded}
+        loadFailed={fulfilment.error}
+        onRetry={fulfilment.retry}
+        period={period}
+        onPeriodChange={setPeriod}
+        periodValid={periodValid}
+        onRefresh={reload}
+      />
+      <DecisionCard
+        request={request}
+        lines={data?.lines ?? []}
+        reservations={data?.reservations ?? []}
+        ready={data !== null && (fulfilment.loaded || !periodValid)}
+        rejectReason={rejectReason}
+        onDecided={(decision) => {
+          onDecided(decision.status, decision.rejectReason)
           reload()
         }}
       />

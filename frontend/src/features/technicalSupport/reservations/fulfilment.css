@@ -1,0 +1,663 @@
+/* Request page (D33): a compact summary, one reserve table, the decision. */
+.request-page {
+  gap: 1rem;
+}
+
+.request-page__back {
+  align-self: flex-start;
+  color: var(--ink-soft);
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.request-page__back:hover {
+  color: var(--accent-strong);
+}
+
+.request-head {
+  gap: 0.6rem;
+}
+
+.request-head__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.75rem;
+}
+
+.request-head__title > .field-hint {
+  flex-basis: 100%;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.request-head__title h1 {
+  margin: 0;
+  font-size: 1.5rem;
+  line-height: 1.2;
+}
+
+.request-head__badges {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.request-head__facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 2rem;
+  margin: 0;
+}
+
+.request-head__facts dt {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.request-head__facts dd {
+  margin: 0.1rem 0 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+
+.request-head__note {
+  margin: 0;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  font-size: 0.92rem;
+}
+
+.request-head__note span {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tech-badge--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.fulfil-window {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.25rem 0.5rem;
+  padding: 0.5rem 0.8rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.fulfil-window p {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
+.fulfil-window__label {
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.fulfil-window .button--ghost {
+  padding-block: 0.2rem;
+  color: var(--accent-strong);
+}
+
+.fulfil-window__fields {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+  padding-top: 0.5rem;
+}
+
+.fulfil-window .error-text {
+  flex-basis: 100%;
+  font-size: 0.88rem;
+}
+
+.fulfil-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+}
+
+.fulfil-table thead th {
+  padding: 0 0.6rem 0.45rem;
+  border-bottom: 1px solid var(--hairline-strong);
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-align: start;
+  text-transform: uppercase;
+}
+
+.fulfil-table td,
+.fulfil-table tbody th {
+  padding: 0.7rem 0.6rem;
+  border-bottom: 1px solid var(--hairline);
+  vertical-align: top;
+  text-align: start;
+  font-weight: inherit;
+}
+
+.fulfil-table tbody tr:last-child > * {
+  border-bottom: none;
+}
+
+.fulfil-table .fulfil-num {
+  text-align: end;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  width: 1%;
+}
+
+.fulfil-table td.fulfil-num {
+  padding-top: 1.05rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.fulfil-table .fulfil-row--open > * {
+  border-bottom-color: transparent;
+}
+
+.fulfil-row--error > * {
+  background: var(--danger-soft);
+}
+
+.fulfil-row--error > :first-child {
+  box-shadow: inset 3px 0 0 var(--danger);
+}
+
+.fulfil-item {
+  min-width: 15rem;
+}
+
+.fulfil-item__wrap {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+}
+
+.fulfil-item .equipment-damage__photo {
+  width: 2.75rem;
+  height: 2.75rem;
+  font-size: 1.1rem;
+  border-radius: var(--radius-sm);
+}
+
+.fulfil-item__text {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.1rem;
+}
+
+.fulfil-item__name {
+  font-weight: 600;
+}
+
+.fulfil-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-strong);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fulfil-link:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.fulfil-link:disabled {
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.fulfil-link:focus-visible,
+.fulfil-stepper button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 3px;
+}
+
+.fulfil-spare {
+  color: var(--role-technical);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.fulfil-now {
+  min-width: 15rem;
+}
+
+.fulfil-now__body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.45rem 0.9rem;
+}
+
+.fulfil-now__input {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.fulfil-now__input input {
+  width: 4.25rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.fulfil-now__input input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.fulfil-now__input input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.fulfil-now__tools {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.9rem;
+}
+
+.fulfil-now .field-error {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.fulfil-short {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--booking-hold);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.fulfil-done {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.tech-card .fulfil-chips,
+.fulfil-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fulfil-now .fulfil-chips {
+  flex-basis: 100%;
+}
+
+.fulfil-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.12rem 0.55rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  background: var(--paper);
+  font-family: var(--mono);
+  font-size: 0.78rem;
+}
+
+.fulfil-chip__tag {
+  font-family: var(--sans);
+  font-size: 0.66rem;
+  font-weight: 700;
+  color: var(--ink-faint);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.fulfil-chip--spare {
+  border-style: dashed;
+  border-color: var(--role-technical);
+}
+
+.fulfil-chip--spare .fulfil-chip__tag {
+  color: var(--role-technical);
+}
+
+.fulfil-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.fulfil-stepper button {
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 1px solid var(--hairline-strong);
+  border-radius: 999px;
+  background: var(--panel);
+  color: var(--ink);
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.fulfil-stepper button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.fulfil-table .fulfil-detail > td {
+  padding-top: 0;
+}
+
+.fulfil-detail > td > * {
+  padding: 0.6rem 0.75rem !important;
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.tech-card .fulfil-units,
+.fulfil-units {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0;
+  list-style: none;
+}
+
+.fulfil-unit {
+  display: inline-flex;
+  gap: 0.45rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  border: 1px solid var(--hairline);
+  font-size: 0.8rem;
+}
+
+.fulfil-unit__serial {
+  white-space: nowrap;
+  font-family: var(--mono);
+  font-weight: 600;
+}
+
+.fulfil-unit--free {
+  border-color: var(--success);
+  color: var(--success);
+}
+
+.fulfil-unit--here {
+  border-color: var(--accent);
+  color: var(--accent-strong);
+}
+
+.fulfil-unit--blocked {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.fulfil-unit--elsewhere {
+  color: var(--ink-soft);
+}
+
+.fulfil-chooser {
+  margin: 0;
+  border: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.fulfil-chooser legend {
+  float: left;
+  width: 100%;
+  margin-bottom: 0.5rem;
+  padding: 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.fulfil-chooser__options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.fulfil-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  font-family: var(--mono);
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.fulfil-option--checked {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.fulfil-chooser .field-hint {
+  margin: 0;
+}
+
+.fulfil-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
+  padding-top: 0.25rem;
+}
+
+.fulfil > .notice:focus {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
+}
+
+.fulfil-reserved {
+  display: grid;
+  gap: 0.4rem;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--hairline);
+}
+
+.tech-card .fulfil-reserved h3 {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+.tech-card .fulfil-reserved__list {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fulfil-reserved__list li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.3rem 0.6rem;
+  font-size: 0.88rem;
+}
+
+.fulfil-reserved__name {
+  font-weight: 600;
+  min-width: 9rem;
+}
+
+.decision__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 1.5rem;
+}
+
+.decision__row h2 {
+  margin: 0;
+}
+
+.decision__state {
+  margin: 0.2rem 0 0;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+
+.decision__state--ok {
+  color: var(--success);
+}
+
+.decision__reject {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.decision__reason {
+  margin: 0.3rem 0 0;
+  font-weight: 400;
+}
+
+/* Phones: each table row becomes a card, its cells labelled. */
+@media (max-width: 720px) {
+  .fulfil-table,
+  .fulfil-table tbody,
+  .fulfil-table tr,
+  .fulfil-table td,
+  .fulfil-table tbody th {
+    display: block;
+  }
+
+  .fulfil-table thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+  }
+
+  .fulfil-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .fulfil-table .fulfil-row {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+  }
+
+  .fulfil-table .fulfil-row--open {
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: 0;
+  }
+
+  .fulfil-table .fulfil-row--error {
+    border-color: var(--danger);
+  }
+
+  .fulfil-table .fulfil-row > * {
+    border-bottom: none;
+  }
+
+  .fulfil-table .fulfil-row > .fulfil-item,
+  .fulfil-table .fulfil-row > .fulfil-now {
+    grid-column: 1 / -1;
+    min-width: 0;
+  }
+
+  .fulfil-table .fulfil-row > .fulfil-item {
+    padding-bottom: 0.3rem;
+  }
+
+  .fulfil-row--error > :first-child {
+    box-shadow: none;
+  }
+
+  .fulfil-table td.fulfil-num {
+    width: auto;
+    padding: 0.25rem 0.75rem 0.6rem;
+    text-align: start;
+  }
+
+  .fulfil-table td.fulfil-num::before {
+    content: attr(data-label);
+    display: block;
+    color: var(--ink-soft);
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+  }
+
+  .fulfil-table .fulfil-row > .fulfil-now {
+    padding: 0.7rem 0.75rem;
+    border-top: 1px solid var(--hairline);
+    background: var(--paper);
+  }
+
+  .fulfil-table .fulfil-row--error > .fulfil-now {
+    background: var(--danger-soft);
+  }
+
+  .fulfil-table .fulfil-detail {
+    margin-top: -0.75rem;
+    border: 1px solid var(--hairline);
+    border-top: 0;
+    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    overflow: hidden;
+  }
+
+  .fulfil-table .fulfil-detail > td {
+    padding: 0 0.5rem 0.5rem;
+  }
+
+  .fulfil-actions .button {
+    width: 100%;
+  }
+
+  .fulfil-reserved__name {
+    flex-basis: 100%;
+  }
+
+  .decision__row .tech-actions {
+    width: 100%;
+  }
+
+  .decision__row .tech-actions .button {
+    flex: 1;
+  }
+}

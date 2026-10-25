@@ -1,4 +1,5 @@
 import type {
+  BatchReserveLine,
   EquipmentAvailability,
   EquipmentRequestDecision,
   EquipmentReservation,
@@ -12,10 +13,13 @@ import { apiClient, ApiClientError } from '../../../lib/apiClient'
 export class ApiError extends Error {
   status: number
   body: string
-  constructor(status: number, body: string) {
+  /** D33: the item a reservation was refused for, when the server names one. */
+  equipmentId: string | null
+  constructor(status: number, body: string, equipmentId: string | null = null) {
     super(`Request failed with status ${status}`)
     this.status = status
     this.body = body
+    this.equipmentId = equipmentId
   }
 }
 
@@ -24,14 +28,14 @@ async function call<T>(request: () => Promise<T>): Promise<T> {
     return await request()
   } catch (error) {
     if (error instanceof ApiClientError) {
-      throw new ApiError(error.status, error.message)
+      throw new ApiError(error.status, error.message, error.equipmentId)
     }
     throw error
   }
 }
 
 // "2026-09-25T09:00" (local time) -> "2026-09-25T01:00:00.000Z"
-function toIso(localValue: string): string {
+export function toIso(localValue: string): string {
   return new Date(localValue).toISOString()
 }
 
@@ -59,22 +63,18 @@ export function fetchAvailability(
   return apiClient.get<EquipmentAvailability[]>(`/equipment/requests/${requestId}/availability?${query}`)
 }
 
-// AC 5-9
-export function reserveEquipment(
+/** D33 (TS02 AC5-9): reserve several items for one window, all or nothing. */
+export function reserveBatch(
   eventId: string,
-  equipmentId: string,
-  quantity: number,
-  serialNumber: string | null,
   period: TimePeriod,
-): Promise<EquipmentReservation> {
-  return call(() => apiClient.post<EquipmentReservation>('/equipment/reservations', {
-      eventId,
-      equipmentId,
-      quantity,
-      serialNumber,
-      start: toIso(period.start),
-      end: toIso(period.end),
-    }))
+  lines: BatchReserveLine[],
+): Promise<EquipmentReservation[]> {
+  return call(() => apiClient.post<EquipmentReservation[]>('/equipment/reservations/batch', {
+    eventId,
+    start: toIso(period.start),
+    end: toIso(period.end),
+    lines,
+  }))
 }
 
 // AC 11
