@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from './useNotifications'
+import { useSession } from '../../lib/sessionContext'
 import type { NotificationDto } from '../../types/notification'
 import { JOURNEY_LABELS } from '../../types/status'
 import './notifications.css'
@@ -82,6 +83,10 @@ const PLAIN_MESSAGE_TYPES = new Set<NotificationDto['type']>([
  * — today only Organisers receive anything, but nothing here assumes that. */
 export function NotificationBell() {
   const { notifications, unreadCount, markRead } = useNotifications()
+  const { role } = useSession()
+  // Technical Support's list is kept to the heading and when it happened —
+  // the reason/message detail lines (below) are left out for that role only.
+  const compact = role === 'technical-support'
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -136,10 +141,10 @@ export function NotificationBell() {
                     <span className="notification-bell__dot" aria-hidden="true" />
                     <span className="notification-bell__item-body">
                       <span className="notification-bell__item-text">{describe(n)}</span>
-                      {n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
+                      {!compact && n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {n.message ? PLAIN_MESSAGE_TYPES.has(n.type) ? (
+                      {!compact && n.message ? PLAIN_MESSAGE_TYPES.has(n.type) ? (
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>

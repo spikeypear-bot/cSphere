@@ -76,7 +76,7 @@ describe('TS11 Technical Support equipment notices and change reviews', () => {
     window.localStorage.clear()
   })
 
-  it('TS11 AC1, AC8 (happy): the bell titles both notices and shows their message as written', async () => {
+  it('TS11 AC1, AC8 (happy): the bell titles both notices, kept to the heading for Technical Support', async () => {
     stubApi({
       'GET /api/notifications': () => jsonResponse(200, [
         { notificationId: 'n1', type: 'equipment_request_submitted', eventRequestId: null, eventId: 'event-1',
@@ -99,8 +99,10 @@ describe('TS11 Technical Support equipment notices and change reviews', () => {
 
     expect(await screen.findByText('New equipment request for "Town Hall"')).toBeInTheDocument()
     expect(screen.getByText('An approved change to "Town Hall" affects its equipment')).toBeInTheDocument()
-    // Written as a sentence by the server, so shown without quotation marks.
-    expect(screen.getByText(/^Town Hall, 10 Mar 2027, 9:00 AM .* Requested: 2 × Projector\.$/)).toBeInTheDocument()
+    // Technical Support's list is kept to the heading; the server's full
+    // sentence is only read on the request/review page it links to.
+    expect(screen.queryByText(/Requested: 2 × Projector/)).not.toBeInTheDocument()
+    expect(screen.queryByText('An approved change to Town Hall affects its equipment.')).not.toBeInTheDocument()
   })
 
   it('TS11 AC3 (happy): a request notice opens the request on the Technical Support request page', async () => {
