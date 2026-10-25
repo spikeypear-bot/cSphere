@@ -1,11 +1,13 @@
 package com.example.connect_sphere.equipment;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,24 +20,28 @@ public class EquipmentStatusService {
      * damage report with no end date runs until then. */
     public static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
 
+    private final SerialisedEquipmentRepository unitRepository;
+    private final EquipmentStatusPeriodRepository periodRepository;
+    private final EquipmentRepository equipmentRepository;
     /** TS03's refusal to block a unit an event still holds. The Technical
      * Support console detects this 409 and routes the problem to a TS09
      * damage report instead (D32), so the wording is part of the API. */
     public static final String UNIT_COMMITTED_MESSAGE = "This unit is already committed to an event during that time.";
 
-    private final SerialisedEquipmentRepository unitRepository;
-    private final EquipmentStatusPeriodRepository periodRepository;
-    private final EquipmentRepository equipmentRepository;
     private final EquipmentLogRepository logRepository;
+    private final Clock clock;
 
+    @Autowired
     public EquipmentStatusService(SerialisedEquipmentRepository unitRepository,
                                   EquipmentStatusPeriodRepository periodRepository,
                                   EquipmentRepository equipmentRepository,
-                                  EquipmentLogRepository logRepository) {
+                                  EquipmentLogRepository logRepository,
+                                  Clock clock) {
         this.unitRepository = unitRepository;
         this.periodRepository = periodRepository;
         this.equipmentRepository = equipmentRepository;
         this.logRepository = logRepository;
+        this.clock = clock;
     }
 
     // Status of every unit for the viewed period: a block if one overlaps, else Available.
@@ -55,6 +61,26 @@ public class EquipmentStatusService {
                         unit, blocked.getOrDefault(unit.getId(), EquipmentStatus.AVAILABLE)))
                 .sorted(Comparator.comparing(EquipmentUnitResponse::equipmentName)
                         .thenComparing(EquipmentUnitResponse::serialNumber))
+                .toList();
+    }
+
+    /**
+     * D32: blocks on every unit, newest start first. {@code current} keeps
+     * those still running or yet to start (no end, or an end after now),
+     * found with the same overlap query as {@link #listUnits}.
+     */
+    @Transactional(readOnly = true)
+    public List<UnitStatusPeriodResponse> listAllPeriods(boolean current) {
+        List<EquipmentStatusPeriod> periods = current
+                ? periodRepository.findOverlapping(Instant.now(clock), FAR_FUTURE)
+                : periodRepository.findAll();
+        Map<UUID, String> names = new HashMap<>();
+        equipmentRepository.findAllById(periods.stream().map(EquipmentStatusPeriod::getEquipmentId).distinct().toList())
+                .forEach(kind -> names.put(kind.getId(), kind.getName()));
+        return periods.stream()
+                .sorted(Comparator.comparing(EquipmentStatusPeriod::getPeriodStart).reversed()
+                        .thenComparing(EquipmentStatusPeriod::getSerialNumber))
+                .map(p -> UnitStatusPeriodResponse.from(p, names.get(p.getEquipmentId())))
                 .toList();
     }
 
