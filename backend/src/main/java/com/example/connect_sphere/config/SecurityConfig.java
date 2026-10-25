@@ -11,6 +11,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.example.connect_sphere.common.web.RestAccessDeniedHandler;
 import com.example.connect_sphere.common.web.RestAuthenticationEntryPoint;
@@ -150,6 +152,10 @@ public class SecurityConfig{
 		    // are the organiser's and fall under this rule too; which request is
 		    // the organisation check in EventCancellationService.
 		    .requestMatchers("/api/event-requests/**").hasRole("EO")
+		    // D32: the catalogue with a from/to window adds stock levels for
+		    // that window (reserved, out of action, available) — Technical
+		    // Support's console, not something organisers or coordinators use.
+		    .requestMatchers(catalogueWithWindow()).hasRole("TECHNICIAN")
 		    // Organisers need the catalogue to choose equipment for a request;
 		    // Coordinators and technicians use it for availability and requests.
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/catalogue").hasAnyRole("EO", "EC", "TECHNICIAN")
@@ -165,9 +171,16 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/events/*/reservations")
 			    .hasAnyRole("TECHNICIAN", "SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/requests/*/availability").hasRole("TECHNICIAN")
+		    // D32: the console's per-kind detail, a kind's reservations (which
+		    // name events, so not for coordinators — ECL-C7) and every unit's
+		    // status periods. /units stays open to coordinators (TS03) and
+		    // must sit above the one-segment /api/equipment/* rule.
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/units").hasAnyRole("TECHNICIAN", "EC")
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/status-periods", "/api/equipment/*",
+			    "/api/equipment/*/reservations").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
-		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
+		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests", "/api/equipment-requests/processing",
 			    "/api/equipment-requests/*/lines").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
@@ -238,4 +251,12 @@ public class SecurityConfig{
     }
 
 
+
+    /** GET /api/equipment/catalogue carrying from or to (D32). */
+    private static RequestMatcher catalogueWithWindow() {
+	RequestMatcher catalogue = PathPatternRequestMatcher.withDefaults()
+		.matcher(HttpMethod.GET, "/api/equipment/catalogue");
+	return request -> catalogue.matches(request)
+		&& (request.getParameter("from") != null || request.getParameter("to") != null);
+    }
 }

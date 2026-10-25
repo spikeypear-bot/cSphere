@@ -37,4 +37,7 @@ public interface EquipmentStatusPeriodRepository
     // Spring writes this query for us from the method name.
     List<EquipmentStatusPeriod> findByEquipmentIdAndSerialNumberOrderByPeriodStartAsc(
             UUID equipmentId, String serialNumber);
+
+    // D32: every block of one kind's units, for its detail page.
+    List<EquipmentStatusPeriod> findByEquipmentIdOrderByPeriodStartAsc(UUID equipmentId);
 }
