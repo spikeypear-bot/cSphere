@@ -75,9 +75,6 @@
 .side-nav {
   position: sticky;
   top: 0;
-  max-height: 100svh;
-  overflow-x: hidden;
-  overflow-y: auto;
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
@@ -194,7 +191,7 @@
 }
 
 /* Desktop rail: icons only. Labels stay in the page for screen readers and
- * appear as each link's tooltip (title). */
+ * appear as each link's tooltip. */
 @media (min-width: 901px) {
   .side-nav--collapsed .side-nav__head {
     justify-content: center;
@@ -212,8 +209,36 @@
   }
 
   .side-nav--collapsed .side-nav__link {
+    position: relative;
     justify-content: center;
     padding-inline: 0;
+  }
+
+  /* The rail's tooltip, on hover and on keyboard focus (a title attribute
+   * would show on hover only). */
+  .side-nav--collapsed .side-nav__link::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: calc(100% + 0.75rem);
+    top: 50%;
+    z-index: 30;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius-sm);
+    background: var(--ink);
+    color: var(--paper);
+    font-size: 0.8rem;
+    font-weight: 500;
+    white-space: nowrap;
+    pointer-events: none;
+    opacity: 0;
+    transform: translate(-0.25rem, -50%);
+    transition: opacity 120ms ease, transform 120ms ease;
+  }
+
+  .side-nav--collapsed .side-nav__link:hover::after,
+  .side-nav--collapsed .side-nav__link:focus-visible::after {
+    opacity: 1;
+    transform: translate(0, -50%);
   }
 }
 
@@ -241,7 +266,7 @@
     inset: 0 auto 0 0;
     z-index: 50;
     width: min(18rem, 85vw);
-    max-height: none;
+    overflow-y: auto;
     background: var(--panel);
     border-inline-end: 1px solid var(--hairline);
     box-shadow: 0 0 2rem rgba(33, 29, 22, 0.18);
@@ -276,7 +301,8 @@
 @media (prefers-reduced-motion: reduce) {
   .console-shell__rail,
   .side-nav,
-  .side-nav--open {
+  .side-nav--open,
+  .side-nav__link::after {
     transition: none;
   }
 }

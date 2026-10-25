@@ -30,7 +30,8 @@ interface SideNavProps {
  * page's link carries aria-current="page" (NavLink sets it).
  *
  * On a wide screen it can collapse to an icon rail; each link then keeps its
- * label for assistive technology (visually hidden) and shows it as a tooltip.
+ * label for assistive technology (visually hidden) and shows it as a tooltip
+ * on hover and on keyboard focus.
  * On a narrow screen it is a drawer: opening it moves focus to the current
  * page's link, and Esc, the backdrop (console AppShell) or choosing a page
  * closes it. */
@@ -80,7 +81,7 @@ export function SideNav({ id, label, items, collapsed, onToggleCollapsed, drawer
               to={item.path}
               end={matchesExactly(item, items)}
               className="side-nav__link"
-              title={collapsed ? item.label : undefined}
+              data-tooltip={collapsed ? item.label : undefined}
               onClick={drawerOpen ? onCloseDrawer : undefined}
             >
               {item.icon

@@ -128,14 +128,14 @@ describe('TS09 reusable side navigation', () => {
     const nav = screen.getByRole('navigation', { name: 'Example console' })
     const collapse = within(nav).getByRole('button', { name: 'Collapse navigation' })
     expect(collapse).toHaveAttribute('aria-expanded', 'true')
-    expect(within(nav).getByRole('link', { name: 'Orders' })).not.toHaveAttribute('title')
+    expect(within(nav).getByRole('link', { name: 'Orders' })).not.toHaveAttribute('data-tooltip')
 
     await user.click(collapse)
     const expand = within(nav).getByRole('button', { name: 'Expand navigation' })
     expect(expand).toHaveAttribute('aria-expanded', 'false')
     expect(nav).toHaveClass('side-nav--collapsed')
     const links = within(nav).getAllByRole('link')
-    expect(links.map((link) => link.getAttribute('title'))).toEqual(['Home', 'Orders', 'Stock'])
+    expect(links.map((link) => link.getAttribute('data-tooltip'))).toEqual(['Home', 'Orders', 'Stock'])
     expect(within(nav).getByRole('link', { name: 'Orders' })).toHaveAttribute('aria-current', 'page')
     expect(window.localStorage.getItem('connectsphere.sideNav.collapsed')).toBe('true')
 
