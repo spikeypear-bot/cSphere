@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { Link, useSearchParams } from 'react-router-dom'
-import { Card } from '../../../components/ui/Card'
+import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { EQUIPMENT_MEDIA, equipmentMediaFor } from '../../equipment/equipmentCatalogueMedia'
 import { EquipmentPhoto } from '../damage/EquipmentPhoto'
@@ -9,6 +8,7 @@ import { DateRangeFields } from '../shared/DateRangeFields'
 import { rangeFromParams, rangeToWindow } from '../shared/dateWindow'
 import { equipmentPath } from '../shared/faultyEquipment'
 import { ResourceView } from '../shared/ResourceView'
+import { RowLink } from '../shared/RowLink'
 import { useResource } from '../shared/useResource'
 import { fetchCatalogueForWindow } from './inventoryApi'
 import '../technicalSupport.css'
@@ -62,19 +62,16 @@ export function InventoryPage() {
               <ul className="tech-kinds" aria-label="Equipment kinds">
                 {shown.map((item) => (
                   <li key={item.equipmentId}>
-                    <Card className="tech-kind">
-                      <EquipmentPhoto name={item.equipmentName} />
-                      <div>
-                        <h2><Link to={`${equipmentPath(item.equipmentId)}?${query}`}>{item.equipmentName}</Link></h2>
-                        <p className="field-hint">{categoryOf(item.equipmentName)} · {item.serialised ? 'tracked by unit' : 'counted by quantity'}</p>
-                      </div>
+                    <RowLink to={`${equipmentPath(item.equipmentId)}?${query}`} className="card tech-kind" titleAs="h2"
+                      title={item.equipmentName} media={<EquipmentPhoto name={item.equipmentName} />}>
+                      <p className="tech-row-card__hint">{categoryOf(item.equipmentName)} · {item.serialised ? 'tracked by unit' : 'counted by quantity'}</p>
                       <dl className="tech-figures">
                         <div><dt>Total</dt><dd>{item.totalQuantity}</dd></div>
                         <div><dt>Reserved</dt><dd>{item.reservedQuantity}</dd></div>
                         <div><dt>Out of action</dt><dd>{item.outOfActionQuantity}</dd></div>
                         <div><dt>Available</dt><dd>{item.availableQuantity}</dd></div>
                       </dl>
-                    </Card>
+                    </RowLink>
                   </li>
                 ))}
               </ul>

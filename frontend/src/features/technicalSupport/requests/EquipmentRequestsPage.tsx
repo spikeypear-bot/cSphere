@@ -1,5 +1,4 @@
-import { Link, useSearchParams } from 'react-router-dom'
-import { Card } from '../../../components/ui/Card'
+import { useSearchParams } from 'react-router-dom'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import {
   EQUIPMENT_REQUEST_FILTER_LABELS,
@@ -9,6 +8,7 @@ import {
 import { fetchEquipmentRequests } from '../reservations/reservationApi'
 import { TS } from '../shared/faultyEquipment'
 import { ResourceView } from '../shared/ResourceView'
+import { RowLink } from '../shared/RowLink'
 import { useResource } from '../shared/useResource'
 import { RequestBadges, RequestFacts } from './RequestFacts'
 import '../technicalSupport.css'
@@ -49,13 +49,10 @@ export function EquipmentRequestsPage() {
           <ul className="plain-list" aria-label="Equipment requests">
             {list.map((request) => (
               <li key={request.requestId}>
-                <Card className="tech-card">
-                  <div className="tech-heading-row">
-                    <h2><Link to={`${TS}/requests/${request.requestId}`}>{request.eventName}</Link></h2>
-                    <RequestBadges request={request} />
-                  </div>
+                <RowLink to={`${TS}/requests/${request.requestId}`} className="card tech-row-card" titleAs="h2"
+                  title={request.eventName} badges={<RequestBadges request={request} />}>
                   <RequestFacts request={request} />
-                </Card>
+                </RowLink>
               </li>
             ))}
           </ul>

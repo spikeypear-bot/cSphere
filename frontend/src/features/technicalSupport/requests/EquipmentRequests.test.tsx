@@ -201,4 +201,17 @@ describe('TS09 equipment requests list and request page', () => {
     expect(screen.queryByRole('heading', { name: 'Gala r1' })).not.toBeInTheDocument()
     expect(calls).toHaveLength(1)
   })
+
+  it('TS09 (cross-cutting): each request is one clickable card named after its event, its facts read as the description', async () => {
+    stubApi({ 'GET /api/equipment-requests?status=processing': () => jsonResponse(200, [request('r1', { isShortfallRequest: true })]) })
+    renderAt('/technical-support/requests')
+
+    const row = within(await screen.findByRole('list', { name: 'Equipment requests' })).getAllByRole('listitem')[0]
+    const links = within(row).getAllByRole('link')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAccessibleName('Gala r1')
+    expect(links[0]).toHaveAccessibleDescription(/^Awaiting review Shortfall/)
+    expect(links[0]).toHaveAccessibleDescription(/Requested by\s*ec1/)
+    expect(within(links[0]).getByRole('heading', { level: 2, name: 'Gala r1' })).toBeInTheDocument()
+  })
 })

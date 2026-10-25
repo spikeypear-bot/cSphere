@@ -13,6 +13,7 @@ export function RequestBadges({ request }: { request: EquipmentRequestSummary })
       <span className={`tech-badge${request.status === 'rejected' ? ' tech-badge--danger' : ''}`}>
         {EQUIPMENT_REQUEST_FILTER_LABELS[request.status]}
       </span>
+      {request.isShortfallRequest ? ' ' : null}
       {request.isShortfallRequest ? <span className="tech-badge tech-badge--danger">Shortfall</span> : null}
     </>
   )

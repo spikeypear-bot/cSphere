@@ -209,4 +209,15 @@ describe('TS09 inventory by date and equipment detail', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Nothing is reserved in these dates.')).toBeInTheDocument()
   })
+
+  it('TS09 (cross-cutting): each kind is one clickable card named after it, its figures read as the description', async () => {
+    stubApi({ [`GET /api/equipment/catalogue?${DEFAULT}`]: () => jsonResponse(200, CATALOGUE) })
+    renderAt('/technical-support/inventory')
+
+    const projector = within(await screen.findByRole('list', { name: 'Equipment kinds' })).getAllByRole('listitem')[0]
+    const links = within(projector).getAllByRole('link')
+    expect(links).toHaveLength(1)
+    expect(links[0]).toHaveAccessibleName('Projector')
+    expect(links[0]).toHaveAccessibleDescription(/Available\s*3/)
+  })
 })

@@ -1,5 +1,4 @@
 import { Link, useLocation } from 'react-router-dom'
-import { Card } from '../../../components/ui/Card'
 import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { formatEventDateTime } from '../../venueStaff/formatEventDateTime'
@@ -9,6 +8,7 @@ import { fetchCurrentStatusPeriods } from '../status/equipmentStatusApi'
 import { equipmentPath, reportPath, TS } from '../shared/faultyEquipment'
 import { describeSpan } from '../shared/format'
 import { ResourceView } from '../shared/ResourceView'
+import { RowLink } from '../shared/RowLink'
 import { useResource } from '../shared/useResource'
 import '../damage/equipmentDamage.css'
 import '../technicalSupport.css'
@@ -38,16 +38,12 @@ export function FaultyEquipmentPage() {
           <ul className="equipment-damage__list" aria-label="Blocked units">
             {list.map((block) => (
               <li key={block.id}>
-                <Card className="equipment-damage__report-card">
-                  <EquipmentPhoto name={block.equipmentName} />
-                  <div>
-                    <h3>
-                      <Link to={equipmentPath(block.equipmentId)}>{block.equipmentName} · {block.serialNumber}</Link>
-                    </h3>
-                    <p className="field-hint">{describeSpan(block.start, block.end)}</p>
-                  </div>
-                  <span className="tech-badge tech-badge--danger">{block.status}</span>
-                </Card>
+                <RowLink to={equipmentPath(block.equipmentId)} className="card tech-row-card" titleAs="h3"
+                  title={`${block.equipmentName} · ${block.serialNumber}`}
+                  media={<EquipmentPhoto name={block.equipmentName} />}
+                  badges={<span className="tech-badge tech-badge--danger">{block.status}</span>}>
+                  <p className="tech-row-card__hint">{describeSpan(block.start, block.end)}</p>
+                </RowLink>
               </li>
             ))}
           </ul>
@@ -64,26 +60,22 @@ export function FaultyEquipmentPage() {
               const waiting = report.affectedEvents.filter((e) => e.active && e.outcome === null).length
               return (
                 <li key={report.reportId}>
-                  <Card className="equipment-damage__report-card">
-                    <EquipmentPhoto name={report.equipmentName} />
-                    <div>
-                      <h3>
-                        <Link to={reportPath(report.reportId)}>
-                          {report.equipmentName}{report.serialNumber ? ` · ${report.serialNumber}` : ` · ${report.quantity} damaged`}
-                        </Link>
-                      </h3>
-                      <p>{report.description}</p>
-                      <p className="field-hint">{describeSpan(report.periodStart, report.periodEnd)}</p>
-                      <p className="field-hint">
-                        Reported {formatEventDateTime(report.reportedAt)} by {report.reportedByName}
-                        {' · '}{report.affectedEvents.length} affected event{report.affectedEvents.length === 1 ? '' : 's'}
-                        {waiting ? ` · ${waiting} awaiting a decision` : ''}
-                      </p>
-                    </div>
-                    <span className={`chip equipment-damage__status equipment-damage__status--${report.status.toLowerCase()}`}>
-                      {report.status === 'OPEN' ? 'Open' : 'Closed'}
-                    </span>
-                  </Card>
+                  <RowLink to={reportPath(report.reportId)} className="card tech-row-card" titleAs="h3"
+                    title={`${report.equipmentName}${report.serialNumber ? ` · ${report.serialNumber}` : ` · ${report.quantity} damaged`}`}
+                    media={<EquipmentPhoto name={report.equipmentName} />}
+                    badges={(
+                      <span className={report.status === 'OPEN' ? 'tech-badge tech-badge--danger' : 'tech-badge tech-badge--neutral'}>
+                        {report.status === 'OPEN' ? 'Open' : 'Closed'}
+                      </span>
+                    )}>
+                    <p>{report.description}</p>
+                    <p className="tech-row-card__hint">{describeSpan(report.periodStart, report.periodEnd)}</p>
+                    <p className="tech-row-card__hint">
+                      Reported {formatEventDateTime(report.reportedAt)} by {report.reportedByName}
+                      {' · '}{report.affectedEvents.length} affected event{report.affectedEvents.length === 1 ? '' : 's'}
+                      {waiting ? ` · ${waiting} awaiting a decision` : ''}
+                    </p>
+                  </RowLink>
                 </li>
               )
             })}

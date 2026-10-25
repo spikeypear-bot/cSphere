@@ -176,4 +176,27 @@ describe('TS09 faulty equipment and the report-a-problem form', () => {
     expect(await screen.findByText('No unit is marked Faulty or Unavailable.')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('TS09 (cross-cutting): each blocked unit and damage report is one clickable card named after the equipment', async () => {
+    stubApi({
+      [BLOCKS]: () => jsonResponse(200, [
+        { id: 'p-1', equipmentId: 'eq-proj', equipmentName: 'Projector', serialNumber: 'PJ-1', status: 'Faulty', start: '2027-04-01T01:00:00Z', end: null },
+      ]),
+      [REPORTS]: () => jsonResponse(200, [{
+        reportId: 'rep-1', equipmentId: 'eq-hdmi', equipmentName: 'HDMI Cable', serialised: false, serialNumber: null,
+        quantity: 2, description: 'Frayed', periodStart: '2027-04-01T01:00:00Z', periodEnd: null, markFaulty: false, faultyMarked: false,
+        status: 'CLOSED', reportedBy: 't-1', reportedByName: 'ts1', reportedAt: '2027-04-01T01:00:00Z', closedAt: null, canClose: false, affectedEvents: [],
+      }]),
+    })
+    renderAt('/technical-support/faulty')
+
+    const block = within(await screen.findByRole('list', { name: 'Blocked units' })).getAllByRole('listitem')[0]
+    expect(within(block).getAllByRole('link')).toHaveLength(1)
+    expect(within(block).getByRole('link', { name: 'Projector · PJ-1' })).toHaveAccessibleDescription(/Faulty/)
+    const report = within(await screen.findByRole('list', { name: 'Damage reports' })).getAllByRole('listitem')[0]
+    expect(within(report).getAllByRole('link')).toHaveLength(1)
+    expect(within(report).getByRole('link', { name: 'HDMI Cable · 2 damaged' }))
+      .toHaveAttribute('href', '/technical-support/faulty/reports/rep-1')
+    expect(within(report).getByText('Closed')).toHaveClass('tech-badge--neutral')
+  })
 })
