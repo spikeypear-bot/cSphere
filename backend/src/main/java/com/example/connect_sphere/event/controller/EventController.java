@@ -16,8 +16,10 @@ import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.dto.EventReadinessDto;
 import com.example.connect_sphere.event.dto.OrganiserArrangementsDto;
+import com.example.connect_sphere.event.dto.RegistrationInfoDto;
 import com.example.connect_sphere.event.service.EventArrangementsService;
 import com.example.connect_sphere.event.service.EventLifecycleService;
+import com.example.connect_sphere.event.service.EventRegistrationService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 import com.example.connect_sphere.user.entity.UserRole;
@@ -35,9 +37,12 @@ public class EventController {
     private final EventRequestService eventRequestService;
     private final EventLifecycleService lifecycle;
     private final EventArrangementsService arrangements;
+    private final EventRegistrationService registrationService;
 
     public EventController(EventService service, EventRequestService eventRequestService,
-            EventLifecycleService lifecycle, EventArrangementsService arrangements) {
+            EventLifecycleService lifecycle, EventArrangementsService arrangements,
+            EventRegistrationService registrationService) {
+        this.registrationService = registrationService;
         this.service = service;
         this.eventRequestService = eventRequestService;
         this.lifecycle = lifecycle;
@@ -118,6 +123,12 @@ public class EventController {
     @GetMapping("/{id}/arrangements")
     public OrganiserArrangementsDto arrangements(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
         return arrangements.forOrganiser(organisationOf(jwt), id);
+    }
+
+    /** EO10: the owning organiser's registration information. */
+    @GetMapping("/{id}/registrations")
+    public RegistrationInfoDto registrations(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
+        return registrationService.forOrganiser(organisationOf(jwt), id);
     }
 
     /** EC08: confirm once the Safety Officer has approved (SO-C4). Assigned coordinator only. */
