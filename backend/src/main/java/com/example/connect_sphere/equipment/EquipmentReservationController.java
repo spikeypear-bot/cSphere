@@ -39,6 +39,13 @@ public class EquipmentReservationController {
         return service.reserve(request);
     }
 
+    // D33: reserve several requested items for one window, all or nothing.
+    @PostMapping("/reservations/batch")
+    @ResponseStatus(HttpStatus.CREATED)
+    public List<EquipmentReservationResponse> reserveBatch(@RequestBody ReserveBatchRequest request) {
+        return service.reserveBatch(request);
+    }
+
     // AC 11: reservations for an event.
     @GetMapping("/events/{eventId}/reservations")
     public List<EquipmentReservationResponse> reservationsForEvent(@PathVariable UUID eventId) {

@@ -78,8 +78,11 @@ class EquipmentReservationFlowTest {
                 """, equipmentId, serialNumber, status, from, until);
     }
 
+    // D33: reservations are capped at the requested quantity unless marked
+    // spare, so the default request asks for enough (10) for every
+    // reservation these tests make; the TS06 tests name their quantity.
     private UUID requested(UUID eventId, UUID equipmentId) throws Exception {
-        return requested(eventId, equipmentId, 1);
+        return requested(eventId, equipmentId, 10);
     }
 
     private UUID requested(UUID eventId, UUID equipmentId, int quantity) throws Exception {
@@ -315,7 +318,8 @@ class EquipmentReservationFlowTest {
         assertThat(reservationsFor(eventId)).isZero();
         reserve("ts1", reservation(eventId, mixers, 2, null, START, END))
                 .andExpect(status().isCreated());
-        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        // D33: a serialised kind is one reservation per unit, here the two working ones.
+        assertThat(reservationsFor(eventId)).isEqualTo(2);
     }
 
     @Test
@@ -374,7 +378,7 @@ class EquipmentReservationFlowTest {
             throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
-        UUID requestId = requested(eventId, speakers);
+        UUID requestId = requested(eventId, speakers, 1);
         reserve("ts1", reservation(
                 eventId, speakers, 1, null, "2027-03-10T02:00:00Z", END))
                 .andExpect(status().isCreated());
@@ -389,7 +393,7 @@ class EquipmentReservationFlowTest {
     void fullyReservedRequestCanBeApprovedAndTheCoordinatorSeesItImmediately() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
-        UUID requestId = requested(eventId, speakers);
+        UUID requestId = requested(eventId, speakers, 1);
         reserved(eventId, speakers, 1, null);
 
         updateRequestStatus("ts1", requestId, "{\"status\":\"approved\"}")
@@ -408,7 +412,7 @@ class EquipmentReservationFlowTest {
     void rejectionRequiresAndPersistsAReasonForTheCoordinator() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
-        UUID requestId = requested(eventId, speakers);
+        UUID requestId = requested(eventId, speakers, 1);
         reserved(eventId, speakers, 1, null);
 
         updateRequestStatus("ts1", requestId, "{\"status\":\"rejected\"}")

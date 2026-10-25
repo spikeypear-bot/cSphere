@@ -67,9 +67,10 @@ class EquipmentTechnicalSupportServiceTest {
         when(logRepository.findOverlappingForEquipment(EQUIPMENT_ID, START, END)).thenReturn(List.of());
         when(requestRepository.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(
                 new EquipmentRequest(REQUEST_ID, EVENT_ID, EquipmentRequestStatus.processing, "Projector")));
+        // D33: the request asks for all 3, so reserving every available unit is within it.
         when(requestLineRepository.findByIdRequestId(REQUEST_ID)).thenReturn(List.of(
                 new EquipmentRequestLine(
-                        new EquipmentRequestLineId(REQUEST_ID, EQUIPMENT_ID), 1)));
+                        new EquipmentRequestLineId(REQUEST_ID, EQUIPMENT_ID), 3)));
     }
 
     @Test

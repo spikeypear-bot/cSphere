@@ -124,11 +124,16 @@ class EquipmentDamageFlowTest {
     }
 
     private void reserve(UUID eventId, UUID equipmentId, int quantity, String serial, String day) throws Exception {
+        reserve(eventId, equipmentId, quantity, serial, day, false);
+    }
+
+    private void reserve(UUID eventId, UUID equipmentId, int quantity, String serial, String day, boolean spare)
+            throws Exception {
         mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1"))
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":%d,\"serialNumber\":%s,\"start\":\"%s\",\"end\":\"%s\"}"
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":%d,\"serialNumber\":%s,\"start\":\"%s\",\"end\":\"%s\",\"spare\":%s}"
                                 .formatted(eventId, equipmentId, quantity,
-                                        serial == null ? "null" : "\"" + serial + "\"", start(day), end(day))))
+                                        serial == null ? "null" : "\"" + serial + "\"", start(day), end(day), spare)))
                 .andExpect(status().isCreated());
         sync();
     }
@@ -142,8 +147,9 @@ class EquipmentDamageFlowTest {
     private UUID approvedUnits(UUID eventId, UUID equipmentId, int requested, String day, String... serials)
             throws Exception {
         UUID requestId = request(eventId, equipmentId, requested, null);
-        for (String serial : serials) {
-            reserve(eventId, equipmentId, 1, serial, day);
+        // D33: units beyond the requested quantity are reserved as spares.
+        for (int i = 0; i < serials.length; i++) {
+            reserve(eventId, equipmentId, 1, serials[i], day, i >= requested);
         }
         decideRequest(requestId, "approved").andExpect(status().isOk());
         sync();
