@@ -148,7 +148,7 @@ describe('TS09 inventory by date and equipment detail', () => {
       }]),
       'GET /api/equipment-damage-reports?equipmentId=eq-proj': () => jsonResponse(200, [{
         reportId: 'rep-1', equipmentId: 'eq-proj', equipmentName: 'Projector', serialised: true, serialNumber: 'PJ-1', quantity: 1,
-        description: 'Lamp exploded', periodStart: '2027-03-01T00:00:00Z', periodEnd: null, markFaulty: true, faultyMarked: true,
+        description: 'Lamp exploded', periodStart: '2027-03-01T00:00:00Z', periodEnd: null, blockStatus: 'FAULTY', blockApplied: true,
         status: 'CLOSED', reportedBy: 't-1', reportedByName: 'ts1', reportedAt: '2027-03-01T00:00:00Z', closedAt: null, canClose: false, affectedEvents: [],
       }]),
     })

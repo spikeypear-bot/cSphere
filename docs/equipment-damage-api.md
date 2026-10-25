@@ -21,8 +21,8 @@ Errors use the usual `ApiError` shape (`{"message": "..."}`): 400 invalid input,
 ```
 
 - Serialised kind: `serialNumber` required (an existing unit); `quantity` omitted or 1.
-- Non-serialised kind: `quantity` from 1 to the quantity owned; no `serialNumber`; no block (`blockStatus` or `markFaulty`).
-- `blockStatus` (V39): `FAULTY`, `UNAVAILABLE` (any case) or omitted/null — the TS03 block put on the unit when the report closes. The older `"markFaulty": true` is still accepted and means `FAULTY`; `markFaulty: true` with a different `blockStatus` is 400, as is any other value (including `AVAILABLE`).
+- Non-serialised kind: `quantity` from 1 to the quantity owned; no `serialNumber`; no `blockStatus`.
+- `blockStatus` (V39): `FAULTY`, `UNAVAILABLE` (any case) or omitted/null — the TS03 block put on the unit when the report closes. Any other value (including `AVAILABLE`) is 400.
 - `description` 1–2000 characters after trimming. `periodEnd` optional, and after `periodStart` when given.
 - A report affecting no event is returned already `CLOSED`.
 
@@ -32,7 +32,7 @@ Returns a **report**:
 {
   "reportId": "uuid", "equipmentId": "uuid", "equipmentName": "Projector", "serialised": true,
   "serialNumber": "PJ-1", "quantity": 1, "description": "Lamp exploded",
-  "periodStart": "...", "periodEnd": null, "markFaulty": false, "faultyMarked": false,
+  "periodStart": "...", "periodEnd": null,
   "blockStatus": "UNAVAILABLE", "blockApplied": false,
   "status": "OPEN", "reportedBy": "uuid", "reportedByName": "ts1", "reportedAt": "...", "closedAt": null,
   "canClose": false,
@@ -54,7 +54,7 @@ Returns a **report**:
 - `spareCovers`: serialised and undecided only; the event still has enough without the damaged unit.
 - `active`: false once the event is cancelled or over; it then needs no outcome.
 - `outcome`: `null` (undecided), `COVERED`, `REPLACED` or `SHORT`. `resolution`: `NOTE` or `ADDITIONAL_REQUEST`.
-- `blockStatus`: the block asked for (`FAULTY`, `UNAVAILABLE` or `null`); `blockApplied`: it was added when the report closed. `markFaulty` (= `blockStatus` is `FAULTY`) and `faultyMarked` (= a `FAULTY` block was added) are kept for older clients.
+- `blockStatus`: the block asked for (`FAULTY`, `UNAVAILABLE` or `null`); `blockApplied`: it was added when the report closed.
 
 ### `GET /api/equipment-damage-reports` → 200
 

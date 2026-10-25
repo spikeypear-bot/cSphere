@@ -594,9 +594,7 @@ class TechnicalSupportConsoleFlowTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.status").value("CLOSED"))
                 .andExpect(jsonPath("$.blockStatus").value("UNAVAILABLE"))
-                .andExpect(jsonPath("$.blockApplied").value(true))
-                .andExpect(jsonPath("$.markFaulty").value(false))
-                .andExpect(jsonPath("$.faultyMarked").value(false));
+                .andExpect(jsonPath("$.blockApplied").value(true));
 
         sync();
         assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_status_periods WHERE equipment_id = ?",
@@ -639,24 +637,7 @@ class TechnicalSupportConsoleFlowTest {
     }
 
     @Test
-    @DisplayName("TS09 (cross-cutting): markFaulty true is still accepted as a Faulty block, and the response keeps markFaulty and faultyMarked")
-    void markFaultyStillMeansFaulty() throws Exception {
-        UUID projectors = projectors("PJ-1");
-
-        report(unitReport(projectors, "PJ-1", "2027-04-01T00:00:00Z", null, ",\"markFaulty\":true"))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.blockStatus").value("FAULTY"))
-                .andExpect(jsonPath("$.markFaulty").value(true))
-                .andExpect(jsonPath("$.faultyMarked").value(true))
-                .andExpect(jsonPath("$.blockApplied").value(true));
-
-        sync();
-        assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_status_periods WHERE equipment_id = ?",
-                String.class, projectors)).isEqualTo("FAULTY");
-    }
-
-    @Test
-    @DisplayName("TS09 (negative): an unknown block status, markFaulty with a different block status, or a block on a non-serialised kind is refused and nothing is saved")
+    @DisplayName("TS09 (negative): an unknown block status, or a block on a non-serialised kind, is refused and nothing is saved")
     void invalidBlockRequestsAreRefused() throws Exception {
         UUID projectors = projectors("PJ-1");
         UUID mics = equipment("Console Mic " + UUID.randomUUID(), 5, false);
@@ -664,9 +645,6 @@ class TechnicalSupportConsoleFlowTest {
         report(unitReport(projectors, "PJ-1", "2027-04-01T00:00:00Z", null, ",\"blockStatus\":\"AVAILABLE\""))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("blockStatus must be FAULTY, UNAVAILABLE or left out."));
-        report(unitReport(projectors, "PJ-1", "2027-04-01T00:00:00Z", null,
-                        ",\"markFaulty\":true,\"blockStatus\":\"UNAVAILABLE\""))
-                .andExpect(status().isBadRequest());
         report("{\"equipmentId\":\"%s\",\"quantity\":1,\"description\":\"Frayed\",\"periodStart\":\"2027-04-01T00:00:00Z\",\"blockStatus\":\"UNAVAILABLE\"}"
                 .formatted(mics))
                 .andExpect(status().isBadRequest())

@@ -42,8 +42,6 @@ export interface DamageReport {
   description: string
   periodStart: string
   periodEnd: string | null
-  markFaulty: boolean
-  faultyMarked: boolean
   status: 'OPEN' | 'CLOSED'
   reportedBy: string
   reportedByName: string
@@ -51,16 +49,15 @@ export interface DamageReport {
   closedAt: string | null
   canClose: boolean
   affectedEvents: AffectedEvent[]
-  /** V39; older responses (and fixtures) only carry markFaulty/faultyMarked. */
-  blockStatus?: DamageBlockStatus | null
-  blockApplied?: boolean
+  /** V39: the block asked for, or null for none. */
+  blockStatus: DamageBlockStatus | null
+  /** The block was added when the report closed. */
+  blockApplied: boolean
 }
 
-/** The block a report asks for, reading the older markFaulty flag too. */
+/** The block a report asks for, or null when it asks for none. */
 export function reportBlock(report: DamageReport): { status: DamageBlockStatus; applied: boolean } | null {
-  const status = report.blockStatus ?? (report.markFaulty ? 'FAULTY' : null)
-  if (!status) return null
-  return { status, applied: report.blockApplied ?? report.faultyMarked }
+  return report.blockStatus ? { status: report.blockStatus, applied: report.blockApplied } : null
 }
 
 export const BLOCK_LABELS: Record<DamageBlockStatus, string> = { FAULTY: 'Faulty', UNAVAILABLE: 'Unavailable' }

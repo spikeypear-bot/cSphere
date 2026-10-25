@@ -184,7 +184,7 @@ describe('TS09 faulty equipment and the report-a-problem form', () => {
       ]),
       [REPORTS]: () => jsonResponse(200, [{
         reportId: 'rep-1', equipmentId: 'eq-hdmi', equipmentName: 'HDMI Cable', serialised: false, serialNumber: null,
-        quantity: 2, description: 'Frayed', periodStart: '2027-04-01T01:00:00Z', periodEnd: null, markFaulty: false, faultyMarked: false,
+        quantity: 2, description: 'Frayed', periodStart: '2027-04-01T01:00:00Z', periodEnd: null, blockStatus: null, blockApplied: false,
         status: 'CLOSED', reportedBy: 't-1', reportedByName: 'ts1', reportedAt: '2027-04-01T01:00:00Z', closedAt: null, canClose: false, affectedEvents: [],
       }]),
     })

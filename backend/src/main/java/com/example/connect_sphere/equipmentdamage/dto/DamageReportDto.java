@@ -16,10 +16,6 @@ public record DamageReportDto(
         String description,
         Instant periodStart,
         Instant periodEnd,
-        /** Kept for older clients: {@code blockStatus} is FAULTY. */
-        boolean markFaulty,
-        /** Kept for older clients: a FAULTY block was added on close. */
-        boolean faultyMarked,
         String status,
         UUID reportedBy,
         String reportedByName,

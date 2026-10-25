@@ -25,14 +25,14 @@ const EVENT: AffectedEvent = {
 const REPORT: DamageReport = {
   reportId: 'rep-1', equipmentId: 'eq-proj', equipmentName: 'Projector', serialised: true,
   serialNumber: 'EPS-EBU04-7K2Q9M', quantity: 1, description: 'Lamp exploded',
-  periodStart: '2027-03-01T00:00:00Z', periodEnd: null, markFaulty: true, faultyMarked: false,
+  periodStart: '2027-03-01T00:00:00Z', periodEnd: null, blockStatus: 'FAULTY', blockApplied: false,
   status: 'OPEN', reportedBy: 'ts-1', reportedByName: 'tech1', reportedAt: '2027-02-28T03:00:00Z', closedAt: null,
   canClose: false, affectedEvents: [EVENT],
 }
 
 const BULK_REPORT: DamageReport = {
   ...REPORT, reportId: 'rep-2', equipmentId: 'eq-hdmi', equipmentName: 'HDMI Cable', serialised: false,
-  serialNumber: null, quantity: 5, markFaulty: false,
+  serialNumber: null, quantity: 5, blockStatus: null,
   affectedEvents: [{ ...EVENT, outcomeId: 'out-2', requestedQuantity: 10, reservedQuantity: 10, affectedQuantity: 10 }],
 }
 
@@ -112,7 +112,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
 
   it('TS09 AC1, AC2, AC4 (conflict): a unit an event holds is reported through TS09, asking for the chosen block', async () => {
     const start = '2027-03-01T09:00'
-    const reported = { ...REPORT, markFaulty: false, blockStatus: 'UNAVAILABLE', blockApplied: false }
+    const reported = { ...REPORT, blockStatus: 'UNAVAILABLE', blockApplied: false }
     const calls = stubApi({
       'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR, CABLE]),
       'GET /api/equipment/eq-proj': () => jsonResponse(200, detail([
@@ -362,7 +362,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
 
   it('TS09 AC15 (happy): the report closes only once every event has an outcome', async () => {
     const decided = { ...REPORT, canClose: true, affectedEvents: [{ ...EVENT, outcome: 'SHORT' as const, shortfall: 1 }] }
-    const closed = { ...decided, status: 'CLOSED' as const, faultyMarked: true, closedAt: '2027-03-01T05:00:00Z' }
+    const closed = { ...decided, status: 'CLOSED' as const, blockApplied: true, closedAt: '2027-03-01T05:00:00Z' }
     let decidedYet = false
     stubApi({
       'GET /api/equipment-damage-reports/rep-1': () => jsonResponse(200, decidedYet ? decided : REPORT),

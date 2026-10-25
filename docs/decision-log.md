@@ -570,8 +570,7 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 **TS09 Unavailable (V39).**
 - `markFaulty` becomes `blockStatus` (`FAULTY` / `UNAVAILABLE` / null), and `faulty_marked` becomes `block_applied`.
 - On close, the block is applied through TS03's `EquipmentStatusService.addPeriod`, as before.
-- `"markFaulty": true` is still accepted as `FAULTY`; `markFaulty: true` with a different `blockStatus` is 400.
-- Responses keep `markFaulty`/`faultyMarked`, derived from the new columns, and add `blockStatus`/`blockApplied`.
+- The API takes and returns only `blockStatus`/`blockApplied`. The `markFaulty`/`faultyMarked` fields were dropped before release: TS09 is new on this branch, so no client depends on them.
 
 **Access (D20 rows updated).** Every new read is `TECHNICIAN` only.
 - `GET /api/equipment/units` keeps coordinator access through an explicit matcher above the new one-segment rule.

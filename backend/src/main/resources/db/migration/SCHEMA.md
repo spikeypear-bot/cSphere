@@ -649,8 +649,8 @@ as **Unavailable** as well as Faulty (TS03's two block statuses):
 - `chk_damage_block_serialised`: a block needs a serialised unit (`serial_number` set).
   `chk_damage_block_applied`: `block_applied` only when a block was asked for.
 
-The API keeps `markFaulty`/`faultyMarked` in its responses, derived from these columns, and still
-accepts `markFaulty: true` as `FAULTY`. See [TS09 API](../../../../../../docs/equipment-damage-api.md)
+The API reads and returns only `blockStatus`/`blockApplied` (the earlier `markFaulty`/`faultyMarked`
+fields were removed before release). See [TS09 API](../../../../../../docs/equipment-damage-api.md)
 and decision-log D32.
 
 ## V40 update — spare reservations (TS02)

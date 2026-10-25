@@ -167,9 +167,9 @@ class EquipmentDamageFlowTest {
     }
 
     private static String unitReport(UUID equipmentId, String serial, String description, String from, String until,
-            boolean markFaulty) {
-        return "{\"equipmentId\":\"%s\",\"serialNumber\":%s,\"description\":%s,\"periodStart\":%s,\"periodEnd\":%s,\"markFaulty\":%s}"
-                .formatted(equipmentId, quote(serial), quote(description), quote(from), quote(until), markFaulty);
+            String blockStatus) {
+        return "{\"equipmentId\":\"%s\",\"serialNumber\":%s,\"description\":%s,\"periodStart\":%s,\"periodEnd\":%s,\"blockStatus\":%s}"
+                .formatted(equipmentId, quote(serial), quote(description), quote(from), quote(until), quote(blockStatus));
     }
 
     private static String quantityReport(UUID equipmentId, Integer quantity, String from, String until) {
@@ -267,7 +267,7 @@ class EquipmentDamageFlowTest {
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
 
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Lamp exploded", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Lamp exploded", DAMAGED_FROM, null, null));
 
         assertThat(report.get("status").asString()).isEqualTo("OPEN");
         assertThat(report.get("serialNumber").asString()).isEqualTo("PJ-1");
@@ -293,7 +293,7 @@ class EquipmentDamageFlowTest {
     void aBlankDescriptionIsRefused() throws Exception {
         UUID projectors = projectors("PJ-1");
 
-        report(unitReport(projectors, "PJ-1", "   ", DAMAGED_FROM, null, false))
+        report(unitReport(projectors, "PJ-1", "   ", DAMAGED_FROM, null, null))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Describe the damage."));
 
@@ -305,11 +305,11 @@ class EquipmentDamageFlowTest {
     void theDescriptionIsAtMost2000Characters() throws Exception {
         UUID projectors = projectors("PJ-1");
 
-        report(unitReport(projectors, "PJ-1", "x".repeat(2001), DAMAGED_FROM, null, false))
+        report(unitReport(projectors, "PJ-1", "x".repeat(2001), DAMAGED_FROM, null, null))
                 .andExpect(status().isBadRequest());
         assertThat(reportsFor(projectors)).isZero();
 
-        report(unitReport(projectors, "PJ-1", "x".repeat(2000), DAMAGED_FROM, null, false))
+        report(unitReport(projectors, "PJ-1", "x".repeat(2000), DAMAGED_FROM, null, null))
                 .andExpect(status().isCreated());
         assertThat(reportsFor(projectors)).isEqualTo(1);
     }
@@ -319,15 +319,15 @@ class EquipmentDamageFlowTest {
     void theEndMustBeAfterTheStart() throws Exception {
         UUID projectors = projectors("PJ-1");
 
-        report(unitReport(projectors, "PJ-1", "Cracked", null, null, false)).andExpect(status().isBadRequest());
-        report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-02-28T23:59:59Z", false))
+        report(unitReport(projectors, "PJ-1", "Cracked", null, null, null)).andExpect(status().isBadRequest());
+        report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-02-28T23:59:59Z", null))
                 .andExpect(status().isBadRequest());
-        report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, DAMAGED_FROM, false))
+        report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, DAMAGED_FROM, null))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("The end must be after the start."));
         assertThat(reportsFor(projectors)).isZero();
 
-        report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-03-01T00:00:01Z", false))
+        report(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-03-01T00:00:01Z", null))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.periodEnd").value("2027-03-01T00:00:01Z"));
     }
@@ -337,10 +337,10 @@ class EquipmentDamageFlowTest {
     void aSerialisedKindNeedsAKnownUnit() throws Exception {
         UUID projectors = projectors("PJ-1");
 
-        report(unitReport(projectors, null, "Cracked", DAMAGED_FROM, null, false))
+        report(unitReport(projectors, null, "Cracked", DAMAGED_FROM, null, null))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Choose the damaged unit's serial number."));
-        report(unitReport(projectors, "PJ-404", "Cracked", DAMAGED_FROM, null, false))
+        report(unitReport(projectors, "PJ-404", "Cracked", DAMAGED_FROM, null, null))
                 .andExpect(status().isNotFound());
         assertThat(reportsFor(projectors)).isZero();
     }
@@ -379,7 +379,7 @@ class EquipmentDamageFlowTest {
         UUID later = event("TS09 Later", "2027-04-10");
         approvedUnits(later, projectors, 1, "2027-04-10", "PJ-1");
 
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-04-01T00:00:00Z", false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-04-01T00:00:00Z", null));
 
         assertThat(affectedIds(report)).isEmpty();
         assertThat(report.get("status").asString()).isEqualTo("CLOSED");
@@ -398,7 +398,7 @@ class EquipmentDamageFlowTest {
         jdbc.update("UPDATE equipment_logs SET loaned_from = ?::timestamptz, loaned_until = ?::timestamptz WHERE event_id = ?",
                 now.minus(1, ChronoUnit.HOURS).toString(), now.plus(2, ChronoUnit.HOURS).toString(), eventId);
 
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Dropped on stage", now.toString(), null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Dropped on stage", now.toString(), null, null));
 
         assertThat(affectedIds(report)).containsExactly(eventId.toString());
     }
@@ -411,7 +411,7 @@ class EquipmentDamageFlowTest {
         UUID requestId = approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
         setStatus(eventId, "confirmed");
 
-        reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, true));
+        reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, "FAULTY"));
 
         assertThat(serialsReservedFor(eventId, projectors)).containsExactly("PJ-1");
         assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id = ?",
@@ -429,7 +429,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
         assertThat(report.get("affectedEvents").get(0).get("spareCovers").asBoolean()).isTrue();
 
         decide(report, eventId, "{\"decision\":\"COVERED\"}")
@@ -446,7 +446,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
 
         decide(report, eventId, "{\"decision\":\"COVERED\"}")
                 .andExpect(status().isConflict())
@@ -462,7 +462,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
 
         decide(report, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}")
                 .andExpect(status().isOk())
@@ -485,7 +485,7 @@ class EquipmentDamageFlowTest {
         jdbc.update("INSERT INTO equipment_status_periods (equipment_id, serial_number, status, period_start, period_end) "
                 + "VALUES (?, 'PJ-3', 'FAULTY'::equipment_status, ?::timestamptz, ?::timestamptz)",
                 projectors, "2027-03-10T03:59:00Z", "2027-03-11T00:00:00Z");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
 
         decide(report, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}")
                 .andExpect(status().isConflict())
@@ -511,8 +511,8 @@ class EquipmentDamageFlowTest {
         approvedUnits(first, projectors, 1, MARCH_10, "PJ-1");
         UUID second = event("TS09 Second", MARCH_10);
         approvedUnits(second, projectors, 1, MARCH_10, "PJ-2");
-        JsonNode one = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
-        JsonNode two = reported(unitReport(projectors, "PJ-2", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode one = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+        JsonNode two = reported(unitReport(projectors, "PJ-2", "Cracked", DAMAGED_FROM, null, null));
 
         decide(one, first, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-3\"}").andExpect(status().isOk());
         decide(two, second, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-3\"}")
@@ -528,7 +528,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 2, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
 
         decide(report, eventId, "{\"decision\":\"SHORT\"}")
                 .andExpect(status().isOk())
@@ -545,7 +545,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
 
         decide(report, eventId, "{\"decision\":\"SHORT\"}")
                 .andExpect(status().isConflict())
@@ -617,7 +617,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
 
         close(report).andExpect(status().isConflict())
                 .andExpect(jsonPath("$.message").value("1 affected event still needs an outcome."));
@@ -637,10 +637,10 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-04-01T00:00:00Z", true));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-04-01T00:00:00Z", "FAULTY"));
         decide(report, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}");
 
-        close(report).andExpect(status().isOk()).andExpect(jsonPath("$.faultyMarked").value(true));
+        close(report).andExpect(status().isOk()).andExpect(jsonPath("$.blockApplied").value(true));
 
         sync();
         assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_status_periods WHERE equipment_id = ? "
@@ -650,7 +650,7 @@ class EquipmentDamageFlowTest {
 
         UUID cables = equipment("TS09 Cable " + UUID.randomUUID(), 5, false);
         report("{\"equipmentId\":\"" + cables + "\",\"quantity\":1,\"description\":\"Frayed\",\"periodStart\":\""
-                + DAMAGED_FROM + "\",\"markFaulty\":true}").andExpect(status().isBadRequest());
+                + DAMAGED_FROM + "\",\"blockStatus\":\"FAULTY\"}").andExpect(status().isBadRequest());
     }
 
     @Test
@@ -684,7 +684,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 2, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
         decide(report, eventId, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
 
         mvc.perform(get("/api/events/" + eventId + "/equipment-damage").with(flow.as("ec1")))
@@ -721,8 +721,8 @@ class EquipmentDamageFlowTest {
         UUID replaced = event("TS09 Replaced", MARCH_11);
         approvedUnits(replaced, projectors, 1, MARCH_11, "PJ-2");
         setStatus(replaced, "confirmed");
-        JsonNode one = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
-        JsonNode two = reported(unitReport(projectors, "PJ-2", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode one = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+        JsonNode two = reported(unitReport(projectors, "PJ-2", "Cracked", DAMAGED_FROM, null, null));
 
         decide(one, shortEvent, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
         decide(two, replaced, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-3\"}").andExpect(status().isOk());
@@ -739,7 +739,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2", "PJ-3");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 2, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
         decide(report, eventId, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
         UUID shortfall = outcomeOf(report, eventId);
 
@@ -772,7 +772,7 @@ class EquipmentDamageFlowTest {
                 .andExpect(jsonPath("$.message").value(
                         "This event already has an equipment request awaiting review or already approved."));
 
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
         decide(report, eventId, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
         UUID shortfall = outcomeOf(report, eventId);
         request(eventId, projectors, 1, shortfall);
@@ -791,7 +791,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 2, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
         decide(report, eventId, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
         UUID shortfall = outcomeOf(report, eventId);
         String path = "/api/events/" + eventId + "/equipment-damage/" + shortfall + "/resolve";
@@ -826,7 +826,7 @@ class EquipmentDamageFlowTest {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 2, MARCH_10, "PJ-1", "PJ-2");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, false));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
         decide(report, eventId, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
         setStatus(eventId, "confirmed");
 

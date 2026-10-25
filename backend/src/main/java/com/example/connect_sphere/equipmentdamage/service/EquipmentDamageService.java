@@ -449,8 +449,7 @@ public class EquipmentDamageService {
         DamageBlockStatus block = report.getBlockStatus();
         return new DamageReportDto(report.getReportId(), kind.getId(), kind.getName(), report.isSerialised(),
                 report.getSerialNumber(), report.getQuantity(), report.getDescription(), report.getPeriodStart(),
-                report.getPeriodEnd(), block == DamageBlockStatus.FAULTY,
-                block == DamageBlockStatus.FAULTY && report.isBlockApplied(), report.getStatus().name(),
+                report.getPeriodEnd(), report.getStatus().name(),
                 report.getReportedBy(), reporter, report.getReportedAt(), report.getClosedAt(),
                 open && allDecided && fits, affected, name(block), report.isBlockApplied());
     }

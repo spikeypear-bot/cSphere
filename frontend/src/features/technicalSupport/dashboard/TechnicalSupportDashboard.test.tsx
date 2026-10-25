@@ -33,7 +33,7 @@ function period(id: string, start: string, status = 'Faulty', end: string | null
 function report(id: string, periodStart: string, status: 'OPEN' | 'CLOSED' = 'OPEN') {
   return {
     reportId: id, equipmentId: 'eq-hdmi', equipmentName: 'HDMI Cable', serialised: false, serialNumber: null,
-    quantity: 3, description: 'Bent', periodStart, periodEnd: '2027-03-20T00:00:00Z', markFaulty: false, faultyMarked: false,
+    quantity: 3, description: 'Bent', periodStart, periodEnd: '2027-03-20T00:00:00Z', blockStatus: null, blockApplied: false,
     status, reportedBy: 't-1', reportedByName: 'ts1', reportedAt: periodStart, closedAt: null, canClose: false, affectedEvents: [],
   }
 }

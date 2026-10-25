@@ -12,7 +12,7 @@ const REQUEST = {
 }
 const REPORT = {
   reportId: 'rep-9', equipmentId: 'eq-proj', equipmentName: 'Projector', serialised: true, serialNumber: 'PJ-1', quantity: 1,
-  description: 'Lamp exploded', periodStart: '2027-03-01T00:00:00Z', periodEnd: null, markFaulty: false, faultyMarked: false,
+  description: 'Lamp exploded', periodStart: '2027-03-01T00:00:00Z', periodEnd: null, blockStatus: null, blockApplied: false,
   status: 'OPEN', reportedBy: 't-1', reportedByName: 'ts1', reportedAt: '2027-03-01T00:00:00Z', closedAt: null,
   canClose: false, affectedEvents: [],
 }
