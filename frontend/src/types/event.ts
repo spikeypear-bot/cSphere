@@ -19,6 +19,12 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   completed: 'Completed',
 }
 
+/** EC08: venues and equipment can still be changed, in Planning or after the
+ * Safety Officer asked for changes. Mirrors EventStatus.isPlanningEditable(). */
+export function isPlanningEditable(status: EventStatus): boolean {
+  return status === 'pending' || status === 'safety_changes_requested'
+}
+
 export interface EventDto {
   eventId: string
   eventName: string

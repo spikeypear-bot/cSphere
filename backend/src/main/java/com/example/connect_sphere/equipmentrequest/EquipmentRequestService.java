@@ -3,10 +3,10 @@ package com.example.connect_sphere.equipmentrequest;
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentRepository;
 import com.example.connect_sphere.event.entity.Event;
+import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
-import com.example.connect_sphere.safety.ReadinessService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -67,7 +67,7 @@ public class EquipmentRequestService {
     @Transactional(readOnly = true)
     public List<EquipmentRequestDetailsResponse> listForSafetyOfficer(UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!ReadinessService.VISIBLE.contains(event.getStatus())) {
+        if (!EventStatus.ACTIVE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return requests.findByEventId(eventId).stream()

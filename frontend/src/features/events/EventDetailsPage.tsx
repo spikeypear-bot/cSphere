@@ -9,7 +9,7 @@ import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
-import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
+import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { EventCancellationPanel } from './EventCancellationPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
@@ -17,6 +17,7 @@ import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
+import { SafetyDecisionSummary } from '../safetyOfficer/SafetyDecisionSummary'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
@@ -77,7 +78,7 @@ export function EventDetailsPage() {
   const journey = event.journeyStatus ?? null
   // Planning-stage edits (venues, equipment) stay open while changes are
   // requested by the Safety Officer, matching EventStatus.isPlanningEditable.
-  const planning = event.status === 'pending' || event.status === 'safety_changes_requested'
+  const planning = isPlanningEditable(event.status)
 
   return (
     <div className="page">
@@ -172,13 +173,7 @@ export function EventDetailsPage() {
             <>
               <Card className="event-details__history">
                 <h2>Safety Officer's review</h2>
-                <p>Current approval: {readinessState.data.approvalStatus.replace('_', ' ')}</p>
-                {readinessState.data.approvalNote ? <p>Note: {readinessState.data.approvalNote}</p> : null}
-                {readinessState.data.reviewedBy ? (
-                  <p>Reviewed by {readinessState.data.reviewedBy}
-                    {readinessState.data.reviewedAt ? ` · ${new Date(readinessState.data.reviewedAt).toLocaleString()}` : ''}
-                  </p>
-                ) : null}
+                <SafetyDecisionSummary readiness={readinessState.data} />
               </Card>
               <ReadinessChecklistPanel
                 readiness={readinessState.data}
