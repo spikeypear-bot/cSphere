@@ -22,9 +22,9 @@ import com.example.connect_sphere.activity.service.EventChange;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentLog;
+import com.example.connect_sphere.equipment.EquipmentAvailabilityService;
 import com.example.connect_sphere.equipment.EquipmentLogRepository;
 import com.example.connect_sphere.equipment.EquipmentRepository;
-import com.example.connect_sphere.equipment.EquipmentStatusPeriodRepository;
 import com.example.connect_sphere.equipment.EquipmentStatusService;
 import com.example.connect_sphere.equipment.SerialisedEquipmentId;
 import com.example.connect_sphere.equipment.SerialisedEquipmentRepository;
@@ -67,7 +67,7 @@ public class EquipmentDamageService {
     private final EquipmentDamageOutcomeRepository outcomes;
     private final EquipmentRepository equipment;
     private final SerialisedEquipmentRepository units;
-    private final EquipmentStatusPeriodRepository statusPeriods;
+    private final EquipmentAvailabilityService availability;
     private final EquipmentStatusService statusService;
     private final EquipmentLogRepository logs;
     private final EquipmentRequestRepository requests;
@@ -83,7 +83,7 @@ public class EquipmentDamageService {
 
     public EquipmentDamageService(EquipmentDamageReportRepository reports, EquipmentDamageOutcomeRepository outcomes,
             EquipmentRepository equipment, SerialisedEquipmentRepository units,
-            EquipmentStatusPeriodRepository statusPeriods, EquipmentStatusService statusService,
+            EquipmentAvailabilityService availability, EquipmentStatusService statusService,
             EquipmentLogRepository logs, EquipmentRequestRepository requests, EventRepository events,
             EventLifecycleService lifecycle, NotificationService notifications, UserRepository users,
             JourneyStatusResolver statuses, DamageImpact impact, EquipmentShortfallLedger ledger,
@@ -92,7 +92,7 @@ public class EquipmentDamageService {
         this.outcomes = outcomes;
         this.equipment = equipment;
         this.units = units;
-        this.statusPeriods = statusPeriods;
+        this.availability = availability;
         this.statusService = statusService;
         this.logs = logs;
         this.requests = requests;
@@ -295,18 +295,16 @@ public class EquipmentDamageService {
         if (damaged.isEmpty()) {
             throw conflict("The damaged unit is no longer reserved for this event.");
         }
+        // D35: the same "is this unit free?" check TS02 uses.
         for (EquipmentLog log : damaged) {
-            Instant from = log.getLoanedFrom();
-            Instant until = log.getLoanedUntil();
-            if (!statusPeriods.findOverlappingForUnit(kind.getId(), serial, from, until).isEmpty()) {
-                throw conflict(serial + " is marked Faulty or Unavailable for part of this event's reservation.");
-            }
-            if (!logs.findOverlappingForUnit(kind.getId(), serial, from, until).isEmpty()) {
-                throw conflict(serial + " is already reserved for an overlapping event.");
-            }
-            if (!reports.findUnitDamageOverlapping(kind.getId(), serial, from, until).isEmpty()) {
-                throw conflict(serial + " has been reported damaged during this event's reservation.");
-            }
+            availability.unitConflict(kind.getId(), serial, log.getLoanedFrom(), log.getLoanedUntil())
+                    .ifPresent(conflict -> {
+                        throw conflict(serial + switch (conflict) {
+                            case BLOCKED -> " is marked Faulty or Unavailable for part of this event's reservation.";
+                            case RESERVED -> " is already reserved for an overlapping event.";
+                            case DAMAGED -> " has been reported damaged during this event's reservation.";
+                        });
+                    });
         }
         damaged.forEach(log -> log.replaceUnit(serial));
         logs.saveAll(damaged);

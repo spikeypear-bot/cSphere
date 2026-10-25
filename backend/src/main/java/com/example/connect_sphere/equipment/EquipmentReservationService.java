@@ -27,7 +27,6 @@ public class EquipmentReservationService {
 
     private final EquipmentRepository equipmentRepository;
     private final SerialisedEquipmentRepository unitRepository;
-    private final EquipmentStatusPeriodRepository statusPeriodRepository;
     private final EquipmentLogRepository logRepository;
     private final EquipmentRequestLineRepository requestLineRepository;
     private final EquipmentRequestRepository requestRepository;
@@ -44,7 +43,6 @@ public class EquipmentReservationService {
     public EquipmentReservationService(
             EquipmentRepository equipmentRepository,
             SerialisedEquipmentRepository unitRepository,
-            EquipmentStatusPeriodRepository statusPeriodRepository,
             EquipmentLogRepository logRepository,
             EquipmentRequestLineRepository requestLineRepository,
             EquipmentRequestRepository requestRepository,
@@ -52,7 +50,6 @@ public class EquipmentReservationService {
             EventRepository eventRepository) {
         this.equipmentRepository = equipmentRepository;
         this.unitRepository = unitRepository;
-        this.statusPeriodRepository = statusPeriodRepository;
         this.logRepository = logRepository;
         this.requestLineRepository = requestLineRepository;
         this.requestRepository = requestRepository;
@@ -269,41 +266,27 @@ public class EquipmentReservationService {
 
     // AC 7: refuse a unit that is Faulty/Unavailable for any part of the period.
     // AC 8: refuse a unit already committed to an overlapping reservation.
+    // D35: refuse a unit with an open damage report (TS09) for part of the period.
     private void requireUnitFree(UUID equipmentId, String serialNumber, Instant start, Instant end) {
         boolean unitExists = unitRepository.existsById(new SerialisedEquipmentId(equipmentId, serialNumber));
         if (!unitExists) {
             throw new ReservationLineException(HttpStatus.NOT_FOUND, "Equipment unit not found", equipmentId);
         }
-
-        boolean blocked = statusPeriodRepository.findOverlapping(start, end).stream()
-                .anyMatch(p -> p.getEquipmentId().equals(equipmentId)
-                        && p.getSerialNumber().equals(serialNumber));
-        if (blocked) {
-            throw new ReservationLineException(HttpStatus.CONFLICT,
-                    "This unit is marked Faulty or Unavailable for part of that period", equipmentId);
-        }
-
-        boolean alreadyReserved = !logRepository.findOverlappingForUnit(
-                equipmentId, serialNumber, start, end).isEmpty();
-        if (alreadyReserved) {
-            throw new ReservationLineException(HttpStatus.CONFLICT,
-                    "This unit is already reserved for an overlapping event", equipmentId);
-        }
+        availability.unitConflict(equipmentId, serialNumber, start, end).ifPresent(conflict -> {
+            throw new ReservationLineException(HttpStatus.CONFLICT, switch (conflict) {
+                case BLOCKED -> "This unit is marked Faulty or Unavailable for part of that period";
+                case RESERVED -> "This unit is already reserved for an overlapping event";
+                case DAMAGED -> "This unit has been reported damaged for part of that period";
+            }, equipmentId);
+        });
     }
 
-    /** D33: free, working units of a serialised kind for the whole window:
-     * not blocked Faulty/Unavailable (TS03) and not held by an overlapping
-     * reservation, the first {@code count} by serial number. */
+    /** D33: free, working units of a serialised kind for the whole window,
+     * by the same rule as {@link #requireUnitFree} (D35), the first
+     * {@code count} by serial number. */
     private List<String> pickFreeUnits(Equipment equipment, int count, Instant start, Instant end) {
         UUID id = equipment.getId();
-        Set<String> taken = new HashSet<>();
-        statusPeriodRepository.findOverlapping(start, end).stream()
-                .filter(p -> p.getEquipmentId().equals(id))
-                .forEach(p -> taken.add(p.getSerialNumber()));
-        logRepository.findOverlappingForEquipment(id, start, end).stream()
-                .map(EquipmentLog::getSerialNumber)
-                .filter(serial -> serial != null)
-                .forEach(taken::add);
+        Set<String> taken = availability.unitsNotFree(id, start, end);
         List<String> free = unitRepository.findByIdEquipmentIdOrderByIdSerialNumberAsc(id).stream()
                 .map(unit -> unit.getId().getSerialNumber())
                 .filter(serial -> !taken.contains(serial))

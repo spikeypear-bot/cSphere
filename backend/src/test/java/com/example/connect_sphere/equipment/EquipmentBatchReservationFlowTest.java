@@ -99,6 +99,16 @@ class EquipmentBatchReservationFlowTest {
                 """, equipmentId, serialNumber, START, END);
     }
 
+    /** D35: a TS09 damage report on one unit for [from, until), OPEN or CLOSED. */
+    private void damage(UUID equipmentId, String serialNumber, String from, String until, String status) {
+        jdbc.update("""
+                INSERT INTO equipment_damage_reports (report_id, equipment_id, serial_number, quantity, description,
+                    period_start, period_end, status, reported_by, reported_at, closed_at)
+                VALUES (?, ?, ?, 1, 'Cracked', ?::timestamptz, ?::timestamptz, ?, ?, now(),
+                    CASE WHEN ? = 'CLOSED' THEN now() END)
+                """, UUID.randomUUID(), equipmentId, serialNumber, from, until, status, flow.idOf("ts1"), status);
+    }
+
     /** EC07: one processing request for the event, of these kinds and quantities. */
     private UUID requested(UUID eventId, Map<UUID, Integer> items) throws Exception {
         String lines = String.join(",", items.entrySet().stream()
@@ -386,6 +396,58 @@ class EquipmentBatchReservationFlowTest {
                 .andExpect(jsonPath("$.serialNumber").value("MX-2"))
                 .andExpect(jsonPath("$.quantity").value(1));
         assertThat(rowsOf(eventId, mixers)).containsExactly("MX-2:1:false", "MX-3:1:false");
+    }
+
+    // ---- D35: one "is this unit free?" check ------------------------------------------
+
+    @Test
+    @DisplayName("TS02 (conflict): a unit with an open damage report for part of the window cannot be reserved by serial number, singly or in a batch, and nothing is saved")
+    void anOpenDamageReportBlocksANamedUnit() throws Exception {
+        UUID eventId = event("Damage Gala");
+        UUID mixers = units("D35 Mixer", "MX-1", "MX-2");
+        // Overlaps the window's last minute only.
+        damage(mixers, "MX-1", "2027-03-10T03:59:00Z", "2027-03-11T00:00:00Z", "OPEN");
+        requested(eventId, Map.of(mixers, 1));
+
+        single(eventId, mixers, 1, "MX-1", null)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This unit has been reported damaged for part of that period"));
+        batch("ts1", eventId, line(mixers, 1, null, "MX-1"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This unit has been reported damaged for part of that period"))
+                .andExpect(jsonPath("$.equipmentId").value(mixers.toString()));
+
+        assertThat(rowsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("TS02 (conflict): picked units skip one with an open damage report for the window")
+    void pickedUnitsSkipAnOpenDamageReport() throws Exception {
+        UUID eventId = event("Damage Gala");
+        UUID mixers = units("D35 Mixer", "MX-1", "MX-2", "MX-3");
+        damage(mixers, "MX-1", "2027-03-01T00:00:00Z", "2027-04-01T00:00:00Z", "OPEN");
+        requested(eventId, Map.of(mixers, 2));
+
+        batch("ts1", eventId, line(mixers, 2, null))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$[0].serialNumber").value("MX-2"))
+                .andExpect(jsonPath("$[1].serialNumber").value("MX-3"));
+        assertThat(rowsOf(eventId, mixers)).containsExactly("MX-2:1:false", "MX-3:1:false");
+    }
+
+    @Test
+    @DisplayName("TS02 (boundary): a closed damage report, or an open one ending exactly when the window starts, does not block the unit")
+    void closedOrEarlierDamageDoesNotBlock() throws Exception {
+        UUID eventId = event("Damage Gala");
+        UUID mixers = units("D35 Mixer", "MX-1", "MX-2");
+        damage(mixers, "MX-1", "2027-03-01T00:00:00Z", "2027-04-01T00:00:00Z", "CLOSED");
+        damage(mixers, "MX-2", "2027-03-01T00:00:00Z", START, "OPEN");
+        requested(eventId, Map.of(mixers, 2));
+
+        single(eventId, mixers, 1, "MX-1", null).andExpect(status().isCreated());
+        batch("ts1", eventId, line(mixers, 1, null, "MX-2")).andExpect(status().isCreated());
+
+        assertThat(rowsOf(eventId, mixers)).containsExactly("MX-1:1:false", "MX-2:1:false");
     }
 
     @Test

@@ -507,6 +507,27 @@ class EquipmentDamageFlowTest {
     }
 
     @Test
+    @DisplayName("TS09 AC10, AC13 (conflict): a replacement with its own open damage report during the event's reservation is refused, and nothing changes")
+    void aDamagedReplacementIsRefused() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2");
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
+        UUID other = event("TS09 Other", MARCH_11);
+        approvedUnits(other, projectors, 1, MARCH_11, "PJ-2");
+        // PJ-2 is free on 10 March, but its report (still open: it affects the other event) covers that day.
+        JsonNode damagedSpare = reported(unitReport(projectors, "PJ-2", "Cracked", DAMAGED_FROM, null, null));
+        assertThat(damagedSpare.get("status").asString()).isEqualTo("OPEN");
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+
+        decide(report, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("PJ-2 has been reported damaged during this event's reservation."));
+
+        assertThat(serialsReservedFor(eventId, projectors)).containsExactly("PJ-1");
+        assertThat(outcomeColumn(outcomeOf(report, eventId), "outcome")).isNull();
+    }
+
+    @Test
     @DisplayName("TS09 AC14 (conflict): the same replacement unit cannot be given to two events at overlapping times; the second attempt is refused")
     void oneReplacementCannotServeTwoOverlappingEvents() throws Exception {
         UUID projectors = projectors("PJ-1", "PJ-2", "PJ-3");

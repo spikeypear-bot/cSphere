@@ -30,4 +30,24 @@ public interface EquipmentRepository extends JpaRepository<Equipment, UUID> {
             """)
     List<Object[]> damagedQuantities(@Param("equipmentIds") Collection<UUID> equipmentIds,
             @Param("start") Instant start, @Param("end") Instant end);
+
+    /** D35: serial numbers of one kind's units with an open TS09 damage report
+     * overlapping the period. A report with no end runs on. Read through
+     * {@link EquipmentAvailabilityService}, never on its own. */
+    @Query(nativeQuery = true, value = """
+            select distinct serial_number from equipment_damage_reports
+            where equipment_id = :equipmentId and serial_number is not null and status = 'OPEN'
+              and period_start < :end and (period_end is null or period_end > :start)
+            """)
+    List<String> openlyDamagedSerials(@Param("equipmentId") UUID equipmentId,
+            @Param("start") Instant start, @Param("end") Instant end);
+
+    /** D35: whether this unit has an open TS09 damage report overlapping the period. */
+    @Query(nativeQuery = true, value = """
+            select exists (select 1 from equipment_damage_reports
+            where equipment_id = :equipmentId and serial_number = :serialNumber and status = 'OPEN'
+              and period_start < :end and (period_end is null or period_end > :start))
+            """)
+    boolean unitOpenlyDamaged(@Param("equipmentId") UUID equipmentId, @Param("serialNumber") String serialNumber,
+            @Param("start") Instant start, @Param("end") Instant end);
 }

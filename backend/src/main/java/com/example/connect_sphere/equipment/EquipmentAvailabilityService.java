@@ -7,6 +7,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 
@@ -22,6 +23,10 @@ import org.springframework.stereotype.Component;
  * Faulty or Unavailable block overlapping it (TS03), each counted once; and
  * units of a non-serialised kind reported damaged during it (TS09 AC5). Three
  * queries cover any number of kinds.
+ *
+ * <p>It also answers whether one serialised unit is free for a period
+ * ({@link #unitConflict}, D35), for TS02's reservations and TS09's
+ * replacements alike.
  */
 @Component
 public class EquipmentAvailabilityService {
@@ -39,6 +44,16 @@ public class EquipmentAvailabilityService {
         static Availability of(int total, int reserved, int outOfAction) {
             return new Availability(total, reserved, outOfAction, Math.max(0, total - reserved - outOfAction));
         }
+    }
+
+    /** D35: why a serialised unit cannot be used for a period. */
+    public enum UnitConflict {
+        /** A TS03 Faulty or Unavailable block overlaps it. */
+        BLOCKED,
+        /** A reservation of an event that is not cancelled or completed overlaps it. */
+        RESERVED,
+        /** An open TS09 damage report on the unit overlaps it. */
+        DAMAGED
     }
 
     private final EquipmentRepository equipment;
@@ -65,6 +80,39 @@ public class EquipmentAvailabilityService {
                 .filter(log -> !log.getLoanedFrom().isAfter(start) && !log.getLoanedUntil().isBefore(end))
                 .mapToInt(EquipmentLog::getQuantity)
                 .sum();
+    }
+
+    /**
+     * D35: the one "is this unit free?" check. Empty when, for [start, end),
+     * the unit has no Faulty/Unavailable block (TS03), no reservation on an
+     * event that is not cancelled or completed (EO07), and no open damage
+     * report (TS09); otherwise the first reason it is not, in that order.
+     */
+    public Optional<UnitConflict> unitConflict(UUID equipmentId, String serialNumber, Instant start, Instant end) {
+        if (!statusPeriods.findOverlappingForUnit(equipmentId, serialNumber, start, end).isEmpty()) {
+            return Optional.of(UnitConflict.BLOCKED);
+        }
+        if (!logs.findOverlappingForUnit(equipmentId, serialNumber, start, end).isEmpty()) {
+            return Optional.of(UnitConflict.RESERVED);
+        }
+        if (equipment.unitOpenlyDamaged(equipmentId, serialNumber, start, end)) {
+            return Optional.of(UnitConflict.DAMAGED);
+        }
+        return Optional.empty();
+    }
+
+    /** D35: the serial numbers of one kind's units that {@link #unitConflict}
+     * would refuse for [start, end), in three queries for the whole kind. */
+    public Set<String> unitsNotFree(UUID equipmentId, Instant start, Instant end) {
+        Set<String> taken = new HashSet<>();
+        statusPeriods.findOverlappingForEquipment(equipmentId, start, end)
+                .forEach(period -> taken.add(period.getSerialNumber()));
+        logs.findOverlappingForEquipment(equipmentId, start, end).stream()
+                .map(EquipmentLog::getSerialNumber)
+                .filter(serial -> serial != null)
+                .forEach(taken::add);
+        taken.addAll(equipment.openlyDamagedSerials(equipmentId, start, end));
+        return taken;
     }
 
     /** Availability of one kind for [start, end). */

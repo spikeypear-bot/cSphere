@@ -596,7 +596,7 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 
 **Serialised units are always named.** One row per unit, with its serial.
 - Given serials: one per unit (`quantity + spare`). The first `quantity` are the requested units and the rest are spares.
-- No serials, on either endpoint: the server picks free, working units for the whole window. Free means not blocked Faulty/Unavailable and not held by an overlapping reservation. Picks are in serial-number order (Java `String` order, the same order the console shows). If fewer are free than asked, the request is refused. The single endpoint returns the first row it created; `GET /api/equipment/events/{id}/reservations` lists them all.
+- No serials, on either endpoint: the server picks free, working units for the whole window. Free means not blocked Faulty/Unavailable and not held by an overlapping reservation (and, since D35, no open damage report). Picks are in serial-number order (Java `String` order, the same order the console shows). If fewer are free than asked, the request is refused. The single endpoint returns the first row it created; `GET /api/equipment/events/{id}/reservations` lists them all.
 - A non-serialised kind with serials is 400.
 
 **Request page (frontend).** One compact header, then one table with one row per requested item. Each row shows requested, already reserved (spares apart), available for the window, a "Reserve now" figure (the remaining quantity, as far as stock allows), the auto-picked units (which can be changed) and a "+ spare" control. One button sends the whole batch. The loan window defaults to the event's times. The decision card enables Approve only when everything is reserved, and Reject asks for a reason. The old per-item form, availability card, reservations card and decision select are removed.
@@ -609,6 +609,40 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 - **Frontend:** `fulfilment.test.ts` and the request-page tests.
 
 **Migration:** V40 (`equipment_logs.spare BOOLEAN NOT NULL DEFAULT false`).
+
+### D35 — TS02 + TS09: one "is this unit free?" check; an open damage report blocks reserving that unit
+
+2026-10-25, branch `feat/ts09-console-cleanup`. D34 is TS11's, on its own branch.
+
+**Problem.** Three places decided whether a serialised unit was free for a window, each differently:
+- TS02's reservation by serial number (`EquipmentReservationService.requireUnitFree`) loaded every overlapping status period and filtered them in Java.
+- TS02's auto-pick (`pickFreeUnits`, D33) did the same for the kind.
+- Only TS09's replacement (`EquipmentDamageService.replace`) also refused a unit with an overlapping damage report.
+
+So a unit already reported damaged could still be reserved, or auto-picked, for another event. TS09 would then have to decide the same damage again.
+
+**Decision (user, 2026-10-25).** One check, `EquipmentAvailabilityService.unitConflict(equipmentId, serial, from, until)`. A unit is free for the window when it has:
+- no overlapping Faulty/Unavailable block (TS03);
+- no overlapping reservation on an event that is not cancelled or completed (EO07, D28);
+- no overlapping **open** damage report on that unit (TS09).
+
+The check returns the first reason a unit is not free, and each caller words its own message:
+- TS02, named unit: 409 `This unit has been reported damaged for part of that period` (the other two messages are unchanged).
+- TS02, auto-pick: the unit is skipped (`unitsNotFree`, the same rule for a whole kind, three queries).
+- TS09, replacement: unchanged messages.
+
+Each rule is one targeted query: `findOverlappingForUnit` for blocks and reservations, and a native `exists` on `equipment_damage_reports` for damage.
+
+**Why open only.** A report closes once every affected event has an outcome. At that point any block it asked for is a TS03 status period, which the first rule already checks. A closed report that asked for no block means Technical Support chose not to block the unit. If closed reports still counted, a closed report with no end date would make its unit unreservable for good, with no way to undo it. Before D35, TS09's replacement refused a unit with *any* overlapping report, open or closed. It now follows the same open-only rule.
+
+**Not changed.** Availability counts (D32) still count only blocked serialised units as out of action. A unit with an open report is usually reserved by the event the report affects, so it is already counted there, and counting it again would understate stock. Non-serialised damage is still counted by quantity (TS09 AC5).
+
+**Evidence:** `EquipmentBatchReservationFlowTest` (real PostgreSQL) covers:
+- a named unit with an open report refused, singly and in a batch, with nothing saved;
+- auto-pick skipping such a unit;
+- boundary: a closed report, or an open one ending exactly when the window starts, does not block.
+
+`EquipmentDamageFlowTest.aDamagedReplacementIsRefused` covers TS09's replacement refusal, which had no test before.
 
 ## Awaiting Team Confirmation
 

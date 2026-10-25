@@ -37,13 +37,4 @@ public interface EquipmentDamageReportRepository extends JpaRepository<Equipment
             """)
     List<EquipmentDamageReport> findQuantityDamageOverlapping(@Param("equipmentId") UUID equipmentId,
             @Param("start") Instant start, @Param("end") Instant end);
-
-    /** Damage reported against this unit overlapping the period. */
-    @Query("""
-            select r from EquipmentDamageReport r
-            where r.equipmentId = :equipmentId and r.serialNumber = :serialNumber
-              and r.periodStart < :end and (r.periodEnd is null or r.periodEnd > :start)
-            """)
-    List<EquipmentDamageReport> findUnitDamageOverlapping(@Param("equipmentId") UUID equipmentId,
-            @Param("serialNumber") String serialNumber, @Param("start") Instant start, @Param("end") Instant end);
 }

@@ -71,7 +71,7 @@ Every report, newest first, in the shape above. Optional `?equipmentId=uuid` kee
 | `decision` | Kind | Effect | Refused (409) when |
 |---|---|---|---|
 | `COVERED` | serialised | Damaged unit's reservation released | the rest would not cover `requestedQuantity` |
-| `REPLACE` | serialised | Same reservation, held by `replacementSerialNumber` | that unit is Faulty/Unavailable, reserved, or reported damaged during the reservation (400 if it is the damaged unit; 404 if unknown) |
+| `REPLACE` | serialised | Same reservation, held by `replacementSerialNumber` | that unit is Faulty/Unavailable, reserved, or has an open damage report during the reservation (the D35 check; 400 if it is the damaged unit; 404 if unknown) |
 | `SHORT` | serialised | Damaged unit's reservation released; `shortfall` = what is missing | spares still cover the event |
 | `REDUCE` | non-serialised | `reduceBy` (≥ 0) units taken off the event's reservations; `COVERED` or `SHORT` follows | the coordinator already acted on the shortfall (400 if more than the event holds) |
 
@@ -212,7 +212,7 @@ Reserves several of the event's requested items for one window, all or nothing.
 Returns every reservation created, in line order, in the reservation shape above. A serialised unit is one reservation with its serial; a non-serialised line is one reservation of `quantity` units plus, when `spare` > 0, one of `spare` units marked `"spare": true`.
 
 - `quantity` (≥ 0) units count towards the request. `spare` (≥ 0, default 0) extra units are marked spare. Each line must reserve at least one unit.
-- `serialNumbers` (serialised kinds only): one per unit (`quantity + spare`), all different. The first `quantity` are the requested units and the rest are spares. Left out, the server picks free, working units for the whole window (not blocked Faulty/Unavailable, not held by an overlapping reservation), in serial-number order.
+- `serialNumbers` (serialised kinds only): one per unit (`quantity + spare`), all different. The first `quantity` are the requested units and the rest are spares. Left out, the server picks free, working units for the whole window (not blocked Faulty/Unavailable, not held by an overlapping reservation, no open damage report: decision-log D35), in serial-number order. A named unit with an open damage report overlapping the window is refused with 409 `This unit has been reported damaged for part of that period`.
 - **Cap:** the event's non-spare reservations of a kind overlapping the window may not go above what it asks for. That is the processing request's line plus what its approved requests are still owed (TS09). Anything more must be spare.
 - Each line passes the single endpoint's checks: the event is not cancelled or finished, the item is on its processing request, named units exist and are free, and availability (`EquipmentAvailabilityService`) allows it.
 - Nothing is saved unless every line passes. The error names the refused line: `{"message": "...", "equipmentId": "uuid"}`.

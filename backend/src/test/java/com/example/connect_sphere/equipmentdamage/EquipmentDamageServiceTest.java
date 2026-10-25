@@ -31,6 +31,7 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.equipment.Equipment;
+import com.example.connect_sphere.equipment.EquipmentAvailabilityService;
 import com.example.connect_sphere.equipment.EquipmentLog;
 import com.example.connect_sphere.equipment.EquipmentLogRepository;
 import com.example.connect_sphere.equipment.EquipmentRepository;
@@ -91,7 +92,8 @@ class EquipmentDamageServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new EquipmentDamageService(reports, outcomes, equipment, units, periods,
+        service = new EquipmentDamageService(reports, outcomes, equipment, units,
+                new EquipmentAvailabilityService(equipment, periods, logs),
                 mock(EquipmentStatusService.class), logs, mock(EquipmentRequestRepository.class), events, lifecycle,
                 notifications, mock(UserRepository.class), statuses, impact, ledger, changeLog,
                 Clock.fixed(Instant.parse("2027-01-01T00:00:00Z"), ZoneOffset.UTC));
