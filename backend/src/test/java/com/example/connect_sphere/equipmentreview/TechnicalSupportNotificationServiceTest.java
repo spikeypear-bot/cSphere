@@ -31,20 +31,25 @@ import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.repository.UserRepository;
 
+/** Unit tests for the content this service builds ({@code describeRequest},
+ * {@code openReview}) — the after-commit listener wiring itself is covered
+ * end to end by {@link TechnicalSupportNotificationFlowTest}. */
 @Tag("unit")
 @Tag("TS11")
-class EquipmentNoticeServiceTest {
+class TechnicalSupportNotificationServiceTest {
 
     private final EventRepository events = mock(EventRepository.class);
     private final EquipmentRequestRepository requests = mock(EquipmentRequestRepository.class);
     private final EquipmentReservationService reservations = mock(EquipmentReservationService.class);
     private final EquipmentChangeReviewRepository reviews = mock(EquipmentChangeReviewRepository.class);
     private final UserRepository users = mock(UserRepository.class);
-    private final EquipmentNoticeService service = new EquipmentNoticeService(events, requests,
-            mock(EquipmentRequestLineRepository.class), mock(EquipmentRepository.class), reservations, reviews, users);
+    private final TechnicalSupportNotificationService service = new TechnicalSupportNotificationService(events,
+            requests, mock(EquipmentRequestLineRepository.class), mock(EquipmentRepository.class), reservations,
+            reviews, users, mock(NotificationService.class), null);
 
     private Event event;
     private ChangeApproved approved;
