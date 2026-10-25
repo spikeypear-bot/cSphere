@@ -37,10 +37,19 @@ public class EquipmentLog {
     @Column(name = "loaned_until", nullable = false)
     private Instant loanedUntil;
 
+    /** V38 (D33): an extra unit held beyond what the event requested. */
+    @Column(nullable = false)
+    private boolean spare;
+
     protected EquipmentLog() {}
 
     public EquipmentLog(UUID eventId, UUID equipmentId, int quantity,
                         String serialNumber, Instant loanedFrom, Instant loanedUntil) {
+        this(eventId, equipmentId, quantity, serialNumber, loanedFrom, loanedUntil, false);
+    }
+
+    public EquipmentLog(UUID eventId, UUID equipmentId, int quantity,
+                        String serialNumber, Instant loanedFrom, Instant loanedUntil, boolean spare) {
         this.id = UUID.randomUUID();
         this.eventId = eventId;
         this.equipmentId = equipmentId;
@@ -48,6 +57,7 @@ public class EquipmentLog {
         this.serialNumber = serialNumber;
         this.loanedFrom = loanedFrom;
         this.loanedUntil = loanedUntil;
+        this.spare = spare;
     }
 
     public UUID getId() { return id; }
@@ -57,6 +67,7 @@ public class EquipmentLog {
     public String getSerialNumber() { return serialNumber; }
     public Instant getLoanedFrom() { return loanedFrom; }
     public Instant getLoanedUntil() { return loanedUntil; }
+    public boolean isSpare() { return spare; }
 
     /** TS09 AC10: the same reservation, now held by another unit of the kind. */
     public void replaceUnit(String replacementSerialNumber) {
