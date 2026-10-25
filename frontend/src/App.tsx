@@ -39,8 +39,9 @@ import { BookingApprovalsPage } from './features/venueStaff/BookingApprovalsPage
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
-import { TechnicalSupportHomePage } from './features/technicalSupport/TechnicalSupportHomePage'
-import { technicalSupportFeatures } from './features/technicalSupport/technicalSupportFeatures'
+import { AppShell as ConsoleShell } from './components/layout/AppShell'
+import { technicalSupportNav } from './features/technicalSupport/technicalSupportNav'
+import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
 import { EquipmentReviewPage } from './features/technicalSupport/review/EquipmentReviewPage'
 import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
@@ -174,19 +175,18 @@ function TechnicalSupportRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<TechnicalSupportHomePage />} />
-      {skeletonRoutes(
-        technicalSupportFeatures.filter((feature) => feature.path !== 'availability' && feature.path !== 'status' && feature.path !== 'reservations'),
-      )}
-      <Route path="availability" element={<EquipmentReviewPage />} />
-      <Route path="status" element={<EquipmentStatusPage />} />
-      <Route path="reservations" element={<EquipmentReservationPage />} />
-      {/* TS09: damaged equipment reports and their outcomes. */}
-      <Route path="damaged-equipment" element={<DamageReportsPage />} />
-      <Route path="damaged-equipment/new" element={<DamageReportFormPage />} />
-      <Route path="damaged-equipment/:reportId" element={<DamageReportDetailPage />} />
-    </Routes>
+    <ConsoleShell navLabel="Technical Support" items={technicalSupportNav}>
+      <Routes>
+        <Route index element={<TechnicalSupportDashboardPage />} />
+        <Route path="availability" element={<EquipmentReviewPage />} />
+        <Route path="status" element={<EquipmentStatusPage />} />
+        <Route path="reservations" element={<EquipmentReservationPage />} />
+        {/* TS09: damaged equipment reports and their outcomes. */}
+        <Route path="damaged-equipment" element={<DamageReportsPage />} />
+        <Route path="damaged-equipment/new" element={<DamageReportFormPage />} />
+        <Route path="damaged-equipment/:reportId" element={<DamageReportDetailPage />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

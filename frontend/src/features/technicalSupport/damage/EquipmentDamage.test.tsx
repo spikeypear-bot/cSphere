@@ -5,7 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../../test/apiStubs'
-import { TechnicalSupportHomePage } from '../TechnicalSupportHomePage'
+import { TechnicalSupportDashboardPage } from '../dashboard/TechnicalSupportDashboardPage'
 import { DamageReportsPage } from './DamageReportsPage'
 import { DamageReportFormPage } from './DamageReportFormPage'
 import { DamageReportDetailPage } from './DamageReportDetailPage'
@@ -46,7 +46,7 @@ function renderAt(path: string) {
     <MemoryRouter initialEntries={[path]}>
       <SessionProvider>
         <Routes>
-          <Route path="/technical-support" element={<TechnicalSupportHomePage />} />
+          <Route path="/technical-support" element={<TechnicalSupportDashboardPage />} />
           <Route path="/technical-support/damaged-equipment" element={<DamageReportsPage />} />
           <Route path="/technical-support/damaged-equipment/new" element={<DamageReportFormPage />} />
           <Route path="/technical-support/damaged-equipment/:reportId" element={<DamageReportDetailPage />} />
@@ -64,10 +64,11 @@ describe('TS09 Technical Support reports damaged equipment', () => {
     window.localStorage.clear()
   })
 
-  it('TS09 AC1 (happy): the console links to damaged equipment without changing the other cards', () => {
+  it('TS09 AC1 (happy): the console dashboard links to faulty equipment, where damage is reported', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     renderAt('/technical-support')
-    expect(screen.getByRole('link', { name: /Damaged equipment/ })).toHaveAttribute('href', '/technical-support/damaged-equipment')
-    expect(screen.getAllByText('Available')).toHaveLength(3)
+    expect(screen.getByRole('link', { name: 'Faulty equipment' })).toHaveAttribute('href', '/technical-support/faulty')
+    expect(await screen.findByText('No equipment is out of action.')).toBeInTheDocument()
   })
 
   it('TS09 AC6, AC15 (happy): lists reports newest first with how many events still need a decision', async () => {

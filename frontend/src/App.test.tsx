@@ -1,6 +1,6 @@
-// @stories AU04 DEV05  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories AU04 DEV05 TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
@@ -86,17 +86,16 @@ describe('App routing — role consoles', () => {
     expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
   })
 
-  it('opens equipment request review from the Technical Support console', async () => {
+  it('TS09 (happy): opens the Technical Support dashboard inside its side navigation', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
-    const user = userEvent.setup()
     signInAs('technical-support', 'tech1', 'ConnectSphere')
     renderApp('/technical-support')
 
-    const reviewLink = screen.getByRole('link', { name: /Equipment request review/i })
-    expect(reviewLink).toHaveAttribute('href', '/technical-support/availability')
-    await user.click(reviewLink)
+    const nav = screen.getByRole('navigation', { name: 'Technical Support' })
+    expect(within(nav).getByRole('link', { name: 'Equipment requests' })).toHaveAttribute('href', '/technical-support/requests')
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
 
-    expect(await screen.findByRole('heading', { name: 'Equipment request review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { name: 'Technical Support Staff console' })).toBeInTheDocument()
     expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
   })
 

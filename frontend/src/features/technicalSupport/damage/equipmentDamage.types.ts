@@ -4,6 +4,8 @@
 export type DamageOutcome = 'COVERED' | 'REPLACED' | 'SHORT'
 export type ShortfallResolution = 'NOTE' | 'ADDITIONAL_REQUEST'
 export type DamageDecision = 'COVERED' | 'REPLACE' | 'SHORT' | 'REDUCE'
+/** V37: the TS03 block put on the unit when the report closes. */
+export type DamageBlockStatus = 'FAULTY' | 'UNAVAILABLE'
 
 export interface AffectedEvent {
   outcomeId: string
@@ -49,7 +51,19 @@ export interface DamageReport {
   closedAt: string | null
   canClose: boolean
   affectedEvents: AffectedEvent[]
+  /** V37; older responses (and fixtures) only carry markFaulty/faultyMarked. */
+  blockStatus?: DamageBlockStatus | null
+  blockApplied?: boolean
 }
+
+/** The block a report asks for, reading the older markFaulty flag too. */
+export function reportBlock(report: DamageReport): { status: DamageBlockStatus; applied: boolean } | null {
+  const status = report.blockStatus ?? (report.markFaulty ? 'FAULTY' : null)
+  if (!status) return null
+  return { status, applied: report.blockApplied ?? report.faultyMarked }
+}
+
+export const BLOCK_LABELS: Record<DamageBlockStatus, string> = { FAULTY: 'Faulty', UNAVAILABLE: 'Unavailable' }
 
 export interface ReportDamageBody {
   equipmentId: string
@@ -58,7 +72,10 @@ export interface ReportDamageBody {
   description: string
   periodStart: string
   periodEnd: string | null
-  markFaulty: boolean
+  /** Serialised only; omitted (or null) for no block. */
+  blockStatus?: DamageBlockStatus | null
+  /** Older form of `blockStatus: 'FAULTY'`; the server still accepts it. */
+  markFaulty?: boolean
 }
 
 export interface DecideOutcomeBody {

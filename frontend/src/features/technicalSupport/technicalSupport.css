@@ -91,3 +91,127 @@
     padding: 1rem;
   }
 }
+
+/* Console pages (dashboard, lists, inventory). */
+.tech-dashboard {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.tech-dashboard__card h2 a {
+  color: inherit;
+}
+
+.tech-card .tech-rows,
+.tech-rows {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.tech-rows > li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.25rem 0.6rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.tech-rows > li:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.tech-rows > li > p {
+  flex-basis: 100%;
+  margin: 0;
+}
+
+.tech-badge {
+  display: inline-block;
+  padding: 0.1rem 0.55rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.tech-badge--danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.tech-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.75rem;
+  margin: 0;
+}
+
+.tech-figures dt {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.tech-figures dd {
+  margin: 0.2rem 0 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.tech-load-error {
+  display: grid;
+  justify-items: start;
+  gap: 0.5rem;
+}
+
+.tech-load-error p {
+  margin: 0;
+  color: var(--danger);
+}
+
+.tech-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.75rem 1rem;
+  align-items: end;
+}
+
+.tech-kinds {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 17rem), 1fr));
+  gap: 1rem;
+}
+
+.tech-kind {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+  padding: 1rem;
+  height: 100%;
+}
+
+.tech-kind h2 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.tech-kind .tech-figures {
+  grid-column: 1 / -1;
+  gap: 0.5rem 1.25rem;
+}
+
+.tech-kind .tech-figures dd {
+  font-size: 1rem;
+}

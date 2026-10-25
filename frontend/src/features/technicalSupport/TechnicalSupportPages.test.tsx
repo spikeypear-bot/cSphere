@@ -1,11 +1,13 @@
-// @stories TS01 TS02 TS03 TS06  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories TS01 TS02 TS03 TS06 TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
-import { TechnicalSupportHomePage } from './TechnicalSupportHomePage'
+import { AppShell } from '../../components/layout/AppShell'
+import { technicalSupportNav } from './technicalSupportNav'
+import { TechnicalSupportDashboardPage } from './dashboard/TechnicalSupportDashboardPage'
 import { EquipmentReservationPage } from './reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './status/equipmentStatusPage'
 import { toLocalInputValue } from './reservations/reservationUtils'
@@ -20,11 +22,13 @@ function renderRoutes(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
       <SessionProvider>
+        <AppShell navLabel="Technical Support" items={technicalSupportNav}>
         <Routes>
-          <Route path="/technical-support" element={<TechnicalSupportHomePage />} />
+          <Route path="/technical-support" element={<TechnicalSupportDashboardPage />} />
           <Route path="/technical-support/reservations" element={<EquipmentReservationPage />} />
           <Route path="/technical-support/status" element={<EquipmentStatusPage />} />
         </Routes>
+        </AppShell>
       </SessionProvider>
     </MemoryRouter>,
   )
@@ -38,19 +42,22 @@ describe('Technical Support UI integration', () => {
     window.localStorage.clear()
   })
 
-  it('links the console to working reservation and status pages', () => {
+  it('TS09 (happy): the console navigation links to the requests, faulty equipment and inventory pages', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     renderRoutes('/technical-support')
 
-    expect(screen.getByRole('link', { name: /Equipment request review/ })).toHaveAttribute(
-      'href', '/technical-support/availability',
+    const nav = screen.getByRole('navigation', { name: 'Technical Support' })
+    expect(within(nav).getByRole('link', { name: 'Equipment requests' })).toHaveAttribute(
+      'href', '/technical-support/requests',
     )
-    expect(screen.getByRole('link', { name: /Reservations/ })).toHaveAttribute(
-      'href', '/technical-support/reservations',
+    expect(within(nav).getByRole('link', { name: 'Faulty equipment' })).toHaveAttribute(
+      'href', '/technical-support/faulty',
     )
-    expect(screen.getByRole('link', { name: /Equipment status/ })).toHaveAttribute(
-      'href', '/technical-support/status',
+    expect(within(nav).getByRole('link', { name: 'Inventory' })).toHaveAttribute(
+      'href', '/technical-support/inventory',
     )
-    expect(screen.getAllByText('Available')).toHaveLength(3)
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
   })
 
   it('selects an equipment request, reserves it, and shows the saved event reservation', async () => {

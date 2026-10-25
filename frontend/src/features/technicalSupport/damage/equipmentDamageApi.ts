@@ -19,7 +19,9 @@ export function fetchUnits(start: string, end: string) {
   return apiClient.get<EquipmentUnitStatus[]>(`/equipment/units?${query}`)
 }
 
-export const fetchReports = () => apiClient.get<DamageReport[]>(REPORTS)
+/** Every report, newest first; `equipmentId` keeps one kind's (D32). */
+export const fetchReports = (equipmentId?: string) =>
+  apiClient.get<DamageReport[]>(equipmentId ? `${REPORTS}?equipmentId=${encodeURIComponent(equipmentId)}` : REPORTS)
 export const fetchReport = (reportId: string) => apiClient.get<DamageReport>(`${REPORTS}/${reportId}`)
 export const reportDamage = (body: ReportDamageBody) => apiClient.post<DamageReport>(REPORTS, body)
 

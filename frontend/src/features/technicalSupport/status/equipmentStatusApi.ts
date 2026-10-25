@@ -4,7 +4,12 @@ import type {
   EquipmentUnit,
   StatusPeriod,
   TimePeriod,
+  UnitStatusPeriod,
 } from './equipmentStatus.types'
+
+/** TS03's refusal when an event holds the unit during the block (D32). The
+ * console then reports the problem through TS09 instead. */
+export const UNIT_COMMITTED_MESSAGE = 'This unit is already committed to an event during that time.'
 
 // Lets the page react to specific failures, like 409 (conflict).
 export class ApiError extends Error {
@@ -68,6 +73,11 @@ export function addStatusPeriod(
       end: end === null ? null : toIso(end),
     }),
   )
+}
+
+/** D32: every unit's blocks that are running or yet to start, newest start first. */
+export function fetchCurrentStatusPeriods(): Promise<UnitStatusPeriod[]> {
+  return call(() => apiClient.get<UnitStatusPeriod[]>(`${EQUIPMENT}/status-periods?current=true`))
 }
 
 export function removeStatusPeriod(periodId: string): Promise<void> {

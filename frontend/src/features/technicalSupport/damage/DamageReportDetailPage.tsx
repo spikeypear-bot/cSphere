@@ -9,7 +9,9 @@ import { formatEventDateTime, formatEventTimeRange } from '../../venueStaff/form
 import { EquipmentPhoto } from './EquipmentPhoto'
 import { closeReport, decideOutcome, fetchReport, fetchUnits } from './equipmentDamageApi'
 import {
+  BLOCK_LABELS,
   outcomeLabel,
+  reportBlock,
   type AffectedEvent,
   type DamageReport,
   type DecideOutcomeBody,
@@ -69,6 +71,7 @@ export function DamageReportDetailPage() {
   if (!report) return <p role="status">Loading damage report…</p>
 
   const open = report.status === 'OPEN'
+  const block = reportBlock(report)
   const decide = (event: AffectedEvent, body: DecideOutcomeBody, done: string) =>
     act(() => decideOutcome(report.reportId, event.outcomeId, body), done)
 
@@ -77,7 +80,7 @@ export function DamageReportDetailPage() {
       <PageHeader
         title={`${report.equipmentName}${report.serialNumber ? ` · ${report.serialNumber}` : ''}`}
         description={report.description}
-        actions={<Link className="button button--secondary" to="/technical-support/damaged-equipment">Back to reports</Link>}
+        actions={<Link className="button button--secondary" to="/technical-support/faulty">Back to faulty equipment</Link>}
       />
 
       <Card className="equipment-damage__summary">
@@ -88,8 +91,11 @@ export function DamageReportDetailPage() {
           <div><dt>Until</dt><dd>{report.periodEnd ? formatEventDateTime(report.periodEnd) : 'Further notice'}</dd></div>
           <div><dt>Reported</dt><dd>{formatEventDateTime(report.reportedAt)} by {report.reportedByName}</dd></div>
           <div><dt>Status</dt><dd>{open ? 'Open' : 'Closed'}</dd></div>
-          {report.markFaulty ? (
-            <div><dt>Faulty block</dt><dd>{report.faultyMarked ? 'Unit marked Faulty' : 'Added when the report closes'}</dd></div>
+          {block ? (
+            <div>
+              <dt>{BLOCK_LABELS[block.status]} block</dt>
+              <dd>{block.applied ? `Unit marked ${BLOCK_LABELS[block.status]}` : 'Added when the report closes'}</dd>
+            </div>
           ) : null}
         </dl>
       </Card>
