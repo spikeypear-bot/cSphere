@@ -739,6 +739,7 @@ class EventController {
 	{method} +eventsByCoordinator () : List
 	{method} +get ( jwt : Jwt , id : UUID ) : EventDto
 	{method} +readiness ( jwt : Jwt , id : UUID ) : EventReadinessDto
+	{method} +registrations ( jwt : Jwt , id : UUID ) : RegistrationInfoDto
 	{method} +sendForSafetyReview ( jwt : Jwt , id : UUID ) : EventReadinessDto
 	{method} +timeline ( jwt : Jwt , id : UUID ) : List
 	{method} +withdrawFromSafetyReview ( jwt : Jwt , id : UUID , body : Map ) : EventReadinessDto
@@ -890,6 +891,29 @@ class OrganiserArrangementsDto.Venue {
 }
 
 
+class RegistrationInfoDto {
+	{field} -capacity : Integer
+	{field} -closesAt : OffsetDateTime
+	{field} -confirmedCount : int
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -message : String
+	{field} -opensAt : OffsetDateTime
+	{field} -placesRemaining : Integer
+	{field} -registrationRequired : boolean
+	{field} -registrationState : String
+}
+
+
+class RegistrationInfoDto.Attendee {
+	{field} -name : String
+	{field} -reference : String
+	{field} -registeredAt : OffsetDateTime
+	{field} -registrationId : UUID
+	{field} -status : String
+}
+
+
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
@@ -905,7 +929,9 @@ class Event <<Entity>>  {
 	{field} +firstConfirmedAt : OffsetDateTime
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +requiredFacilities : List<String>
 	{field} +safetyApprovedAt : OffsetDateTime
 	{field} +safetyFeedback : String
@@ -952,6 +978,16 @@ enum EventReassignmentStatus {
 }
 
 
+class EventRegistration <<Entity>>  {
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +reference : String
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +status : String
+}
+
+
 enum EventStatus {
 	{field} +awaiting_safety_review
 	{field} +cancelled
@@ -976,6 +1012,11 @@ interface EventReassignmentRequestRepository {
 	{method}  {abstract} +findByStatusOrderByRequestedAtAsc ( status : EventReassignmentStatus ) : List
 	{method}  {abstract} +findFirstByEventIdAndRequesterUserIdOrderByRequestedAtDesc ( eventId : UUID , requesterUserId : UUID ) : Optional
 	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+interface EventRegistrationRepository {
+	{method}  {abstract} +findByEventIdOrderByRegisteredAtAsc ( eventId : UUID ) : List
 }
 
 
@@ -1077,6 +1118,11 @@ class EventReassignmentService {
 
 
 class EventReassignmentStateException {
+}
+
+
+class EventRegistrationService {
+	{method} +forOrganiser ( organisation : String , eventId : UUID ) : RegistrationInfoDto
 }
 
 
@@ -2520,6 +2566,7 @@ SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
 EventCancellationController --> EventCancellationService : service
 EventController --> EventArrangementsService : arrangements
 EventController --> EventLifecycleService : lifecycle
+EventController --> EventRegistrationService : registrationService
 EventController --> EventService : service
 EventController --> EventRequestService : eventRequestService
 EventReassignmentController --> EventReassignmentService : service
@@ -2533,6 +2580,7 @@ EventReassignmentRequestDto --> EventReassignmentStatus : status
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Equipment : equipment
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Venue : venues
 OrganiserArrangementsDto --> StatusView : journeyStatus
+RegistrationInfoDto --> "0..*" RegistrationInfoDto.Attendee : attendees
 Event --> EventStatus : status
 EventCancellationRequest --> EventCancellationStatus : status
 EventReassignmentRequest --> EventReassignmentStatus : status
@@ -2571,6 +2619,8 @@ EventReassignmentService --> EventRepository : events
 EventReassignmentService --> EventRequestRepository : eventRequests
 EventReassignmentService --> NotificationService : notifications
 EventReassignmentService --> UserRepository : users
+EventRegistrationService --> EventRegistrationRepository : registrations
+EventRegistrationService --> EventRepository : events
 EventService --> "0..*" EventStatus : ACTIVE_STATUSES
 EventService --> JourneyStatusResolver : statuses
 EventService --> EventRepository : repository
