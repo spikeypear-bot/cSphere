@@ -163,9 +163,13 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `POST /api/venues`, `PUT /api/venues/{id}` | `hasAnyRole('EC','VS')` | Catalogue authoring is VS07/VS18; widened to Coordinators per open question 1 below. |
   | `/api/event-requests/**` | `hasRole('EO')` **plus organisation scoping from the token claim** | EO01/EO02/EO15. Narrowed from `hasAnyRole('EO','EC')` — see open question 2. |
   | `GET /api/equipment/catalogue` | `hasAnyRole('EO','TECHNICIAN','EC')` | Organisers select equipment types for requests; Technical Support and Coordinators use the catalogue for availability/request workflows. |
+  | `GET /api/equipment/catalogue?from&to` | `hasRole('TECHNICIAN')` — a request matcher on the path **and** a `from` or `to` parameter, placed above the plain catalogue rule | D32. The window adds stock levels (reserved, out of action, available) for the Technical Support console; organisers and coordinators keep the plain catalogue, unchanged. |
+  | `GET /api/equipment/{id}`, `GET /api/equipment/{id}/reservations?from&to`, `GET /api/equipment/status-periods` | `hasRole('TECHNICIAN')`, above the `GET /api/equipment/**` rule; `GET /api/equipment/units` keeps `hasAnyRole('TECHNICIAN','EC')` just above them | D32. A kind's reservations name events, so coordinators do not get them (ECL-C7, D25); detail and status periods are console reads. |
   | Other `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
   | `POST`, `DELETE /api/equipment/**` | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. |
   | `PATCH /api/equipment-requests/{id}/status` | `hasRole('TECHNICIAN')` | TS06 decision; approval additionally requires sufficient reservations covering the full event period. |
+  | `GET /api/equipment-requests?status=…`, `GET /api/equipment-requests/processing`, `GET /api/equipment-requests/{id}/lines` | `hasRole('TECHNICIAN')` | TS01's queue; D32 adds the by-status form of the same list. Without the matcher the new path would fall to `anyRequest().authenticated()`. |
+  | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
   | `/api/mock` | `denyAll()` or delete the package | Demo vertical slice illustrating the MVC convention. It is currently reachable by any authenticated user of any role. |
   | `GET /api/event-requests/queue`, `GET /api/event-requests/{id}/review`, `POST /api/event-requests/{id}/clarifications\|approve\|reject` | `hasRole('EC')` **plus assignment check in the service** | EC01/EC02 (D21). The queue is the caller's own requests only. `POST /api/event-requests/{id}/assign-coordinator` and the queue's unassigned list were removed with ELC-C6: a coordinator can no longer see or pick up an unassigned request, and that path now falls under the blanket rule above (403 for a coordinator). |
   | `GET /api/event-requests/unassigned/coordinators`, `POST /api/event-requests/unassigned/{id}/assign` | `hasRole('ECL')` — covered by the existing `/api/event-requests/unassigned/**` matcher **plus an "unassigned and still open" check in the service** | ELC-C6 (Week 7 customer change 5). The Lead assigns an unassigned request to one Event Coordinator, picked from the list of every `ec` account (id and username only). Allowed while the request is `pending` or `clarification_required` with no coordinator, otherwise 409; a missing coordinator or a user who is not an Event Coordinator is 422. The acting Lead is the token's subject. The ECL-C1 queue now keeps an unassigned `clarification_required` request listed, so it can still be opened and assigned. |
@@ -536,6 +540,47 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 - **Backend:** `EquipmentDamageFlowTest` (27, real PostgreSQL), `EquipmentDamageRoleAccessTest` (41), `EquipmentDamageServiceTest` (4, unit), `DamageImpactTest` (3, unit).
 
 **Migration:** V35 (two tables, one notification type, notification constraint re-declared with it added).
+
+### D32 — TS09: Technical Support console built on existing endpoints; one availability calculation; problems routed TS03 → TS09; Unavailable blocks
+
+2026-10-25, branch `feat/ts09-technical-support-console`. The reworked Technical Support console needed a request list by status, the blocked units, inventory for a date range and a per-equipment page. The user asked for reuse and refactorability rather than parallel APIs. Endpoints and shapes: `docs/equipment-damage-api.md` § Technical Support console.
+
+**Reuse first (extend, do not duplicate).**
+- **Requests:** `GET /api/equipment-requests?status=processing|approved|rejected|all` is the same list as TS01's `/processing`, which is unchanged. Both are served by one method (`EquipmentRequestQueueService.list`), moved out of the controller. Fields are only added to `EquipmentRequestResponse`. The list loads requests, events, lines, coordinators and shortfall links once each, not per request.
+  - `requestedBy` is the event's current coordinator, because the submitter is not stored.
+  - `submittedAt` is not stored, so it is `null`. Adding the column was left out of this change.
+- **Status periods:** `GET /api/equipment/status-periods` lists every unit's current and upcoming TS03 blocks. It uses TS03's existing overlap query from now.
+- **Damage reports:** `?equipmentId=` narrows TS09's list.
+- **Catalogue for a window:** `from`/`to` (both or neither) add `reservedQuantity`, `outOfActionQuantity` and `availableQuantity`. Without them the response is unchanged (the extra fields are left out of the JSON). With them the endpoint is Technical Support only (D20).
+- **Per kind:** `GET /api/equipment/{id}` (units, status now, blocks) and `GET /api/equipment/{id}/reservations`. The second is the by-equipment twin of the event reservations list and uses the same mapper, so both lists have the same item shape. Its time fields therefore keep their existing names, `loanedFrom`/`loanedUntil`. `eventName` was added to that shared shape.
+
+**One availability calculation.** `EquipmentAvailabilityService` is the only place availability is computed:
+- available = total − overlapping reservations of events that are not cancelled or completed − serialised units blocked Faulty/Unavailable (TS03, each counted once) − units of a non-serialised kind reported damaged (TS09 AC5);
+- never below zero;
+- used by TS01's request availability, TS02's quantity check and the catalogue window;
+- three queries for any number of kinds.
+
+The private formula in `EquipmentReservationService` and the single-kind `EquipmentRepository.damagedQuantity` query were removed.
+
+**Routed problem form, no combined endpoint.** The console first tries TS03's `POST /api/equipment/{id}/units/{serial}/periods`.
+- If an event holds the unit, TS03 refuses with **409** `"This unit is already committed to an event during that time."` That is the endpoint's only 409, and its message is now the constant `EquipmentStatusService.UNIT_COMMITTED_MESSAGE`.
+- On that 409, the console falls back to a TS09 damage report, which decides each affected event first.
+- Two endpoints keep two sets of rules: a block never changes reservations (business rule E21), and a damage report does.
+
+**TS09 Unavailable (V37).**
+- `markFaulty` becomes `blockStatus` (`FAULTY` / `UNAVAILABLE` / null), and `faulty_marked` becomes `block_applied`.
+- On close, the block is applied through TS03's `EquipmentStatusService.addPeriod`, as before.
+- `"markFaulty": true` is still accepted as `FAULTY`; `markFaulty: true` with a different `blockStatus` is 400.
+- Responses keep `markFaulty`/`faultyMarked`, derived from the new columns, and add `blockStatus`/`blockApplied`.
+
+**Access (D20 rows updated).** Every new read is `TECHNICIAN` only.
+- `GET /api/equipment/units` keeps coordinator access through an explicit matcher above the new one-segment rule.
+- The catalogue window is matched on its query parameters in the filter chain, rather than with `@PreAuthorize`, so the rule stays in the one list.
+
+**Evidence:**
+- **Backend:** `TechnicalSupportConsoleFlowTest` (real PostgreSQL), `TechnicalSupportConsoleRoleAccessTest` (403 for every other role, existing readers still 200), `EquipmentAvailabilityServiceTest`, `EquipmentConsoleReadsTest`, `EquipmentRequestQueueServiceTest`, `ReportDamageRequestTest` (unit).
+
+**Migration:** V37 (`block_status` added and back-filled, `faulty_marked` → `block_applied`, `mark_faulty` dropped, two checks).
 
 ## Awaiting Team Confirmation
 

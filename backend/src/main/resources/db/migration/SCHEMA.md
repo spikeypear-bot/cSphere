@@ -619,3 +619,19 @@ reduction lowers `quantity` (deleting the row at 0). What was decided stays on t
 `notification_type` gains `equipment_damage_outcome` (needs `event_id` and `message`). The recreated
 `chk_notification_shape` keeps every V33 branch. See
 [TS09 API](../../../../../../docs/equipment-damage-api.md) and decision-log D31.
+
+## V37 update — damage report block status (TS09)
+
+V34–V36 are taken across branches. A damage report can now ask for the damaged unit to be blocked
+as **Unavailable** as well as Faulty (TS03's two block statuses):
+
+- `equipment_damage_reports.block_status` (`text`, nullable; `FAULTY` or `UNAVAILABLE`): the TS03 block to
+  add when the report closes. Back-filled to `FAULTY` where `mark_faulty` was true, then
+  `mark_faulty` is dropped (V35's check tying `faulty_marked` to it goes with it).
+- `faulty_marked` is renamed `block_applied`: the requested block was added on close.
+- `chk_damage_block_serialised`: a block needs a serialised unit (`serial_number` set).
+  `chk_damage_block_applied`: `block_applied` only when a block was asked for.
+
+The API keeps `markFaulty`/`faultyMarked` in its responses, derived from these columns, and still
+accepts `markFaulty: true` as `FAULTY`. See [TS09 API](../../../../../../docs/equipment-damage-api.md)
+and decision-log D32.
