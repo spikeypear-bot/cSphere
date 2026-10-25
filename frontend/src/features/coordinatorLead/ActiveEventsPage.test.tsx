@@ -84,7 +84,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
-    ['attendee', 'att1', /Attendee console/i],
+    ['attendee', 'att1', /^Welcome$/i],
   ] as const)('ECL-C4 AC1 (negative): a signed-in %s opening the URL directly is sent to their own console, told why, and no events are read', async (role, username, ownConsole) => {
     window.localStorage.clear()
     const fetched: string[] = []
@@ -95,7 +95,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     signInAs(role, username)
     render(<MemoryRouter initialEntries={['/coordinator-lead/active-events']}><App /></MemoryRouter>)
 
-    expect(await screen.findByRole('heading', { name: ownConsole })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: ownConsole })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 1, name: 'Active events' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/active-events')

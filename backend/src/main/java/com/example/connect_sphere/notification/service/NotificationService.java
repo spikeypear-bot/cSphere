@@ -260,6 +260,17 @@ public class NotificationService {
         }
     }
 
+    /** AT01 AC9: confirm an attendee's registration after it has committed. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createAttendeeRegistrationConfirmation(UUID recipientUserId, UUID eventId, String eventName,
+            String registrationReference) {
+        Notification notification = base(recipientUserId, NotificationType.attendee_registration_confirmed,
+                eventName);
+        notification.setEventId(eventId);
+        notification.setMessage("Your registration is confirmed. Reference: " + registrationReference);
+        saveBestEffort(notification);
+    }
+
     /** TS09 AC16: tell the assigned coordinator the outcome for their event. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createEquipmentDamageOutcomeNotification(UUID coordinatorId, UUID eventId, String eventName,
