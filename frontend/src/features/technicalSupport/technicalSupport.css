@@ -137,6 +137,16 @@
   color: var(--danger);
 }
 
+.tech-badge--success {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.tech-badge--warning {
+  background: var(--warning-soft);
+  color: var(--warning);
+}
+
 .tech-figures {
   display: flex;
   flex-wrap: wrap;
@@ -371,7 +381,7 @@ h2.row-link__title {
 }
 
 /* The front page (dashboard): a work queue in three blocks. Requests span
- * the full width; faulty equipment and today's stock sit side by side. */
+ * the full width; today's stock and faulty equipment sit side by side. */
 .tech-home {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

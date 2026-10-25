@@ -78,7 +78,7 @@ export function DecisionCard({ request, lines, reservations, ready, rejectReason
         </div>
         {!rejecting ? (
           <div className="tech-actions">
-            <Button type="button" disabled={!ready || !covered || saving} onClick={() => decide('approved')}
+            <Button variant="success" type="button" disabled={!ready || !covered || saving} onClick={() => decide('approved')}
               aria-describedby={covered ? undefined : 'approve-hint'}>
               {saving ? 'Saving…' : 'Approve request'}
             </Button>

@@ -78,11 +78,6 @@
   font-weight: 600;
 }
 
-.tech-badge--success {
-  background: var(--success-soft);
-  color: var(--success);
-}
-
 .fulfil-window {
   display: flex;
   flex-wrap: wrap;

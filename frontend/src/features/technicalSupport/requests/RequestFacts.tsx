@@ -6,11 +6,17 @@ import {
 import { summariseItems } from '../reservations/reservationUtils'
 import { requesterName } from '../shared/format'
 
+const STATUS_BADGE: Record<EquipmentRequestSummary['status'], string> = {
+  processing: 'tech-badge--warning',
+  approved: 'tech-badge--success',
+  rejected: 'tech-badge--danger',
+}
+
 /** The status badge, plus Shortfall for an additional request (TS09 AC19). */
 export function RequestBadges({ request }: { request: EquipmentRequestSummary }) {
   return (
     <>
-      <span className={`tech-badge${request.status === 'rejected' ? ' tech-badge--danger' : ''}`}>
+      <span className={`tech-badge ${STATUS_BADGE[request.status]}`}>
         {EQUIPMENT_REQUEST_FILTER_LABELS[request.status]}
       </span>
       {request.isShortfallRequest ? ' ' : null}

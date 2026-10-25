@@ -22,7 +22,7 @@ import '../technicalSupport.css'
 const TOP = 5
 
 /** The console's front page: a work queue. Requests awaiting review first,
- * then what is out of action and what is running low today. */
+ * then what is running low today and what is out of action. */
 export function TechnicalSupportDashboardPage() {
   const { username } = useSession()
   const requests = useResource(() => fetchEquipmentRequests('processing'), 'processing')
@@ -40,8 +40,8 @@ export function TechnicalSupportDashboardPage() {
       />
       <div className="tech-home">
         <RequestsPanel requests={requests} />
-        <FaultyPanel faulty={faulty} />
         <TodayPanel />
+        <FaultyPanel faulty={faulty} />
       </div>
     </section>
   )
