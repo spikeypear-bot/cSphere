@@ -17,12 +17,6 @@ public record EquipmentReservationResponse(
         /** D33: an extra unit held beyond what the event requested. */
         boolean spare) {
 
-    /** Without the event's name, for callers built before D32. */
-    public EquipmentReservationResponse(UUID logId, UUID eventId, UUID equipmentId, String equipmentName,
-            int quantity, String serialNumber, Instant loanedFrom, Instant loanedUntil) {
-        this(logId, eventId, equipmentId, equipmentName, quantity, serialNumber, loanedFrom, loanedUntil, null, false);
-    }
-
     static EquipmentReservationResponse from(EquipmentLog log, String equipmentName, String eventName) {
         return new EquipmentReservationResponse(
                 log.getId(), log.getEventId(), log.getEquipmentId(), equipmentName,

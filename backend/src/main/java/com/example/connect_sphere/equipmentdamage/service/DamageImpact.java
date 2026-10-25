@@ -15,7 +15,9 @@ import org.springframework.stereotype.Component;
 
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentLog;
+import com.example.connect_sphere.equipment.EquipmentAvailabilityService;
 import com.example.connect_sphere.equipment.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.EquipmentStatusService;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageReport;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageReportRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
@@ -31,9 +33,6 @@ import com.example.connect_sphere.event.entity.EventStatus;
  */
 @Component
 public class DamageImpact {
-
-    /** Stands in for "no end", as TS03's status periods do. */
-    static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
 
     /** AC6: Planning through Confirmed. */
     private static final Set<EventStatus> ACTIVE = EnumSet.of(EventStatus.pending,
@@ -56,7 +55,7 @@ public class DamageImpact {
     }
 
     static Instant endOf(EquipmentDamageReport report) {
-        return report.getPeriodEnd() != null ? report.getPeriodEnd() : FAR_FUTURE;
+        return report.getPeriodEnd() != null ? report.getPeriodEnd() : EquipmentStatusService.FAR_FUTURE;
     }
 
     /** AC6: still running (Planning to Confirmed, not yet over) and relying on
@@ -87,14 +86,11 @@ public class DamageImpact {
 
     /** Units of a kind reserved for the event's whole period, as TS06 counts them. */
     public int reservedForEvent(Event event, UUID equipmentId, Set<UUID> leaveOut) {
-        Instant start = event.getStartDatetime().toInstant();
-        Instant end = event.getEndDatetime().toInstant();
-        return logs.findByEventId(event.getEventId()).stream()
-                .filter(log -> log.getEquipmentId().equals(equipmentId))
+        List<EquipmentLog> kept = logs.findByEventId(event.getEventId()).stream()
                 .filter(log -> !leaveOut.contains(log.getId()))
-                .filter(log -> !log.getLoanedFrom().isAfter(start) && !log.getLoanedUntil().isBefore(end))
-                .mapToInt(EquipmentLog::getQuantity)
-                .sum();
+                .toList();
+        return EquipmentAvailabilityService.heldThroughout(kept, equipmentId,
+                event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant());
     }
 
     /** Events (any status) with reservations the damage touches, in reservation order. */

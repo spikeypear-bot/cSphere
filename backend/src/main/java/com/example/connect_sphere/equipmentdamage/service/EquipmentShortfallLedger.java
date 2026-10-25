@@ -2,6 +2,7 @@ package com.example.connect_sphere.equipmentdamage.service;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -46,11 +47,6 @@ public class EquipmentShortfallLedger {
         this.clock = clock;
     }
 
-    /** Units of this kind the event has been recorded short of. */
-    public int recordedShortfall(UUID eventId, UUID equipmentId) {
-        return outcomes.recordedShortfall(eventId, equipmentId, NONE);
-    }
-
     /** What the event is owed of this kind, leaving out {@code excludedOutcome}'s own shortfall. */
     public int need(UUID eventId, UUID equipmentId, UUID excludedOutcome) {
         int approved = requests.findByEventId(eventId).stream()
@@ -67,10 +63,7 @@ public class EquipmentShortfallLedger {
      * event's, still open, and not already answered by a request awaiting
      * review or approved. */
     public EquipmentDamageOutcome requireOpenShortfall(UUID eventId, UUID outcomeId) {
-        EquipmentDamageOutcome outcome = outcomes.findForUpdate(outcomeId)
-                .filter(o -> o.getEventId().equals(eventId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "That equipment shortfall was not found for this event."));
+        EquipmentDamageOutcome outcome = lockForEvent(eventId, outcomeId);
         if (!canRequestAdditional(outcome)) {
             throw new EquipmentRequestStateException(outcome.isOpenShortfall()
                     ? "An additional request for this shortfall is already awaiting review or approved."
@@ -79,16 +72,25 @@ public class EquipmentShortfallLedger {
         return outcome;
     }
 
+    /** One of this event's damage outcomes, row-locked; 404 when it is not this event's. */
+    public EquipmentDamageOutcome lockForEvent(UUID eventId, UUID outcomeId) {
+        return outcomes.findForUpdate(outcomeId)
+                .filter(o -> o.getEventId().equals(eventId))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
+                        "That equipment shortfall was not found for this event."));
+    }
+
+    /** The status of the additional request raised for this outcome, if there is one. */
+    public Optional<EquipmentRequestStatus> linkedStatus(EquipmentDamageOutcome outcome) {
+        return Optional.ofNullable(outcome.getAdditionalRequestId())
+                .flatMap(requests::findById)
+                .map(EquipmentRequest::getStatus);
+    }
+
     /** An open shortfall with no live request answering it. */
     public boolean canRequestAdditional(EquipmentDamageOutcome outcome) {
-        if (!outcome.isOpenShortfall()) {
-            return false;
-        }
-        UUID linked = outcome.getAdditionalRequestId();
-        return linked == null || requests.findById(linked)
-                .map(EquipmentRequest::getStatus)
-                .map(status -> status == EquipmentRequestStatus.rejected)
-                .orElse(true);
+        return outcome.isOpenShortfall()
+                && linkedStatus(outcome).map(status -> status == EquipmentRequestStatus.rejected).orElse(true);
     }
 
     public void linkAdditionalRequest(EquipmentDamageOutcome outcome, UUID requestId) {

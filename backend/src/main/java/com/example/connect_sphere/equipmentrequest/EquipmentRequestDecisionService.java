@@ -1,5 +1,6 @@
 package com.example.connect_sphere.equipmentrequest;
 
+import com.example.connect_sphere.equipment.EquipmentAvailabilityService;
 import com.example.connect_sphere.equipment.EquipmentLog;
 import com.example.connect_sphere.equipment.EquipmentLogRepository;
 import com.example.connect_sphere.event.entity.Event;
@@ -126,12 +127,8 @@ public class EquipmentRequestDecisionService {
         List<EquipmentLog> eventReservations = reservations.findByEventId(request.getEventId());
         for (EquipmentRequestLine line : lines.findByIdRequestId(request.getId())) {
             UUID equipmentId = line.getId().getEquipmentId();
-            int reserved = eventReservations.stream()
-                    .filter(reservation -> reservation.getEquipmentId().equals(equipmentId))
-                    .filter(reservation -> !reservation.getLoanedFrom().isAfter(eventStart)
-                            && !reservation.getLoanedUntil().isBefore(eventEnd))
-                    .mapToInt(EquipmentLog::getQuantity)
-                    .sum();
+            int reserved = EquipmentAvailabilityService.heldThroughout(eventReservations, equipmentId,
+                    eventStart, eventEnd);
             int owedElsewhere = shortfalls == null ? 0
                     : shortfalls.need(request.getEventId(), equipmentId, null);
             int required = line.getQuantity() + owedElsewhere;

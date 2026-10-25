@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLine;
@@ -59,22 +58,6 @@ public class EquipmentReservationService {
         this.requestRepository = requestRepository;
         this.availability = availability;
         this.eventRepository = eventRepository;
-    }
-
-    /** For callers wired from repositories alone (unit tests built before
-     * D32): the shared calculator over the same repositories, and no event
-     * names in reservation responses. */
-    public EquipmentReservationService(
-            EquipmentRepository equipmentRepository,
-            SerialisedEquipmentRepository unitRepository,
-            EquipmentStatusPeriodRepository statusPeriodRepository,
-            EquipmentLogRepository logRepository,
-            EquipmentRequestLineRepository requestLineRepository,
-            EquipmentRequestRepository requestRepository) {
-        this(equipmentRepository, unitRepository, statusPeriodRepository, logRepository, requestLineRepository,
-                requestRepository,
-                new EquipmentAvailabilityService(equipmentRepository, statusPeriodRepository, logRepository),
-                null);
     }
 
     @Autowired(required = false)
@@ -212,7 +195,7 @@ public class EquipmentReservationService {
     private List<EquipmentLog> reserveLine(UUID eventId, Equipment equipment, int quantity, int spare,
             List<String> serialNumbers, Instant start, Instant end) {
         UUID id = equipment.getId();
-        requireRequestedForEvent(eventId, id);
+        int processing = requireRequestedForEvent(eventId, id);
         int units = quantity + spare;
         boolean serialised = Boolean.TRUE.equals(equipment.getSerialised());
 
@@ -248,7 +231,9 @@ public class EquipmentReservationService {
 
         // D33: not above what the event asked for, unless marked spare.
         if (quantity > 0) {
-            int requested = requestedForEvent(eventId, id);
+            // What the event asks for: its processing request's line, plus what its
+            // approved requests are still owed (TS09), as TS06 counts it.
+            int requested = processing + (shortfalls == null ? 0 : shortfalls.need(eventId, id, null));
             int reserved = logRepository.findByEventId(eventId).stream()
                     .filter(log -> log.getEquipmentId().equals(id) && !log.isSpare())
                     .filter(log -> log.getLoanedFrom().isBefore(end) && log.getLoanedUntil().isAfter(start))
@@ -332,20 +317,6 @@ public class EquipmentReservationService {
         return free.subList(0, count);
     }
 
-    /** D33: what the event asks for of this kind: its processing request's
-     * line, plus what its approved requests are still owed (TS09), as TS06
-     * counts it. */
-    private int requestedForEvent(UUID eventId, UUID equipmentId) {
-        int processing = requestRepository.findByEventIdForUpdate(eventId).stream()
-                .filter(request -> request.getStatus() == EquipmentRequestStatus.processing)
-                .flatMap(request -> requestLineRepository.findByIdRequestId(request.getId()).stream())
-                .filter(line -> line.getId().getEquipmentId().equals(equipmentId))
-                .mapToInt(EquipmentRequestLine::getQuantity)
-                .sum();
-        int owed = shortfalls == null ? 0 : shortfalls.need(eventId, equipmentId, null);
-        return processing + owed;
-    }
-
     // EO07 AC12: nothing more is reserved for a cancelled or finished event.
     private void requireEventOpen(UUID eventId) {
         if (requestRepository.eventClosed(eventId)) {
@@ -354,16 +325,20 @@ public class EquipmentReservationService {
         }
     }
 
-    private void requireRequestedForEvent(UUID eventId, UUID equipmentId) {
-        boolean requested = requestRepository.findByEventIdForUpdate(eventId).stream()
+    /** The quantity of this kind on the event's processing request; 409 when
+     * it is not on one (0 means not requested: a line asks for at least 1). */
+    private int requireRequestedForEvent(UUID eventId, UUID equipmentId) {
+        int requested = requestRepository.findByEventIdForUpdate(eventId).stream()
                 .filter(request -> request.getStatus() == EquipmentRequestStatus.processing)
-                .map(EquipmentRequest::getId)
-                .anyMatch(requestId -> requestLineRepository.findByIdRequestId(requestId).stream()
-                        .anyMatch(line -> line.getId().getEquipmentId().equals(equipmentId)));
-        if (!requested) {
+                .flatMap(request -> requestLineRepository.findByIdRequestId(request.getId()).stream())
+                .filter(line -> line.getId().getEquipmentId().equals(equipmentId))
+                .mapToInt(EquipmentRequestLine::getQuantity)
+                .sum();
+        if (requested == 0) {
             throw new ReservationLineException(HttpStatus.CONFLICT,
                     "This equipment is not part of an active request for the selected event.", equipmentId);
         }
+        return requested;
     }
 
     // TS09: serial numbers are stored as VARCHAR(64) (V37).
@@ -412,7 +387,7 @@ public class EquipmentReservationService {
 
     private Map<UUID, String> eventNames(List<UUID> eventIds) {
         Map<UUID, String> names = new HashMap<>();
-        if (eventRepository != null && !eventIds.isEmpty()) {
+        if (!eventIds.isEmpty()) {
             eventRepository.findAllById(eventIds).forEach(event -> names.put(event.getEventId(), event.getEventName()));
         }
         return names;

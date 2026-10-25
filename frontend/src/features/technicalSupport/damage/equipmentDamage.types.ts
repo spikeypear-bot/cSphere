@@ -112,13 +112,6 @@ export interface CatalogueItem {
   serialised: boolean
 }
 
-export interface EquipmentUnitStatus {
-  equipmentId: string
-  equipmentName: string
-  serialNumber: string
-  status: 'Available' | 'Faulty' | 'Unavailable'
-}
-
 /** The outcome in words, the same for Technical Support and the coordinator. */
 export function outcomeLabel(outcome: DamageOutcome | null, shortfall: number, replacement: string | null): string {
   if (outcome === 'COVERED') return 'Covered by spare'

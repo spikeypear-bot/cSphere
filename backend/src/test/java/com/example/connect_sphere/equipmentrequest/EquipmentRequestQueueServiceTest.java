@@ -111,7 +111,6 @@ class EquipmentRequestQueueServiceTest {
         EquipmentRequestResponse second = listed.get(1);
         assertThat(second.requestedBy()).isEqualTo(new EquipmentRequestResponse.Person(coordinator, "ec1"));
         assertThat(second.organisationName()).isEqualTo("Acme Pte Ltd");
-        assertThat(second.submittedAt()).isNull();
         assertThat(second.isShortfallRequest()).isTrue();
         assertThat(second.eventStatus()).isEqualTo("CONFIRMED");
         assertThat(second.items()).containsExactly(new EquipmentRequestResponse.Item(

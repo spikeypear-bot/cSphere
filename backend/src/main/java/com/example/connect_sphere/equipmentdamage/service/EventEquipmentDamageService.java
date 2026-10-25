@@ -8,10 +8,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.context.ApplicationEventPublisher;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.EventChange;
@@ -24,7 +22,6 @@ import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageReport;
 import com.example.connect_sphere.equipmentdamage.entity.ShortfallResolution;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageReportRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
 import com.example.connect_sphere.event.entity.Event;
@@ -84,14 +81,11 @@ public class EventEquipmentDamageService {
             ResolveShortfallRequest input) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requireAssigned(coordinatorId, event);
-        EquipmentDamageOutcome outcome = outcomes.findForUpdate(outcomeId)
-                .filter(o -> o.getEventId().equals(eventId))
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "That equipment shortfall was not found for this event."));
+        EquipmentDamageOutcome outcome = ledger.lockForEvent(eventId, outcomeId);
         if (!outcome.isOpenShortfall()) {
             throw EquipmentDamageService.conflict("This equipment shortfall is not open.");
         }
-        if (linkedStatus(outcome).filter(s -> s == EquipmentRequestStatus.processing).isPresent()) {
+        if (ledger.linkedStatus(outcome).filter(s -> s == EquipmentRequestStatus.processing).isPresent()) {
             throw EquipmentDamageService.conflict("An additional request for this shortfall is awaiting Technical "
                     + "Support. Wait for their decision before resolving it.");
         }
@@ -111,7 +105,7 @@ public class EventEquipmentDamageService {
             boolean processing) {
         EquipmentDamageReport report = reports.findById(outcome.getReportId()).orElseThrow();
         Equipment kind = kindOf(outcome);
-        Optional<EquipmentRequestStatus> linked = linkedStatus(outcome);
+        Optional<EquipmentRequestStatus> linked = ledger.linkedStatus(outcome);
         boolean planning = event.getStatus().isPlanningEditable();
         boolean canRequest = !lead && planning && !processing && ledger.canRequestAdditional(outcome);
         boolean canResolve = !lead && outcome.isOpenShortfall()
@@ -124,12 +118,6 @@ public class EventEquipmentDamageService {
                 outcome.getResolution() == null ? null : outcome.getResolution().name(), outcome.getResolutionNote(),
                 outcome.getResolvedAt(), outcome.getAdditionalRequestId(), linked.map(Enum::name).orElse(null),
                 canRequest, canResolve);
-    }
-
-    private Optional<EquipmentRequestStatus> linkedStatus(EquipmentDamageOutcome outcome) {
-        return Optional.ofNullable(outcome.getAdditionalRequestId())
-                .flatMap(requests::findById)
-                .map(EquipmentRequest::getStatus);
     }
 
     private Equipment kindOf(EquipmentDamageOutcome outcome) {

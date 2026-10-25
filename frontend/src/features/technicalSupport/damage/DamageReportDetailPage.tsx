@@ -7,7 +7,9 @@ import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
 import { formatEventDateTime, formatEventTimeRange } from '../../venueStaff/formatEventDateTime'
 import { EquipmentPhoto } from './EquipmentPhoto'
-import { closeReport, decideOutcome, fetchReport, fetchUnits } from './equipmentDamageApi'
+import { closeReport, decideOutcome, fetchReport } from './equipmentDamageApi'
+import { fetchEquipmentUnits } from '../status/equipmentStatusApi'
+import type { EquipmentUnit } from '../status/equipmentStatus.types'
 import {
   BLOCK_LABELS,
   outcomeLabel,
@@ -15,7 +17,6 @@ import {
   type AffectedEvent,
   type DamageReport,
   type DecideOutcomeBody,
-  type EquipmentUnitStatus,
 } from './equipmentDamage.types'
 import './equipmentDamage.css'
 
@@ -184,7 +185,7 @@ function SerialisedActions({ report, event, busy, decide }: {
   decide: (event: AffectedEvent, body: DecideOutcomeBody, done: string) => Promise<void>
 }) {
   const [replacing, setReplacing] = useState(false)
-  const [units, setUnits] = useState<EquipmentUnitStatus[] | null>(null)
+  const [units, setUnits] = useState<EquipmentUnit[] | null>(null)
   const [unitsFailed, setUnitsFailed] = useState(false)
   const [unitsAttempt, setUnitsAttempt] = useState(0)
   const [replacement, setReplacement] = useState('')
@@ -192,7 +193,7 @@ function SerialisedActions({ report, event, busy, decide }: {
   useEffect(() => {
     if (!replacing) return
     let cancelled = false
-    fetchUnits(new Date(event.eventStart).toISOString(), new Date(event.eventEnd).toISOString())
+    fetchEquipmentUnits({ start: event.eventStart, end: event.eventEnd })
       .then((loaded) => {
         if (cancelled) return
         setUnits(loaded.filter((unit) => unit.equipmentId === report.equipmentId

@@ -23,8 +23,6 @@ public record EquipmentRequestResponse(
         /** Who asked: the submitting coordinator is not stored, so this is the
          * event's currently assigned coordinator; null when there is none. */
         Person requestedBy,
-        /** When it was submitted; not stored yet, so always null. */
-        Instant submittedAt,
         /** TS09 AC19: an additional request answering an equipment shortfall. */
         @JsonProperty("isShortfallRequest") boolean isShortfallRequest,
         List<Item> items,

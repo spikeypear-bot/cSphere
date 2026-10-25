@@ -1,5 +1,4 @@
 export type EquipmentStatus = 'Available' | 'Faulty' | 'Unavailable'
-export const EQUIPMENT_STATUSES: EquipmentStatus[] = ['Available', 'Faulty', 'Unavailable']
 export type BlockStatus = Exclude<EquipmentStatus, 'Available'>
 
 export interface EquipmentUnit {
@@ -28,10 +27,4 @@ export interface UnitStatusPeriod extends StatusPeriod {
 export interface TimePeriod {
   start: string
   end: string
-}
-
-export interface AvailabilityCount {
-  typeName: string
-  availableCount: number
-  totalCount: number
 }

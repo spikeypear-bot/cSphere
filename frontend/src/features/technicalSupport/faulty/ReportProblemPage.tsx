@@ -12,12 +12,8 @@ import { fetchEquipmentDetail } from '../inventory/inventoryApi'
 import type { EquipmentDetail } from '../inventory/inventory.types'
 import { reportPath, TS } from '../shared/faultyEquipment'
 import { addStatusPeriod, ApiError, UNIT_COMMITTED_MESSAGE } from '../status/equipmentStatusApi'
+import { toIso } from '../reservations/reservationApi'
 import type { BlockStatus } from '../status/equipmentStatus.types'
-
-// "2027-03-01T09:00" (local) -> exact moment.
-function toIso(local: string) {
-  return new Date(local).toISOString()
-}
 
 const BLOCK_STATUSES: BlockStatus[] = ['Faulty', 'Unavailable']
 const TO_REPORT_BLOCK: Record<BlockStatus, DamageBlockStatus> = { Faulty: 'FAULTY', Unavailable: 'UNAVAILABLE' }

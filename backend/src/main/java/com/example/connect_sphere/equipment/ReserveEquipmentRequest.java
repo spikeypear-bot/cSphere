@@ -17,10 +17,4 @@ public record ReserveEquipmentRequest(
         Instant start,
         Instant end,
         Boolean spare) {
-
-    /** Not a spare (callers built before D33). */
-    public ReserveEquipmentRequest(UUID eventId, UUID equipmentId, int quantity, String serialNumber,
-            Instant start, Instant end) {
-        this(eventId, equipmentId, quantity, serialNumber, start, end, false);
-    }
 }

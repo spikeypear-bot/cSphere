@@ -1,8 +1,8 @@
 import { apiClient, ApiClientError } from '../../../lib/apiClient'
+import { toIso } from '../reservations/reservationApi'
 import type {
   EquipmentStatus,
   EquipmentUnit,
-  StatusPeriod,
   TimePeriod,
   UnitStatusPeriod,
 } from './equipmentStatus.types'
@@ -38,11 +38,6 @@ async function call<T>(run: () => Promise<T>): Promise<T> {
 // apiClient prefixes /api itself (VITE_API_BASE_URL), so paths start below it.
 const EQUIPMENT = '/equipment'
 
-// "2026-09-25T09:00" (local time) -> exact moment "2026-09-25T01:00:00.000Z"
-function toIso(localValue: string): string {
-  return new Date(localValue).toISOString()
-}
-
 function unitPath(equipmentId: string, serialNumber: string): string {
   return `${EQUIPMENT}/${equipmentId}/units/${encodeURIComponent(serialNumber)}`
 }
@@ -50,13 +45,6 @@ function unitPath(equipmentId: string, serialNumber: string): string {
 export function fetchEquipmentUnits(period: TimePeriod): Promise<EquipmentUnit[]> {
   const query = `start=${encodeURIComponent(toIso(period.start))}&end=${encodeURIComponent(toIso(period.end))}`
   return call(() => apiClient.get<EquipmentUnit[]>(`${EQUIPMENT}/units?${query}`))
-}
-
-export function fetchStatusPeriods(
-  equipmentId: string,
-  serialNumber: string,
-): Promise<StatusPeriod[]> {
-  return call(() => apiClient.get<StatusPeriod[]>(`${unitPath(equipmentId, serialNumber)}/periods`))
 }
 
 export function addStatusPeriod(

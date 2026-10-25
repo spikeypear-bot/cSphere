@@ -52,6 +52,21 @@ public class EquipmentAvailabilityService {
         this.logs = logs;
     }
 
+    /**
+     * TS06, TS09: units of one kind among an event's reservations that are held
+     * for the whole of [start, end) (each starting no later and ending no
+     * earlier). TS06 approves a request only when these cover it, and TS09
+     * reads the same figure, so the two cannot disagree.
+     */
+    public static int heldThroughout(Collection<EquipmentLog> reservations, UUID equipmentId,
+            Instant start, Instant end) {
+        return reservations.stream()
+                .filter(log -> log.getEquipmentId().equals(equipmentId))
+                .filter(log -> !log.getLoanedFrom().isAfter(start) && !log.getLoanedUntil().isBefore(end))
+                .mapToInt(EquipmentLog::getQuantity)
+                .sum();
+    }
+
     /** Availability of one kind for [start, end). */
     public Availability forEquipment(Equipment kind, Instant start, Instant end) {
         return forEquipment(List.of(kind), start, end).get(kind.getId());

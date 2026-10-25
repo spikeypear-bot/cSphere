@@ -16,8 +16,9 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class EquipmentStatusService {
 
-    // Stands in for "forever" when checking overlaps for a block with no end date.
-    private static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
+    /** Stands in for "no end" when checking overlaps: a TS03 block or a TS09
+     * damage report with no end date runs until then. */
+    public static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
 
     private final SerialisedEquipmentRepository unitRepository;
     private final EquipmentStatusPeriodRepository periodRepository;
@@ -41,14 +42,6 @@ public class EquipmentStatusService {
         this.equipmentRepository = equipmentRepository;
         this.logRepository = logRepository;
         this.clock = clock;
-    }
-
-    /** On the system clock, for callers built before D32. */
-    public EquipmentStatusService(SerialisedEquipmentRepository unitRepository,
-                                  EquipmentStatusPeriodRepository periodRepository,
-                                  EquipmentRepository equipmentRepository,
-                                  EquipmentLogRepository logRepository) {
-        this(unitRepository, periodRepository, equipmentRepository, logRepository, Clock.systemUTC());
     }
 
     // Status of every unit for the viewed period: a block if one overlaps, else Available.

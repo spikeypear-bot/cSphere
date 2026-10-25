@@ -24,8 +24,6 @@ export interface EquipmentRequestSummary {
   organisationName?: string | null
   /** The event's currently assigned coordinator (a username), or null. */
   requestedBy?: { userId: string; name: string } | null
-  /** Not stored yet, so always null: never shown. */
-  submittedAt?: string | null
   /** TS09 AC19: an additional request answering an equipment shortfall. */
   isShortfallRequest?: boolean
   items?: RequestLine[]

@@ -117,7 +117,7 @@ public class EquipmentRequestQueueService {
         return new EquipmentRequestResponse(r.getId(), r.getEventId(),
                 event != null ? event.getEventName() : "Unknown event", start, end,
                 r.getTechnicalRequirement(), r.getStatus().name(),
-                event != null ? event.getOrganisation() : null, requestedBy, null,
+                event != null ? event.getOrganisation() : null, requestedBy,
                 shortfallRequests.contains(r.getId()), items.getOrDefault(r.getId(), List.of()),
                 event != null ? statuses.journeyOf(event).name() : null);
     }

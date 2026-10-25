@@ -16,7 +16,7 @@ function request(id: string, extra: Record<string, unknown> = {}) {
   return {
     requestId: id, eventId: `event-${id}`, eventName: `Gala ${id}`, eventStart, eventEnd,
     technicalRequirement: 'Stage', status: 'processing', organisationName: 'Acme Pte Ltd',
-    requestedBy: { userId: 'u-1', name: 'ec1' }, submittedAt: null, isShortfallRequest: false,
+    requestedBy: { userId: 'u-1', name: 'ec1' }, isShortfallRequest: false,
     items: [{ equipmentId: 'eq-proj', equipmentName: 'Projector', quantity: 2 }], eventStatus: 'PLANNING',
     ...extra,
   }
@@ -70,7 +70,7 @@ describe('TS09 equipment requests list and request page', () => {
     expect(rows[1]).not.toHaveTextContent('Shortfall')
     expect(rows[1]).toHaveTextContent('Requested byNo coordinator assigned')
     expect(rows[1]).toHaveTextContent('OrganisationGlobex Holdings')
-    // submittedAt is never stored yet, so nothing claims a submission time.
+    // No submission time is recorded, so nothing claims one.
     expect(screen.queryByText(/Submitted/)).not.toBeInTheDocument()
     expect(calls.map((call) => call.url)).toEqual(['/api/equipment-requests?status=processing'])
   })

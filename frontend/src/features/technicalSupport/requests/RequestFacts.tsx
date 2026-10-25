@@ -25,8 +25,8 @@ export function RequestBadges({ request }: { request: EquipmentRequestSummary })
   )
 }
 
-/** Dates, organisation, requester and items of one request. `submittedAt`
- * is never stored yet (always null), so it is not shown. */
+/** Dates, organisation, requester and items of one request. No submission
+ * time is recorded, so none is shown. */
 export function RequestFacts({ request }: { request: EquipmentRequestSummary }) {
   return (
     <dl className="tech-figures tech-facts">

@@ -20,7 +20,7 @@ function request(n: number, extra: Record<string, unknown> = {}) {
     requestId: `req-${n}`, eventId: `event-${n}`, eventName: `Event ${n}`,
     eventStart: '2027-03-12T01:00:00Z', eventEnd: '2027-03-12T04:00:00Z',
     technicalRequirement: '', status: 'processing', organisationName: 'Acme Pte Ltd',
-    requestedBy: { userId: 'u-1', name: 'ec1' }, submittedAt: null, isShortfallRequest: false,
+    requestedBy: { userId: 'u-1', name: 'ec1' }, isShortfallRequest: false,
     items: [{ equipmentId: 'eq-proj', equipmentName: 'Projector', quantity: 2 }], eventStatus: 'PLANNING',
     ...extra,
   }

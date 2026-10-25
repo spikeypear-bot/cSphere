@@ -8,7 +8,7 @@ import { jsonResponse, seedSession } from '../../test/apiStubs'
 const REQUEST = {
   requestId: 'r-7', eventId: 'event-7', eventName: 'Town Hall',
   eventStart: '2027-03-10T01:00:00Z', eventEnd: '2027-03-10T04:00:00Z', technicalRequirement: '', status: 'processing',
-  organisationName: 'Acme Pte Ltd', requestedBy: null, submittedAt: null, isShortfallRequest: false, items: [], eventStatus: 'PLANNING',
+  organisationName: 'Acme Pte Ltd', requestedBy: null, isShortfallRequest: false, items: [], eventStatus: 'PLANNING',
 }
 const REPORT = {
   reportId: 'rep-9', equipmentId: 'eq-proj', equipmentName: 'Projector', serialised: true, serialNumber: 'PJ-1', quantity: 1,

@@ -218,7 +218,6 @@ class TechnicalSupportConsoleFlowTest {
                 .isEqualTo(users.findByUsername("eo1").orElseThrow().getOrganisation());
         assertThat(first.get("requestedBy").get("userId").asString()).isEqualTo(flow.idOf("ec1").toString());
         assertThat(first.get("requestedBy").get("name").asString()).isEqualTo("ec1");
-        assertThat(first.get("submittedAt").isNull()).isTrue();
         assertThat(first.get("isShortfallRequest").asBoolean()).isFalse();
         assertThat(first.get("eventStatus").asString()).isEqualTo("PLANNING");
         assertThat(first.get("items")).hasSize(1);

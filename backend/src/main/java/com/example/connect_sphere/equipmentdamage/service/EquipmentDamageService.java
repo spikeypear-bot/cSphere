@@ -181,11 +181,6 @@ public class EquipmentDamageService {
         return toDto(report, kind);
     }
 
-    @Transactional(readOnly = true)
-    public List<DamageReportDto> list() {
-        return list(null);
-    }
-
     /** Every report, newest first; with {@code equipmentId}, only that kind's (D32). */
     @Transactional(readOnly = true)
     public List<DamageReportDto> list(UUID equipmentId) {

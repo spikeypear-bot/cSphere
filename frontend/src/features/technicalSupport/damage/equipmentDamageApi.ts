@@ -3,7 +3,6 @@ import type {
   CatalogueItem,
   DamageReport,
   DecideOutcomeBody,
-  EquipmentUnitStatus,
   EventEquipmentDamage,
   ReportDamageBody,
 } from './equipmentDamage.types'
@@ -12,12 +11,6 @@ import type {
 const REPORTS = '/equipment-damage-reports'
 
 export const fetchCatalogue = () => apiClient.get<CatalogueItem[]>('/equipment/catalogue')
-
-/** Every unit with its status over the period (TS03's endpoint). */
-export function fetchUnits(start: string, end: string) {
-  const query = `start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
-  return apiClient.get<EquipmentUnitStatus[]>(`/equipment/units?${query}`)
-}
 
 /** Every report, newest first; `equipmentId` keeps one kind's (D32). */
 export const fetchReports = (equipmentId?: string) =>

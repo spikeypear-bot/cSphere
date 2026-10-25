@@ -115,20 +115,23 @@ public class EventArrangementsService {
      * equipment was reported damaged; an item with nothing left is not shown. */
     private List<OrganiserArrangementsDto.Equipment> equipmentOf(Event event) {
         Map<String, Integer> quantities = new LinkedHashMap<>();
-        Map<String, java.util.UUID> ids = new LinkedHashMap<>();
+        java.util.Set<UUID> counted = new java.util.HashSet<>();
         equipmentRequests.findByEventId(event.getEventId()).stream()
                 .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
                 .flatMap(r -> equipmentLines.findByIdRequestId(r.getId()).stream())
                 .forEach((EquipmentRequestLine line) -> {
-                    quantities.merge(line.getEquipment().getName(), line.getQuantity(), Integer::sum);
+                    int quantity = line.getQuantity();
                     if (shortfalls != null) {
-                        ids.putIfAbsent(line.getEquipment().getName(), line.getId().getEquipmentId());
+                        // TS09: the ledger's need covers every approved line of the kind,
+                        // less recorded shortfalls (as TS06 counts it), so each kind counts once.
+                        UUID equipmentId = line.getId().getEquipmentId();
+                        if (!counted.add(equipmentId)) {
+                            return;
+                        }
+                        quantity = shortfalls.need(event.getEventId(), equipmentId, null);
                     }
+                    quantities.merge(line.getEquipment().getName(), quantity, Integer::sum);
                 });
-        if (shortfalls != null) {
-            ids.forEach((name, equipmentId) -> quantities.computeIfPresent(name,
-                    (n, quantity) -> quantity - shortfalls.recordedShortfall(event.getEventId(), equipmentId)));
-        }
         return quantities.entrySet().stream()
                 .filter(e -> e.getValue() > 0)
                 .map(e -> new OrganiserArrangementsDto.Equipment(e.getKey(), e.getValue())).toList();

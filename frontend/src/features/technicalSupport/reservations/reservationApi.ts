@@ -39,11 +39,6 @@ export function toIso(localValue: string): string {
   return new Date(localValue).toISOString()
 }
 
-// AC 1
-export function fetchProcessingRequests(): Promise<EquipmentRequestSummary[]> {
-  return apiClient.get<EquipmentRequestSummary[]>('/equipment-requests/processing')
-}
-
 /** D32: requests by status, soonest event first (the server's order). */
 export function fetchEquipmentRequests(status: EquipmentRequestFilter): Promise<EquipmentRequestSummary[]> {
   return apiClient.get<EquipmentRequestSummary[]>(`/equipment-requests?status=${status}`)
