@@ -1,4 +1,5 @@
 import { ACCESSIBILITY_LABELS, FIELD_LABELS, type AccessibilityFeature } from '../types/eventRequest'
+import { formatSingaporeDateTime } from './singaporeTime'
 
 export interface FieldChange {
   field: string
@@ -13,10 +14,7 @@ const DATE_FIELDS = new Set(['startDatetime', 'endDatetime'])
 export function formatFieldValue(field: string, value: unknown): string {
   if (value === null || value === undefined || value === '') return '—'
   if (DATE_FIELDS.has(field) && typeof value === 'string') {
-    return new Intl.DateTimeFormat('en-SG', {
-      timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', year: 'numeric',
-      hour: '2-digit', minute: '2-digit', hour12: true,
-    }).format(new Date(value))
+    return formatSingaporeDateTime(value)
   }
   if (Array.isArray(value)) {
     return value.length === 0 ? '—'

@@ -1,4 +1,4 @@
-// @stories EC01 EC02 EO26 EC-NEW2 EC-NEW5  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories EC01 EC02 EO26 EC-NEW2 EC-NEW5 SO-C5 SO-C6  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { ActivityTimeline } from './ActivityTimeline'
@@ -83,6 +83,24 @@ describe('ActivityTimeline', () => {
   it('shows the empty text when there is no history', () => {
     render(<ActivityTimeline entries={[]} emptyText="No history yet." />)
     expect(screen.getByText('No history yet.')).toBeInTheDocument()
+  })
+})
+
+describe('SO-C5 / SO-C6 safety decisions on the timeline', () => {
+  afterEach(cleanup)
+
+  it('SO-C5 AC11, SO-C6 AC12 (happy): a rejection lists the checklist items it concerns by name, with its reason', () => {
+    render(<ActivityTimeline entries={[{ activityId: 's1', type: 'safety_rejected', actorName: 'so1',
+      actorRole: 'safety_officer', message: 'Exits blocked by the stage', flaggedFields: ['capacity_facilities', 'safety_operations'],
+      fromStatus: 'AWAITING_SAFETY_REVIEW', toStatus: 'SAFETY_CHANGES_REQUESTED', occurredAt: '2026-09-21T01:00:00Z' }]} />)
+
+    const items = within(screen.getByRole('list', { name: 'Checklist items concerned' })).getAllByRole('listitem')
+    expect(items.map((li) => li.textContent)).toEqual([
+      'Venue capacity and required facilities are verified',
+      'Safety, emergency, and on-site operational arrangements are ready',
+    ])
+    expect(screen.getByText('Exits blocked by the stage')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Fields that need attention' })).not.toBeInTheDocument()
   })
 })
 

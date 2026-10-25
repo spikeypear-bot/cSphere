@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
+import { formatSingaporeDateTime } from '../../lib/singaporeTime'
 import type { ReadinessDto, ReadinessItem } from './readinessTypes'
 import './safetyOfficer.css'
 
@@ -12,15 +13,17 @@ interface Props {
 }
 
 export function ReadinessChecklistPanel({ readiness, editable, savingItem, onSave }: Props) {
+  const flagged = new Set(readiness.flaggedItems ?? [])
   return (
     <Card className="safety-panel">
       <h2>Operational readiness checklist</h2>
       <p role="status">{readiness.completedItems} of {readiness.totalItems} items complete</p>
-      <ul className="readiness-list">
+      <ul className="readiness-list" aria-label="Readiness checklist">
         {readiness.items.map((item) => (
           <ReadinessItemRow
             key={`${item.itemKey}:${item.note}`}
             item={item}
+            flagged={flagged.has(item.itemKey)}
             editable={editable}
             saving={savingItem === item.itemKey}
             onSave={(checked, note) => onSave(item, checked, note)}
@@ -32,9 +35,10 @@ export function ReadinessChecklistPanel({ readiness, editable, savingItem, onSav
 }
 
 function ReadinessItemRow({
-  item, editable, saving, onSave,
+  item, flagged, editable, saving, onSave,
 }: {
   item: ReadinessItem
+  flagged: boolean
   editable: boolean
   saving: boolean
   onSave: (checked: boolean, note: string) => Promise<void>
@@ -42,7 +46,7 @@ function ReadinessItemRow({
   const [note, setNote] = useState(item.note)
 
   return (
-    <li className="readiness-item">
+    <li className={flagged ? 'readiness-item readiness-item--flagged' : 'readiness-item'}>
       <label className="readiness-item__check">
         <input
           type="checkbox"
@@ -52,6 +56,7 @@ function ReadinessItemRow({
         />
         <span>{item.label}</span>
       </label>
+      {flagged ? <p className="readiness-item__flag">Raised by the Safety Officer's latest decision</p> : null}
       {editable ? (
         <div className="readiness-item__notes">
           <label htmlFor={`readiness-note-${item.itemKey}`}>Notes</label>
@@ -69,12 +74,12 @@ function ReadinessItemRow({
       ) : item.note ? <p className="readiness-item__note">{item.note}</p> : null}
       <p className="readiness-item__audit">
         {item.checkedBy
-          ? `${item.checked ? 'Checked' : 'Last checked'} by ${item.checkedBy}${item.checkedAt ? ` · ${new Date(item.checkedAt).toLocaleString()}` : ''}`
+          ? `${item.checked ? 'Checked' : 'Last checked'} by ${item.checkedBy}${item.checkedAt ? ` · ${formatSingaporeDateTime(item.checkedAt)}` : ''}`
           : 'Not checked yet'}
       </p>
       {item.updatedBy && item.updatedBy !== item.checkedBy ? (
         <p className="readiness-item__audit">
-          Last updated by {item.updatedBy}{item.updatedAt ? ` · ${new Date(item.updatedAt).toLocaleString()}` : ''}
+          Last updated by {item.updatedBy}{item.updatedAt ? ` · ${formatSingaporeDateTime(item.updatedAt)}` : ''}
         </p>
       ) : null}
     </li>

@@ -212,6 +212,8 @@ public class SecurityConfig{
 		    // events is the organisation check in EventArrangementsService.
 		    // Must sit above the GET /api/events/** rule below.
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/arrangements").hasRole("EO")
+		    // EO10: registration information; the owning organisation is checked in the service.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/registrations").hasRole("EO")
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.

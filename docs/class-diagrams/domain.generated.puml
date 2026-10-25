@@ -228,7 +228,9 @@ class Event <<Entity>>  {
 	{field} +firstConfirmedAt : OffsetDateTime
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +requiredFacilities : List<String>
 	{field} +safetyApprovedAt : OffsetDateTime
 	{field} +safetyFeedback : String
@@ -272,6 +274,16 @@ enum EventReassignmentStatus {
 	{field} +approved
 	{field} +declined
 	{field} +pending
+}
+
+
+class EventRegistration <<Entity>>  {
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +reference : String
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +status : String
 }
 
 
@@ -368,11 +380,12 @@ enum NotificationType {
 
 class EventSafetyReview <<Entity>>  {
 	{field} -eventId : UUID {id}
+	{field} -flaggedItems : List<String>
 	{field} -note : String
 	{field} -reviewStatus : String
 	{field} -reviewedAt : OffsetDateTime
 	{field} -reviewedBy : UUID
-	{method} +update ( status : String , reason : String , reviewer : UUID , at : OffsetDateTime ) : void
+	{method} +update ( status : String , reason : String , flagged : List , reviewer : UUID , at : OffsetDateTime ) : void
 }
 
 
@@ -603,6 +616,7 @@ ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy
 EventReassignmentRequest "0..*" --> "1" Event : eventId
 EventReassignmentRequest "0..*" --> "1" User : requesterUserId
+EventRegistration "0..*" --> "1" Event : eventId
 RequestActivity "0..*" --> "1" User : actorUserId
 RequestActivity "0..*" --> "0..1" Event : eventId
 RequestActivity "0..*" --> "1" EventRequest : requestId
