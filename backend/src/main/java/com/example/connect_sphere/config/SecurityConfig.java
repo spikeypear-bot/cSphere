@@ -176,6 +176,8 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")
 		    .requestMatchers("/api/safety/events/**").hasRole("SAFETY_OFFICER")
+	    // AT02: the attendee-safe public event projection is attendee-only.
+	    .requestMatchers("/api/attendee/**").hasRole("ATTENDEE")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/readiness").hasAnyRole("EC", "SAFETY_OFFICER")
 		    // EC08: the assigned Coordinator confirms, only after the Safety
 		    // Officer approves (enforced in EventLifecycleService.confirm).

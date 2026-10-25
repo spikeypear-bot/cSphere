@@ -45,6 +45,7 @@ import { EquipmentReviewPage } from './features/technicalSupport/review/Equipmen
 import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
+import { AttendeeEventDetailsPage } from './features/attendee/AttendeeEventDetailsPage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
 import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
@@ -191,6 +192,7 @@ function AttendeeRoutes() {
   return (
     <Routes>
       <Route index element={<AttendeeHomePage />} />
+      <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
       {skeletonRoutes(attendeeFeatures)}
     </Routes>
   )
