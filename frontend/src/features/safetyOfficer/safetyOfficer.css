@@ -21,3 +21,16 @@
   .safety-event-card { align-items: flex-start; flex-direction: column; }
   .safety-panel, .safety-event-card { padding: 1rem; }
 }
+/* SO-C5/SO-C6: the latest decision and the checklist items it raised. */
+.safety-decision__outcome { margin: 0 0 0.5rem; }
+.safety-decision__by { color: var(--ink-soft); }
+.safety-decision__reason { margin: 0 0 0.75rem; padding: 0.5rem 0.85rem; border-left: 3px solid var(--accent); background: var(--accent-soft); white-space: pre-wrap; overflow-wrap: anywhere; }
+.safety-decision__items-heading { margin: 0 0 0.25rem; font-weight: 600; }
+.safety-decision__items { margin: 0; padding-left: 1.25rem; }
+.readiness-item--flagged { border-left: 3px solid var(--accent); padding-left: 0.75rem; background: var(--accent-soft); }
+.readiness-item__flag { color: var(--accent-strong); font-size: 0.85rem; font-weight: 600; margin: 0.35rem 0 0 1.5rem; }
+.safety-panel h3 { margin: 0.75rem 0 0.4rem; font-size: 1rem; }
+.safety-flags { border: 1px solid var(--hairline); border-radius: var(--radius-sm); margin: 0.75rem 0; padding: 0.6rem 0.9rem 0.8rem; display: grid; gap: 0.45rem; }
+.safety-flags legend { font-weight: 600; padding: 0 0.3rem; }
+.safety-flags .field-hint { margin: 0; }
+.safety-flags__option { display: flex; align-items: flex-start; gap: 0.55rem; }

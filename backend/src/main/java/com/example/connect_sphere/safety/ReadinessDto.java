@@ -10,6 +10,9 @@ public record ReadinessDto(
         String approvalNote,
         String reviewedBy,
         OffsetDateTime reviewedAt,
+        // SO-C5/SO-C6: the checklist items the latest rejection or request
+        // for changes concerns, in checklist order; empty otherwise.
+        List<String> flaggedItems,
         int completedItems,
         int totalItems,
         List<ReadinessItemDto> items) {

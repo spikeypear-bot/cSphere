@@ -48,8 +48,6 @@ public class ChangeImpactService {
     static final String OK = "ok";
     static final String ATTENTION = "attention";
     private static final Set<VenueBookingStatus> ACTIVE_BOOKINGS = Set.of(VenueBookingStatus.pending, VenueBookingStatus.approved);
-    private static final Set<EventStatus> SAFETY_STAGES = Set.of(
-            EventStatus.awaiting_safety_review, EventStatus.safety_approved, EventStatus.confirmed);
     private static final DateTimeFormatter SINGAPORE = DateTimeFormatter
             .ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH).withZone(ZoneId.of("Asia/Singapore"));
 
@@ -196,7 +194,7 @@ public class ChangeImpactService {
     }
 
     private void safetyImpact(Event event, Set<String> changedFields, List<ImpactItem> items) {
-        if (!SAFETY_STAGES.contains(event.getStatus())) {
+        if (!EventStatus.IN_OR_PAST_SAFETY_CHECK.contains(event.getStatus())) {
             return;
         }
         boolean replan = changedFields.stream().anyMatch(ChangeFields.AFFECTS_ARRANGEMENTS::contains);

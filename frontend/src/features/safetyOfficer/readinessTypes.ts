@@ -18,6 +18,10 @@ export interface ReadinessDto {
   approvalNote: string | null
   reviewedBy: string | null
   reviewedAt: string | null
+  // SO-C5/SO-C6: checklist item keys the latest rejection or request for
+  // changes concerns, in checklist order; empty otherwise. Optional so a
+  // response without it (an older server) reads as none.
+  flaggedItems?: string[]
   completedItems: number
   totalItems: number
   items: ReadinessItem[]

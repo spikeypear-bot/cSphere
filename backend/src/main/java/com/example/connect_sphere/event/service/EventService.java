@@ -1,6 +1,7 @@
 package com.example.connect_sphere.event.service;
 
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -31,9 +32,7 @@ public class EventService {
 
     /** EC09: cancelled and completed events need no further planning. Events
      * in safety review (EC08) are still the coordinator's responsibility. */
-    private static final List<EventStatus> ACTIVE_STATUSES = List.of(EventStatus.pending,
-            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested, EventStatus.safety_approved,
-            EventStatus.confirmed);
+    private static final Set<EventStatus> ACTIVE_STATUSES = EventStatus.ACTIVE;
 
     private final EventRepository repository;
     private final UserRepository userRepository;

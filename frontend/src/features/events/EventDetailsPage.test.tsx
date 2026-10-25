@@ -1,6 +1,6 @@
-// @stories EC08 EO04 SO-C3 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories EC08 EO04 SO-C3 SO-C5 SO-C6 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { EventDetailsPage } from './EventDetailsPage'
@@ -53,6 +53,7 @@ function readiness() {
     approvalNote: 'Recheck the venue setup',
     reviewedBy: 'so1',
     reviewedAt: '2026-09-22T02:00:00Z',
+    flaggedItems: ['venue_booking'],
     completedItems: 1,
     totalItems: 6,
     items: [{
@@ -110,9 +111,42 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     )
     expect(await screen.findByText('1 of 6 items complete')).toBeInTheDocument()
     expect(screen.getByText(/Checked by ec1/)).toBeInTheDocument()
-    expect(screen.getByText('Current approval: rejected')).toBeInTheDocument()
-    expect(screen.getByText('Note: Recheck the venue setup')).toBeInTheDocument()
-    expect(screen.getByText(/Reviewed by so1/)).toBeInTheDocument()
+    expect(screen.getByText('Rejected')).toBeInTheDocument()
+    expect(screen.getByText('Recheck the venue setup')).toBeInTheDocument()
+    expect(screen.getByText(/by so1 · 22 Sept 2026, 10:00 am \(Singapore time\)/)).toBeInTheDocument()
+  })
+
+  it('SO-C5 AC10, SO-C6 AC11 (happy): the coordinator sees the decision, its reason and the checklist items it concerns, highlighted in the checklist', async () => {
+    seedSession('coordinator')
+    const decided = {
+      ...readiness(),
+      approvalStatus: 'changes_requested',
+      approvalNote: 'Add a second exit marshal',
+      flaggedItems: ['safety_operations'],
+      items: [
+        ...readiness().items,
+        { itemKey: 'safety_operations', label: 'Safety, emergency, and on-site operational arrangements are ready',
+          checked: false, note: 'Only one marshal for 150 people', checkedBy: null, checkedAt: null,
+          updatedBy: 'so1', updatedAt: '2026-09-22T01:30:00Z' },
+      ],
+    }
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return jsonResponse(200, url.endsWith('/readiness') ? decided : url.endsWith('/timeline') ? [] : pendingEvent())
+    }))
+
+    renderPage('/coordinator')
+
+    expect(await screen.findByText('Changes requested')).toBeInTheDocument()
+    expect(screen.getByText('Add a second exit marshal')).toBeInTheDocument()
+    const concerned = screen.getByRole('list', { name: 'Checklist items concerned' })
+    expect(within(concerned).getAllByRole('listitem').map((li) => li.textContent))
+      .toEqual(['Safety, emergency, and on-site operational arrangements are ready'])
+    const flaggedRow = screen.getByText("Raised by the Safety Officer's latest decision").closest('li')
+    expect(flaggedRow).toHaveClass('readiness-item--flagged')
+    expect(within(flaggedRow as HTMLElement).getByText('Only one marshal for 150 people')).toBeInTheDocument()
+    // The other item was not raised by the decision.
+    expect(screen.getAllByText("Raised by the Safety Officer's latest decision")).toHaveLength(1)
   })
 
   it('EC08 AC25, EC-NEW2 AC24 (negative): does not let an Event Coordinator confirm an event directly', async () => {

@@ -246,19 +246,23 @@ item is later unchecked; `updated_by`/`updated_at` track the most recent edit.
 | `updated_by` | `UUID` | yes | FK → `users` | Most recent editor |
 | `updated_at` | `TIMESTAMPTZ` | yes | | Most recent edit time |
 
-### `event_safety_reviews` (V22, SO-C4)
+### `event_safety_reviews` (V22, SO-C4; V34, SO-C5/SO-C6)
 
-The latest Safety Officer decision for an event (`approved` or `rejected`), with
-the reviewer, time, and optional note. Approval updates `events.status` to
-`confirmed` in the same transaction; rejection leaves the event in Planning.
+The latest Safety Officer decision for an event, with the reviewer, time, note
+and the checklist items it concerns. Since EC08 (V23, D22) a decision does not
+confirm the event: approval moves it to `safety_approved` for the coordinator to
+confirm, and a rejection or a request for changes returns it to the coordinator
+as `safety_changes_requested`, with the note in `events.safety_feedback`. Each
+decision overwrites this row; the event's timeline keeps every decision.
 
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `event_id` | `UUID` | no | PK, FK → `events` | Event under review, cascade-deleted with the event |
 | `review_status` | `VARCHAR(32)` | no | | `approved`, `rejected` or `changes_requested` (V23; widened from 16 in V24) |
-| `note` | `VARCHAR(2000)` | no | | Optional review note |
+| `note` | `VARCHAR(2000)` | no | | Review note: optional for an approval, required (1–2,000 characters after trimming, checked by `ReadinessService`) for a rejection or a request for changes |
 | `reviewed_by` | `UUID` | no | FK → `users` | Safety Officer who made the latest decision |
 | `reviewed_at` | `TIMESTAMPTZ` | no | | Time of the latest decision |
+| `flagged_items` | `TEXT[]` | no | | V34: readiness checklist item keys (`event_readiness_items.item_key`) the rejection or request for changes concerns, in checklist order; at least one for those decisions, none for an approval (checked by `ReadinessService`). Default `{}`. `chk_safety_review_flagged_items` allows only the six checklist keys |
 
 ---
 
@@ -578,6 +582,18 @@ logs of cancelled or completed events (decision-log D28).
 `chk_notification_shape` keeps every earlier branch, including EC-C3's `venue_hold_expiring`
 (V31) and EO03/EC-NEW3's change-request types (V32). See
 [EO07 API](../../../../../../docs/event-cancellation-api.md).
+
+## V34 update — safety decisions name checklist items (SO-C5, SO-C6)
+
+`event_safety_reviews` adds `flagged_items` (`TEXT[]`, not null, default `{}`):
+the readiness checklist items (SO-C3) a rejection or a request for changes
+concerns, so the coordinator sees what to fix. `ReadinessService` requires at
+least one known item for those decisions and none for an approval; reviews made
+before V34 keep an empty list. `chk_safety_review_flagged_items` also limits the
+column to the six checklist keys, so a row written outside the service cannot
+hold an unknown item; adding a checklist item means updating that constraint. The decision's timeline entry
+(`event_request_activity.flagged_fields`) holds the same keys. See
+decision-log D30.
 
 ### V36 — TS11 equipment change reviews and Technical Support notices
 

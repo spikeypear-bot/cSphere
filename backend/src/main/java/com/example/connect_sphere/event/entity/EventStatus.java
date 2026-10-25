@@ -1,5 +1,9 @@
 package com.example.connect_sphere.event.entity;
 
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+
 /**
  * Mirrors the Postgres {@code event_status} enum (SCHEMA.md §2). {@code
  * pending} was added by V12 — an event that exists (its request was approved)
@@ -19,6 +23,20 @@ public enum EventStatus {
     confirmed,
     cancelled,
     completed;
+
+    /** From Planning to Confirmed: going ahead and still looked after (EC09,
+     * ECL-C7, EO03). Cancelled and completed events are not. */
+    public static final Set<EventStatus> ACTIVE = Collections.unmodifiableSet(EnumSet.of(
+            pending, awaiting_safety_review, safety_changes_requested, safety_approved, confirmed));
+
+    /** Not yet confirmed: Planning through Safety Approved (EC08). */
+    public static final Set<EventStatus> BEFORE_CONFIRMATION = Collections.unmodifiableSet(EnumSet.of(
+            pending, awaiting_safety_review, safety_changes_requested, safety_approved));
+
+    /** Sent for the safety check, cleared by it, or confirmed: a change to
+     * the arrangements sends the event back to Planning (EC08). */
+    public static final Set<EventStatus> IN_OR_PAST_SAFETY_CHECK = Collections.unmodifiableSet(EnumSet.of(
+            awaiting_safety_review, safety_approved, confirmed));
 
     /** EC08: arrangements (venues, equipment) can still be changed — in
      * Planning, or after the Safety Officer asked for changes. */

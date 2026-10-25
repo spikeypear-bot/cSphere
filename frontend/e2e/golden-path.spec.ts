@@ -87,7 +87,7 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
 
   await test.step('SO-C3/SO-C4: the Safety Officer completes the checklist and approves', async () => {
     await officer.goto(`/safety-officer/events/${eventId}`)
-    const boxes = officer.getByRole('checkbox')
+    const boxes = officer.getByRole('list', { name: 'Readiness checklist' }).getByRole('checkbox')
     await expect(boxes).toHaveCount(6)
     for (let i = 0; i < 6; i++) {
       // The box shows the saved state, so it ticks once the server has stored
@@ -97,7 +97,7 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
       await expect(officer.getByText(`${i + 1} of 6 items complete`)).toBeVisible()
     }
     await officer.getByRole('button', { name: 'Approve' }).click()
-    await expect(officer.getByText('Current approval: approved')).toBeVisible()
+    await expect(officer.locator('.safety-decision').getByText('Approved', { exact: true })).toBeVisible()
   })
 
   await test.step('EC08 AC25, AC29: the coordinator confirms; the event is Confirmed (EC-NEW2 AC12)', async () => {
