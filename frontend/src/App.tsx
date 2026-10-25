@@ -45,8 +45,8 @@ import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashb
 import { EquipmentRequestsPage } from './features/technicalSupport/requests/EquipmentRequestsPage'
 import { EquipmentRequestDetailPage } from './features/technicalSupport/requests/EquipmentRequestDetailPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
-import { DamageReportsPage } from './features/technicalSupport/damage/DamageReportsPage'
-import { DamageReportFormPage } from './features/technicalSupport/damage/DamageReportFormPage'
+import { FaultyEquipmentPage } from './features/technicalSupport/faulty/FaultyEquipmentPage'
+import { ReportProblemPage } from './features/technicalSupport/faulty/ReportProblemPage'
 import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
@@ -183,10 +183,11 @@ function TechnicalSupportRoutes() {
         <Route path="availability" element={<Navigate to="/technical-support/requests" replace />} />
         <Route path="reservations" element={<Navigate to="/technical-support/requests" replace />} />
         <Route path="status" element={<EquipmentStatusPage />} />
-        {/* TS09: damaged equipment reports and their outcomes. */}
-        <Route path="damaged-equipment" element={<DamageReportsPage />} />
-        <Route path="damaged-equipment/new" element={<DamageReportFormPage />} />
-        <Route path="damaged-equipment/:reportId" element={<DamageReportDetailPage />} />
+        {/* TS03 blocks and TS09 damage reports, reported through one form. */}
+        <Route path="faulty" element={<FaultyEquipmentPage />} />
+        <Route path="faulty/new" element={<ReportProblemPage />} />
+        <Route path="faulty/reports/:reportId" element={<DamageReportDetailPage />} />
+        <Route path="damaged-equipment/*" element={<Navigate to="/technical-support/faulty" replace />} />
       </Routes>
     </ConsoleShell>
   )

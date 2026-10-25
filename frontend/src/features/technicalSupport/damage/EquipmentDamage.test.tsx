@@ -6,8 +6,8 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../../test/apiStubs'
 import { TechnicalSupportDashboardPage } from '../dashboard/TechnicalSupportDashboardPage'
-import { DamageReportsPage } from './DamageReportsPage'
-import { DamageReportFormPage } from './DamageReportFormPage'
+import { FaultyEquipmentPage } from '../faulty/FaultyEquipmentPage'
+import { ReportProblemPage } from '../faulty/ReportProblemPage'
 import { DamageReportDetailPage } from './DamageReportDetailPage'
 import type { AffectedEvent, DamageReport } from './equipmentDamage.types'
 
@@ -37,7 +37,13 @@ const BULK_REPORT: DamageReport = {
 }
 
 const iso = (local: string) => new Date(local).toISOString()
-const plusDay = (local: string) => new Date(new Date(local).getTime() + 24 * 60 * 60 * 1000).toISOString()
+const BLOCKS = 'GET /api/equipment/status-periods?current=true'
+const COMMITTED = 'This unit is already committed to an event during that time.'
+// Units of a kind come from its detail read (D32), with their status now.
+const detail = (units: { serialNumber: string; status: string }[]) => ({
+  equipmentId: 'eq-proj', equipmentName: 'Projector', serialised: true, totalQuantity: 6,
+  units: units.map((unit) => ({ ...unit, statusPeriods: [] })),
+})
 const unitsUrl = (start: string, end: string) =>
   `GET /api/equipment/units?start=${encodeURIComponent(start)}&end=${encodeURIComponent(end)}`
 
@@ -47,9 +53,9 @@ function renderAt(path: string) {
       <SessionProvider>
         <Routes>
           <Route path="/technical-support" element={<TechnicalSupportDashboardPage />} />
-          <Route path="/technical-support/damaged-equipment" element={<DamageReportsPage />} />
-          <Route path="/technical-support/damaged-equipment/new" element={<DamageReportFormPage />} />
-          <Route path="/technical-support/damaged-equipment/:reportId" element={<DamageReportDetailPage />} />
+          <Route path="/technical-support/faulty" element={<FaultyEquipmentPage />} />
+          <Route path="/technical-support/faulty/new" element={<ReportProblemPage />} />
+          <Route path="/technical-support/faulty/reports/:reportId" element={<DamageReportDetailPage />} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,
@@ -72,8 +78,11 @@ describe('TS09 Technical Support reports damaged equipment', () => {
   })
 
   it('TS09 AC6, AC15 (happy): lists reports newest first with how many events still need a decision', async () => {
-    stubApi({ 'GET /api/equipment-damage-reports': () => jsonResponse(200, [REPORT, { ...BULK_REPORT, status: 'CLOSED' }]) })
-    renderAt('/technical-support/damaged-equipment')
+    stubApi({
+      'GET /api/equipment-damage-reports': () => jsonResponse(200, [REPORT, { ...BULK_REPORT, status: 'CLOSED' }]),
+      [BLOCKS]: () => jsonResponse(200, []),
+    })
+    renderAt('/technical-support/faulty')
 
     const list = await screen.findByRole('list', { name: 'Damage reports' })
     const items = within(list).getAllByRole('listitem')
@@ -91,43 +100,52 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'GET /api/equipment-damage-reports': () => (++calls === 1
         ? jsonResponse(500, { message: 'Server unavailable' })
         : jsonResponse(200, [REPORT])),
+      [BLOCKS]: () => jsonResponse(200, []),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment')
+    renderAt('/technical-support/faulty')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('could not be loaded')
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('list', { name: 'Damage reports' })).toBeInTheDocument()
   })
 
-  it('TS09 AC1, AC2, AC4 (happy): reports a serialised unit by serial number, asking to mark it Faulty', async () => {
+  it('TS09 AC1, AC2, AC4 (conflict): a unit an event holds is reported through TS09, asking for the chosen block', async () => {
     const start = '2027-03-01T09:00'
+    const reported = { ...REPORT, markFaulty: false, blockStatus: 'UNAVAILABLE', blockApplied: false }
     const calls = stubApi({
       'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR, CABLE]),
-      [unitsUrl(iso(start), plusDay(start))]: () => jsonResponse(200, [
-        { equipmentId: 'eq-proj', equipmentName: 'Projector', serialNumber: 'EPS-EBU04-7K2Q9M', status: 'Available' },
-        { equipmentId: 'eq-hdmi', equipmentName: 'HDMI Cable', serialNumber: 'IGNORED', status: 'Available' },
-      ]),
-      'POST /api/equipment-damage-reports': () => jsonResponse(201, REPORT),
-      'GET /api/equipment-damage-reports/rep-1': () => jsonResponse(200, REPORT),
+      'GET /api/equipment/eq-proj': () => jsonResponse(200, detail([
+        { serialNumber: 'EPS-EBU04-7K2Q9M', status: 'Available' },
+        { serialNumber: 'EPS-EBU04-AAAA22', status: 'Faulty' },
+      ])),
+      'POST /api/equipment/eq-proj/units/EPS-EBU04-7K2Q9M/periods': () => jsonResponse(409, { message: COMMITTED }),
+      'POST /api/equipment-damage-reports': () => jsonResponse(201, reported),
+      'GET /api/equipment-damage-reports/rep-1': () => jsonResponse(200, reported),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/new')
+    renderAt('/technical-support/faulty/new')
 
     await user.selectOptions(await screen.findByLabelText('Equipment'), 'eq-proj')
-    fireEvent.change(screen.getByLabelText('Damage starts'), { target: { value: start } })
-    const unit = screen.getByLabelText('Damaged unit')
+    const unit = screen.getByLabelText('Unit')
     await screen.findByRole('option', { name: 'EPS-EBU04-7K2Q9M (Available)' })
-    expect(within(unit).queryByRole('option', { name: /IGNORED/ })).not.toBeInTheDocument()
+    expect(within(unit).getAllByRole('option').map((o) => o.textContent))
+      .toEqual(['Choose a unit…', 'EPS-EBU04-7K2Q9M (Available)', 'EPS-EBU04-AAAA22 (Faulty)'])
     await user.selectOptions(unit, 'EPS-EBU04-7K2Q9M')
-    await user.click(screen.getByLabelText(/Also mark this unit Faulty/))
+    await user.selectOptions(screen.getByLabelText('Status'), 'Unavailable')
+    fireEvent.change(screen.getByLabelText('Starts'), { target: { value: start } })
     await user.type(screen.getByLabelText('Description'), '  Lamp exploded  ')
-    await user.click(screen.getByRole('button', { name: 'Save damage report' }))
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
 
     expect(await screen.findByRole('heading', { name: 'Projector · EPS-EBU04-7K2Q9M' })).toBeInTheDocument()
-    expect(calls.find((c) => c.method === 'POST')?.body).toEqual({
+    expect(screen.getByText(/so a damage report was opened/)).toBeInTheDocument()
+    expect(screen.getByText('Unavailable block').nextSibling).toHaveTextContent('Added when the report closes')
+    const posts = calls.filter((c) => c.method === 'POST')
+    expect(posts.map((c) => c.url)).toEqual(['/api/equipment/eq-proj/units/EPS-EBU04-7K2Q9M/periods', '/api/equipment-damage-reports'])
+    expect(posts[0].body).toEqual({ status: 'Unavailable', start: iso(start), end: null })
+    expect(posts[1].body).toEqual({
       equipmentId: 'eq-proj', serialNumber: 'EPS-EBU04-7K2Q9M', quantity: null, description: 'Lamp exploded',
-      periodStart: iso(start), periodEnd: null, markFaulty: true,
+      periodStart: iso(start), periodEnd: null, blockStatus: 'UNAVAILABLE',
     })
   })
 
@@ -138,45 +156,47 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'GET /api/equipment-damage-reports/rep-2': () => jsonResponse(200, BULK_REPORT),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/new')
+    renderAt('/technical-support/faulty/new')
 
     await user.selectOptions(await screen.findByLabelText('Equipment'), 'eq-hdmi')
-    expect(screen.queryByLabelText('Damaged unit')).not.toBeInTheDocument()
-    expect(screen.queryByLabelText(/Also mark this unit Faulty/)).not.toBeInTheDocument()
-    fireEvent.change(screen.getByLabelText('Damage starts'), { target: { value: '2027-03-01T09:00' } })
-    fireEvent.change(screen.getByLabelText('Damage ends (optional)'), { target: { value: '2027-03-05T09:00' } })
-    await user.clear(screen.getByLabelText('Units damaged'))
-    await user.type(screen.getByLabelText('Units damaged'), '5')
+    expect(screen.queryByLabelText('Unit')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Status')).not.toBeInTheDocument()
+    fireEvent.change(screen.getByLabelText('Starts'), { target: { value: '2027-03-01T09:00' } })
+    fireEvent.change(screen.getByLabelText('Ends (optional)'), { target: { value: '2027-03-05T09:00' } })
+    await user.clear(screen.getByLabelText('Units affected'))
+    await user.type(screen.getByLabelText('Units affected'), '5')
     await user.type(screen.getByLabelText('Description'), 'Connectors bent')
-    await user.click(screen.getByRole('button', { name: 'Save damage report' }))
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
 
     expect(await screen.findByRole('heading', { name: 'HDMI Cable' })).toBeInTheDocument()
+    // A quantity is always a TS09 report, with no TS03 block.
+    expect(calls.filter((c) => c.method === 'POST').map((c) => c.url)).toEqual(['/api/equipment-damage-reports'])
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({
-      equipmentId: 'eq-hdmi', serialNumber: null, quantity: 5, periodEnd: iso('2027-03-05T09:00'), markFaulty: false,
+      equipmentId: 'eq-hdmi', serialNumber: null, quantity: 5, periodEnd: iso('2027-03-05T09:00'), blockStatus: null,
     })
   })
 
   it('TS09 AC1, AC3, AC7 (negative): missing details, an end not after the start and too many units are refused before sending', async () => {
     const calls = stubApi({ 'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR, CABLE]) })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/new')
+    renderAt('/technical-support/faulty/new')
 
-    await user.click(await screen.findByRole('button', { name: 'Save damage report' }))
-    expect(screen.getByText('Choose the damaged equipment.')).toBeInTheDocument()
-    expect(screen.getByText('Describe the damage.')).toBeInTheDocument()
-    expect(screen.getByText('Enter when the damage starts.')).toBeInTheDocument()
+    await user.click(await screen.findByRole('button', { name: 'Report problem' }))
+    expect(screen.getByText('Choose the equipment.')).toBeInTheDocument()
+    expect(screen.getByText('Describe the problem.')).toBeInTheDocument()
+    expect(screen.getByText('Enter when the problem starts.')).toBeInTheDocument()
 
     await user.selectOptions(screen.getByLabelText('Equipment'), 'eq-hdmi')
-    fireEvent.change(screen.getByLabelText('Damage starts'), { target: { value: '2027-03-01T09:00' } })
-    fireEvent.change(screen.getByLabelText('Damage ends (optional)'), { target: { value: '2027-03-01T09:00' } })
-    await user.clear(screen.getByLabelText('Units damaged'))
-    await user.type(screen.getByLabelText('Units damaged'), '31')
+    fireEvent.change(screen.getByLabelText('Starts'), { target: { value: '2027-03-01T09:00' } })
+    fireEvent.change(screen.getByLabelText('Ends (optional)'), { target: { value: '2027-03-01T09:00' } })
+    await user.clear(screen.getByLabelText('Units affected'))
+    await user.type(screen.getByLabelText('Units affected'), '31')
     await user.type(screen.getByLabelText('Description'), '   ')
-    await user.click(screen.getByRole('button', { name: 'Save damage report' }))
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
 
     expect(screen.getByText('The end must be after the start.')).toBeInTheDocument()
     expect(screen.getByText('Enter a whole number from 1 to 30.')).toBeInTheDocument()
-    expect(screen.getByText('Describe the damage.')).toBeInTheDocument()
+    expect(screen.getByText('Describe the problem.')).toBeInTheDocument()
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
   })
 
@@ -184,17 +204,17 @@ describe('TS09 Technical Support reports damaged equipment', () => {
     const start = '2027-03-01T09:00'
     const calls = stubApi({
       'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR]),
-      [unitsUrl(iso(start), plusDay(start))]: () => jsonResponse(200, []),
+      'GET /api/equipment/eq-proj': () => jsonResponse(200, detail([{ serialNumber: 'EPS-EBU04-7K2Q9M', status: 'Available' }])),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/new')
+    renderAt('/technical-support/faulty/new')
 
     await user.selectOptions(await screen.findByLabelText('Equipment'), 'eq-proj')
-    fireEvent.change(screen.getByLabelText('Damage starts'), { target: { value: start } })
+    fireEvent.change(screen.getByLabelText('Starts'), { target: { value: start } })
     await user.type(screen.getByLabelText('Description'), 'Cracked lens')
-    await user.click(screen.getByRole('button', { name: 'Save damage report' }))
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
 
-    expect(screen.getByText('Choose the damaged unit.')).toBeInTheDocument()
+    expect(screen.getByText('Choose the unit.')).toBeInTheDocument()
     expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
   })
 
@@ -204,15 +224,15 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'POST /api/equipment-damage-reports': () => jsonResponse(400, { message: 'Only 30 HDMI Cable are owned.' }),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/new')
+    renderAt('/technical-support/faulty/new')
 
     await user.selectOptions(await screen.findByLabelText('Equipment'), 'eq-hdmi')
-    fireEvent.change(screen.getByLabelText('Damage starts'), { target: { value: '2027-03-01T09:00' } })
+    fireEvent.change(screen.getByLabelText('Starts'), { target: { value: '2027-03-01T09:00' } })
     await user.type(screen.getByLabelText('Description'), 'Connectors bent')
-    await user.click(screen.getByRole('button', { name: 'Save damage report' }))
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Only 30 HDMI Cable are owned.')
-    expect(screen.getByRole('heading', { name: 'Report damaged equipment' })).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Report a problem' })).toBeInTheDocument()
   })
 
   it('TS09 AC6, AC9 (happy): shows each affected event and records Covered by spare when spares cover it', async () => {
@@ -223,7 +243,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'POST /api/equipment-damage-reports/rep-1/outcomes/out-1': () => jsonResponse(200, covered),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
 
     const card = within(await screen.findByRole('list', { name: 'Affected events' })).getByRole('listitem')
     expect(card).toHaveTextContent('Town Hall')
@@ -250,7 +270,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'POST /api/equipment-damage-reports/rep-1/outcomes/out-1': () => jsonResponse(200, replaced),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
 
     await user.click(await screen.findByRole('button', { name: 'Replace unit' }))
     const select = await screen.findByLabelText('Replacement unit for Town Hall')
@@ -271,7 +291,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'POST /api/equipment-damage-reports/rep-1/outcomes/out-1': () => jsonResponse(200, short),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
 
     expect(await screen.findByRole('button', { name: 'Covered by spare' })).toBeDisabled()
     await user.click(screen.getByRole('button', { name: 'Mark short' }))
@@ -291,7 +311,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
         jsonResponse(409, { message: 'Unit EPS-EBU04-AAAA22 is already reserved during this reservation.' }),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
 
     await user.click(await screen.findByRole('button', { name: 'Replace unit' }))
     await user.selectOptions(await screen.findByLabelText('Replacement unit for Town Hall'), 'EPS-EBU04-AAAA22')
@@ -311,7 +331,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'POST /api/equipment-damage-reports/rep-2/outcomes/out-2': () => jsonResponse(200, reduced),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-2')
+    renderAt('/technical-support/faulty/reports/rep-2')
 
     expect(await screen.findByText(/reservations fit the working units/)).toBeInTheDocument()
     const input = screen.getByLabelText('Units to take off Town Hall')
@@ -327,7 +347,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
   it('TS09 AC11 (boundary): a reduction above what the event holds cannot be sent', async () => {
     const calls = stubApi({ 'GET /api/equipment-damage-reports/rep-2': () => jsonResponse(200, BULK_REPORT) })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-2')
+    renderAt('/technical-support/faulty/reports/rep-2')
 
     const input = await screen.findByLabelText('Units to take off Town Hall')
     await user.clear(input)
@@ -349,14 +369,14 @@ describe('TS09 Technical Support reports damaged equipment', () => {
       'POST /api/equipment-damage-reports/rep-1/close': () => jsonResponse(200, closed),
     })
     const user = userEvent.setup()
-    const first = renderAt('/technical-support/damaged-equipment/rep-1')
+    const first = renderAt('/technical-support/faulty/reports/rep-1')
 
     expect(await screen.findByRole('button', { name: 'Close report' })).toBeDisabled()
     expect(screen.getByText(/once every affected event has an outcome/)).toBeInTheDocument()
     first.unmount()
 
     decidedYet = true
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
     await user.click(await screen.findByRole('button', { name: 'Close report' }))
 
     expect(await screen.findByText('Report closed.')).toBeInTheDocument()
@@ -368,7 +388,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
     stubApi({
       'GET /api/equipment-damage-reports/rep-1': () => jsonResponse(200, { ...REPORT, affectedEvents: [{ ...EVENT, active: false }] }),
     })
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
 
     expect(await screen.findByText(/cancelled or has finished, so it needs no outcome/)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Mark short' })).not.toBeInTheDocument()
@@ -382,7 +402,7 @@ describe('TS09 Technical Support reports damaged equipment', () => {
         : jsonResponse(200, REPORT)),
     })
     const user = userEvent.setup()
-    renderAt('/technical-support/damaged-equipment/rep-1')
+    renderAt('/technical-support/faulty/reports/rep-1')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('could not be loaded')
     await user.click(screen.getByRole('button', { name: 'Try again' }))

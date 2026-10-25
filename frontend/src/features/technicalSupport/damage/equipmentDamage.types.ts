@@ -74,8 +74,6 @@ export interface ReportDamageBody {
   periodEnd: string | null
   /** Serialised only; omitted (or null) for no block. */
   blockStatus?: DamageBlockStatus | null
-  /** Older form of `blockStatus: 'FAULTY'`; the server still accepts it. */
-  markFaulty?: boolean
 }
 
 export interface DecideOutcomeBody {

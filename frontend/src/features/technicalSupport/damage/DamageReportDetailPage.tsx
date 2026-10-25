@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { Notice } from '../../../components/ui/Notice'
@@ -27,7 +27,9 @@ export function DamageReportDetailPage() {
   const [attempt, setAttempt] = useState(0)
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
-  const [notice, setNotice] = useState<string | null>(null)
+  // The report-a-problem form explains why it opened this report.
+  const location = useLocation()
+  const [notice, setNotice] = useState<string | null>((location.state as { notice?: string } | null)?.notice ?? null)
 
   useEffect(() => {
     if (!reportId) return
