@@ -511,7 +511,7 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 
 2026-10-25, branch `feat/ts09-damaged-equipment-reports`. Technical Support report damaged equipment, decide what happens to each event that relied on it, and the event's coordinator deals with any shortfall. D30 is TS11's (built in parallel); the gap is intentional.
 
-**Data (V35).** Two tables: `equipment_damage_reports` (one per damaged serialised unit, or per damaged quantity of a non-serialised kind) and `equipment_damage_outcomes` (one per affected event). See `SCHEMA.md` § V35.
+**Data (V38).** Two tables: `equipment_damage_reports` (one per damaged serialised unit, or per damaged quantity of a non-serialised kind) and `equipment_damage_outcomes` (one per affected event). See `SCHEMA.md` § V38.
 
 **Rules.**
 - **Who is affected (AC6, AC7):** events from Planning to Confirmed that have not ended, whose **approved** request lists the kind, and that hold a reservation the damage touches. Events whose request is still processing are left to TS01/TS06's normal review. For a non-serialised kind, an event is affected only when, at some moment in the period, reservations exceed the owned quantity less every damaged quantity. The period is split at each reservation and damage boundary, so reservations that never overlap are not added together.
@@ -539,7 +539,7 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 **Evidence:**
 - **Backend:** `EquipmentDamageFlowTest` (27, real PostgreSQL), `EquipmentDamageRoleAccessTest` (41), `EquipmentDamageServiceTest` (4, unit), `DamageImpactTest` (3, unit).
 
-**Migration:** V35 (two tables, one notification type, notification constraint re-declared with it added).
+**Migration:** V38 (two tables, one notification type, notification constraint re-declared with it added).
 
 ### D32 — TS09: Technical Support console built on existing endpoints; one availability calculation; problems routed TS03 → TS09; Unavailable blocks
 
@@ -567,7 +567,7 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 - On that 409, the console falls back to a TS09 damage report, which decides each affected event first.
 - Two endpoints keep two sets of rules: a block never changes reservations (business rule E21), and a damage report does.
 
-**TS09 Unavailable (V37).**
+**TS09 Unavailable (V39).**
 - `markFaulty` becomes `blockStatus` (`FAULTY` / `UNAVAILABLE` / null), and `faulty_marked` becomes `block_applied`.
 - On close, the block is applied through TS03's `EquipmentStatusService.addPeriod`, as before.
 - `"markFaulty": true` is still accepted as `FAULTY`; `markFaulty: true` with a different `blockStatus` is 400.
@@ -580,7 +580,7 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 **Evidence:**
 - **Backend:** `TechnicalSupportConsoleFlowTest` (real PostgreSQL), `TechnicalSupportConsoleRoleAccessTest` (403 for every other role, existing readers still 200), `EquipmentAvailabilityServiceTest`, `EquipmentConsoleReadsTest`, `EquipmentRequestQueueServiceTest`, `ReportDamageRequestTest` (unit).
 
-**Migration:** V37 (`block_status` added and back-filled, `faulty_marked` → `block_applied`, `mark_faulty` dropped, two checks).
+**Migration:** V39 (`block_status` added and back-filled, `faulty_marked` → `block_applied`, `mark_faulty` dropped, two checks).
 
 ### D33 — TS02: reserve a request in one all-or-nothing batch; reservations capped at the request unless marked spare; serialised units always named
 
@@ -591,7 +591,7 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 - All lines are checked before anything is written, in one transaction. A refused line saves nothing, and its error carries `equipmentId` (`ApiError.equipmentId`, left out otherwise) so the console marks that row.
 - Every kind's row is locked first, in id order, so two batches cannot deadlock.
 
-**Cap and spares (V38).** A reservation may not take the event's non-spare reservations of a kind, counted over those overlapping the new window, above what the event asks for: its processing request's line plus what its approved requests are still owed (`EquipmentShortfallLedger.need`, as TS06 counts it). The excess must be marked spare (`equipment_logs.spare`).
+**Cap and spares (V40).** A reservation may not take the event's non-spare reservations of a kind, counted over those overlapping the new window, above what the event asks for: its processing request's line plus what its approved requests are still owed (`EquipmentShortfallLedger.need`, as TS06 counts it). The excess must be marked spare (`equipment_logs.spare`).
 - A batch line's `spare` is how many extra units to add as spares. The single endpoint takes `spare: true` for the whole reservation (default false). Both paths enforce the cap.
 - Spares stay "reserved" everywhere else: they hold stock in availability; TS06's approval counts them (no change); TS09's "covered by spare" counts every reservation the event holds other than the damaged unit's (no change). An integration test proves a spare covers a damaged unit.
 
@@ -609,7 +609,7 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 - **Backend:** `EquipmentBatchReservationFlowTest` (real PostgreSQL): batch happy path, all-or-nothing, cap refusal and boundary, spares, named serials, auto-pick skipping blocked and reserved units, too few units, invalid lines, role access, the single endpoint's cap and auto-pick, and TS09 spare cover.
 - **Frontend:** `fulfilment.test.ts` and the request-page tests.
 
-**Migration:** V38 (`equipment_logs.spare BOOLEAN NOT NULL DEFAULT false`).
+**Migration:** V40 (`equipment_logs.spare BOOLEAN NOT NULL DEFAULT false`).
 
 ## Awaiting Team Confirmation
 

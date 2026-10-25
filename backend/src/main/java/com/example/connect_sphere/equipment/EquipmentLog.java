@@ -37,7 +37,7 @@ public class EquipmentLog {
     @Column(name = "loaned_until", nullable = false)
     private Instant loanedUntil;
 
-    /** V38 (D33): an extra unit held beyond what the event requested. */
+    /** V40 (D33): an extra unit held beyond what the event requested. */
     @Column(nullable = false)
     private boolean spare;
 

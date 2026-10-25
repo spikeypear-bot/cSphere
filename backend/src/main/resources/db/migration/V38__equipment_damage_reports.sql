@@ -1,8 +1,7 @@
 -- TS09: Technical Support report damaged equipment, decide what happens to
 -- each affected event (covered by a spare, replaced, or short), and the
--- assigned Event Coordinator resolves a shortfall. V34 is taken by another
--- branch (serial numbers become VARCHAR(64)); the serial column here already
--- uses that length.
+-- assigned Event Coordinator resolves a shortfall. The serial column uses
+-- V37's VARCHAR(64) length.
 
 -- One report per damaged serialised unit (serial_number set, quantity 1) or
 -- per damaged quantity of a non-serialised kind (serial_number null).

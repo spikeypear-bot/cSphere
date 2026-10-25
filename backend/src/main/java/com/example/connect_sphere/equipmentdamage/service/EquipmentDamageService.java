@@ -415,7 +415,7 @@ public class EquipmentDamageService {
                 .count();
     }
 
-    /** AC4: the block asked for (TS03 Faulty or Unavailable, V37) is added
+    /** AC4: the block asked for (TS03 Faulty or Unavailable, V39) is added
      * once no event still holds the unit, since TS03 refuses to block a
      * committed unit. It goes through TS03's own service, so its overlap
      * rules apply unchanged. */

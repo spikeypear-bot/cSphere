@@ -1,6 +1,6 @@
 # Equipment damage API (TS09)
 
-Technical Support report damaged equipment and decide what happens to each event that relied on it. The event's assigned Event Coordinator sees the outcome and deals with any shortfall. Rules and reasons: decision-log D31 (and D32 for the console reads and the Unavailable block). Tables: `SCHEMA.md` § V35, § V37.
+Technical Support report damaged equipment and decide what happens to each event that relied on it. The event's assigned Event Coordinator sees the outcome and deals with any shortfall. Rules and reasons: decision-log D31 (and D32 for the console reads and the Unavailable block). Tables: `SCHEMA.md` § V38, § V39.
 
 Errors use the usual `ApiError` shape (`{"message": "..."}`): 400 invalid input, 403 wrong role or not the assigned coordinator, 404 not found, 409 not possible in the current state. A refused action changes nothing.
 
@@ -22,7 +22,7 @@ Errors use the usual `ApiError` shape (`{"message": "..."}`): 400 invalid input,
 
 - Serialised kind: `serialNumber` required (an existing unit); `quantity` omitted or 1.
 - Non-serialised kind: `quantity` from 1 to the quantity owned; no `serialNumber`; no block (`blockStatus` or `markFaulty`).
-- `blockStatus` (V37): `FAULTY`, `UNAVAILABLE` (any case) or omitted/null — the TS03 block put on the unit when the report closes. The older `"markFaulty": true` is still accepted and means `FAULTY`; `markFaulty: true` with a different `blockStatus` is 400, as is any other value (including `AVAILABLE`).
+- `blockStatus` (V39): `FAULTY`, `UNAVAILABLE` (any case) or omitted/null — the TS03 block put on the unit when the report closes. The older `"markFaulty": true` is still accepted and means `FAULTY`; `markFaulty: true` with a different `blockStatus` is 400, as is any other value (including `AVAILABLE`).
 - `description` 1–2000 characters after trimming. `periodEnd` optional, and after `periodStart` when given.
 - A report affecting no event is returned already `CLOSED`.
 

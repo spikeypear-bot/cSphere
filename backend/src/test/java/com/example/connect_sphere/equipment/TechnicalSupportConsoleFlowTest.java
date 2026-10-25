@@ -38,7 +38,7 @@ import tools.jackson.databind.JsonNode;
  * the request list by status, every unit's current and upcoming status
  * periods, the catalogue's availability for a window, one kind's detail and
  * reservations, TS03's refusal the console routes to TS09, and a damage
- * report that blocks a unit as Unavailable (V37).
+ * report that blocks a unit as Unavailable (V39).
  *
  * <p>Set-up goes through the real API (EC07 request, TS02 reservation, TS03
  * status period, TS06 decision), so the rules of TS01 (availability), TS02
@@ -582,7 +582,7 @@ class TechnicalSupportConsoleFlowTest {
         assertThat(periodsFor(projectors)).isZero();
     }
 
-    // ---- TS09 Unavailable (V37) ----------------------------------------------
+    // ---- TS09 Unavailable (V39) ----------------------------------------------
 
     @Test
     @DisplayName("TS09 (happy): a report asking for Unavailable on a unit no event holds closes at once and blocks it Unavailable for the period")
@@ -679,7 +679,7 @@ class TechnicalSupportConsoleFlowTest {
     }
 
     @Test
-    @DisplayName("TS09 (failure): the database itself refuses a block on a non-serialised report (V37)")
+    @DisplayName("TS09 (failure): the database itself refuses a block on a non-serialised report (V39)")
     void schemaRefusesABlockWithoutAUnit() {
         UUID mics = equipment("Console Mic " + UUID.randomUUID(), 5, false);
 

@@ -17,7 +17,7 @@ import com.example.connect_sphere.equipmentdamage.dto.ReportDamageRequest;
 import com.example.connect_sphere.equipmentdamage.entity.DamageBlockStatus;
 
 /**
- * TS09 AC4 as generalised by V37 (decision-log D32): a damage report asks for
+ * TS09 AC4 as generalised by V39 (decision-log D32): a damage report asks for
  * a TS03 block, Faulty or Unavailable, through {@code blockStatus}; the older
  * {@code markFaulty: true} still means Faulty. Pure value logic, so no
  * doubles.

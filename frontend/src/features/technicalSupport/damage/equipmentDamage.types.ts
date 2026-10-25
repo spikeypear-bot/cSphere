@@ -4,7 +4,7 @@
 export type DamageOutcome = 'COVERED' | 'REPLACED' | 'SHORT'
 export type ShortfallResolution = 'NOTE' | 'ADDITIONAL_REQUEST'
 export type DamageDecision = 'COVERED' | 'REPLACE' | 'SHORT' | 'REDUCE'
-/** V37: the TS03 block put on the unit when the report closes. */
+/** V39: the TS03 block put on the unit when the report closes. */
 export type DamageBlockStatus = 'FAULTY' | 'UNAVAILABLE'
 
 export interface AffectedEvent {
@@ -51,7 +51,7 @@ export interface DamageReport {
   closedAt: string | null
   canClose: boolean
   affectedEvents: AffectedEvent[]
-  /** V37; older responses (and fixtures) only carry markFaulty/faultyMarked. */
+  /** V39; older responses (and fixtures) only carry markFaulty/faultyMarked. */
   blockStatus?: DamageBlockStatus | null
   blockApplied?: boolean
 }

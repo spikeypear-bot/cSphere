@@ -13,7 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * TS09 (V35): Technical Support's report that equipment is damaged for a
+ * TS09 (V38): Technical Support's report that equipment is damaged for a
  * period. A serialised report names one unit (quantity 1); a non-serialised
  * report gives how many units of the kind are out of action, which then stop
  * counting as available (AC5). Each event it affects gets an
@@ -49,7 +49,7 @@ public class EquipmentDamageReport {
     @Column(name = "period_end")
     private Instant periodEnd;
 
-    /** AC4 (V37): the TS03 block Technical Support asked for on the damaged
+    /** AC4 (V39): the TS03 block Technical Support asked for on the damaged
      * unit, Faulty or Unavailable; null when none was asked for. */
     @Enumerated(EnumType.STRING)
     @Column(name = "block_status")

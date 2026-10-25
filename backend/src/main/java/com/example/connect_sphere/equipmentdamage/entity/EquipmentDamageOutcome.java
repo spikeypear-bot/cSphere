@@ -13,7 +13,7 @@ import lombok.Getter;
 import lombok.Setter;
 
 /**
- * TS09 (V35): one event affected by an {@link EquipmentDamageReport}, and
+ * TS09 (V38): one event affected by an {@link EquipmentDamageReport}, and
  * what was decided for it. Its own class rather than fields on the report:
  * each affected event has its own outcome, shortfall and resolution.
  */

@@ -366,7 +366,7 @@ public class EquipmentReservationService {
         }
     }
 
-    // TS09: serial numbers are stored as VARCHAR(64) (V34).
+    // TS09: serial numbers are stored as VARCHAR(64) (V37).
     private void requireSerialLength(String serialNumber, UUID equipmentId) {
         int maxSerial = SerialisedEquipmentId.MAX_SERIAL_NUMBER_LENGTH;
         if (serialNumber != null && serialNumber.length() > maxSerial) {

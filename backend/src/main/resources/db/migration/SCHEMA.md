@@ -376,7 +376,7 @@ from; `equipment_requests` records intent, this records reality.
 | `serial_number` | `VARCHAR(64)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
 | `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
 | `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
-| `spare` | `BOOLEAN` | no | | V38. `true` for an extra unit held beyond the requested quantity; default `false` |
+| `spare` | `BOOLEAN` | no | | V40. `true` for an extra unit held beyond the requested quantity; default `false` |
 
 **Foreign keys:** `(equipment_id, serial_number)` is a *composite* FK to `serialised_equipments`,
 so a log row cannot cite a serial belonging to a different equipment kind. Because
@@ -596,7 +596,7 @@ hold an unknown item; adding a checklist item means updating that constraint. Th
 (`event_request_activity.flagged_fields`) holds the same keys. See
 decision-log D30.
 
-## V34 update — serial number length (TS09)
+## V37 update — serial number length (TS09)
 
 `serialised_equipments.serial_number`, `equipment_logs.serial_number` and
 `equipment_status_periods.serial_number` are `VARCHAR(64)` (were `VARCHAR(255)`). Serial numbers
@@ -606,9 +606,9 @@ projector, a 15-digit IMEI-style number for a mobile Wi-Fi unit); the dev seeder
 `(equipment_id, serial_number)` are unchanged. A reservation naming a serial number longer than
 64 characters is refused with 400.
 
-## V35 update — equipment damage reports (TS09)
+## V38 update — equipment damage reports (TS09)
 
-The serial columns use V34's `VARCHAR(64)` length.
+The serial columns use V37's `VARCHAR(64)` length.
 
 `equipment_damage_reports` records Technical Support's report that equipment is damaged for a
 period. Columns: `report_id` (UUID PK), `equipment_id` (required FK → `equipments`),
@@ -637,14 +637,14 @@ reduction lowers `quantity` (deleting the row at 0). What was decided stays on t
 `chk_notification_shape` keeps every V33 branch. See
 [TS09 API](../../../../../../docs/equipment-damage-api.md) and decision-log D31.
 
-## V37 update — damage report block status (TS09)
+## V39 update — damage report block status (TS09)
 
-V34–V36 are taken across branches. A damage report can now ask for the damaged unit to be blocked
+A damage report can now ask for the damaged unit to be blocked
 as **Unavailable** as well as Faulty (TS03's two block statuses):
 
 - `equipment_damage_reports.block_status` (`text`, nullable; `FAULTY` or `UNAVAILABLE`): the TS03 block to
   add when the report closes. Back-filled to `FAULTY` where `mark_faulty` was true, then
-  `mark_faulty` is dropped (V35's check tying `faulty_marked` to it goes with it).
+  `mark_faulty` is dropped (V38's check tying `faulty_marked` to it goes with it).
 - `faulty_marked` is renamed `block_applied`: the requested block was added on close.
 - `chk_damage_block_serialised`: a block needs a serialised unit (`serial_number` set).
   `chk_damage_block_applied`: `block_applied` only when a block was asked for.
@@ -653,9 +653,9 @@ The API keeps `markFaulty`/`faultyMarked` in its responses, derived from these c
 accepts `markFaulty: true` as `FAULTY`. See [TS09 API](../../../../../../docs/equipment-damage-api.md)
 and decision-log D32.
 
-## V38 update — spare reservations (TS02)
+## V40 update — spare reservations (TS02)
 
-V34–V37 are taken across branches. `equipment_logs.spare` (`BOOLEAN NOT NULL DEFAULT false`) marks a
+`equipment_logs.spare` (`BOOLEAN NOT NULL DEFAULT false`) marks a
 reservation as a **spare**: an extra unit held beyond what the event's requests ask for.
 
 - TS02 refuses a reservation that would take the event's non-spare reservations of a kind (those

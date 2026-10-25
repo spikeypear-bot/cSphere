@@ -1,7 +1,6 @@
 -- TS09: a damage report can ask for the damaged unit to be blocked as
--- Unavailable as well as Faulty (TS03's two block statuses). V35's
+-- Unavailable as well as Faulty (TS03's two block statuses). V38's
 -- mark_faulty / faulty_marked become block_status / block_applied.
--- V34-V36 are taken across branches.
 
 ALTER TABLE equipment_damage_reports
     ADD COLUMN block_status text CHECK (block_status IS NULL OR block_status IN ('FAULTY', 'UNAVAILABLE'));
@@ -11,7 +10,7 @@ UPDATE equipment_damage_reports SET block_status = 'FAULTY' WHERE mark_faulty;
 -- "Was the requested block added when the report closed?" now covers either status.
 ALTER TABLE equipment_damage_reports RENAME COLUMN faulty_marked TO block_applied;
 
--- Dropping mark_faulty also drops V35's check that tied faulty_marked to it.
+-- Dropping mark_faulty also drops V38's check that tied faulty_marked to it.
 ALTER TABLE equipment_damage_reports DROP COLUMN mark_faulty;
 
 ALTER TABLE equipment_damage_reports
