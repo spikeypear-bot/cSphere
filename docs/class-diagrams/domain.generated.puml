@@ -157,6 +157,7 @@ class EquipmentLog <<Entity>>  {
 	{field} -loanedUntil : Instant
 	{field} -quantity : int
 	{field} -serialNumber : String
+	{field} -spare : boolean
 	{field} -technicalRequirements : String
 	{method} +reduceBy ( units : int ) : void
 	{method} +replaceUnit ( replacementSerialNumber : String ) : void

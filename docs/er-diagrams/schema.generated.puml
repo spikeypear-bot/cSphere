@@ -53,6 +53,7 @@ entity equipment_logs {
 	serial_number : character varying(64) <<FK>>
 	* loaned_from : timestamp with time zone
 	* loaned_until : timestamp with time zone
+	* spare : boolean
 }
 
 entity equipment_request_equipments {

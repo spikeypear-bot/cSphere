@@ -353,10 +353,12 @@ class StatusView {
 
 
 class ApiError {
+	{field} -equipmentId : UUID
 	{field} -fieldErrors : Map<String, String>
 	{field} -message : String
 	{field} -missingFields : List<String>
 	{method}  {static} +fieldErrors ( message : String , fieldErrors : Map ) : ApiError
+	{method}  {static} +forEquipment ( message : String , equipmentId : UUID ) : ApiError
 	{method}  {static} +missingFields ( message : String , missingFields : List ) : ApiError
 	{method}  {static} +of ( message : String ) : ApiError
 }
@@ -394,6 +396,7 @@ class ApiExceptionHandler {
 	{method} +handleNotPending ( ex : EventRequestNotPendingException ) : ResponseEntity
 	{method} +handleNotificationNotFound ( ex : NotificationNotFoundException ) : ResponseEntity
 	{method} +handleRequestState ( ex : EventRequestStateException ) : ResponseEntity
+	{method} +handleReservationLine ( ex : ReservationLineException ) : ResponseEntity
 	{method} +handleResponseStatus ( ex : ResponseStatusException ) : ResponseEntity
 	{method} +handleVenueBookingNotFound ( ex : VenueBookingNotFoundException ) : ResponseEntity
 	{method} +handleVenueBookingState ( ex : VenueBookingStateException ) : ResponseEntity
@@ -492,15 +495,39 @@ enum EquipmentAvailabilityService.UnitConflict {
 
 
 class EquipmentCatalogueController {
-	{method} +catalogue () : List
+	{method} +catalogue ( from : Instant , to : Instant ) : List
+	{method} +detail ( equipmentId : UUID ) : EquipmentDetailResponse
 }
 
 
 class EquipmentCatalogueResponse {
+	{field} -availableQuantity : Integer
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -outOfActionQuantity : Integer
+	{field} -reservedQuantity : Integer
+	{field} -serialised : boolean
+	{field} -totalQuantity : int
+}
+
+
+class EquipmentCatalogueService {
+	{field} -clock : Clock
+	{method} +catalogue ( from : Instant , to : Instant ) : List
+	{method} +detail ( equipmentId : UUID ) : EquipmentDetailResponse
+}
+
+
+class EquipmentDetailResponse {
 	{field} -equipmentId : UUID
 	{field} -equipmentName : String
 	{field} -serialised : boolean
 	{field} -totalQuantity : int
+}
+
+
+class EquipmentDetailResponse.Unit {
+	{field} -serialNumber : String
 }
 
 
@@ -512,6 +539,7 @@ class EquipmentLog <<Entity>>  {
 	{field} -loanedUntil : Instant
 	{field} -quantity : int
 	{field} -serialNumber : String
+	{field} -spare : boolean
 	{field} -technicalRequirements : String
 	{method} +reduceBy ( units : int ) : void
 	{method} +replaceUnit ( replacementSerialNumber : String ) : void
@@ -536,8 +564,10 @@ interface EquipmentRepository {
 
 class EquipmentReservationController {
 	{method} +availability ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
 	{method} +reservationsForEvent ( eventId : UUID ) : List
 	{method} +reserve ( request : ReserveEquipmentRequest ) : EquipmentReservationResponse
+	{method} +reserveBatch ( request : ReserveBatchRequest ) : List
 }
 
 
@@ -545,18 +575,22 @@ class EquipmentReservationResponse {
 	{field} -equipmentId : UUID
 	{field} -equipmentName : String
 	{field} -eventId : UUID
+	{field} -eventName : String
 	{field} -loanedFrom : Instant
 	{field} -loanedUntil : Instant
 	{field} -logId : UUID
 	{field} -quantity : int
 	{field} -serialNumber : String
+	{field} -spare : boolean
 }
 
 
 class EquipmentReservationService {
 	{method} +availabilityForEvent ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
 	{method} +reservationsForEvent ( eventId : UUID ) : List
 	{method} +reserve ( req : ReserveEquipmentRequest ) : EquipmentReservationResponse
+	{method} +reserveBatch ( req : ReserveBatchRequest ) : List
 }
 
 
@@ -569,6 +603,7 @@ enum EquipmentStatus {
 
 class EquipmentStatusController {
 	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , request : AddStatusPeriodRequest ) : void
+	{method} +listAllPeriods ( current : boolean ) : List
 	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
 	{method} +listUnits ( start : Instant , end : Instant ) : List
 	{method} +removePeriod ( periodId : UUID ) : void
@@ -597,7 +632,9 @@ interface EquipmentStatusPeriodRepository {
 class EquipmentStatusService {
 	{field} {static} +FAR_FUTURE : Instant
 	{field} {static} +UNIT_COMMITTED_MESSAGE : String
+	{field} -clock : Clock
 	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , status : EquipmentStatus , start : Instant , end : Instant ) : void
+	{method} +listAllPeriods ( current : boolean ) : List
 	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
 	{method} +listUnits ( start : Instant , end : Instant ) : List
 	{method} +removePeriod ( periodId : UUID ) : void
@@ -611,12 +648,33 @@ class EquipmentUnitResponse {
 }
 
 
+class ReservationLineException {
+	{field} -equipmentId : UUID
+}
+
+
+class ReserveBatchRequest {
+	{field} -end : Instant
+	{field} -eventId : UUID
+	{field} -start : Instant
+}
+
+
+class ReserveBatchRequest.Line {
+	{field} -equipmentId : UUID
+	{field} -quantity : Integer
+	{field} -serialNumbers : List<String>
+	{field} -spare : Integer
+}
+
+
 class ReserveEquipmentRequest {
 	{field} -end : Instant
 	{field} -equipmentId : UUID
 	{field} -eventId : UUID
 	{field} -quantity : int
 	{field} -serialNumber : String
+	{field} -spare : Boolean
 	{field} -start : Instant
 }
 
@@ -633,12 +691,23 @@ class SerialisedEquipmentId {
 
 
 interface SerialisedEquipmentRepository {
+	{method}  {abstract} +findByIdEquipmentIdOrderByIdSerialNumberAsc ( equipmentId : UUID ) : List
 }
 
 
 class StatusPeriodResponse {
 	{field} -end : Instant
 	{field} -id : UUID
+	{field} -start : Instant
+}
+
+
+class UnitStatusPeriodResponse {
+	{field} -end : Instant
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -id : UUID
+	{field} -serialNumber : String
 	{field} -start : Instant
 }
 
@@ -894,6 +963,7 @@ class EquipmentRequest <<Entity>>  {
 class EquipmentRequestController {
 	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
 	{method} +lines ( requestId : UUID ) : List
+	{method} +list ( status : String ) : List
 	{method} +listProcessing () : List
 	{method} +submit ( jwt : Jwt , eventId : UUID , request : SubmitEquipmentRequest ) : ResponseEntity
 	{method} +updateStatus ( requestId : UUID , request : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
@@ -929,6 +999,7 @@ class EquipmentRequestLineId {
 
 interface EquipmentRequestLineRepository {
 	{method}  {abstract} +findByIdRequestId ( requestId : UUID ) : List
+	{method}  {abstract} +findByRequestIds ( requestIds : Collection ) : List
 }
 
 
@@ -939,11 +1010,16 @@ class EquipmentRequestLineResponse {
 }
 
 
+class EquipmentRequestQueueService {
+	{method} +list ( status : String ) : List
+}
+
+
 interface EquipmentRequestRepository {
 	{method}  {abstract} +eventClosed ( eventId : UUID ) : boolean
 	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
 	{method}  {abstract} +findByEventIdForUpdate ( eventId : UUID ) : List
-	{method}  {abstract} +findByStatus ( status : EquipmentRequestStatus ) : List
+	{method}  {abstract} +findByStatusIn ( statuses : Collection ) : List
 	{method}  {abstract} +findForUpdate ( requestId : UUID ) : Optional
 }
 
@@ -953,9 +1029,25 @@ class EquipmentRequestResponse {
 	{field} -eventId : UUID
 	{field} -eventName : String
 	{field} -eventStart : Instant
+	{field} -eventStatus : String
+	{field} -isShortfallRequest : boolean
+	{field} -organisationName : String
 	{field} -requestId : UUID
 	{field} -status : String
 	{field} -technicalRequirement : String
+}
+
+
+class EquipmentRequestResponse.Item {
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -quantity : int
+}
+
+
+class EquipmentRequestResponse.Person {
+	{field} -name : String
+	{field} -userId : UUID
 }
 
 
@@ -2811,15 +2903,23 @@ AddStatusPeriodRequest --> EquipmentStatus : status
 EquipmentAvailabilityService --> EquipmentLogRepository : logs
 EquipmentAvailabilityService --> EquipmentRepository : equipment
 EquipmentAvailabilityService --> EquipmentStatusPeriodRepository : statusPeriods
-EquipmentCatalogueController --> EquipmentRepository : equipmentRepository
+EquipmentCatalogueController --> EquipmentCatalogueService : service
+EquipmentCatalogueService --> EquipmentAvailabilityService : availability
+EquipmentCatalogueService --> EquipmentRepository : equipment
+EquipmentCatalogueService --> EquipmentStatusPeriodRepository : statusPeriods
+EquipmentCatalogueService --> SerialisedEquipmentRepository : units
+EquipmentDetailResponse --> "0..*" EquipmentDetailResponse.Unit : units
+EquipmentDetailResponse.Unit --> "0..*" StatusPeriodResponse : statusPeriods
+EquipmentDetailResponse.Unit --> EquipmentStatus : status
 EquipmentReservationController --> EquipmentReservationService : service
 EquipmentReservationService --> EquipmentAvailabilityService : availability
 EquipmentReservationService --> EquipmentLogRepository : logRepository
 EquipmentReservationService --> EquipmentRepository : equipmentRepository
-EquipmentReservationService --> EquipmentStatusPeriodRepository : statusPeriodRepository
 EquipmentReservationService --> SerialisedEquipmentRepository : unitRepository
 EquipmentReservationService --> EquipmentRequestLineRepository : requestLineRepository
 EquipmentReservationService --> EquipmentRequestRepository : requestRepository
+EquipmentReservationService --> EventRepository : eventRepository
+EquipmentReservationService --> EquipmentShortfallLedger : shortfalls
 EquipmentStatusController --> EquipmentStatusService : service
 EquipmentStatusPeriod --> EquipmentStatus : status
 EquipmentStatusService --> EquipmentLogRepository : logRepository
@@ -2827,10 +2927,12 @@ EquipmentStatusService --> EquipmentRepository : equipmentRepository
 EquipmentStatusService --> EquipmentStatusPeriodRepository : periodRepository
 EquipmentStatusService --> SerialisedEquipmentRepository : unitRepository
 EquipmentUnitResponse --> EquipmentStatus : status
+ReserveBatchRequest --> "0..*" ReserveBatchRequest.Line : lines
 SerialisedEquipment --> Equipment : equipment
 SerialisedEquipment --> EquipmentStatus : status
 SerialisedEquipment *-- SerialisedEquipmentId : id
 StatusPeriodResponse --> EquipmentStatus : status
+UnitStatusPeriodResponse --> EquipmentStatus : status
 EquipmentDamageController --> EquipmentDamageService : service
 EventEquipmentDamageController --> EventEquipmentDamageService : service
 DamageReportDto --> "0..*" DamageReportDto.AffectedEvent : affectedEvents
@@ -2870,9 +2972,8 @@ EventEquipmentDamageService --> EventRepository : events
 EquipmentRequest --> EquipmentRequestStatus : status
 EquipmentRequestController --> EquipmentRequestDecisionService : decisionService
 EquipmentRequestController --> EquipmentRequestLineRepository : lineRepository
-EquipmentRequestController --> EquipmentRequestRepository : requestRepository
+EquipmentRequestController --> EquipmentRequestQueueService : queue
 EquipmentRequestController --> EquipmentRequestService : service
-EquipmentRequestController --> EventRepository : eventRepository
 EquipmentRequestDecisionService --> EquipmentLogRepository : reservations
 EquipmentRequestDecisionService --> EquipmentRequestLineRepository : lines
 EquipmentRequestDecisionService --> EquipmentRequestRepository : requests
@@ -2881,6 +2982,15 @@ EquipmentRequestDecisionService --> EquipmentShortfallLedger : shortfalls
 EquipmentRequestDetailsResponse --> "0..*" EquipmentRequestLineResponse : lines
 EquipmentRequestLine --> Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
+EquipmentRequestQueueService --> "0..*" EventStatus : CLOSED
+EquipmentRequestQueueService --> JourneyStatusResolver : statuses
+EquipmentRequestQueueService --> EquipmentDamageOutcomeRepository : outcomes
+EquipmentRequestQueueService --> EquipmentRequestLineRepository : lines
+EquipmentRequestQueueService --> EquipmentRequestRepository : requests
+EquipmentRequestQueueService --> EventRepository : events
+EquipmentRequestQueueService --> UserRepository : users
+EquipmentRequestResponse --> "0..*" EquipmentRequestResponse.Item : items
+EquipmentRequestResponse --> EquipmentRequestResponse.Person : requestedBy
 EquipmentRequestService --> EquipmentRepository : equipment
 EquipmentRequestService --> EquipmentRequestLineRepository : lines
 EquipmentRequestService --> EquipmentRequestRepository : requests
