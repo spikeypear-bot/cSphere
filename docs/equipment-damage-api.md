@@ -194,7 +194,39 @@ The by-equipment twin of `GET /api/equipment/events/{eventId}/reservations`, bui
    "eventName": "Gala" }]
 ```
 
-`eventName` was added to both reservation lists (and to the `POST /api/equipment/reservations` response); the other fields are unchanged.
+`eventName` was added to both reservation lists (and to the `POST /api/equipment/reservations` response); the other fields are unchanged. D33 adds `"spare": false|true` to every reservation in all three.
+
+### Reserving a request: `POST /api/equipment/reservations/batch` → 201 (D33)
+
+Reserves several of the event's requested items for one window, all or nothing.
+
+```json
+{ "eventId": "uuid", "start": "2027-03-10T01:00:00Z", "end": "2027-03-10T04:00:00Z",
+  "lines": [
+    { "equipmentId": "uuid-mic", "quantity": 4, "spare": 1 },
+    { "equipmentId": "uuid-projector", "quantity": 2, "serialNumbers": ["PJ-3", "PJ-1"] },
+    { "equipmentId": "uuid-laptop", "quantity": 2 }
+  ] }
+```
+
+Returns every reservation created, in line order, in the reservation shape above. A serialised unit is one reservation with its serial; a non-serialised line is one reservation of `quantity` units plus, when `spare` > 0, one of `spare` units marked `"spare": true`.
+
+- `quantity` (≥ 0) units count towards the request. `spare` (≥ 0, default 0) extra units are marked spare. Each line must reserve at least one unit.
+- `serialNumbers` (serialised kinds only): one per unit (`quantity + spare`), all different. The first `quantity` are the requested units and the rest are spares. Left out, the server picks free, working units for the whole window (not blocked Faulty/Unavailable, not held by an overlapping reservation), in serial-number order.
+- **Cap:** the event's non-spare reservations of a kind overlapping the window may not go above what it asks for. That is the processing request's line plus what its approved requests are still owed (TS09). Anything more must be spare.
+- Each line passes the single endpoint's checks: the event is not cancelled or finished, the item is on its processing request, named units exist and are free, and availability (`EquipmentAvailabilityService`) allows it.
+- Nothing is saved unless every line passes. The error names the refused line: `{"message": "...", "equipmentId": "uuid"}`.
+
+| Status | When |
+|---|---|
+| 400 | no `eventId`, no lines, `end` not after `start`, a line without `equipmentId`, a repeated item, negative or zero units, serials on a non-serialised kind, the wrong number of serials, a repeated, blank or over-long serial |
+| 404 | unknown item (`"Equipment not found"`) or unit (`"Equipment unit not found"`) |
+| 409 | event closed; item not on the processing request; `"Only N of X available for that period"`; `"Only N more X can be reserved for this event: R requested and S already reserved. Mark any extra units as spare."`; `"Only N working X units are free for that period"`; a named unit is blocked or reserved elsewhere |
+| 403 | any role but `TECHNICIAN` |
+
+### One reservation: `POST /api/equipment/reservations` (TS02, D33 changes)
+
+Same body as before plus optional `"spare": true` (default false), which marks the whole reservation as spare. The same cap applies. A serialised kind reserved without `serialNumber` gets `quantity` free, working units picked as above, one reservation each; the response is the first of them. Previously these were stored without serials.
 
 ### Reporting a problem: TS03 first, TS09 when the unit is reserved
 

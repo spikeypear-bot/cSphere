@@ -166,7 +166,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `GET /api/equipment/catalogue?from&to` | `hasRole('TECHNICIAN')` — a request matcher on the path **and** a `from` or `to` parameter, placed above the plain catalogue rule | D32. The window adds stock levels (reserved, out of action, available) for the Technical Support console; organisers and coordinators keep the plain catalogue, unchanged. |
   | `GET /api/equipment/{id}`, `GET /api/equipment/{id}/reservations?from&to`, `GET /api/equipment/status-periods` | `hasRole('TECHNICIAN')`, above the `GET /api/equipment/**` rule; `GET /api/equipment/units` keeps `hasAnyRole('TECHNICIAN','EC')` just above them | D32. A kind's reservations name events, so coordinators do not get them (ECL-C7, D25); detail and status periods are console reads. |
   | Other `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
-  | `POST`, `DELETE /api/equipment/**` | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. |
+  | `POST`, `DELETE /api/equipment/**` (incl. `POST /api/equipment/reservations/batch`) | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. D33's batch falls under the same rule; no new matcher. |
   | `PATCH /api/equipment-requests/{id}/status` | `hasRole('TECHNICIAN')` | TS06 decision; approval additionally requires sufficient reservations covering the full event period. |
   | `GET /api/equipment-requests?status=…`, `GET /api/equipment-requests/processing`, `GET /api/equipment-requests/{id}/lines` | `hasRole('TECHNICIAN')` | TS01's queue; D32 adds the by-status form of the same list. Without the matcher the new path would fall to `anyRequest().authenticated()`. |
   | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
@@ -581,6 +581,35 @@ The private formula in `EquipmentReservationService` and the single-kind `Equipm
 - **Backend:** `TechnicalSupportConsoleFlowTest` (real PostgreSQL), `TechnicalSupportConsoleRoleAccessTest` (403 for every other role, existing readers still 200), `EquipmentAvailabilityServiceTest`, `EquipmentConsoleReadsTest`, `EquipmentRequestQueueServiceTest`, `ReportDamageRequestTest` (unit).
 
 **Migration:** V37 (`block_status` added and back-filled, `faulty_marked` → `block_applied`, `mark_faulty` dropped, two checks).
+
+### D33 — TS02: reserve a request in one all-or-nothing batch; reservations capped at the request unless marked spare; serialised units always named
+
+2026-10-25, branch `feat/ts09-request-fulfilment`. The user raised four problems with the request page: equipment was reserved one item at a time; more could be reserved than the request needed; a serialised kind could be reserved without serial numbers, which breaks TS09's per-unit decisions; and the page was about 3000px of repeated information with the task at the bottom. Endpoint and shapes: `docs/equipment-damage-api.md` § Technical Support console.
+
+**Batch, reusing TS02's checks.** `POST /api/equipment/reservations/batch` (`TECHNICIAN`, under the existing `/api/equipment/**` rule) reserves several of the request's items for one window.
+- Every line goes through the same per-item checks as the single endpoint (`EquipmentReservationService.reserveLine`): the event is open (EO07), the item is on its processing request, named units exist and are not Faulty/Unavailable or reserved elsewhere, and the shared availability (`EquipmentAvailabilityService`, D32) allows it.
+- All lines are checked before anything is written, in one transaction. A refused line saves nothing, and its error carries `equipmentId` (`ApiError.equipmentId`, left out otherwise) so the console marks that row.
+- Every kind's row is locked first, in id order, so two batches cannot deadlock.
+
+**Cap and spares (V38).** A reservation may not take the event's non-spare reservations of a kind, counted over those overlapping the new window, above what the event asks for: its processing request's line plus what its approved requests are still owed (`EquipmentShortfallLedger.need`, as TS06 counts it). The excess must be marked spare (`equipment_logs.spare`).
+- A batch line's `spare` is how many extra units to add as spares. The single endpoint takes `spare: true` for the whole reservation (default false). Both paths enforce the cap.
+- Spares stay "reserved" everywhere else: they hold stock in availability; TS06's approval counts them (no change); TS09's "covered by spare" counts every reservation the event holds other than the damaged unit's (no change). An integration test proves a spare covers a damaged unit.
+
+**Serialised units are always named.** One row per unit, with its serial.
+- Given serials: one per unit (`quantity + spare`). The first `quantity` are the requested units and the rest are spares.
+- No serials, on either endpoint: the server picks free, working units for the whole window. Free means not blocked Faulty/Unavailable and not held by an overlapping reservation. Picks are in serial-number order (Java `String` order, the same order the console shows). If fewer are free than asked, the request is refused. The single endpoint returns the first row it created; `GET /api/equipment/events/{id}/reservations` lists them all.
+- A non-serialised kind with serials is 400.
+
+**Request page (frontend).** One compact header, then one table with one row per requested item. Each row shows requested, already reserved (spares apart), available for the window, a "Reserve now" figure (the remaining quantity, as far as stock allows), the auto-picked units (which can be changed) and a "+ spare" control. One button sends the whole batch. The loan window defaults to the event's times. The decision card enables Approve only when everything is reserved, and Reject asks for a reason. The old per-item form, availability card, reservations card and decision select are removed.
+- The console sends the serials it shows, so what is reserved is what was on screen. A unit taken in the meantime is refused for that row.
+
+**Existing tests changed (counts kept):** `EquipmentReservationFlowTest` requests 10 by default (its reservations went above a request for 1); its three TS06 tests name 1 explicitly, and a serialised reservation of 2 now expects two rows. `EquipmentTechnicalSupportServiceTest`'s request line asks for the 3 it reserves. `EquipmentDamageFlowTest.approvedUnits` reserves units beyond the request as spares.
+
+**Evidence:**
+- **Backend:** `EquipmentBatchReservationFlowTest` (real PostgreSQL): batch happy path, all-or-nothing, cap refusal and boundary, spares, named serials, auto-pick skipping blocked and reserved units, too few units, invalid lines, role access, the single endpoint's cap and auto-pick, and TS09 spare cover.
+- **Frontend:** `fulfilment.test.ts` and the request-page tests.
+
+**Migration:** V38 (`equipment_logs.spare BOOLEAN NOT NULL DEFAULT false`).
 
 ## Awaiting Team Confirmation
 
