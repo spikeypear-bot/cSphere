@@ -1024,6 +1024,7 @@ class EventLifecycleService {
 	{method} +onVenueBecameUnavailable ( change : VenueBecameUnavailable ) : void
 	{method} +readiness ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
 	{method} +recordSafetyDecision ( officerId : UUID , eventId : UUID , decision : SafetyDecision , feedback : String ) : void
+	{method} +recordSafetyDecision ( officerId : UUID , eventId : UUID , decision : SafetyDecision , feedback : String , flaggedItems : List ) : void
 	{method} +returnToPlanning ( eventId : UUID , actorId : UUID , reason : String ) : boolean
 	{method} +sendForSafetyReview ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
 	{method} +withdrawFromSafetyReview ( coordinatorId : UUID , eventId : UUID , reason : String ) : EventReadinessDto
@@ -1447,11 +1448,12 @@ class EventReadinessController {
 
 class EventSafetyReview <<Entity>>  {
 	{field} -eventId : UUID {id}
+	{field} -flaggedItems : List<String>
 	{field} -note : String
 	{field} -reviewStatus : String
 	{field} -reviewedAt : OffsetDateTime
 	{field} -reviewedBy : UUID
-	{method} +update ( status : String , reason : String , reviewer : UUID , at : OffsetDateTime ) : void
+	{method} +update ( status : String , reason : String , flagged : List , reviewer : UUID , at : OffsetDateTime ) : void
 }
 
 
@@ -1474,6 +1476,7 @@ class ReadinessDto {
 	{field} -approvalStatus : String
 	{field} -completedItems : int
 	{field} -eventId : UUID
+	{field} -flaggedItems : List<String>
 	{field} -reviewedAt : OffsetDateTime
 	{field} -reviewedBy : String
 	{field} -totalItems : int
@@ -1515,6 +1518,7 @@ interface ReadinessItemStateRepository {
 class ReadinessService {
 	{field} {static} -MAX_NOTE_LENGTH : int
 	{field} {static} -STANDARD_ITEMS : List<ReadinessService.StandardItem>
+	{field} -clock : Clock
 	{method} +forCoordinator ( coordinatorId : UUID , eventId : UUID ) : ReadinessDto
 	{method} +forSafetyOfficer ( eventId : UUID ) : ReadinessDto
 	{method} +review ( safetyOfficerId : UUID , eventId : UUID , input : SafetyApprovalRequest ) : ReadinessDto
@@ -1524,6 +1528,7 @@ class ReadinessService {
 
 class SafetyApprovalRequest {
 	{field} -decision : String
+	{field} -flaggedItems : List<String>
 	{field} -note : String
 }
 
@@ -2450,7 +2455,6 @@ ActivityService.Entry --> ActivityType : type
 ChangeLogRecorder --> ActivityService : activity
 ChangeLogRecorder --> EventRequestRepository : eventRequests
 EventChange --> ActivityType : type
-ChangeImpactService --> "0..*" EventStatus : SAFETY_STAGES
 ChangeImpactService --> "0..*" VenueBookingStatus : ACTIVE_BOOKINGS
 ChangeImpactService --> EquipmentReservationService : equipment
 ChangeImpactService --> VenueRepository : venues
@@ -2466,8 +2470,6 @@ ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : followUps
 ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : impact
 ChangeRequestException.ImpactChanged --> "0..*" ChangeRequestDto.ImpactItem : impact
 ChangeRequestException.ImpactChanged --|> ChangeRequestException.State
-ChangeRequestService --> "0..*" EventStatus : ACTIVE_EVENT
-ChangeRequestService --> "0..*" EventStatus : SAFETY_STAGES
 ChangeRequestService --> ActivityService : activity
 ChangeRequestService --> ChangeImpactService : impact
 ChangeRequestService --> ChangeRequestRepository : changeRequests
@@ -2564,7 +2566,6 @@ EventLifecycleService --> UserRepository : users
 EventLifecycleService --> AvailabilityService : availability
 EventLifecycleService --> VenueHoldService : holds
 EventLifecycleService --> VenueBookingRecordRepository : bookings
-EventReassignmentService --> "0..*" EventStatus : ACTIVE_STATUSES
 EventReassignmentService --> ActivityService : activity
 EventReassignmentService --> EventReassignmentRequestRepository : requests
 EventReassignmentService --> EventRepository : events
@@ -2605,7 +2606,6 @@ Notification --> NotificationType : type
 NotificationService --> NotificationRepository : repository
 EventReadinessController --> ReadinessService : readiness
 ReadinessDto --> "0..*" ReadinessItemDto : items
-ReadinessService --> "0..*" EventStatus : VISIBLE
 ReadinessService --> EventRepository : events
 ReadinessService --> EventLifecycleService : lifecycle
 ReadinessService --> EventRequestRepository : eventRequests

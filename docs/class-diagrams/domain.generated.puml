@@ -368,11 +368,12 @@ enum NotificationType {
 
 class EventSafetyReview <<Entity>>  {
 	{field} -eventId : UUID {id}
+	{field} -flaggedItems : List<String>
 	{field} -note : String
 	{field} -reviewStatus : String
 	{field} -reviewedAt : OffsetDateTime
 	{field} -reviewedBy : UUID
-	{method} +update ( status : String , reason : String , reviewer : UUID , at : OffsetDateTime ) : void
+	{method} +update ( status : String , reason : String , flagged : List , reviewer : UUID , at : OffsetDateTime ) : void
 }
 
 

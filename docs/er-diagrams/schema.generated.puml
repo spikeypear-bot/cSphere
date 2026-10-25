@@ -162,6 +162,7 @@ entity event_safety_reviews {
 	* note : character varying(2000)
 	* reviewed_by : uuid <<FK>>
 	* reviewed_at : timestamp with time zone
+	* flagged_items : text[]
 }
 
 entity events {
