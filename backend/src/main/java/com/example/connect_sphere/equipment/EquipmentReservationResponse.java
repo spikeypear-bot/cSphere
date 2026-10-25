@@ -11,11 +11,19 @@ public record EquipmentReservationResponse(
         int quantity,
         String serialNumber,
         Instant loanedFrom,
-        Instant loanedUntil) {
+        Instant loanedUntil,
+        /** D32: the event the reservation is for (null when it cannot be read). */
+        String eventName) {
 
-    static EquipmentReservationResponse from(EquipmentLog log, String equipmentName) {
+    /** Without the event's name, for callers built before D32. */
+    public EquipmentReservationResponse(UUID logId, UUID eventId, UUID equipmentId, String equipmentName,
+            int quantity, String serialNumber, Instant loanedFrom, Instant loanedUntil) {
+        this(logId, eventId, equipmentId, equipmentName, quantity, serialNumber, loanedFrom, loanedUntil, null);
+    }
+
+    static EquipmentReservationResponse from(EquipmentLog log, String equipmentName, String eventName) {
         return new EquipmentReservationResponse(
                 log.getId(), log.getEventId(), log.getEquipmentId(), equipmentName,
-                log.getQuantity(), log.getSerialNumber(), log.getLoanedFrom(), log.getLoanedUntil());
+                log.getQuantity(), log.getSerialNumber(), log.getLoanedFrom(), log.getLoanedUntil(), eventName);
     }
 }

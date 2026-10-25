@@ -44,4 +44,13 @@ public class EquipmentReservationController {
     public List<EquipmentReservationResponse> reservationsForEvent(@PathVariable UUID eventId) {
         return service.reservationsForEvent(eventId);
     }
+
+    // D32: the same list for one equipment kind over a window (Technical Support only).
+    @GetMapping("/{equipmentId}/reservations")
+    public List<EquipmentReservationResponse> reservationsForEquipment(
+            @PathVariable UUID equipmentId,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to) {
+        return service.reservationsForEquipment(equipmentId, from, to);
+    }
 }

@@ -1,12 +1,18 @@
 package com.example.connect_sphere.equipment;
 
 import java.time.Instant;
+import java.util.Comparator;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestLine;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.event.repository.EventRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +27,32 @@ public class EquipmentReservationService {
     private final EquipmentLogRepository logRepository;
     private final EquipmentRequestLineRepository requestLineRepository;
     private final EquipmentRequestRepository requestRepository;
+    private final EquipmentAvailabilityService availability;
+    private final EventRepository eventRepository;
 
+    @Autowired
+    public EquipmentReservationService(
+            EquipmentRepository equipmentRepository,
+            SerialisedEquipmentRepository unitRepository,
+            EquipmentStatusPeriodRepository statusPeriodRepository,
+            EquipmentLogRepository logRepository,
+            EquipmentRequestLineRepository requestLineRepository,
+            EquipmentRequestRepository requestRepository,
+            EquipmentAvailabilityService availability,
+            EventRepository eventRepository) {
+        this.equipmentRepository = equipmentRepository;
+        this.unitRepository = unitRepository;
+        this.statusPeriodRepository = statusPeriodRepository;
+        this.logRepository = logRepository;
+        this.requestLineRepository = requestLineRepository;
+        this.requestRepository = requestRepository;
+        this.availability = availability;
+        this.eventRepository = eventRepository;
+    }
+
+    /** For callers wired from repositories alone (unit tests built before
+     * D32): the shared calculator over the same repositories, and no event
+     * names in reservation responses. */
     public EquipmentReservationService(
             EquipmentRepository equipmentRepository,
             SerialisedEquipmentRepository unitRepository,
@@ -29,12 +60,10 @@ public class EquipmentReservationService {
             EquipmentLogRepository logRepository,
             EquipmentRequestLineRepository requestLineRepository,
             EquipmentRequestRepository requestRepository) {
-        this.equipmentRepository = equipmentRepository;
-        this.unitRepository = unitRepository;
-        this.statusPeriodRepository = statusPeriodRepository;
-        this.logRepository = logRepository;
-        this.requestLineRepository = requestLineRepository;
-        this.requestRepository = requestRepository;
+        this(equipmentRepository, unitRepository, statusPeriodRepository, logRepository, requestLineRepository,
+                requestRepository,
+                new EquipmentAvailabilityService(equipmentRepository, statusPeriodRepository, logRepository),
+                null);
     }
 
     // AC 3 + 4: what's available, and how much, for a period.
@@ -44,37 +73,17 @@ public class EquipmentReservationService {
             UUID requestId, Instant start, Instant end) {
         requireValidPeriod(start, end);
 
-        return requestLineRepository.findByIdRequestId(requestId).stream()
-                .map(line -> {
-                    Equipment equipment = line.getEquipment();
-                    int available = availableQuantity(equipment.getId(), start, end);
-                    return new EquipmentAvailabilityResponse(
-                            equipment.getId(), equipment.getName(),
-                            Boolean.TRUE.equals(equipment.getSerialised()),
-                            equipment.getQuantity(), available);
-                })
+        List<Equipment> kinds = requestLineRepository.findByIdRequestId(requestId).stream()
+                .map(EquipmentRequestLine::getEquipment)
                 .toList();
-    }
-
-    // The formula: total − reserved elsewhere (overlapping) − blocked units (Faulty/Unavailable)
-    // − damaged units of a non-serialised kind (TS09 AC5).
-    private int availableQuantity(UUID equipmentId, Instant start, Instant end) {
-        Equipment equipment = equipmentRepository.findById(equipmentId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
-
-        int reservedElsewhere = logRepository.findOverlappingForEquipment(equipmentId, start, end)
-                .stream().mapToInt(EquipmentLog::getQuantity).sum();
-
-        long blockedUnits = statusPeriodRepository.findOverlapping(start, end).stream()
-                .filter(p -> p.getEquipmentId().equals(equipmentId))
-                .map(EquipmentStatusPeriod::getSerialNumber)
-                .distinct()
-                .count();
-
-        int damaged = Boolean.TRUE.equals(equipment.getSerialised())
-                ? 0 : equipmentRepository.damagedQuantity(equipmentId, start, end);
-
-        return Math.max(0, equipment.getQuantity() - reservedElsewhere - (int) blockedUnits - damaged);
+        // D32: the shared calculation (reserved, blocked and damaged units), one set of queries.
+        Map<UUID, EquipmentAvailabilityService.Availability> available = availability.forEquipment(kinds, start, end);
+        return kinds.stream()
+                .map(equipment -> new EquipmentAvailabilityResponse(
+                        equipment.getId(), equipment.getName(),
+                        Boolean.TRUE.equals(equipment.getSerialised()),
+                        equipment.getQuantity(), available.get(equipment.getId()).availableQuantity()))
+                .toList();
     }
 
     // AC 5-9: reserve equipment for an event.
@@ -108,7 +117,8 @@ public class EquipmentReservationService {
         EquipmentLog log = new EquipmentLog(
                 req.eventId(), req.equipmentId(), req.quantity(),
                 req.serialNumber(), req.start(), req.end());
-        return EquipmentReservationResponse.from(logRepository.save(log), equipment.getName());
+        return EquipmentReservationResponse.from(logRepository.save(log), equipment.getName(),
+                eventNames(List.of(req.eventId())).get(req.eventId()));
     }
 
     // AC 7: refuse a unit that is Faulty/Unavailable for any part of the period.
@@ -142,7 +152,7 @@ public class EquipmentReservationService {
 
     // AC 6: refuse a quantity greater than what's available.
     private void reserveByQuantity(Equipment equipment, ReserveEquipmentRequest req) {
-        int available = availableQuantity(equipment.getId(), req.start(), req.end());
+        int available = availability.forEquipment(equipment, req.start(), req.end()).availableQuantity();
         if (req.quantity() > available) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
                     "Only " + available + " of " + equipment.getName() + " available for that period");
@@ -169,13 +179,44 @@ public class EquipmentReservationService {
     // AC 11: reservations already made for an event.
     @Transactional(readOnly = true)
     public List<EquipmentReservationResponse> reservationsForEvent(UUID eventId) {
-        return logRepository.findByEventId(eventId).stream()
-                .map(log -> {
-                    String equipment = equipmentRepository.findById(log.getEquipmentId())
-                            .map(Equipment::getName).orElse("Unknown");
-                    return EquipmentReservationResponse.from(log, equipment);
-                })
+        return toResponses(logRepository.findByEventId(eventId));
+    }
+
+    /** D32: the by-equipment twin of {@link #reservationsForEvent}: every
+     * reservation of one kind overlapping [from, to), for events that are not
+     * cancelled or completed (the availability query, EO07), earliest first. */
+    @Transactional(readOnly = true)
+    public List<EquipmentReservationResponse> reservationsForEquipment(UUID equipmentId, Instant from, Instant to) {
+        if (from == null || to == null || !to.isAfter(from)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "from and to are required, and to must be after from");
+        }
+        if (!equipmentRepository.existsById(equipmentId)) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found");
+        }
+        return toResponses(logRepository.findOverlappingForEquipment(equipmentId, from, to).stream()
+                .sorted(Comparator.comparing(EquipmentLog::getLoanedFrom).thenComparing(EquipmentLog::getId))
+                .toList());
+    }
+
+    /** One mapper for both reservation lists: names are loaded once per kind and per event. */
+    private List<EquipmentReservationResponse> toResponses(List<EquipmentLog> logs) {
+        Map<UUID, String> equipmentNames = new HashMap<>();
+        equipmentRepository.findAllById(logs.stream().map(EquipmentLog::getEquipmentId).distinct().toList())
+                .forEach(equipment -> equipmentNames.put(equipment.getId(), equipment.getName()));
+        Map<UUID, String> eventNames = eventNames(logs.stream().map(EquipmentLog::getEventId).distinct().toList());
+        return logs.stream()
+                .map(log -> EquipmentReservationResponse.from(log,
+                        equipmentNames.getOrDefault(log.getEquipmentId(), "Unknown"),
+                        eventNames.get(log.getEventId())))
                 .toList();
+    }
+
+    private Map<UUID, String> eventNames(List<UUID> eventIds) {
+        Map<UUID, String> names = new HashMap<>();
+        if (eventRepository != null && !eventIds.isEmpty()) {
+            eventRepository.findAllById(eventIds).forEach(event -> names.put(event.getEventId(), event.getEventName()));
+        }
+        return names;
     }
 
     private void requireValidPeriod(Instant start, Instant end) {
