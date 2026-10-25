@@ -163,10 +163,13 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `POST /api/venues`, `PUT /api/venues/{id}` | `hasAnyRole('EC','VS')` | Catalogue authoring is VS07/VS18; widened to Coordinators per open question 1 below. |
   | `/api/event-requests/**` | `hasRole('EO')` **plus organisation scoping from the token claim** | EO01/EO02/EO15. Narrowed from `hasAnyRole('EO','EC')` — see open question 2. |
   | `GET /api/equipment/catalogue` | `hasAnyRole('EO','TECHNICIAN','EC')` | Organisers select equipment types for requests; Technical Support and Coordinators use the catalogue for availability/request workflows. |
-  | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
+  | `GET /api/equipment/catalogue?from&to` | `hasRole('TECHNICIAN')` — a request matcher on the path **and** a `from` or `to` parameter, placed above the plain catalogue rule | D32. The window adds stock levels (reserved, out of action, available) for the Technical Support console; organisers and coordinators keep the plain catalogue, unchanged. |
+  | `GET /api/equipment/{id}`, `GET /api/equipment/{id}/reservations?from&to`, `GET /api/equipment/status-periods` | `hasRole('TECHNICIAN')`, above the `GET /api/equipment/**` rule; `GET /api/equipment/units` keeps `hasAnyRole('TECHNICIAN','EC')` just above them | D32. A kind's reservations name events, so coordinators do not get them (ECL-C7, D25); detail and status periods are console reads. |
   | Other `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
-  | `POST`, `DELETE /api/equipment/**` | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. |
+  | `POST`, `DELETE /api/equipment/**` (incl. `POST /api/equipment/reservations/batch`) | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. D33's batch falls under the same rule; no new matcher. |
   | `PATCH /api/equipment-requests/{id}/status` | `hasRole('TECHNICIAN')` | TS06 decision; approval additionally requires sufficient reservations covering the full event period. |
+  | `GET /api/equipment-requests?status=…`, `GET /api/equipment-requests/processing`, `GET /api/equipment-requests/{id}/lines` | `hasRole('TECHNICIAN')` | TS01's queue; D32 adds the by-status form of the same list. Without the matcher the new path would fall to `anyRequest().authenticated()`. |
+  | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
   | `/api/mock` | `denyAll()` or delete the package | Demo vertical slice illustrating the MVC convention. It is currently reachable by any authenticated user of any role. |
   | `GET /api/event-requests/queue`, `GET /api/event-requests/{id}/review`, `POST /api/event-requests/{id}/clarifications\|approve\|reject` | `hasRole('EC')` **plus assignment check in the service** | EC01/EC02 (D21). The queue is the caller's own requests only. `POST /api/event-requests/{id}/assign-coordinator` and the queue's unassigned list were removed with ELC-C6: a coordinator can no longer see or pick up an unassigned request, and that path now falls under the blanket rule above (403 for a coordinator). |
   | `GET /api/event-requests/unassigned/coordinators`, `POST /api/event-requests/unassigned/{id}/assign` | `hasRole('ECL')` — covered by the existing `/api/event-requests/unassigned/**` matcher **plus an "unassigned and still open" check in the service** | ELC-C6 (Week 7 customer change 5). The Lead assigns an unassigned request to one Event Coordinator, picked from the list of every `ec` account (id and username only). Allowed while the request is `pending` or `clarification_required` with no coordinator, otherwise 409; a missing coordinator or a user who is not an Event Coordinator is 422. The acting Lead is the token's subject. The ECL-C1 queue now keeps an unassigned `clarification_required` request listed, so it can still be opened and assigned. |
@@ -537,6 +540,109 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 - **Backend:** `EquipmentDamageFlowTest` (27, real PostgreSQL), `EquipmentDamageRoleAccessTest` (41), `EquipmentDamageServiceTest` (4, unit), `DamageImpactTest` (3, unit).
 
 **Migration:** V38 (two tables, one notification type, notification constraint re-declared with it added).
+
+### D32 — TS09: Technical Support console built on existing endpoints; one availability calculation; problems routed TS03 → TS09; Unavailable blocks
+
+2026-10-25, branch `feat/ts09-technical-support-console`. The reworked Technical Support console needed a request list by status, the blocked units, inventory for a date range and a per-equipment page. The user asked for reuse and refactorability rather than parallel APIs. Endpoints and shapes: `docs/equipment-damage-api.md` § Technical Support console.
+
+**Reuse first (extend, do not duplicate).**
+- **Requests:** `GET /api/equipment-requests?status=processing|approved|rejected|all` is the same list as TS01's `/processing`, which is unchanged. Both are served by one method (`EquipmentRequestQueueService.list`), moved out of the controller. Fields are only added to `EquipmentRequestResponse`. The list loads requests, events, lines, coordinators and shortfall links once each, not per request.
+  - `requestedBy` is the event's current coordinator, because the submitter is not stored.
+  - `submittedAt` is not stored, so it is `null`. Adding the column was left out of this change.
+- **Status periods:** `GET /api/equipment/status-periods` lists every unit's current and upcoming TS03 blocks. It uses TS03's existing overlap query from now.
+- **Damage reports:** `?equipmentId=` narrows TS09's list.
+- **Catalogue for a window:** `from`/`to` (both or neither) add `reservedQuantity`, `outOfActionQuantity` and `availableQuantity`. Without them the response is unchanged (the extra fields are left out of the JSON). With them the endpoint is Technical Support only (D20).
+- **Per kind:** `GET /api/equipment/{id}` (units, status now, blocks) and `GET /api/equipment/{id}/reservations`. The second is the by-equipment twin of the event reservations list and uses the same mapper, so both lists have the same item shape. Its time fields therefore keep their existing names, `loanedFrom`/`loanedUntil`. `eventName` was added to that shared shape.
+
+**One availability calculation.** `EquipmentAvailabilityService` is the only place availability is computed:
+- available = total − overlapping reservations of events that are not cancelled or completed − serialised units blocked Faulty/Unavailable (TS03, each counted once) − units of a non-serialised kind reported damaged (TS09 AC5);
+- never below zero;
+- used by TS01's request availability, TS02's quantity check and the catalogue window;
+- three queries for any number of kinds.
+
+The private formula in `EquipmentReservationService` and the single-kind `EquipmentRepository.damagedQuantity` query were removed.
+
+**Routed problem form, no combined endpoint.** The console first tries TS03's `POST /api/equipment/{id}/units/{serial}/periods`.
+- If an event holds the unit, TS03 refuses with **409** `"This unit is already committed to an event during that time."` That is the endpoint's only 409, and its message is now the constant `EquipmentStatusService.UNIT_COMMITTED_MESSAGE`.
+- On that 409, the console falls back to a TS09 damage report, which decides each affected event first.
+- Two endpoints keep two sets of rules: a block never changes reservations (business rule E21), and a damage report does.
+
+**TS09 Unavailable (V39).**
+- `markFaulty` becomes `blockStatus` (`FAULTY` / `UNAVAILABLE` / null), and `faulty_marked` becomes `block_applied`.
+- On close, the block is applied through TS03's `EquipmentStatusService.addPeriod`, as before.
+- The API takes and returns only `blockStatus`/`blockApplied`. The `markFaulty`/`faultyMarked` fields were dropped before release: TS09 is new on this branch, so no client depends on them.
+
+**Access (D20 rows updated).** Every new read is `TECHNICIAN` only.
+- `GET /api/equipment/units` keeps coordinator access through an explicit matcher above the new one-segment rule.
+- The catalogue window is matched on its query parameters in the filter chain, rather than with `@PreAuthorize`, so the rule stays in the one list.
+
+**Evidence:**
+- **Backend:** `TechnicalSupportConsoleFlowTest` (real PostgreSQL), `TechnicalSupportConsoleRoleAccessTest` (403 for every other role, existing readers still 200), `EquipmentAvailabilityServiceTest`, `EquipmentConsoleReadsTest`, `EquipmentRequestQueueServiceTest`, `ReportDamageRequestTest` (unit).
+
+**Migration:** V39 (`block_status` added and back-filled, `faulty_marked` → `block_applied`, `mark_faulty` dropped, two checks).
+
+### D33 — TS02: reserve a request in one all-or-nothing batch; reservations capped at the request unless marked spare; serialised units always named
+
+2026-10-25, branch `feat/ts09-request-fulfilment`. The user raised four problems with the request page: equipment was reserved one item at a time; more could be reserved than the request needed; a serialised kind could be reserved without serial numbers, which breaks TS09's per-unit decisions; and the page was about 3000px of repeated information with the task at the bottom. Endpoint and shapes: `docs/equipment-damage-api.md` § Technical Support console.
+
+**Batch, reusing TS02's checks.** `POST /api/equipment/reservations/batch` (`TECHNICIAN`, under the existing `/api/equipment/**` rule) reserves several of the request's items for one window.
+- Every line goes through the same per-item checks as the single endpoint (`EquipmentReservationService.reserveLine`): the event is open (EO07), the item is on its processing request, named units exist and are not Faulty/Unavailable or reserved elsewhere, and the shared availability (`EquipmentAvailabilityService`, D32) allows it.
+- All lines are checked before anything is written, in one transaction. A refused line saves nothing, and its error carries `equipmentId` (`ApiError.equipmentId`, left out otherwise) so the console marks that row.
+- Every kind's row is locked first, in id order, so two batches cannot deadlock.
+
+**Cap and spares (V40).** A reservation may not take the event's non-spare reservations of a kind, counted over those overlapping the new window, above what the event asks for: its processing request's line plus what its approved requests are still owed (`EquipmentShortfallLedger.need`, as TS06 counts it). The excess must be marked spare (`equipment_logs.spare`).
+- A batch line's `spare` is how many extra units to add as spares. The single endpoint takes `spare: true` for the whole reservation (default false). Both paths enforce the cap.
+- Spares stay "reserved" everywhere else: they hold stock in availability; TS06's approval counts them (no change); TS09's "covered by spare" counts every reservation the event holds other than the damaged unit's (no change). An integration test proves a spare covers a damaged unit.
+
+**Serialised units are always named.** One row per unit, with its serial.
+- Given serials: one per unit (`quantity + spare`). The first `quantity` are the requested units and the rest are spares.
+- No serials, on either endpoint: the server picks free, working units for the whole window. Free means not blocked Faulty/Unavailable and not held by an overlapping reservation (and, since D35, no open damage report). Picks are in serial-number order (Java `String` order, the same order the console shows). If fewer are free than asked, the request is refused. The single endpoint returns the first row it created; `GET /api/equipment/events/{id}/reservations` lists them all.
+- A non-serialised kind with serials is 400.
+
+**Request page (frontend).** One compact header, then one table with one row per requested item. Each row shows requested, already reserved (spares apart), available for the window, a "Reserve now" figure (the remaining quantity, as far as stock allows), the auto-picked units (which can be changed) and a "+ spare" control. One button sends the whole batch. The loan window defaults to the event's times. The decision card enables Approve only when everything is reserved, and Reject asks for a reason. The old per-item form, availability card, reservations card and decision select are removed.
+- The console sends the serials it shows, so what is reserved is what was on screen. A unit taken in the meantime is refused for that row.
+
+**Existing tests changed (counts kept):** `EquipmentReservationFlowTest` requests 10 by default (its reservations went above a request for 1); its three TS06 tests name 1 explicitly, and a serialised reservation of 2 now expects two rows. `EquipmentTechnicalSupportServiceTest`'s request line asks for the 3 it reserves. `EquipmentDamageFlowTest.approvedUnits` reserves units beyond the request as spares.
+
+**Evidence:**
+- **Backend:** `EquipmentBatchReservationFlowTest` (real PostgreSQL): batch happy path, all-or-nothing, cap refusal and boundary, spares, named serials, auto-pick skipping blocked and reserved units, too few units, invalid lines, role access, the single endpoint's cap and auto-pick, and TS09 spare cover.
+- **Frontend:** `fulfilment.test.ts` and the request-page tests.
+
+**Migration:** V40 (`equipment_logs.spare BOOLEAN NOT NULL DEFAULT false`).
+
+### D35 — TS02 + TS09: one "is this unit free?" check; an open damage report blocks reserving that unit
+
+2026-10-25, branch `feat/ts09-console-cleanup`. D34 is TS11's, on its own branch.
+
+**Problem.** Three places decided whether a serialised unit was free for a window, each differently:
+- TS02's reservation by serial number (`EquipmentReservationService.requireUnitFree`) loaded every overlapping status period and filtered them in Java.
+- TS02's auto-pick (`pickFreeUnits`, D33) did the same for the kind.
+- Only TS09's replacement (`EquipmentDamageService.replace`) also refused a unit with an overlapping damage report.
+
+So a unit already reported damaged could still be reserved, or auto-picked, for another event. TS09 would then have to decide the same damage again.
+
+**Decision (user, 2026-10-25).** One check, `EquipmentAvailabilityService.unitConflict(equipmentId, serial, from, until)`. A unit is free for the window when it has:
+- no overlapping Faulty/Unavailable block (TS03);
+- no overlapping reservation on an event that is not cancelled or completed (EO07, D28);
+- no overlapping **open** damage report on that unit (TS09).
+
+The check returns the first reason a unit is not free, and each caller words its own message:
+- TS02, named unit: 409 `This unit has been reported damaged for part of that period` (the other two messages are unchanged).
+- TS02, auto-pick: the unit is skipped (`unitsNotFree`, the same rule for a whole kind, three queries).
+- TS09, replacement: unchanged messages.
+
+Each rule is one targeted query: `findOverlappingForUnit` for blocks and reservations, and a native `exists` on `equipment_damage_reports` for damage.
+
+**Why open only.** A report closes once every affected event has an outcome. At that point any block it asked for is a TS03 status period, which the first rule already checks. A serialised report must ask for a block (Faulty or Unavailable; a report without one is refused with 400, user decision 2026-10-25), so a closed serialised report always leaves its unit blocked through TS03 once no event holds it. If closed reports still counted, a closed report with no end date would make its unit unreservable for good, with no way to undo it. Before D35, TS09's replacement refused a unit with *any* overlapping report, open or closed. It now follows the same open-only rule.
+
+**Not changed.** Availability counts (D32) still count only blocked serialised units as out of action. A unit with an open report is usually reserved by the event the report affects, so it is already counted there, and counting it again would understate stock. Non-serialised damage is still counted by quantity (TS09 AC5).
+
+**Evidence:** `EquipmentBatchReservationFlowTest` (real PostgreSQL) covers:
+- a named unit with an open report refused, singly and in a batch, with nothing saved;
+- auto-pick skipping such a unit;
+- boundary: a closed report, or an open one ending exactly when the window starts, does not block.
+
+`EquipmentDamageFlowTest.aDamagedReplacementIsRefused` covers TS09's replacement refusal, which had no test before.
 
 ## Awaiting Team Confirmation
 

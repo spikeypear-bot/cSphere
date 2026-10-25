@@ -13,6 +13,8 @@ import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineId;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.event.repository.EventRepository;
+import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -42,6 +44,7 @@ class EquipmentTechnicalSupportServiceTest {
     @Mock private EquipmentLogRepository logRepository;
     @Mock private EquipmentRequestLineRepository requestLineRepository;
     @Mock private EquipmentRequestRepository requestRepository;
+    @Mock private EventRepository eventRepository;
     @Mock private Equipment equipment;
 
     private EquipmentReservationService reservationService;
@@ -51,11 +54,12 @@ class EquipmentTechnicalSupportServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         reservationService = new EquipmentReservationService(
-                equipmentRepository, unitRepository, periodRepository, logRepository,
+                equipmentRepository, unitRepository, logRepository,
                 requestLineRepository, requestRepository,
-                new EquipmentAvailabilityService(equipmentRepository, periodRepository, logRepository));
+                new EquipmentAvailabilityService(equipmentRepository, periodRepository, logRepository),
+                eventRepository);
         statusService = new EquipmentStatusService(
-                unitRepository, periodRepository, equipmentRepository, logRepository);
+                unitRepository, periodRepository, equipmentRepository, logRepository, Clock.systemUTC());
 
         when(equipment.getId()).thenReturn(EQUIPMENT_ID);
         when(equipment.getName()).thenReturn("Projector");
@@ -68,9 +72,10 @@ class EquipmentTechnicalSupportServiceTest {
         when(logRepository.findOverlappingForEquipment(EQUIPMENT_ID, START, END)).thenReturn(List.of());
         when(requestRepository.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(
                 new EquipmentRequest(REQUEST_ID, EVENT_ID, EquipmentRequestStatus.processing, "Projector")));
+        // D33: the request asks for all 3, so reserving every available unit is within it.
         when(requestLineRepository.findByIdRequestId(REQUEST_ID)).thenReturn(List.of(
                 new EquipmentRequestLine(
-                        new EquipmentRequestLineId(REQUEST_ID, EQUIPMENT_ID), 1)));
+                        new EquipmentRequestLineId(REQUEST_ID, EQUIPMENT_ID), 3)));
     }
 
     @Test
@@ -78,7 +83,7 @@ class EquipmentTechnicalSupportServiceTest {
         when(logRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
         EquipmentReservationResponse saved = reservationService.reserve(
-                new ReserveEquipmentRequest(EVENT_ID, EQUIPMENT_ID, 3, null, START, END));
+                new ReserveEquipmentRequest(EVENT_ID, EQUIPMENT_ID, 3, null, START, END, false));
 
         assertThat(saved.quantity()).isEqualTo(3);
         assertThat(saved.equipmentName()).isEqualTo("Projector");
@@ -88,7 +93,7 @@ class EquipmentTechnicalSupportServiceTest {
     @Test
     void reservationRejectsQuantityAboveAvailable() {
         assertThatThrownBy(() -> reservationService.reserve(
-                new ReserveEquipmentRequest(EVENT_ID, EQUIPMENT_ID, 4, null, START, END)))
+                new ReserveEquipmentRequest(EVENT_ID, EQUIPMENT_ID, 4, null, START, END, false)))
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("Only 3");
     }
