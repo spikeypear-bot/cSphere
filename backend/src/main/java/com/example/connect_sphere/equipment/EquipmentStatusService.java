@@ -14,8 +14,14 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class EquipmentStatusService {
 
-    // Stands in for "forever" when checking overlaps for a block with no end date.
-    private static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
+    /** Stands in for "no end" when checking overlaps: a TS03 block or a TS09
+     * damage report with no end date runs until then. */
+    public static final Instant FAR_FUTURE = Instant.parse("9999-12-31T23:59:59Z");
+
+    /** TS03's refusal to block a unit an event still holds. The Technical
+     * Support console detects this 409 and routes the problem to a TS09
+     * damage report instead (D32), so the wording is part of the API. */
+    public static final String UNIT_COMMITTED_MESSAGE = "This unit is already committed to an event during that time.";
 
     private final SerialisedEquipmentRepository unitRepository;
     private final EquipmentStatusPeriodRepository periodRepository;
@@ -82,8 +88,7 @@ public class EquipmentStatusService {
                 equipmentId, serialNumber, start, checkEnd);
         if (status != EquipmentStatus.AVAILABLE
                 && !logRepository.findOverlappingForUnit(equipmentId, serialNumber, start, checkEnd).isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "This unit is already committed to an event during that time.");
+            throw new ResponseStatusException(HttpStatus.CONFLICT, UNIT_COMMITTED_MESSAGE);
         }
 
         List<EquipmentStatusPeriod> preserved = new java.util.ArrayList<>();

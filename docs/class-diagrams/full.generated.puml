@@ -40,8 +40,10 @@ enum ActivityType {
 	{field} +coordinator_assigned
 	{field} +coordinator_reassigned
 	{field} +equipment_approved
+	{field} +equipment_damage_outcome
 	{field} +equipment_rejected
 	{field} +equipment_requested
+	{field} +equipment_shortfall_resolved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
 	{field} +event_cancelled
@@ -437,10 +439,12 @@ class AddStatusPeriodRequest {
 
 
 class DevEquipmentSeeder {
+	{field} {static} ~ATTEMPTS_PER_UNIT : int
 	{field} {static} -GENERAL_EQUIPMENT_TYPE : char
-	{field} {static} -SEED_EQUIPMENT : List<DevEquipmentSeeder.SeedEquipment>
+	{field} {static} ~SEED_EQUIPMENT : List<DevEquipmentSeeder.SeedEquipment>
 	{field} -jdbc : JdbcTemplate
 	{field} {static} -log : Logger
+	{field} -random : RandomGenerator
 	{method} +run ( args : String[] ) : void
 }
 
@@ -460,6 +464,30 @@ class EquipmentAvailabilityResponse {
 	{field} -equipmentName : String
 	{field} -serialised : boolean
 	{field} -totalQuantity : int
+}
+
+
+class EquipmentAvailabilityService {
+	{method} +forEquipment ( kinds : Collection , start : Instant , end : Instant ) : Map
+	{method} +forEquipment ( kind : Equipment , start : Instant , end : Instant ) : Availability
+	{method}  {static} +heldThroughout ( reservations : Collection , equipmentId : UUID , start : Instant , end : Instant ) : int
+	{method} +unitConflict ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : Optional
+	{method} +unitsNotFree ( equipmentId : UUID , start : Instant , end : Instant ) : Set
+}
+
+
+class EquipmentAvailabilityService.Availability {
+	{field} -availableQuantity : int
+	{field} -outOfActionQuantity : int
+	{field} -reservedQuantity : int
+	{field} -totalQuantity : int
+}
+
+
+enum EquipmentAvailabilityService.UnitConflict {
+	{field} +BLOCKED
+	{field} +DAMAGED
+	{field} +RESERVED
 }
 
 
@@ -485,18 +513,24 @@ class EquipmentLog <<Entity>>  {
 	{field} -quantity : int
 	{field} -serialNumber : String
 	{field} -technicalRequirements : String
+	{method} +reduceBy ( units : int ) : void
+	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
 
 
 interface EquipmentLogRepository {
 	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
 	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForEquipments ( equipmentIds : Collection , start : Instant , end : Instant ) : List
 	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
 }
 
 
 interface EquipmentRepository {
+	{method}  {abstract} +damagedQuantities ( equipmentIds : Collection , start : Instant , end : Instant ) : List
 	{method}  {abstract} +findForUpdate ( equipmentId : UUID ) : Optional
+	{method}  {abstract} +openlyDamagedSerials ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +unitOpenlyDamaged ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : boolean
 }
 
 
@@ -553,13 +587,16 @@ class EquipmentStatusPeriod <<Entity>>  {
 
 interface EquipmentStatusPeriodRepository {
 	{method}  {abstract} +findByEquipmentIdAndSerialNumberOrderByPeriodStartAsc ( equipmentId : UUID , serialNumber : String ) : List
+	{method}  {abstract} +findByEquipmentIdOrderByPeriodStartAsc ( equipmentId : UUID ) : List
 	{method}  {abstract} +findOverlapping ( start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
 	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
 }
 
 
 class EquipmentStatusService {
-	{field} {static} -FAR_FUTURE : Instant
+	{field} {static} +FAR_FUTURE : Instant
+	{field} {static} +UNIT_COMMITTED_MESSAGE : String
 	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , status : EquipmentStatus , start : Instant , end : Instant ) : void
 	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
 	{method} +listUnits ( start : Instant , end : Instant ) : List
@@ -589,6 +626,7 @@ class SerialisedEquipment <<Entity>>  {
 
 
 class SerialisedEquipmentId {
+	{field} {static} +MAX_SERIAL_NUMBER_LENGTH : int
 	{field} -equipmentId : UUID
 	{field} -serialNumber : String
 }
@@ -602,6 +640,245 @@ class StatusPeriodResponse {
 	{field} -end : Instant
 	{field} -id : UUID
 	{field} -start : Instant
+}
+
+
+class EquipmentDamageController {
+	{method} +close ( jwt : Jwt , reportId : UUID ) : DamageReportDto
+	{method} +decide ( jwt : Jwt , reportId : UUID , outcomeId : UUID , request : DecideOutcomeRequest ) : DamageReportDto
+	{method} +get ( reportId : UUID ) : DamageReportDto
+	{method} +list ( equipmentId : UUID ) : List
+	{method} +report ( jwt : Jwt , request : ReportDamageRequest ) : ResponseEntity
+}
+
+
+class EventEquipmentDamageController {
+	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
+	{method} +resolve ( jwt : Jwt , eventId : UUID , outcomeId : UUID , request : ResolveShortfallRequest ) : EventEquipmentDamageDto
+}
+
+
+class DamageReportDto {
+	{field} -blockApplied : boolean
+	{field} -blockStatus : String
+	{field} -canClose : boolean
+	{field} -closedAt : Instant
+	{field} -description : String
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -periodEnd : Instant
+	{field} -periodStart : Instant
+	{field} -quantity : int
+	{field} -reportId : UUID
+	{field} -reportedAt : Instant
+	{field} -reportedBy : UUID
+	{field} -reportedByName : String
+	{field} -serialNumber : String
+	{field} -serialised : boolean
+	{field} -status : String
+}
+
+
+class DamageReportDto.AffectedEvent {
+	{field} -active : boolean
+	{field} -additionalRequestId : UUID
+	{field} -additionalRequestStatus : String
+	{field} -affectedQuantity : int
+	{field} -decidedAt : Instant
+	{field} -eventEnd : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -eventStart : OffsetDateTime
+	{field} -journeyStatus : String
+	{field} -outcome : String
+	{field} -outcomeId : UUID
+	{field} -reducedBy : int
+	{field} -replacementSerialNumber : String
+	{field} -requestedQuantity : int
+	{field} -reservedQuantity : int
+	{field} -resolution : String
+	{field} -resolutionNote : String
+	{field} -resolvedAt : Instant
+	{field} -shortfall : int
+	{field} -spareCovers : boolean
+}
+
+
+class DecideOutcomeRequest {
+	{field} -decision : String
+	{field} -reduceBy : Integer
+	{field} -replacementSerialNumber : String
+}
+
+
+class EventEquipmentDamageDto {
+	{field} -additionalRequestId : UUID
+	{field} -additionalRequestStatus : String
+	{field} -canRequestAdditional : boolean
+	{field} -canResolve : boolean
+	{field} -damagedQuantity : int
+	{field} -decidedAt : Instant
+	{field} -description : String
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -outcome : String
+	{field} -outcomeId : UUID
+	{field} -periodEnd : Instant
+	{field} -periodStart : Instant
+	{field} -replacementSerialNumber : String
+	{field} -reportId : UUID
+	{field} -reportedAt : Instant
+	{field} -resolution : String
+	{field} -resolutionNote : String
+	{field} -resolvedAt : Instant
+	{field} -serialNumber : String
+	{field} -shortfall : int
+}
+
+
+class ReportDamageRequest {
+	{field} -blockStatus : String
+	{field} -description : String
+	{field} -equipmentId : UUID
+	{field} -periodEnd : Instant
+	{field} -periodStart : Instant
+	{field} -quantity : Integer
+	{field} -serialNumber : String
+	{method} +requestedBlock () : DamageBlockStatus
+}
+
+
+class ResolveShortfallRequest {
+	{field} -note : String
+}
+
+
+enum DamageBlockStatus {
+	{field} +FAULTY
+	{field} +UNAVAILABLE
+}
+
+
+enum DamageOutcome {
+	{field} +COVERED
+	{field} +REPLACED
+	{field} +SHORT
+}
+
+
+enum DamageReportStatus {
+	{field} +CLOSED
+	{field} +OPEN
+}
+
+
+class EquipmentDamageOutcome <<Entity>>  {
+	{field} +additionalRequestId : UUID
+	{field} +decidedAt : Instant
+	{field} +decidedBy : UUID
+	{field} +eventId : UUID
+	{field} +outcomeId : UUID {id}
+	{field} +reducedBy : int
+	{field} +replacementSerialNumber : String
+	{field} +reportId : UUID
+	{field} +resolutionNote : String
+	{field} +resolvedAt : Instant
+	{field} +resolvedBy : UUID
+	{field} +shortfall : int
+}
+
+
+class EquipmentDamageReport <<Entity>>  {
+	{field} +blockApplied : boolean
+	{field} +closedAt : Instant
+	{field} +description : String
+	{field} +equipmentId : UUID
+	{field} +periodEnd : Instant
+	{field} +periodStart : Instant
+	{field} +quantity : int
+	{field} +reportId : UUID {id}
+	{field} +reportedAt : Instant
+	{field} +reportedBy : UUID
+	{field} +serialNumber : String
+}
+
+
+enum ShortfallResolution {
+	{field} +ADDITIONAL_REQUEST
+	{field} +NOTE
+}
+
+
+interface EquipmentDamageOutcomeRepository {
+	{method}  {abstract} +findByAdditionalRequestId ( requestId : UUID ) : Optional
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findByReportId ( reportId : UUID ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+	{method}  {abstract} +recordedShortfall ( eventId : UUID , equipmentId : UUID , excluded : UUID ) : int
+	{method}  {abstract} +shortfallRequestIds ( requestIds : Collection ) : List
+}
+
+
+interface EquipmentDamageReportRepository {
+	{method}  {abstract} +equipmentIdOf ( id : UUID ) : Optional
+	{method}  {abstract} +findAllByOrderByReportedAtDesc () : List
+	{method}  {abstract} +findByEquipmentIdOrderByReportedAtDesc ( equipmentId : UUID ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+	{method}  {abstract} +findQuantityDamageOverlapping ( equipmentId : UUID , start : Instant , end : Instant ) : List
+}
+
+
+class DamageImpact {
+	{field} -clock : Clock
+	{method} +candidateEvents ( report : EquipmentDamageReport , equipment : Equipment ) : Set
+	{method} +overCommitted ( equipment : Equipment , start : Instant , end : Instant ) : List
+	{method} +qualifies ( event : Event , equipmentId : UUID ) : boolean
+	{method} +reservedForEvent ( event : Event , equipmentId : UUID , leaveOut : Set ) : int
+	{method} +touched ( report : EquipmentDamageReport , eventId : UUID ) : List
+}
+
+
+class DamageImpact.Segment {
+	{field} -eventIds : Set<UUID>
+	{field} -from : Instant
+	{field} -reserved : int
+	{field} -until : Instant
+	{field} -working : int
+	{method} +excess () : int
+}
+
+
+class EquipmentDamageService {
+	{field} {static} ~MAX_TEXT : int
+	{field} {static} -NEXT_STEP : String
+	{field} -changeLog : ApplicationEventPublisher
+	{field} -clock : Clock
+	{method} +close ( technicianId : UUID , reportId : UUID ) : DamageReportDto
+	{method} +decide ( technicianId : UUID , reportId : UUID , outcomeId : UUID , input : DecideOutcomeRequest ) : DamageReportDto
+	{method} +get ( reportId : UUID ) : DamageReportDto
+	{method} +list ( equipmentId : UUID ) : List
+	{method} +report ( technicianId : UUID , input : ReportDamageRequest ) : DamageReportDto
+}
+
+
+class EquipmentShortfallLedger {
+	{field} {static} -NONE : UUID
+	{field} -clock : Clock
+	{method} +canRequestAdditional ( outcome : EquipmentDamageOutcome ) : boolean
+	{method} +linkAdditionalRequest ( outcome : EquipmentDamageOutcome , requestId : UUID ) : void
+	{method} +linkedStatus ( outcome : EquipmentDamageOutcome ) : Optional
+	{method} +lockForEvent ( eventId : UUID , outcomeId : UUID ) : EquipmentDamageOutcome
+	{method} +need ( eventId : UUID , equipmentId : UUID , excludedOutcome : UUID ) : int
+	{method} +onRequestApproved ( requestId : UUID ) : void
+	{method} +requireOpenShortfall ( eventId : UUID , outcomeId : UUID ) : EquipmentDamageOutcome
+}
+
+
+class EventEquipmentDamageService {
+	{field} -changeLog : ApplicationEventPublisher
+	{field} -clock : Clock
+	{method} +forEvent ( viewerId : UUID , lead : boolean , eventId : UUID ) : List
+	{method} +resolve ( coordinatorId : UUID , eventId : UUID , outcomeId : UUID , input : ResolveShortfallRequest ) : EventEquipmentDamageDto
 }
 
 
@@ -707,6 +984,7 @@ class InvalidEquipmentRequestException {
 
 
 class SubmitEquipmentRequest {
+	{field} -shortfallOutcomeId : UUID
 	{field} -technicalRequirement : String
 }
 
@@ -1428,6 +1706,7 @@ enum NotificationType {
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +equipment_damage_outcome
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -1467,6 +1746,7 @@ class NotificationService {
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
+	{method} +createEquipmentDamageOutcomeNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createEventCancellationDecisionNotification ( organiserId : UUID , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
 	{method} +createEventCancellationRequestedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createEventCancelledNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
@@ -2528,8 +2808,12 @@ ChangeRequestService --> UserRepository : users
 ChangeRequestService.Caller --> UserRole : role
 JourneyStatusResolver --> EventRepository : events
 AddStatusPeriodRequest --> EquipmentStatus : status
+EquipmentAvailabilityService --> EquipmentLogRepository : logs
+EquipmentAvailabilityService --> EquipmentRepository : equipment
+EquipmentAvailabilityService --> EquipmentStatusPeriodRepository : statusPeriods
 EquipmentCatalogueController --> EquipmentRepository : equipmentRepository
 EquipmentReservationController --> EquipmentReservationService : service
+EquipmentReservationService --> EquipmentAvailabilityService : availability
 EquipmentReservationService --> EquipmentLogRepository : logRepository
 EquipmentReservationService --> EquipmentRepository : equipmentRepository
 EquipmentReservationService --> EquipmentStatusPeriodRepository : statusPeriodRepository
@@ -2547,6 +2831,42 @@ SerialisedEquipment --> Equipment : equipment
 SerialisedEquipment --> EquipmentStatus : status
 SerialisedEquipment *-- SerialisedEquipmentId : id
 StatusPeriodResponse --> EquipmentStatus : status
+EquipmentDamageController --> EquipmentDamageService : service
+EventEquipmentDamageController --> EventEquipmentDamageService : service
+DamageReportDto --> "0..*" DamageReportDto.AffectedEvent : affectedEvents
+EquipmentDamageOutcome --> DamageOutcome : outcome
+EquipmentDamageOutcome --> ShortfallResolution : resolution
+EquipmentDamageReport --> DamageBlockStatus : blockStatus
+EquipmentDamageReport --> DamageReportStatus : status
+DamageImpact --> "0..*" EventStatus : ACTIVE
+DamageImpact --> EquipmentLogRepository : logs
+DamageImpact --> EquipmentDamageReportRepository : reports
+DamageImpact --> EquipmentRequestLineRepository : lines
+DamageImpact --> EquipmentRequestRepository : requests
+EquipmentDamageService --> JourneyStatusResolver : statuses
+EquipmentDamageService --> EquipmentAvailabilityService : availability
+EquipmentDamageService --> EquipmentLogRepository : logs
+EquipmentDamageService --> EquipmentRepository : equipment
+EquipmentDamageService --> EquipmentStatusService : statusService
+EquipmentDamageService --> SerialisedEquipmentRepository : units
+EquipmentDamageService --> EquipmentDamageOutcomeRepository : outcomes
+EquipmentDamageService --> EquipmentDamageReportRepository : reports
+EquipmentDamageService --> DamageImpact : impact
+EquipmentDamageService --> EquipmentShortfallLedger : ledger
+EquipmentDamageService --> EquipmentRequestRepository : requests
+EquipmentDamageService --> EventRepository : events
+EquipmentDamageService --> EventLifecycleService : lifecycle
+EquipmentDamageService --> NotificationService : notifications
+EquipmentDamageService --> UserRepository : users
+EquipmentShortfallLedger --> EquipmentDamageOutcomeRepository : outcomes
+EquipmentShortfallLedger --> EquipmentRequestLineRepository : lines
+EquipmentShortfallLedger --> EquipmentRequestRepository : requests
+EventEquipmentDamageService --> EquipmentRepository : equipment
+EventEquipmentDamageService --> EquipmentDamageOutcomeRepository : outcomes
+EventEquipmentDamageService --> EquipmentDamageReportRepository : reports
+EventEquipmentDamageService --> EquipmentShortfallLedger : ledger
+EventEquipmentDamageService --> EquipmentRequestRepository : requests
+EventEquipmentDamageService --> EventRepository : events
 EquipmentRequest --> EquipmentRequestStatus : status
 EquipmentRequestController --> EquipmentRequestDecisionService : decisionService
 EquipmentRequestController --> EquipmentRequestLineRepository : lineRepository
@@ -2557,6 +2877,7 @@ EquipmentRequestDecisionService --> EquipmentLogRepository : reservations
 EquipmentRequestDecisionService --> EquipmentRequestLineRepository : lines
 EquipmentRequestDecisionService --> EquipmentRequestRepository : requests
 EquipmentRequestDecisionService --> EventRepository : events
+EquipmentRequestDecisionService --> EquipmentShortfallLedger : shortfalls
 EquipmentRequestDetailsResponse --> "0..*" EquipmentRequestLineResponse : lines
 EquipmentRequestLine --> Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
@@ -2564,6 +2885,7 @@ EquipmentRequestService --> EquipmentRepository : equipment
 EquipmentRequestService --> EquipmentRequestLineRepository : lines
 EquipmentRequestService --> EquipmentRequestRepository : requests
 EquipmentRequestService --> EventRepository : events
+EquipmentRequestService --> EquipmentShortfallLedger : shortfalls
 SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
 EventCancellationController --> EventCancellationService : service
 EventController --> EventArrangementsService : arrangements
@@ -2594,6 +2916,7 @@ EventArrangementsService --> UserRepository : users
 EventArrangementsService --> VenueRepository : venues
 EventArrangementsService --> AvailabilityService : availability
 EventArrangementsService --> VenueBookingRecordRepository : bookings
+EventArrangementsService --> EquipmentShortfallLedger : shortfalls
 EventCancellationService --> "0..*" JourneyStatus : CANCELLABLE
 EventCancellationService --> ActivityService : activity
 EventCancellationService --> JourneyStatusResolver : statuses

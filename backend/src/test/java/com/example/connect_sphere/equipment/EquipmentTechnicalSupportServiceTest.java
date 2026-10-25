@@ -52,7 +52,8 @@ class EquipmentTechnicalSupportServiceTest {
         MockitoAnnotations.openMocks(this);
         reservationService = new EquipmentReservationService(
                 equipmentRepository, unitRepository, periodRepository, logRepository,
-                requestLineRepository, requestRepository);
+                requestLineRepository, requestRepository,
+                new EquipmentAvailabilityService(equipmentRepository, periodRepository, logRepository));
         statusService = new EquipmentStatusService(
                 unitRepository, periodRepository, equipmentRepository, logRepository);
 
