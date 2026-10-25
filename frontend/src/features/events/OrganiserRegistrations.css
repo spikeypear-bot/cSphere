@@ -1,0 +1,144 @@
+/* Card spacing (the card had no inner padding, so content touched the border) */
+.registrations {
+  padding: 1.5rem;
+}
+
+/* Header */
+.registrations__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+.registrations__head h2 {
+  margin: 0;
+}
+.registrations__head .field-hint {
+  margin: 0.25rem 0 0;
+}
+
+/* Badge + pills (dark-theme friendly: translucent backgrounds, bright text) */
+.registrations__badge,
+.registrations__pill {
+  display: inline-block;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  background: rgba(156, 163, 175, 0.18);
+  color: #d1d5db;
+}
+.registrations__badge--open,
+.registrations__pill--confirmed {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+.registrations__badge--full,
+.registrations__pill--event_cancelled {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+.registrations__badge--not_yet_open,
+.registrations__pill--withdrawn {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+/* Stat tiles */
+.registrations__stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin: 1.25rem 0 1rem;
+}
+.registrations__stats div {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+}
+.registrations__stats strong {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: inherit;
+}
+.registrations__stats span {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Progress bar */
+.registrations__bar {
+  height: 0.5rem;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+.registrations__bar div {
+  height: 100%;
+  background: #4ade80;
+  border-radius: 999px;
+  transition: width 0.3s ease;
+}
+
+/* Attendee table */
+.registrations__scroll {
+  overflow-x: auto;
+  margin-top: 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+.registrations__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.registrations .registrations__table caption {
+  /* show the caption as a left-aligned heading, even if a global sr-only class is applied */
+  position: static;
+  width: auto;
+  height: auto;
+  margin: 0;
+  clip: auto;
+  overflow: visible;
+  text-align: left;
+  padding: 0.85rem 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.registrations__table th {
+  text-align: left;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: rgba(255, 255, 255, 0.55);
+  background: rgba(255, 255, 255, 0.03);
+}
+.registrations__table th,
+.registrations__table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.registrations__table tbody tr:last-child td {
+  border-bottom: none;
+}
+.registrations__table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+/* Small screens: stack the stat tiles */
+@media (max-width: 600px) {
+  .registrations__stats {
+    grid-template-columns: 1fr;
+  }
+}

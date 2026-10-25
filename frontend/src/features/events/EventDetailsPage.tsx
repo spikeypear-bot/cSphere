@@ -13,6 +13,7 @@ import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { EventCancellationPanel } from './EventCancellationPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
+import { OrganiserRegistrations } from './OrganiserRegistrations'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
@@ -149,6 +150,7 @@ export function EventDetailsPage() {
         <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserRegistrations key={`registrations-${reloadToken}`} eventId={event.eventId} /> : null}
       {/* EO07: the organiser asks for cancellation; the assigned coordinator decides. */}
       <EventCancellationPanel event={event} role={role} onChanged={() => setReloadToken((n) => n + 1)} />
 
