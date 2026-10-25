@@ -32,6 +32,13 @@ public class EquipmentStatusController {
         return service.listUnits(start, end);
     }
 
+    // D32: blocks on every unit; current=true (the default) keeps those not yet over.
+    @GetMapping("/status-periods")
+    public List<UnitStatusPeriodResponse> listAllPeriods(
+            @RequestParam(name = "current", defaultValue = "true") boolean current) {
+        return service.listAllPeriods(current);
+    }
+
     // All blocks for one unit.
     @GetMapping("/{equipmentId}/units/{serialNumber}/periods")
     public List<StatusPeriodResponse> listPeriods(

@@ -183,7 +183,7 @@ class ChangeImpactServiceTest {
     void equipmentWindowsAndRequirements() {
         UUID log = UUID.randomUUID();
         when(equipment.reservationsForEvent(event.getEventId())).thenReturn(List.of(new EquipmentReservationResponse(
-                log, event.getEventId(), UUID.randomUUID(), "Wireless mic", 4, null, START.toInstant(), END.toInstant())));
+                log, event.getEventId(), UUID.randomUUID(), "Wireless mic", 4, null, START.toInstant(), END.toInstant(), null, false)));
 
         List<String> moved = attention(service.assess(event, proposal(START, END.plusMinutes(30), 150, List.of(), null),
                 Set.of("endDatetime")));

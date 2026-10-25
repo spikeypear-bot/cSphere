@@ -1,6 +1,5 @@
 package com.example.connect_sphere.equipmentrequest;
 
-import com.example.connect_sphere.event.repository.EventRepository;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
@@ -13,27 +12,25 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
 @RequestMapping("/api")
 public class EquipmentRequestController {
 
-    private final EquipmentRequestRepository requestRepository;
     private final EquipmentRequestLineRepository lineRepository;
-    private final EventRepository eventRepository;
+    private final EquipmentRequestQueueService queue;
     private final EquipmentRequestService service;
     private final EquipmentRequestDecisionService decisionService;
 
     public EquipmentRequestController(
-            EquipmentRequestRepository requestRepository,
             EquipmentRequestLineRepository lineRepository,
-            EventRepository eventRepository,
+            EquipmentRequestQueueService queue,
             EquipmentRequestService service,
             EquipmentRequestDecisionService decisionService) {
-        this.requestRepository = requestRepository;
         this.lineRepository = lineRepository;
-        this.eventRepository = eventRepository;
+        this.queue = queue;
         this.service = service;
         this.decisionService = decisionService;
     }
@@ -42,22 +39,16 @@ public class EquipmentRequestController {
         return UUID.fromString(jwt.getSubject());
     }
 
+    // TS01: the review queue. Kept as it was; the same list as ?status=processing.
     @GetMapping("/equipment-requests/processing")
     public List<EquipmentRequestResponse> listProcessing() {
-        return requestRepository.findByStatus(EquipmentRequestStatus.processing).stream()
-                // EO07: a cancelled or finished event's request needs no review.
-                .filter(r -> eventRepository.findById(r.getEventId())
-                        .map(e -> e.getStatus() != com.example.connect_sphere.event.entity.EventStatus.cancelled
-                                && e.getStatus() != com.example.connect_sphere.event.entity.EventStatus.completed)
-                        .orElse(true))
-                .map(r -> {
-                    var event = eventRepository.findById(r.getEventId()).orElse(null);
-                    String eventName = event != null ? event.getEventName() : "Unknown event";
-                    var start = event != null ? event.getStartDatetime().toInstant() : null;
-                    var end = event != null ? event.getEndDatetime().toInstant() : null;
-                    return EquipmentRequestResponse.from(r, eventName, start, end);
-                })
-                .toList();
+        return queue.list("processing");
+    }
+
+    // D32: the same list by status (processing, the default; approved; rejected; all).
+    @GetMapping("/equipment-requests")
+    public List<EquipmentRequestResponse> list(@RequestParam(required = false) String status) {
+        return queue.list(status);
     }
 
     @GetMapping("/equipment-requests/{requestId}/lines")

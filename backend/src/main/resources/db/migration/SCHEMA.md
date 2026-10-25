@@ -376,6 +376,7 @@ from; `equipment_requests` records intent, this records reality.
 | `serial_number` | `VARCHAR(64)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
 | `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
 | `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
+| `spare` | `BOOLEAN` | no | | V40. `true` for an extra unit held beyond the requested quantity; default `false` |
 
 **Foreign keys:** `(equipment_id, serial_number)` is a *composite* FK to `serialised_equipments`,
 so a log row cannot cite a serial belonging to a different equipment kind. Because
@@ -652,3 +653,18 @@ The API reads and returns only `blockStatus`/`blockApplied` (the earlier `markFa
 fields were removed before release). See [TS09 API](../../../../../../docs/equipment-damage-api.md)
 and decision-log D32.
 
+## V40 update — spare reservations (TS02)
+
+`equipment_logs.spare` (`BOOLEAN NOT NULL DEFAULT false`) marks a
+reservation as a **spare**: an extra unit held beyond what the event's requests ask for.
+
+- TS02 refuses a reservation that would take the event's non-spare reservations of a kind (those
+  overlapping the new window) above the quantity requested. The excess must be reserved as spare.
+- Spares still count as reserved everywhere else: availability (they hold stock), TS06's "everything is
+  reserved" check and TS09's "covered by spare".
+- A serialised unit is always one row with its serial; a serialised kind reserved without serials gets
+  free, working units picked by the server.
+- Existing rows are back-filled `false` by the default.
+
+See [TS09 API](../../../../../../docs/equipment-damage-api.md) § Technical Support console and
+decision-log D33.
