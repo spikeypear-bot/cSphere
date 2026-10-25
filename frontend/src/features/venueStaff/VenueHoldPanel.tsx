@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Notice } from '../../components/ui/Notice'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
@@ -118,14 +119,16 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
     </BookingDecisionPanel>}
     {!showConfirmation && success && <Notice>{success}</Notice>}
       {currentHolds.length > 0 && <ul className="venue-hold-panel__history" aria-label="Hold history">{currentHolds.map(h => <li key={h.holdId}>
+        <Card className="venue-card-preview venue-hold-panel__history-card">
         <strong className="venue-card-preview__tag booking-status-tag" data-booking-status={h.status === 'active' && !expired.has(h.holdId) ? 'tentative' : h.status === 'converted' ? 'approved' : undefined}>
           {expired.has(h.holdId) && h.status === 'active' ? 'Expired' : h.status[0].toUpperCase() + h.status.slice(1)}
         </strong>
-        <dl className="venue-hold-panel__summary">
+        <dl className="venue-card-preview__information venue-hold-panel__history-information">
           <div><dt>Occupied period (SGT)</dt><dd>{formatEventTimeRange(h.reservedStart, h.reservedEnd)}</dd></div>
           <div><dt>Expires (SGT)</dt><dd>{formatEventDateTime(h.expiresAt)}</dd></div>
           <div><dt>Created (SGT)</dt><dd>{formatEventDateTime(h.createdAt)}</dd></div>
         </dl>
+        </Card>
       </li>)}</ul>}
   </section>
 }

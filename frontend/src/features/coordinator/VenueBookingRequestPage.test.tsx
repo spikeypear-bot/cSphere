@@ -117,6 +117,7 @@ const OPTIONS = [
 
 function routes(bookings: unknown[] = [], post?: (body: unknown) => Response) {
   return {
+    [`GET /api/events/${EVENT}/venue-assessments`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}/venue-reviews`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
     [`GET /api/events/${EVENT}/venue-options`]: () => jsonResponse(200, OPTIONS),

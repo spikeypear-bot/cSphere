@@ -2,7 +2,7 @@ import { Card } from '../../components/ui/Card'
 import { venueAccessibilityLabels } from '../../types/venue'
 import type { AccessibilityFeature } from '../../types/eventRequest'
 import type { VenueBookingDto } from '../../types/venueBooking'
-import type { VenueBookingDisplayStatus } from '../../types/venueBookingStatus'
+import { BOOKING_STATUS_LABELS, type VenueBookingDisplayStatus } from '../../types/venueBookingStatus'
 import { BookingTimingConflicts } from '../../components/BookingTimingSummary'
 
 import { formatEventDateTime } from './formatEventDateTime'
@@ -19,7 +19,7 @@ export function EventRequirementsPanel({ event, timing, status, highlightStart, 
   return <Card className="feature-skeleton__body event-requirements-panel">
     <div className="event-requirements-panel__header">
       <h2 id="event-requirements-heading">Event Requirements</h2>
-      <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status} aria-label={'Status: ' + status} aria-live="polite">{status === 'tentative' ? 'Tentative Hold' : status}</span>
+      <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status} aria-label={'Status: ' + BOOKING_STATUS_LABELS[status]} aria-live="polite">{BOOKING_STATUS_LABELS[status]}</span>
     </div>
     <h3>{event.eventName}</h3>
     <dl className="venue-card-preview__information">

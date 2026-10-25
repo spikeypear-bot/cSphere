@@ -24,7 +24,7 @@ function page(role = 'venue-staff', path = '/venue-staff/booking-approvals') {
   // VS17 has its own review read; these queue fixtures have no approved changes.
   const originalFetch = globalThis.fetch
   vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/requirement-reviews')
-    ? Promise.resolve(response([])) : originalFetch(input, init))
+    ? Promise.resolve(response([])) : String(input).endsWith('/assessment') ? Promise.resolve(response({ bookingId: 'b1', status: 'pending', checks: [], history: [] })) : originalFetch(input, init))
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
     accessToken: 'access-1', refreshToken: 'refresh-1', username: 'vs1', role, organisation: 'ConnectSphere',
   }))
@@ -161,7 +161,7 @@ it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
     await userEvent.click(await screen.findByRole('link', { name: 'View booking details' }))
     expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('150 people')
     expect(screen.getByText('Updated seating')).toBeInTheDocument()
-    expect(screen.getByLabelText(`Status: ${status}`)).toBeInTheDocument()
+    expect(screen.getByLabelText('Status: ' + ({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled', tentative: 'Tentative Hold', attention: 'Requires attention' })[status])).toBeInTheDocument()
     expect(screen.queryByText(/This booking request is no longer pending/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
@@ -233,7 +233,7 @@ it('approves from the queue and removes the booking when returning', async () =>
   await user.click(await screen.findByRole('link', { name: 'View booking details' }))
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
-  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   await user.click(screen.getByRole('link', { name: 'Back to Booking Approvals' }))
   expect(await screen.findByText('No pending booking requests found.')).toBeInTheDocument()
 })

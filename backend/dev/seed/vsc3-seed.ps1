@@ -123,7 +123,6 @@ try {
         $venue = Invoke-DemoApi POST '/api/venues' $staff @{
             venueAddress = $scenario.venueAddress; venueCapacity = 200; supportedLayouts = @('classroom', 'theatre')
             venueAccessibilities = @('step_free_access'); venueFacilities = @('projection')
-            operatingInformation = 'Daily 00:00-23:59. VS-C3 local demonstration only.'
             additionalInformation = 'Booking 10:00-12:00; occupied 09:30-12:45 Singapore time.'
             setupMinutes = 30; turnaroundMinutes = 45
             operatingHours = @(1..7 | ForEach-Object { @{ dayOfWeek = $_; openTime = '00:00'; closeTime = '23:59' } })

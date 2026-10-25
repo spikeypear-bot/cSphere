@@ -1,4 +1,4 @@
-// @stories VS07
+// @stories VS07 VS17
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -9,7 +9,7 @@ import type { VenueDto } from '../../types/venue'
 
 const venue: VenueDto = { venueId: 'v1', venueAddress: 'Main Hall', venueCapacity: 50,
   supportedLayouts: ['theatre'], venueAccessibilities: [], venueFacilities: [],
-  operatingInformation: 'Daily', additionalInformation: null }
+  operatingInformation: 'Legacy text must not display', operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'18:00'}], additionalInformation: null }
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function Origin() {
   const location = useLocation()

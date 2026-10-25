@@ -53,6 +53,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  */
 @Tag("unit")
 @Tag("EO04")
+@Tag("VS17")
 class EventArrangementsServiceTest {
 
     private static final Instant NOW = Instant.parse("2027-01-01T00:00:00Z");
@@ -160,7 +161,8 @@ class EventArrangementsServiceTest {
             assertThat(v.layouts()).containsExactly("theatre");
             assertThat(v.accessibilities()).containsExactly("step_free_access");
             assertThat(v.facilities()).containsExactly("projection");
-            assertThat(v.operatingInformation()).isEqualTo("Loading bay at the back.");
+            assertThat(v.operatingInformation()).isEqualTo("Operating hours not configured");
+            assertThat(v.operatingHours()).isEmpty();
             assertThat(v.venueId()).isEqualTo(hall.getVenueId());
             assertThat(v.noLongerAvailable()).isFalse();
         });

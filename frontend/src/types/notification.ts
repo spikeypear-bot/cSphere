@@ -1,6 +1,8 @@
 // Mirrors backend/src/main/java/com/example/connect_sphere/notification/dto/NotificationDto.java
 
 export type NotificationTypeName =
+  | 'venue_suitability_changed'
+  | 'venue_arrangements_changed'
   | 'status_change'
   | 'coordinator_assignment'
   | 'clarification_requested'

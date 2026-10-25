@@ -1,8 +1,8 @@
 # VS16 local demo seed and manual testing
 
 For Venue Staff, Event Coordinator, and anyone developing or reviewing the shared
-booking-detail component. This fixture enables testing before the Coordinator
-creation workflow exists. It does not implement that workflow.
+booking-detail component. This fixture provides fixed historical read/pagination records independently of
+the Coordinator creation workflow. It does not implement a separate workflow.
 
 ## Location and sharing
 
@@ -38,7 +38,15 @@ normal dependency installation (see the root README).
 | Booking | `16000000-0000-4000-8000-000000000003` | Pending; notes `VS16_LOCAL_SEED` |
 
 The venue has capacity 200, classroom/theatre layouts, step-free access/elevators,
-projection/audio-visual facilities, operating information and entrance instructions.
+projection/audio-visual facilities, structured Monday-Friday 09:00-18:00 operating
+hours and entrance instructions. Re-running the seed preserves existing venues,
+bookings and edited schedules. An older fixture created without structured hours
+shows **Operating hours not configured**; use **Edit venue** to configure its days
+and times. The seed does not guess a schedule from old descriptive text.
+These are historical read/pagination fixtures; their fixed September/October
+2026 dates are intentionally retained. Use the API-backed VS-C3 fixture or create
+a future event for live approval/availability testing.
+
 The event expects 120 attendees on 24 September 2026, 14:00–17:00 Singapore time.
 Dates are fixed; rerunning does not advance them. The event's required schema status
 is `confirmed`, while the booking is `pending`: these are fixture values, not results

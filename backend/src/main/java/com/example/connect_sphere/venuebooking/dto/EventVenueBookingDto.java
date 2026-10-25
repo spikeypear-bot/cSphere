@@ -21,5 +21,6 @@ public record EventVenueBookingDto(
         String alternativeVenueAddress,
         String alternativeArrangement,
         OffsetDateTime startDatetime,
-        OffsetDateTime endDatetime, BookingTimingDto timing, java.util.List<com.example.connect_sphere.venuebooking.hold.VenueHold> holds) {
+        OffsetDateTime endDatetime, BookingTimingDto timing, java.util.List<com.example.connect_sphere.venuebooking.hold.VenueHold> holds, String operatingInformation,
+        java.util.List<com.example.connect_sphere.venue.dto.VenueOperatingHourDto> operatingHours) {
 }

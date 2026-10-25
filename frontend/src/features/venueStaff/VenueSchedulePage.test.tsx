@@ -1,6 +1,6 @@
-// @stories VS15 VS-C2 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS15 VS-C2 VS-C3 VS-C4 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { apiClient } from '../../lib/apiClient'
 import { VenueSchedulePage } from './VenueSchedulePage'
 import { calendarDays, calendarEntries, entriesOnDay, shiftMonth, singaporeDate } from './venueCalendar'
@@ -94,7 +94,9 @@ it('VS-C4 AC7, AC8, AC9, AC10 (conflict): highlights buffers, links both booking
   fireEvent.click(screen.getByRole('button', { name: 'Close' }))
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{ venueId: 'v1', venueAddress: 'Main Hall' }] : schedule)
   fireEvent(window, new Event('focus'))
-  await screen.findByText('No booking conflicts detected for this venue in this view.')
+  await screen.findByRole('table')
+  await waitFor(() => expect(screen.queryByRole('region', { name: 'Booking Conflicts' })).not.toBeInTheDocument())
+  expect(screen.queryByRole('link', { name: 'Review all active conflicts for this venue' })).not.toBeInTheDocument()
   expect(screen.getByRole('table').querySelector('[data-conflict="true"]')).toBeNull()
 })
 it('shows overlapping bookings, holds and separate buffers, with read-only details', async () => {
@@ -201,4 +203,33 @@ it('preserves the calendar height during navigation, venue changes and refresh w
   expect(frame.style.minHeight).toBe('1200px')
   expect(screen.queryByRole('table')).not.toBeInTheDocument()
   vi.restoreAllMocks()
+})
+
+it('VS15 (happy): toolbar immediately precedes the calendar and empty conflicts are hidden', async () => {
+  await mount()
+  expect(screen.getByRole('table').parentElement?.previousElementSibling).toHaveClass('venue-calendar__toolbar')
+  expect(screen.queryByRole('region', { name: 'Booking Conflicts' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('link', { name: 'Review all active conflicts for this venue' })).not.toBeInTheDocument()
+})
+
+it('VS17 (conflict): attention bookings retain event and buffer entries, red status, conflicts and detail links', async () => {
+ const attention = { ...booking, status: 'attention', eventName: 'Needs reassessment' }
+ const data = { ...schedule, bookings: [attention, { ...booking, bookingId: 'partner', eventName: 'Overlapping event' }] }
+ vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{venueId: 'v1', venueAddress: 'Main Hall'}] : data)
+ await mount()
+ const entries = within(screen.getByRole('table')).getAllByRole('button', {name: /Requires attention/})
+ expect(entries).toHaveLength(3)
+ for (const entry of entries) {
+  expect(entry).toHaveAttribute('data-booking-status', 'attention')
+  expect(entry).toHaveAttribute('data-conflict', 'true')
+ }
+ fireEvent.click(entries[0])
+ const dialog = screen.getByRole('dialog')
+ expect(within(dialog).getAllByText('Requires attention').length).toBeGreaterThan(0)
+ expect(within(dialog).getByRole('link', {name:'View booking details'})).toHaveAttribute('href','/venue-staff/bookings/b1')
+ expect(within(dialog).getByRole('link', {name:'Overlapping event'})).toHaveAttribute('href','/venue-staff/bookings/partner')
+})
+it('VS17 (boundary): replaced, rejected and cancelled bookings do not occupy calendar time', () => {
+ const rows = ['changed','rejected','cancelled'].map(status => ({...booking, status, bookingId:status}))
+ expect(calendarEntries({...schedule, bookings:rows, unavailablePeriods:[]})).toEqual([])
 })

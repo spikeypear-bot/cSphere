@@ -47,7 +47,7 @@ public class ChangeImpactService {
 
     static final String OK = "ok";
     static final String ATTENTION = "attention";
-    private static final Set<VenueBookingStatus> ACTIVE_BOOKINGS = Set.of(VenueBookingStatus.pending, VenueBookingStatus.approved);
+    private static final Set<VenueBookingStatus> ACTIVE_BOOKINGS = Set.of(VenueBookingStatus.pending, VenueBookingStatus.approved, VenueBookingStatus.attention);
     private static final Set<EventStatus> SAFETY_STAGES = Set.of(
             EventStatus.awaiting_safety_review, EventStatus.safety_approved, EventStatus.confirmed);
     private static final DateTimeFormatter SINGAPORE = DateTimeFormatter

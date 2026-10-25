@@ -67,7 +67,7 @@ public class VenueBookingRequestService {
     private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
     static final int MAX_TEXT_LENGTH = 2000;
     private static final List<VenueBookingStatus> ACTIVE =
-            List.of(VenueBookingStatus.pending, VenueBookingStatus.approved);
+            List.of(VenueBookingStatus.pending, VenueBookingStatus.approved, VenueBookingStatus.attention);
 
     private final EventRepository events;
     private final VenueRepository venues;
@@ -191,7 +191,7 @@ public class VenueBookingRequestService {
                 throw new VenueBookingStateException("This booking is not eligible for a replacement. Refresh this event.");
             if (bookings.existsByReplacesBookingIdAndStatus(original.getBookingId(), VenueBookingStatus.pending))
                 throw new VenueBookingStateException("A replacement request for this booking is already pending.");
-            if (bookings.existsByReplacesBookingIdAndStatus(original.getBookingId(), VenueBookingStatus.approved))
+            if (bookings.existsByReplacesBookingIdAndStatusIn(original.getBookingId(), List.of(VenueBookingStatus.approved,VenueBookingStatus.attention)))
                 throw new VenueBookingStateException("This booking already has an approved replacement.");
         }
         if (request == null || request.venueId() == null) {
@@ -304,7 +304,7 @@ public class VenueBookingRequestService {
         if (booking.getStatus() == VenueBookingStatus.rejected || booking.getStatus() == VenueBookingStatus.cancelled) {
             return true;
         }
-        return ACTIVE.contains(booking.getStatus()) && availability.affected(booking.getBookingId());
+        return booking.getStatus() == VenueBookingStatus.attention || ACTIVE.contains(booking.getStatus()) && availability.affected(booking.getBookingId());
     }
 
     @Transactional
@@ -344,7 +344,7 @@ public class VenueBookingRequestService {
     private boolean hasActiveBooking(UUID eventId, UUID except) {
         return bookings.findForEvent(eventId).stream()
                 .filter(b -> except == null || !except.equals(b.getBookingId()))
-                .anyMatch(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved);
+                .anyMatch(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved || b.getStatus() == VenueBookingStatus.attention);
     }
 
     private static com.example.connect_sphere.venueavailability.EffectivePeriod requestedPeriod(
@@ -380,7 +380,7 @@ public class VenueBookingRequestService {
         if (holdService != null) holdService.endForBooking(bookingId, coordinatorId);
         booking.setStatus(VenueBookingStatus.cancelled);
         VenueBookingRecord saved = bookings.save(booking);
-        if (previous == VenueBookingStatus.approved)
+        if (previous == VenueBookingStatus.approved || previous == VenueBookingStatus.attention)
             lifecycle.returnToPlanning(eventId, coordinatorId, "An approved venue booking was cancelled."
                     + (why == null ? "" : " " + why));
 
@@ -566,6 +566,7 @@ public class VenueBookingRequestService {
 
     private EventVenueBookingDto toDto(VenueBookingRecord b) {
         Venue venue = venues.findById(b.getVenueId()).orElse(null);
+        var venueDetails = venue == null ? null : venueMapper.toDto(venue);
         Venue alternativeVenue = b.getAlternativeVenueId() == null ? null
                 : venues.findById(b.getAlternativeVenueId()).orElse(null);
         String submittedBy = b.getSubmittedBy() == null ? null
@@ -574,7 +575,7 @@ public class VenueBookingRequestService {
         return new EventVenueBookingDto(b.getBookingId(), b.getStatus(), b.getVenueId(),
                 venue == null ? null : venue.getVenueAddress(), venue == null ? null : venue.getVenueCapacity(),
                 b.getBookingNotes(), b.getSuitabilityNote(), b.getRejectReason(), b.getSubmittedAt(), submittedBy,
-                availability.affected(b.getBookingId()), b.getReplacesBookingId(),
+                b.getStatus() == VenueBookingStatus.attention || availability.affected(b.getBookingId()), b.getReplacesBookingId(),
                 b.getAlternativeVenueId(), alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
                 b.getAlternativeArrangement(),
                 b.getStartDatetime() == null && event != null ? event.getStartDatetime() : b.getStartDatetime(),
@@ -585,7 +586,9 @@ public class VenueBookingRequestService {
                         b.getEndDatetime() == null ? event.getEndDatetime() : b.getEndDatetime(),
                         b.getSetupDurationMinutes(), b.getTurnaroundDurationMinutes(), b.getTimingNote(),
                         ACTIVE.contains(b.getStatus()) && event.getStatus() != EventStatus.completed
-                        && event.getStatus() != EventStatus.cancelled), holds == null ? List.of() : holds.history(b.getBookingId()));
+                        && event.getStatus() != EventStatus.cancelled), holds == null ? List.of() : holds.history(b.getBookingId()),
+                venueDetails == null ? "Operating hours not configured" : venueDetails.operatingInformation(),
+                venueDetails == null || venueDetails.operatingHours() == null ? List.of() : venueDetails.operatingHours());
     }
 
     /** Same reason as EventRequestService.afterThisTransactionCommits: the

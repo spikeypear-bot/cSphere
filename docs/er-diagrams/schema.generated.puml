@@ -207,6 +207,7 @@ entity notifications {
 	read_at : timestamp with time zone
 	message : text
 	venue_booking_id : uuid
+	requirement_review_id : uuid <<FK>>
 }
 
 entity refresh_tokens {
@@ -236,6 +237,21 @@ entity users {
 	* created_at : timestamp with time zone
 	* role : user_role
 	organisation : character varying(100)
+}
+
+entity venue_booking_assessments {
+	* assessment_id : uuid <<PK>>
+	--
+	* booking_id : uuid <<FK>>
+	* outcome : text
+	* source : text
+	* reason : text
+	actor_id : uuid <<FK>>
+	actor_name : text
+	* created_at : timestamp with time zone
+	* venue_snapshot : jsonb
+	* requirements_snapshot : jsonb
+	previous_venue_snapshot : jsonb
 }
 
 entity venue_booking_holds {
@@ -293,6 +309,34 @@ entity venue_operational_issues {
 	affected_until : timestamp with time zone
 	* created_by : uuid <<FK>>
 	* created_at : timestamp with time zone
+}
+
+entity venue_requirement_reviews {
+	* review_id : uuid <<PK>>
+	--
+	* change_request_id : uuid <<FK>>
+	* booking_id : uuid <<FK>>
+	* event_id : uuid <<FK>>
+	* venue_id : uuid <<FK>>
+	coordinator_id : uuid <<FK>>
+	coordinator_name : text
+	coordinator_email : text
+	* event_name : text
+	* venue_address : text
+	* approved_at : timestamp with time zone
+	* approved_by : uuid <<FK>>
+	* reserved_start : timestamp with time zone
+	* reserved_end : timestamp with time zone
+	* setup_duration_minutes : integer
+	* turnaround_duration_minutes : integer
+	* previous_requirements : jsonb
+	* new_requirements : jsonb
+	* status : text
+	reviewed_by : uuid <<FK>>
+	reviewer_name : text
+	reviewed_at : timestamp with time zone
+	review_note : text
+	reviewed_checks : jsonb
 }
 
 entity venue_timing_conflicts {
@@ -411,6 +455,10 @@ enum notification_type {
 	event_cancellation_declined
 	event_cancelled
 	request_cancelled
+	venue_requirement_changed
+	venue_requirement_reviewed
+	venue_suitability_changed
+	venue_arrangements_changed
 }
 
 enum user_role {
@@ -429,6 +477,7 @@ enum venue_booking_status {
 	changed
 	rejected
 	cancelled
+	attention
 }
 
 equipment_logs }o--|| equipments : equipment_id
@@ -464,8 +513,11 @@ events }o--o| venues : venue_id
 notifications }o--o| events : event_id
 notifications }o--o| event_requests : event_request_id
 notifications }o--|| users : recipient_user_id
+notifications }o--o| venue_requirement_reviews : requirement_review_id
 refresh_tokens }o--|| users : user_id
 serialised_equipments }o--|| equipments : equipment_id
+venue_booking_assessments }o--o| users : actor_id
+venue_booking_assessments }o--|| venue_bookings : booking_id
 venue_booking_holds }o--|| venue_bookings : booking_id
 venue_booking_holds }o--|| users : created_by
 venue_bookings }o--o| venues : alternative_venue_id
@@ -477,6 +529,13 @@ venue_bookings }o--|| venues : venue_id
 venue_operating_hours }o--|| venues : venue_id
 venue_operational_issues }o--|| users : created_by
 venue_operational_issues }o--|| venues : venue_id
+venue_requirement_reviews }o--|| users : approved_by
+venue_requirement_reviews }o--|| venue_bookings : booking_id
+venue_requirement_reviews }o--|| event_change_requests : change_request_id
+venue_requirement_reviews }o--o| users : coordinator_id
+venue_requirement_reviews }o--|| events : event_id
+venue_requirement_reviews }o--o| users : reviewed_by
+venue_requirement_reviews }o--|| venues : venue_id
 venue_timing_conflicts }o--|| venue_bookings : first_booking_id
 venue_timing_conflicts }o--|| venue_bookings : second_booking_id
 venue_unavailability }o--|| users : created_by

@@ -28,6 +28,7 @@ import com.example.connect_sphere.venue.service.VenueService;
 @Transactional
 @org.springframework.security.test.context.support.WithMockUser(username = "vs16-reader", roles = "VS")
 @Tag("VS16")
+@Tag("VS17")
 class VenueBookingReadTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -36,7 +37,7 @@ class VenueBookingReadTest {
 
     private UUID venue() {
         UUID id = venues.createVenue(new CreateVenueDto("VS16 venue", 200,
-                List.of(VenueLayout.classroom), "Daily", null, null, null)).venueId();
+                List.of(VenueLayout.classroom), "Daily", null, null, null, com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek())).venueId();
         entityManager.flush();
         return id;
     }

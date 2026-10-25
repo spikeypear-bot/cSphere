@@ -38,6 +38,9 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Service
 public class EventArrangementsService {
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.changerequest.ChangeImpactService impact;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.connect_sphere.venue.service.VenueHoursService venueHours;
     private final EventRepository events;
     private final VenueBookingRecordRepository bookings;
     private final VenueRepository venues;
@@ -95,17 +98,19 @@ public class EventArrangementsService {
     private List<OrganiserArrangementsDto.Venue> venuesOf(Event event) {
         List<OrganiserArrangementsDto.Venue> result = new ArrayList<>();
         for (VenueBookingRecord booking : bookings.findForEvent(event.getEventId())) {
-            if (booking.getStatus() != VenueBookingStatus.approved) {
+            if (booking.getStatus() != VenueBookingStatus.approved && booking.getStatus() != VenueBookingStatus.attention) {
                 continue;
             }
             Venue venue = venues.findById(booking.getVenueId()).orElse(null);
             if (venue == null) {
                 continue;
             }
+            var schedule = venueHours == null ? null : venueHours.forVenue(venue.getVenueId());
             result.add(new OrganiserArrangementsDto.Venue(venue.getVenueId(), venue.getVenueAddress(),
                     venue.getVenueCapacity(), copy(venue.getSupportedLayouts()), copy(venue.getVenueAccessibilities()),
-                    copy(venue.getVenueFacilities()), venue.getOperatingInformation(),
-                    availability.affected(booking.getBookingId())));
+                    copy(venue.getVenueFacilities()), schedule == null ? "Operating hours not configured" : schedule.summary(),
+                    availability.affected(booking.getBookingId()), booking.getStatus()==VenueBookingStatus.attention,
+                    impact==null ? List.of() : impact.assessBooking(event,booking).stream().filter(c -> "attention".equals(c.status())).map(c -> c.detail()).toList(), schedule == null ? List.of() : schedule.hours()));
         }
         return result;
     }

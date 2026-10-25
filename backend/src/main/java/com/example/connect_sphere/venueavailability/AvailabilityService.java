@@ -22,7 +22,7 @@ public class AvailabilityService {
     @org.springframework.beans.factory.annotation.Autowired
     private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
     private List<Booking> blocking(UUID venueId) {
-        return holds == null ? repository.bookings(venueId).stream().filter(b -> b.status().equals("approved")).toList()
+        return holds == null ? repository.bookings(venueId).stream().filter(b -> (b.status().equals("approved") || b.status().equals("attention"))).toList()
                 : repository.blocking(venueId, holds.now());
     }
     private List<com.example.connect_sphere.venuebooking.hold.VenueHold> scheduleHolds(UUID venueId, OffsetDateTime start, OffsetDateTime end) {

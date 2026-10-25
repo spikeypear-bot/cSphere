@@ -398,7 +398,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
-            case venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case venue_suitability_changed, venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested ->
                     "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
@@ -416,7 +416,7 @@ public class NotificationService {
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_requirement_changed, venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
-            case status_change, coordinator_assignment -> n.getEventId() != null
+            case venue_arrangements_changed, status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()
                     : n.getEventRequestId() != null
                             ? "/organiser/requests/" + n.getEventRequestId()

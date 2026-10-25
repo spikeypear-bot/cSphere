@@ -242,11 +242,11 @@ public class ChangeRequestService {
                 .map(i -> Map.of("key", i.key(), "area", i.area(), "title", i.title(), "detail", i.detail()))
                 .toList());
         ChangeRequest saved = changeRequests.save(change);
-        venueRequirements.approved(saved, event, oldStart, oldEnd);
         String summary = ChangeFields.describe(changes);
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
                 ActivityType.change_approved, coordinator.userId(), fitActivityMessage("Approved: " + summary), null, null, null, null,
                 ChangeFields.changedValues(changes)));
+        venueRequirements.approved(saved, event, oldStart, oldEnd);
         if (replan) {
             lifecycle.returnToPlanning(event.getEventId(), coordinator.userId(),
                     fitActivityMessage("An approved change affects the event's arrangements: " + summary));

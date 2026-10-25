@@ -131,18 +131,20 @@ public class EventLifecycleService {
 
         // Venues: at least one approved; nothing still pending or affected.
         List<VenueBookingRecord> active = bookings.findForEvent(event.getEventId()).stream()
-                .filter(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved)
+                .filter(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved || b.getStatus() == VenueBookingStatus.attention)
                 .toList();
         long approved = active.stream().filter(b -> b.getStatus() == VenueBookingStatus.approved).count();
         long pending = active.stream().filter(b -> b.getStatus() == VenueBookingStatus.pending).count();
         long affected = active.stream().filter(b -> availability.affected(b.getBookingId())).count();
         String venueDetail;
-        boolean venuesOk = approved > 0 && pending == 0 && affected == 0;
+        boolean venuesOk = approved > 0 && approved == active.size() && pending == 0 && affected == 0;
         if (active.isEmpty()) {
             venueDetail = "No venue has been booked yet.";
         } else if (affected > 0) {
             venueDetail = plural(affected, "venue has", "venues have")
                     + " become unavailable. Request a replacement.";
+        } else if (active.stream().anyMatch(b -> b.getStatus() == VenueBookingStatus.attention)) {
+            venueDetail = "Venue suitability requires attention. Resolve the affected bookings with Venue Staff.";
         } else if (pending > 0) {
             venueDetail = plural(pending, "booking is", "bookings are") + " still waiting for Venue Staff.";
         } else {
@@ -433,7 +435,7 @@ public class EventLifecycleService {
             throw new EventLifecycleException("This event can no longer be cancelled (it is " + from.label() + ").");
         }
         List<VenueBookingRecord> released = bookings.findForEvent(eventId).stream()
-                .filter(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved)
+                .filter(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved || b.getStatus() == VenueBookingStatus.attention)
                 .toList();
         for (VenueBookingRecord booking : released) {
             holds.endForBooking(booking.getBookingId(), actorId);

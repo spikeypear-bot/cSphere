@@ -70,6 +70,8 @@ enum ActivityType {
 	{field} +venue_hold_created
 	{field} +venue_hold_expired
 	{field} +venue_hold_released
+	{field} +venue_requirements_reviewed
+	{field} +venue_suitability_changed
 	{field} +venue_unavailable
 }
 
@@ -133,11 +135,65 @@ class EventChange {
 }
 
 
+class BookingAssessmentController {
+	{method} +event ( id : UUID , jwt : Jwt ) : List
+	{method} +failure ( e : RuntimeException ) : ResponseEntity
+	{method} +restore ( id : UUID , jwt : Jwt , input : Reassessment ) : View
+	{method} +view ( id : UUID ) : View
+}
+
+
+class BookingAssessmentController.Reassessment {
+	{field} -assessmentId : UUID
+	{field} -note : String
+}
+
+
+class BookingAssessmentService {
+	{field} -jdbc : JdbcTemplate
+	{field} -publisher : ApplicationEventPublisher
+	{method} +forCoordinator ( eventId : UUID , actor : UUID ) : List
+	{method} +lockVenueEvents ( venueId : UUID ) : Set
+	{method} +requirementsChanged ( event : Event , actor : UUID ) : void
+	{method} +restore ( bookingId : UUID , actor : UUID , expectedAssessmentId : UUID , note : String ) : View
+	{method} +venueChanged ( venueId : UUID , actor : UUID , layoutChanged : boolean , previousVenue : String , lockedEvents : Set ) : void
+	{method} +venueSnapshot ( venueId : UUID ) : String
+	{method} +view ( bookingId : UUID ) : View
+}
+
+
+class BookingAssessmentService.History {
+	{field} -actorName : String
+	{field} -assessmentId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -outcome : String
+	{field} -reason : String
+	{field} -source : String
+}
+
+
+class BookingAssessmentService.View {
+	{field} -bookingId : UUID
+	{field} -canReassess : boolean
+	{field} -status : String
+}
+
+
 class ChangeImpactService {
 	{field} {static} ~ATTENTION : String
 	{field} {static} ~OK : String
 	{field} {static} -SINGAPORE : DateTimeFormatter
 	{method} +assess ( event : Event , proposed : SaveEventRequestRequest , changedFields : Set ) : List
+	{method} +assessBooking ( event : Event , booking : VenueBookingRecord ) : List
+	{method} +bookingSummary ( event : Event , booking : VenueBookingRecord , assessed : List ) : BookingSummary
+}
+
+
+class ChangeImpactService.BookingSummary {
+	{field} -occupiedEnd : OffsetDateTime
+	{field} -occupiedStart : OffsetDateTime
+	{field} -supportedLayouts : List<String>
+	{field} -venueRequirements : String
 }
 
 
@@ -164,6 +220,7 @@ class ChangeRequestController {
 	{method} +impactChanged ( ex : ImpactChanged ) : ResponseEntity
 	{method} +list ( jwt : Jwt , requestId : UUID , eventId : UUID ) : List
 	{method} +notFound ( ex : NotFound ) : ResponseEntity
+	{method} +persistenceFailure ( ex : RuntimeException ) : ResponseEntity
 	{method} +reject ( jwt : Jwt , id : UUID , body : Reject ) : View
 	{method} +state ( ex : State ) : ResponseEntity
 	{method} +withdraw ( jwt : Jwt , id : UUID ) : View
@@ -282,6 +339,81 @@ enum ChangeRequestStatus {
 	{field} +pending
 	{field} +rejected
 	{field} +withdrawn
+}
+
+
+class VenueRequirementChangeService {
+	{field} {static} -FIELDS : Set<String>
+	{method} +approved ( change : ChangeRequest , event : Event , oldStart : OffsetDateTime , oldEnd : OffsetDateTime ) : void
+}
+
+
+class VenueRequirementReview <<Entity>>  {
+	{field} +approvedAt : OffsetDateTime
+	{field} +approvedBy : UUID
+	{field} +bookingId : UUID
+	{field} +changeRequestId : UUID
+	{field} +coordinatorEmail : String
+	{field} +coordinatorId : UUID
+	{field} +coordinatorName : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +newRequirements : Map<String, Object>
+	{field} +previousRequirements : Map<String, Object>
+	{field} +reservedEnd : OffsetDateTime
+	{field} +reservedStart : OffsetDateTime
+	{field} +reviewId : UUID {id}
+	{field} +reviewNote : String
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +reviewedChecks : List<Map<String, String>>
+	{field} +reviewerName : String
+	{field} +setupDurationMinutes : int
+	{field} +status : String
+	{field} +turnaroundDurationMinutes : int
+	{field} +venueAddress : String
+	{field} +venueId : UUID
+}
+
+
+class VenueRequirementReviewController {
+	{method} +booking ( bookingId : UUID ) : List
+	{method} +decide ( bookingId : UUID , reviewId : UUID , jwt : Jwt , decision : Decision ) : View
+	{method} +event ( eventId : UUID , jwt : Jwt ) : List
+	{method} +failure ( ex : RuntimeException ) : ResponseEntity
+}
+
+
+interface VenueRequirementReviewRepository {
+	{method}  {abstract} +existsByChangeRequestIdAndBookingId ( changeRequestId : UUID , bookingId : UUID ) : boolean
+	{method}  {abstract} +findByBookingIdOrderByApprovedAtDescReviewIdAsc ( bookingId : UUID ) : List
+	{method}  {abstract} +findByEventIdOrderByApprovedAtDescReviewIdAsc ( eventId : UUID ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class VenueRequirementReviewService {
+	{field} -jdbc : JdbcTemplate
+	{method} +decide ( bookingId : UUID , reviewId : UUID , actor : UUID , decision : Decision ) : View
+	{method} +forBooking ( bookingId : UUID ) : List
+	{method} +forCoordinator ( eventId : UUID , actor : UUID ) : List
+}
+
+
+class VenueRequirementReviewService.Decision {
+	{field} -note : String
+	{field} -outcome : String
+}
+
+
+class VenueRequirementReviewService.View {
+	{field} -bookingStatus : String
+	{field} -canReview : boolean
+	{field} -outcomeCurrent : boolean
+	{field} -reservedEnd : OffsetDateTime
+	{field} -reservedStart : OffsetDateTime
+	{field} -setupDurationMinutes : int
+	{field} -turnaroundDurationMinutes : int
 }
 
 
@@ -886,6 +1018,8 @@ class OrganiserArrangementsDto.Venue {
 	{field} -name : String
 	{field} -noLongerAvailable : boolean
 	{field} -operatingInformation : String
+	{field} -requiresAttention : boolean
+	{field} -suitabilityIssues : List<String>
 	{field} -venueId : UUID
 }
 
@@ -1370,6 +1504,7 @@ class Notification <<Entity>>  {
 	{field} +readAt : OffsetDateTime
 	{field} +reason : String
 	{field} +recipientUserId : UUID
+	{field} +requirementReviewId : UUID
 	{field} +venueBookingId : UUID
 }
 
@@ -1393,10 +1528,14 @@ enum NotificationType {
 	{field} +event_safety_approved
 	{field} +request_cancelled
 	{field} +status_change
+	{field} +venue_arrangements_changed
 	{field} +venue_booking_cancelled
 	{field} +venue_booking_requested
 	{field} +venue_hold_expired
 	{field} +venue_hold_expiring
+	{field} +venue_requirement_changed
+	{field} +venue_requirement_reviewed
+	{field} +venue_suitability_changed
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -1434,6 +1573,8 @@ class NotificationService {
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
 	{method} +createVenueBookingCancelledNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createVenueBookingRequestedNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String ) : void
+	{method} +createVenueRequirementChangedNotifications ( recipients : List , review : VenueRequirementReview , changes : String ) : void
+	{method} +createVenueRequirementReviewedNotification ( coordinator : UUID , review : VenueRequirementReview , message : String ) : void
 	{method} +list ( recipientUserId : UUID ) : List
 	{method} +markRead ( recipientUserId : UUID , notificationId : UUID ) : NotificationDto
 	{method} +unreadCount ( recipientUserId : UUID ) : long
@@ -1761,7 +1902,7 @@ class VenueOperatingHour <<Entity>>  {
 }
 
 
-interface VenueMapper {
+abstract class VenueMapper {
 	{method}  {abstract} +toDto ( entity : Venue ) : VenueDto
 }
 
@@ -1783,6 +1924,17 @@ class InvalidVenueException {
 
 
 class InvalidVenueSearchException {
+}
+
+
+class VenueHoursService {
+	{method} +forVenue ( id : UUID ) : Schedule
+	{method}  {static} +summary ( hours : List ) : String
+}
+
+
+class VenueHoursService.Schedule {
+	{field} -summary : String
 }
 
 
@@ -2002,6 +2154,7 @@ class EventVenueBookingDto {
 	{field} -bookingId : UUID
 	{field} -bookingNotes : String
 	{field} -endDatetime : OffsetDateTime
+	{field} -operatingInformation : String
 	{field} -rejectReason : String
 	{field} -replacesBookingId : UUID
 	{field} -requiresAlternative : boolean
@@ -2169,6 +2322,7 @@ class VenueBookingRecord <<Entity>>  {
 
 enum VenueBookingStatus {
 	{field} +approved
+	{field} +attention
 	{field} +cancelled
 	{field} +changed
 	{field} +pending
@@ -2273,6 +2427,7 @@ interface VenueBookingRecordRepository {
 	{method}  {abstract} +findApprovalConflicts ( venueId : UUID , bookingId : UUID , status : VenueBookingStatus , start : OffsetDateTime , end : OffsetDateTime ) : List
 	{method}  {abstract} +findApprovedForCoordinator ( coordinatorId : UUID , status : VenueBookingStatus ) : List
 	{method} +findApprovedOverlapping ( eventId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method}  {abstract} +findByVenueId ( venueId : UUID ) : List
 	{method}  {abstract} +findEventId ( id : UUID ) : Optional
 	{method}  {abstract} +findFirstByEventIdAndStatusIn ( eventId : UUID , statuses : Collection ) : Optional
 	{method}  {abstract} +findForEvent ( eventId : UUID ) : List
@@ -2450,6 +2605,15 @@ ActivityService.Entry --> ActivityType : type
 ChangeLogRecorder --> ActivityService : activity
 ChangeLogRecorder --> EventRequestRepository : eventRequests
 EventChange --> ActivityType : type
+BookingAssessmentController --> BookingAssessmentService : service
+BookingAssessmentService --> ChangeImpactService : impact
+BookingAssessmentService --> EventRepository : events
+BookingAssessmentService --> EventLifecycleService : lifecycle
+BookingAssessmentService --> UserRepository : users
+BookingAssessmentService --> VenueRepository : venues
+BookingAssessmentService --> VenueBookingRecordRepository : bookings
+BookingAssessmentService.View --> "0..*" BookingAssessmentService.History : history
+BookingAssessmentService.View --> "0..*" ChangeRequestDto.ImpactItem : checks
 ChangeImpactService --> "0..*" EventStatus : SAFETY_STAGES
 ChangeImpactService --> "0..*" VenueBookingStatus : ACTIVE_BOOKINGS
 ChangeImpactService --> EquipmentReservationService : equipment
@@ -2457,6 +2621,7 @@ ChangeImpactService --> VenueRepository : venues
 ChangeImpactService --> AvailabilityService : availability
 ChangeImpactService --> VenueHoldRepository : holds
 ChangeImpactService --> VenueBookingRecordRepository : bookings
+ChangeImpactService.BookingSummary --> "0..*" ChangeRequestDto.ImpactItem : checks
 ChangeRequest --> ChangeRequestStatus : status
 ChangeRequestController --> ChangeRequestService : service
 ChangeRequestController.ImpactChangedError --> "0..*" ChangeRequestDto.ImpactItem : impact
@@ -2471,6 +2636,7 @@ ChangeRequestService --> "0..*" EventStatus : SAFETY_STAGES
 ChangeRequestService --> ActivityService : activity
 ChangeRequestService --> ChangeImpactService : impact
 ChangeRequestService --> ChangeRequestRepository : changeRequests
+ChangeRequestService --> VenueRequirementChangeService : venueRequirements
 ChangeRequestService --> EventRepository : events
 ChangeRequestService --> EventLifecycleService : lifecycle
 ChangeRequestService --> EventRequestRepository : requests
@@ -2478,6 +2644,26 @@ ChangeRequestService --> EventRequestService : requestRules
 ChangeRequestService --> NotificationService : notifications
 ChangeRequestService --> UserRepository : users
 ChangeRequestService.Caller --> UserRole : role
+VenueRequirementChangeService --> VenueRequirementReviewRepository : reviews
+VenueRequirementChangeService --> NotificationService : notifications
+VenueRequirementChangeService --> UserRepository : users
+VenueRequirementChangeService --> VenueRepository : venues
+VenueRequirementChangeService --> VenueBookingRecordRepository : bookings
+VenueRequirementChangeService --> BookingAssessmentService : assessments
+VenueRequirementReviewController --> VenueRequirementReviewService : service
+VenueRequirementReviewService --> ActivityService : activity
+VenueRequirementReviewService --> ChangeImpactService : impact
+VenueRequirementReviewService --> VenueRequirementReviewRepository : reviews
+VenueRequirementReviewService --> EventRepository : events
+VenueRequirementReviewService --> EventRequestRepository : requests
+VenueRequirementReviewService --> NotificationService : notifications
+VenueRequirementReviewService --> UserRepository : users
+VenueRequirementReviewService --> VenueRepository : venues
+VenueRequirementReviewService --> VenueBookingRecordRepository : bookings
+VenueRequirementReviewService.View --> "0..*" ChangeRequestDto.FieldChange : changes
+VenueRequirementReviewService.View --> "0..*" ChangeRequestDto.ImpactItem : checks
+VenueRequirementReviewService.View --> ChangeImpactService.BookingSummary : suitability
+VenueRequirementReviewService.View --> VenueRequirementReview : review
 JourneyStatusResolver --> EventRepository : events
 AddStatusPeriodRequest --> EquipmentStatus : status
 EquipmentCatalogueController --> EquipmentRepository : equipmentRepository
@@ -2533,6 +2719,7 @@ EventReassignmentRequestDto --> EventReassignmentStatus : status
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Equipment : equipment
 OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Venue : venues
 OrganiserArrangementsDto --> StatusView : journeyStatus
+OrganiserArrangementsDto.Venue --> "0..*" VenueOperatingHourDto : operatingHours
 Event --> EventStatus : status
 EventCancellationRequest --> EventCancellationStatus : status
 EventReassignmentRequest --> EventReassignmentStatus : status
@@ -2544,6 +2731,8 @@ EventArrangementsService --> UserRepository : users
 EventArrangementsService --> VenueRepository : venues
 EventArrangementsService --> AvailabilityService : availability
 EventArrangementsService --> VenueBookingRecordRepository : bookings
+EventArrangementsService --> ChangeImpactService : impact
+EventArrangementsService --> VenueHoursService : venueHours
 EventCancellationService --> "0..*" JourneyStatus : CANCELLABLE
 EventCancellationService --> ActivityService : activity
 EventCancellationService --> JourneyStatusResolver : statuses
@@ -2642,12 +2831,16 @@ VenueDto --> "0..*" AccessibilityFeature : venueAccessibilities
 VenueDto --> "0..*" Facility : venueFacilities
 VenueDto --> "0..*" VenueOperatingHourDto : operatingHours
 VenueDto --> "0..*" VenueLayout : supportedLayouts
+VenueMapper --> VenueHoursService : hours
+VenueHoursService --> VenueOperatingHourRepository : repository
+VenueHoursService.Schedule --> "0..*" VenueOperatingHourDto : hours
 VenueSearchService --> VenueMapper : mapper
 VenueSearchService --> VenueRepository : venues
 VenueSearchService --> AvailabilityService : availability
 VenueService --> VenueMapper : mapper
 VenueService --> VenueOperatingHourRepository : hours
 VenueService --> VenueRepository : repository
+VenueService --> BookingAssessmentService : assessments
 AvailabilityController --> AvailabilityService : service
 AvailabilityModels.Preview --> "0..*" AvailabilityModels.Booking : affectedBookings
 AvailabilityModels.Schedule --> "0..*" AvailabilityModels.Booking : bookings
@@ -2668,6 +2861,7 @@ TimingConflictService.Overlap --> AvailabilityModels.Booking : second
 EventVenueBookingController --> VenueBookingRequestService : service
 VenueBookingController --> VenueBookingService : service
 BookingTimingDto --> "0..*" VenueBookingConflictDto : conflicts
+EventVenueBookingDto --> "0..*" VenueOperatingHourDto : operatingHours
 EventVenueBookingDto --> "0..*" VenueHold : holds
 EventVenueBookingDto --> BookingTimingDto : timing
 EventVenueBookingDto --> VenueBookingStatus : status
@@ -2726,6 +2920,7 @@ VenueBookingService --> AvailabilityService : availability
 VenueBookingService --> TimingConflictService : timingConflicts
 VenueBookingService --> VenueBookingRecordRepository : records
 VenueBookingService --> VenueBookingRepository : bookings
+VenueBookingService --> ChangeImpactService : impact
 VenueBookingService --> VenueHoldRepository : holds
 VenueBookingService --> VenueHoldService : holdService
 CoordinatorVenueOperationalIssueController --> VenueOperationalIssueService : service

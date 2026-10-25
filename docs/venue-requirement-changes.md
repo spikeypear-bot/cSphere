@@ -178,3 +178,72 @@ as unavailable rather than interpreted as successful checks. The New requirement
 column remains bold.
 
 Summary verification: 26 backend tests (including 3 focused summary tests), 58 frontend tests, production frontend build, lint and traceability passed. Tests ran against an isolated disposable PostgreSQL database.
+
+
+## Live venue suitability and invalidated approvals (25 October 2026)
+
+User-authorised VS17/VS07 extension: relevant catalogue edits and approved venue-related
+event changes reassess each active booking against current approved requirements.
+Pending event proposals only show their existing live approval impact; they do not invalidate
+bookings until approved. Capacity, facilities, accessibility, occupied opening hours and
+existing availability checks are reused. Changed supported layouts require staff judgement
+when written venue requirements exist. Suitable bookings keep their state.
+
+V36 adds booking `attention` (Requires attention) and two role-specific notification types.
+Affected previously approved bookings move to attention, retaining their saved start/end,
+setup/turnaround and reservation. Attention is included in availability, schedule, active
+booking limits, cancellation, replacement and requirement-change processing. It does not
+count as an approved arrangement for safety readiness. `EventLifecycleService` returns
+future safety-stage or confirmed events to Planning and clears safety approval; restoring
+a booking does not automatically reconfirm the event. Terminal events are not invalidated.
+
+V37/V38 add append-only booking assessment history, including catalogue values before/after
+an edit (including structured hours), approved requirement snapshots, actor, reason and time.
+Existing approved-change snapshots and completed requirement-review outcomes stay immutable.
+Review responses identify whether a saved decision still describes the current arrangement;
+outdated decisions are displayed as previous decisions instead of a current successful review.
+No synthetic event change request is created for a catalogue edit.
+
+Venue edits lock affected events in sorted order before the venue. If a new event booking
+arrives between discovery and locking, saving fails with a retryable conflict rather than
+taking an event lock under a venue lock. Assessment changes, audit, catalogue edits and the
+new notifications commit atomically. Repeated identical failing assessments are deduplicated
+using their reason and catalogue snapshot. EC alerts go to the current assignee; EO alerts
+are limited to the event's organisation after its first confirmation. Original notification
+read markers and VS17 review/recipient uniqueness constraints remain unchanged.
+
+New endpoints:
+- GET `/api/venue-bookings/{id}/assessment`: Venue Staff, current checks and history.
+- POST `/api/venue-bookings/{id}/reassess`: Venue Staff, `{assessmentId,note}`; restores an
+  attention booking only after current checks pass and a nonblank comment (max 2000) is recorded.
+  Stale assessments and outstanding replacement requests are refused. Reservations do not move.
+- GET `/api/events/{id}/venue-assessments`: current assigned coordinator only.
+
+Existing role-wide Venue Staff access is retained; no per-venue ownership model is introduced.
+EC comparison/search, event status/booking panels, staff assessment cards and EO arrangements
+refresh automatically every five seconds and on window focus. Review cards use their existing
+15-second refresh. Inputs survive refresh; assessment revision checks prevent stale decisions.
+EO confirmed/reconfirming arrangements show current venue facts and suitability issues,
+without exposing staff reassessment comments, internal holds or saved reservation buffers.
+
+Manual verification: open the same confirmed event in EC and EO sessions, and its booking in
+a VS session. Reduce venue capacity below approved attendance. Without reloading, expect red
+Requires attention booking tags, Planning event status, EO arrangements-being-updated warning
+and the capacity issue. The period stays reserved. Restore capacity: checks pass but approval
+stays attention until staff record reassessment. The event still needs its normal safety and
+confirmation steps. Repeating an unchanged edit must not generate another alert.
+
+
+Final integrated verification (25 October 2026): the subsequent operating-hours
+fixture updates were completed in this chat at the user's request. The full
+frontend suite passed 675 tests, the full backend suite passed 1,374 tests, and
+all eight browser journeys passed without skips or file exclusions. This
+supersedes the earlier partial checks and ownership note about the other chat.
+See [the staff audit](venue-staff-presentation-audit.md) for workflow/test mapping
+and the follow-up verification of editing hours through every staff entry point.
+
+## Empty review sections (25 October 2026)
+The shared Venue Requirement Reviews section is hidden after a successful empty
+response, including its heading and former no-reviews message. This applies to
+staff booking details and coordinator views. Loading and failed-read/retry states
+remain visible; existing pending and completed reviews remain displayed.

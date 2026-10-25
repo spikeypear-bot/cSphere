@@ -16,5 +16,7 @@ export interface VenueRequirementReviewView {
     venueRequirements: string | null; supportedLayouts: string[]
     occupiedStart: string; occupiedEnd: string
   }
+  outcomeCurrent?: boolean
+  bookingStatus?: string
   canReview: boolean
 }

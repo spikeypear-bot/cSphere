@@ -1,4 +1,4 @@
-.booking-details-page { max-width: none; }
+.booking-details-page { max-width: none; overflow-anchor: none; }
 .booking-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
 .booking-detail-layout > * { min-width: 0; min-height: 0; overflow-wrap: anywhere; }
 .booking-details-page .event-requirements-panel h3 { margin: 0.75rem 0 0; }
@@ -71,7 +71,7 @@
 .booking-details-page__section-header .button { flex-shrink: 0; }
 
 .booking-information-heading { display: flex; flex-direction: column; align-items: flex-start; gap: 0.5rem; }
-.booking-status-tag { text-transform: capitalize; }
+.booking-status-tag { text-transform: none; }
 
 .booking-approval__confirmation textarea { display: block; margin: 0.5rem 0 1rem; resize: vertical; }
 
@@ -98,7 +98,10 @@
 .venue-hold-panel__actions { margin-top: 1rem; }
 .venue-hold-panel__form .venue-hold-panel__actions { margin-top: 0; }
 .venue-hold-panel__history { display: grid; gap: 1rem; list-style: none; padding: 0; margin: 1.25rem 0 0; }
-.venue-hold-panel__history > li { border-top: 1px solid var(--hairline); padding-top: 1rem; }
+.venue-hold-panel__history > li { min-width: 0; }
+.venue-hold-panel__history-card { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 1rem; }
+.venue-hold-panel__history-card > .booking-status-tag { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; }
+.venue-hold-panel__history-card .venue-hold-panel__history-information { grid-column: 1; grid-row: 1; margin: 0; min-width: 0; grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); }
 .venue-hold-panel__summary { display: grid; gap: .75rem 1.5rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); margin: .75rem 0 0; }
 .venue-hold-panel__summary dd { margin: .25rem 0 0; }
 .venue-hold-panel .notice { margin-top: 1rem; }
@@ -118,3 +121,32 @@
 }
 
 .booking-approval > .booking-details-page__section-header:not(:first-child) { margin-top: 1.25rem; }
+
+/* Venue sections reuse the booking detail cards, fields and action spacing. */
+.venue-details-page > section { min-width: 0; }
+.venue-details-page > section > h2 { margin: 0 0 1rem; }
+.venue-timing-conflicts .feature-skeleton__body > h2 { margin-top: 0; }
+.venue-operational-issues__form { padding: clamp(1.25rem, 4vw, 2rem); gap: 1.25rem; }
+.venue-operational-issues__form h3 { font-size: 1rem; }
+.venue-operational-issues__period { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+.venue-operational-issues__form input { font: inherit; box-sizing: border-box; }
+.venue-details-page details.venue-unavailability { margin: 0; border: 1px solid var(--hairline); border-radius: var(--radius-lg); padding: 1.5rem; background: var(--panel); }
+.venue-details-page details.venue-unavailability summary { font-weight: 600; cursor: pointer; }
+@media (max-width: 640px) { .venue-operational-issues__period { grid-template-columns: minmax(0, 1fr); } }
+
+/* Staff sections share the Venue Information heading and existing paper fields. */
+.venue-details-page > section > h2,
+.venue-timing-conflicts h2,
+.venue-hold-panel > h2 {
+  font-family: var(--sans);
+  font-size: var(--section-heading-size);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+.booking-details-page > .venue-assessment { margin-block: 0; }
+.venue-assessment > h2 { margin-top: 0; }
+.venue-assessment > .venue-card-preview__id { margin-bottom: .75rem; }
+.venue-assessment details ul { padding-left: 1.25rem; }
+.venue-assessment details p { white-space: pre-wrap; }

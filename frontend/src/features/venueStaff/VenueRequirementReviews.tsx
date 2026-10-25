@@ -26,19 +26,25 @@ export function VenueRequirementReviews({ bookingId, eventId }: { bookingId?: st
   const staff = !!bookingId
   const path = staff ? `/venue-bookings/${bookingId}/requirement-reviews` : `/events/${eventId}/venue-reviews`
   const { data, loading, error, retry, replaceData } = useVenueRead<VenueRequirementReviewView[]>(path, false, 15000, true)
+  const valid = (loading && data == null) || (Array.isArray(data) && data.every(view => view?.review && typeof view.review.reviewId === 'string' && Array.isArray(view.changes) && Array.isArray(view.checks)))
+  const reviews = valid ? data : null
+  const loadError = error ?? (valid ? null : 'Please try again.')
+  if (!loading && !loadError && reviews?.length === 0) return null
   return <section className="venue-reviews" aria-label="Venue requirement reviews" aria-busy={loading}>
     <h2>Venue Requirement Reviews</h2>
     {loading && <p role="status">Loading requirement reviews…</p>}
-    {error && <div role="alert"><p>Could not load requirement reviews. {error}</p><Button onClick={retry}>Retry requirement reviews</Button></div>}
-    {data?.length === 0 && <p>No approved requirement changes need review for {staff ? 'this booking' : 'this event'}.</p>}
-    {data?.map(view => <Review key={`${path}:${view.review.reviewId}`} view={view} staff={staff} disabled={!!error || loading}
-      onRefresh={retry} onSaved={saved => replaceData(data.map(v => v.review.reviewId === saved.review.reviewId ? saved : v))} />)}
+    {loadError && <div role="alert"><p>Could not load requirement reviews. {loadError}</p><Button onClick={retry}>Retry requirement reviews</Button></div>}
+    {reviews?.map(view => <Review key={`${path}:${view.review.reviewId}`} view={view} staff={staff} disabled={!!loadError || loading}
+      onRefresh={retry} onSaved={saved => replaceData(reviews.map(v => v.review.reviewId === saved.review.reviewId ? saved : v))} />)}
   </section>
 }
 
 function Review({ view, staff, disabled, onSaved, onRefresh }: { view: VenueRequirementReviewView; staff: boolean; disabled: boolean;
   onSaved: (view: VenueRequirementReviewView) => void; onRefresh: () => void }) {
   const { review } = view
+  const invalidated = view.bookingStatus === 'attention'
+  const historical = view.outcomeCurrent === false
+  const displayedOutcome = invalidated ? 'Requires attention' : historical && review.status !== 'pending' ? 'Previous review' : OUTCOME[review.status]
   const reservationChanged = Date.parse(view.reservedStart) !== Date.parse(review.reservedStart)
     || Date.parse(view.reservedEnd) !== Date.parse(review.reservedEnd)
   const durationsChanged = view.setupDurationMinutes !== review.setupDurationMinutes
@@ -65,12 +71,11 @@ function Review({ view, staff, disabled, onSaved, onRefresh }: { view: VenueRequ
     <div className="venue-card-preview__header venue-reviews__header">
       <div className="venue-reviews__metadata">
         <p className="venue-card-preview__id" aria-label="Booking ID">Booking ID: {review.bookingId}</p>
-        <p className="venue-card-preview__id">Change approved {formatEventDateTime(review.approvedAt)}</p>
-        <p className="venue-card-preview__id">Coordinator at approval: {review.coordinatorName ?? 'Unassigned'}{review.coordinatorEmail ? ` (${review.coordinatorEmail})` : ''}</p>
+        <p className="venue-card-preview__id">Change approved {formatEventDateTime(review.approvedAt)} | Coordinator at approval: {review.coordinatorName ?? 'Unassigned'}{review.coordinatorEmail ? ` (${review.coordinatorEmail})` : ''}</p>
       </div>
-      <span className="venue-card-preview__tag" data-review-status={review.status}>{OUTCOME[review.status]}</span>
+      <span className="venue-card-preview__tag" data-review-status={invalidated ? 'action_required' : review.status}>{displayedOutcome}</span>
     </div>
-    <h3 className="venue-card-preview__title venue-reviews__title" aria-label={`${review.venueAddress} — ${OUTCOME[review.status]}`}>{review.venueAddress}</h3>
+    <h3 className="venue-card-preview__title venue-reviews__title" aria-label={`${review.venueAddress} — ${displayedOutcome}`}>{review.venueAddress}</h3>
     <div className="venue-reviews__table"><h3 id={`requirement-changes-${review.reviewId}`}>Approved Requirement Changes</h3><table aria-labelledby={`requirement-changes-${review.reviewId}`}>
       <thead><tr><th scope="col">Requirement</th><th scope="col">Previous</th><th scope="col" className="venue-reviews__new">New</th></tr></thead>
       <tbody>{view.changes.map(c => <tr key={c.field}><th scope="row">{c.label}</th><td>{show(c.field,c.before)}</td><td className="venue-reviews__new"><strong>{show(c.field,c.after)}</strong>
@@ -89,7 +94,7 @@ function Review({ view, staff, disabled, onSaved, onRefresh }: { view: VenueRequ
       {durationsChanged && <div><dt>Setup / Turnaround at approval</dt><dd>{review.setupDurationMinutes} / {review.turnaroundDurationMinutes} minutes</dd></div>}
     </dl>
     <SuitabilitySummary view={view} />
-    {review.status !== 'pending' && <div className="venue-reviews__outcome" role="status"><p><strong>Reviewed by {review.reviewerName}</strong>, {review.reviewedAt ? formatEventDateTime(review.reviewedAt) : ''}.</p>
+    {review.status !== 'pending' && <div className="venue-reviews__outcome" role="status"><p>{(invalidated || historical) && <span>Previous decision: {OUTCOME[review.status]}. </span>}<strong>Reviewed by {review.reviewerName}</strong>, {review.reviewedAt ? formatEventDateTime(review.reviewedAt) : ''}.</p>
       {review.reviewNote && <p>{review.reviewNote}</p>}
     </div>}
     {staff && view.canReview && <form onSubmit={e => { void save(e) }}>
@@ -99,11 +104,11 @@ function Review({ view, staff, disabled, onSaved, onRefresh }: { view: VenueRequ
         </select></label>
         <label>Review comment{outcome === 'action_required' ? ' (required)' : ' (optional)'}<textarea value={note} onChange={e => setNote(e.target.value)} maxLength={2000} rows={3} /></label>
         {view.checks.some(c => c.status === 'attention') && <p>Current checks require attention. Record coordinator action required, or refresh after arrangements are resolved.</p>}
-        <p>Recording a review leaves booking status, reserved times and reservations unchanged. The assigned coordinator will be notified.</p>
+        <p>Your review will be sent to the assigned coordinator.</p>
         <Button type="submit" disabled={saving}>{saving ? 'Saving review…' : 'Save review'}</Button>
       </fieldset>
     </form>}
-    {staff && review.status === 'pending' && !view.canReview && <p>This booking is no longer active. Its review history is retained.</p>}
+    {staff && review.status === 'pending' && !view.canReview && <p>{invalidated ? 'Resolve the booking suitability issues before recording this review. Its history is retained.' : 'This booking is no longer active. Its review history is retained.'}</p>}
     {error && <p role="alert">{error}</p>}
   </Card>
 }

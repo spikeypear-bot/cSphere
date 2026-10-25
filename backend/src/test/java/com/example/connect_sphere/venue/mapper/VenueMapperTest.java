@@ -17,6 +17,7 @@ import com.example.connect_sphere.venue.entity.VenueLayout;
 
 @Tag("unit")
 @Tag("VS07")
+@Tag("VS17")
 class VenueMapperTest {
     private final VenueMapper mapper = Mappers.getMapper(VenueMapper.class);
 
@@ -54,7 +55,8 @@ class VenueMapperTest {
         assertEquals(venue.getVenueAddress(), dto.venueAddress());
         assertEquals(50000, dto.venueCapacity());
         assertEquals(List.of(VenueLayout.theatre, VenueLayout.classroom), dto.supportedLayouts());
-        assertEquals(venue.getOperatingInformation(), dto.operatingInformation());
+        assertEquals("Operating hours not configured", dto.operatingInformation());
+        assertEquals(List.of(), dto.operatingHours());
         assertNull(dto.additionalInformation());
         assertEquals(List.of(AccessibilityFeature.step_free_access, AccessibilityFeature.elevators), dto.venueAccessibilities());
         assertEquals(List.of(Facility.projection, Facility.stage), dto.venueFacilities());

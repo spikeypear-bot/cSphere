@@ -8,7 +8,7 @@ import { formatEventDateTime } from './formatEventDateTime'
 const MAX_DESCRIPTION_LENGTH = 2000
 
 function toApiDateTime(value: string): string | null {
-  return value ? new Date(value).toISOString() : null
+  return value ? new Date(`${value}+08:00`).toISOString() : null
 }
 
 function periodLabel(issue: VenueOperationalIssueDto): string {
@@ -95,31 +95,40 @@ export function VenueOperationalIssuesPanel({ venueId, venueAddress }: {
   }
 
   return (
-    <section aria-labelledby="operational-issues-heading">
-      <div className="venue-details-page__section-header">
+    <section className="venue-operational-issues" aria-labelledby="operational-issues-heading">
+      <div className="booking-details-page__section-header">
         <h2 id="operational-issues-heading">Operational issues</h2>
         <Button variant="ghost" onClick={() => void loadIssues()} disabled={saving}>Refresh issues</Button>
       </div>
-      <Card className="venue-operational-issues__form">
+      <Card className="feature-skeleton__body venue-operational-issues__form">
         <h3>Report operational issue</h3>
+        <div className="field">
         <label htmlFor="operational-issue-description">Issue description</label>
         <textarea id="operational-issue-description" rows={3} value={description}
           maxLength={MAX_DESCRIPTION_LENGTH} onChange={event => setDescription(event.target.value)}
           placeholder="Describe the problem affecting this venue." />
         <span className="field-hint">{description.trim().length}/{MAX_DESCRIPTION_LENGTH}</span>
+        </div>
+        <p className="field-hint">Affected times are in Singapore time.</p>
         <div className="venue-operational-issues__period">
+          <div className="field">
           <label htmlFor="operational-issue-from">Affected from (optional)</label>
           <input id="operational-issue-from" type="datetime-local" value={affectedFrom}
             onChange={event => setAffectedFrom(event.target.value)} />
+          </div>
+          <div className="field">
           <label htmlFor="operational-issue-until">Affected until (optional)</label>
           <input id="operational-issue-until" type="datetime-local" value={affectedUntil}
             onChange={event => setAffectedUntil(event.target.value)} />
+          </div>
         </div>
         {error ? <p className="field-error" role="alert">{error}</p> : null}
         {success ? <p role="status">Operational issue reported successfully.</p> : null}
+        <div className="booking-approval__actions">
         <Button onClick={() => void submit()} disabled={saving}>
           {saving ? 'Saving…' : 'Report issue'}
         </Button>
+        </div>
       </Card>
       {issues === null && !error ? <p role="status">Loading operational issues…</p> : null}
       {issues && issues.length === 0 ? <p>No operational issues reported.</p> : null}
@@ -127,7 +136,7 @@ export function VenueOperationalIssuesPanel({ venueId, venueAddress }: {
         <ul className="venue-operational-issues__list">
           {issues.map(issue => (
             <li key={issue.issueId}>
-              <Card>
+              <Card className="feature-skeleton__body">
                 <p><strong>Venue:</strong> {venueAddress}</p>
                 <p>{issue.description}</p>
                 <p><strong>Affected period:</strong> {periodLabel(issue)}</p>

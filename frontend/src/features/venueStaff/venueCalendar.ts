@@ -2,7 +2,7 @@ import { BOOKING_STATUS_LABELS, type VenueBookingDisplayStatus } from '../../typ
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 
 export function approvedOverlaps(schedule: VenueSchedule) {
-  const bookings = schedule.bookings.filter(b => b.status === 'approved')
+  const bookings = schedule.bookings.filter(b => b.status === 'approved' || b.status === 'attention')
   return bookings.flatMap((first, index) => bookings.slice(index + 1)
     .filter(second => Date.parse(first.effectiveStart) < Date.parse(second.effectiveEnd)
       && Date.parse(first.effectiveEnd) > Date.parse(second.effectiveStart))
@@ -12,7 +12,7 @@ export function approvedOverlaps(schedule: VenueSchedule) {
 export interface CalendarEntry {
   id: string
   entryId: string
-  type: Extract<VenueBookingDisplayStatus, 'approved' | 'tentative' | 'pending'> | 'unavailable'
+  type: Extract<VenueBookingDisplayStatus, 'approved' | 'attention' | 'tentative' | 'pending'> | 'unavailable'
   phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable' | 'Reserved period'
   title: string
   start: string
@@ -21,7 +21,7 @@ export interface CalendarEntry {
   eventStart?: string
   eventEnd?: string
 }
-export const entryLabels = { approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable' }
+export const entryLabels = { attention: BOOKING_STATUS_LABELS.attention, approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable' }
 export function calendarEntries(schedule: VenueSchedule, expired = new Set<string>()): CalendarEntry[] {
   const entries: CalendarEntry[] = schedule.unavailablePeriods.map(p => ({
     id: `unavailable:${p.unavailabilityId}`, entryId: p.unavailabilityId, type: 'unavailable',
@@ -32,8 +32,8 @@ export function calendarEntries(schedule: VenueSchedule, expired = new Set<strin
     phase: 'Reserved period', title: h.eventName, start: h.reservedStart, end: h.reservedEnd, expiresAt: h.expiresAt })
   for (const b of schedule.bookings) {
     if (activeHolds.some(h => h.bookingId === b.bookingId)) continue
-    if (b.status !== 'approved' && b.status !== 'pending') continue
-    const base = { entryId: b.bookingId, type: b.status === 'approved' ? 'approved' as const : 'pending' as const,
+    if (b.status !== 'approved' && b.status !== 'attention' && b.status !== 'pending') continue
+    const base = { entryId: b.bookingId, type: b.status as 'approved' | 'attention' | 'pending',
       title: b.eventName, eventStart: b.startDateTime, eventEnd: b.endDateTime }
     for (const [phase, start, end] of [
       ['Setup', b.effectiveStart, b.startDateTime], ['Event', b.startDateTime, b.endDateTime],

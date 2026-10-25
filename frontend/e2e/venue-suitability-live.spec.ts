@@ -1,0 +1,46 @@
+// @stories VS17 VS07 EO04 EC08
+import { expect, test } from '@playwright/test'
+import { apiGet, apiToken, confirmedEventByApi, createVenue, signedIn, uniqueName } from './support.ts'
+
+test('VS17 (happy): venue edits update open staff, coordinator and organiser pages and require explicit recovery', async ({ browser, request }) => {
+  test.setTimeout(150_000)
+  const venueName = uniqueName('Live suitability hall')
+  const venueId = await createVenue(request, venueName)
+  const eventId = await confirmedEventByApi(request, uniqueName('Live suitability event'), venueId, '2027-11-20T09:00:00+08:00', '2027-11-20T12:00:00+08:00')
+  const vs = await apiToken(request, 'vs1')
+  const ec = await apiToken(request, 'ec1')
+  const bookings = await apiGet<{ bookingId: string }[]>(request, ec, `/api/events/${eventId}/venue-bookings`)
+  const bookingId = bookings[0].bookingId
+  const before = await apiGet<{ timing: unknown }>(request, vs, `/api/venue-bookings/${bookingId}`)
+  const staff = await signedIn(browser, 'vs1')
+  const coordinator = await signedIn(browser, 'ec1')
+  const organiser = await signedIn(browser, 'eo1')
+  await staff.goto(`/venue-staff/bookings/${bookingId}`)
+  await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
+  await organiser.goto(`/organiser/events/${eventId}`)
+  await expect(organiser.getByRole('heading', { name: 'Confirmed arrangements' })).toBeVisible()
+  const change = await request.put(`/api/venues/${venueId}`, { headers: { Authorization: `Bearer ${vs}` }, data: { venueCapacity: 100 } })
+  expect(change.ok(), await change.text()).toBeTruthy()
+  // No navigation or reload after the edit: all pages observe their live reads.
+  const staffAssessment = staff.getByRole('article', { name: 'Booking suitability assessment' })
+  const ecAssessment = coordinator.getByRole('article', { name: 'Booking suitability assessment' })
+  await expect(staffAssessment.getByText('Requires attention', { exact: true }).first()).toBeVisible({ timeout: 20_000 })
+  await expect(ecAssessment.getByRole('link', { name: 'Find replacement venue' })).toBeVisible({ timeout: 20_000 })
+  await expect(organiser.getByText('Arrangements are being updated.', { exact: true })).toBeVisible({ timeout: 20_000 })
+  await expect(organiser.getByText('Requires attention', { exact: true })).toBeVisible()
+  await expect(organiser.getByRole('region', { name: 'Venues' }).getByText('It holds 100; 120 are expected.', { exact: true })).toBeVisible()
+  await expect(staffAssessment.getByRole('button', { name: 'Restore approval' })).toBeDisabled()
+  const after = await apiGet<{ status: string; timing: unknown }>(request, vs, `/api/venue-bookings/${bookingId}`)
+  expect(after.status).toBe('attention'); expect(after.timing).toEqual(before.timing)
+  const fixed = await request.put(`/api/venues/${venueId}`, { headers: { Authorization: `Bearer ${vs}` }, data: { venueCapacity: 300 } })
+  expect(fixed.ok(), await fixed.text()).toBeTruthy()
+  await expect(staffAssessment.getByRole('button', { name: 'Restore approval' })).toBeEnabled({ timeout: 20_000 })
+  await staffAssessment.getByLabel('Reassessment comment').fill('Capacity restored; seating and written requirements checked.')
+  await staffAssessment.getByRole('button', { name: 'Restore approval' }).click()
+  await expect(staffAssessment.getByText('Approval restored', { exact: true }).first()).toBeVisible()
+  await expect(ecAssessment.getByText('Approval restored', { exact: true }).first()).toBeVisible({ timeout: 20_000 })
+  // Restoring this booking does not bypass the event safety and confirmation workflow.
+  await expect(organiser.getByText('Arrangements are being updated.', { exact: true })).toBeVisible()
+  await expect(organiser.getByText('Requires attention', { exact: true })).toHaveCount(0, { timeout: 20_000 })
+  await staff.context().close(); await coordinator.context().close(); await organiser.context().close()
+})

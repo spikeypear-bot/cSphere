@@ -1,3 +1,4 @@
+import { BOOKING_STATUS_LABELS } from '../../types/venueBookingStatus'
 import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
@@ -64,7 +65,7 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
       if (active.current) {
         onApproved(current)
         setNeedsRefresh(false)
-        setError(previous => previous?.replace(' Checking the latest booking status.', ' Latest booking status: ' + current.status + '.'))
+        setError(previous => previous?.replace(' Checking the latest booking status.', ' Latest booking status: ' + BOOKING_STATUS_LABELS[current.status] + '.'))
         return true
       }
     } catch (cause) {

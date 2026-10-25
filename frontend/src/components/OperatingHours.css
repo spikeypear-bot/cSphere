@@ -1,0 +1,7 @@
+.operating-hours { min-width: 0; font-size: inherit; line-height: 1.5; color: var(--ink-soft); }
+.operating-hours .operating-hours__rows { display: grid; gap: 0.3rem; list-style: none; padding: 0; margin: 0; }
+.operating-hours .operating-hours__row { display: grid; grid-template-columns: 6.5rem minmax(0, 1fr); align-items: baseline; gap: 0.65rem; border: 0; padding: 0; margin: 0; background: none; border-radius: 0; }
+.operating-hours__day { font-weight: 500; }
+.operating-hours__time { font-variant-numeric: tabular-nums; }
+.operating-hours__timezone { display: block; margin-top: 0.4rem; font-size: 0.75rem; color: var(--ink-faint); font-weight: 400; }
+.operating-hours__empty { color: var(--ink-faint); font-weight: 400; }

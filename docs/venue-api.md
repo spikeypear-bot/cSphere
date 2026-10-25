@@ -1,7 +1,8 @@
 # Venue catalogue API
 
 VS06A/VS06B catalogue creation and reads, plus VS07 updates to existing venues.
-No booking or approval workflow.
+Catalogue endpoints do not create booking requests or decide pending approvals.
+Suitability edits reassess existing bookings through the established review workflow.
 
 | Method | Path | Success |
 |---|---|---|
@@ -11,10 +12,16 @@ No booking or approval workflow.
 | PUT | `/api/venues/{venueId}` | 200, updated venue DTO |
 
 POST fields: `venueAddress`, `venueCapacity`, `supportedLayouts`,
-`operatingInformation`, optional `additionalInformation`. Capacity is one shared
+`operatingHours` (at least one day), optional `additionalInformation`,
+`venueAccessibilities`, `venueFacilities`, `setupMinutes` and `turnaroundMinutes`. Capacity is one shared
 integer from 1 through 50,000. The frontend default of 50 is not supplied by this
 API. Layout labels: `classroom`, `theatre`, `boardroom`, `banquet`, `exhibition`.
-The response adds `venueId` to these fields.
+The response adds `venueId` and a derived `operatingInformation` compatibility summary.
+Each hours row is `{dayOfWeek: 1, openTime: "09:00", closeTime: "18:00"}`; Monday is 1
+and Sunday is 7. Times are local Singapore time, closing must follow opening, and
+only one interval per day is allowed. Unselected days are closed. The UI displays
+these structured rows, never legacy operating-information prose. See
+[operating hours across roles](venue-operating-hours.md).
 
 Optional `venueAccessibilities` and `venueFacilities` arrays record venue provisions.
 On POST, omitted or null arrays become empty arrays; responses always include both arrays.
@@ -111,20 +118,26 @@ Java 17 and must be overridden for the Maven command below.
 ## VS07 characteristic updates
 
 PUT accepts only characteristic changes: `venueCapacity`, `supportedLayouts`,
-`venueAccessibilities`, `venueFacilities`, `operatingInformation`, and optional
-`additionalInformation`.
+`venueAccessibilities`, `venueFacilities`, `operatingHours`, `setupMinutes`,
+`turnaroundMinutes`, and optional `additionalInformation`. The legacy
+`operatingInformation` input is accepted for compatibility and ignored; it cannot
+create or overwrite the schedule.
 Omitted fields retain their saved values. Explicit null is rejected (400).
 Empty optional accessibility/facility arrays clear selections; empty layouts are
 invalid (422). Existing creation validation applies before any mutation.
 An empty object leaves values unchanged. Venue ID and address are preserved. Omitted additional information is preserved;
-a supplied string is trimmed, and an empty string clears it. Unknown venues return 404. The operation neither
-reads nor changes bookings. Existing API authorization limitations above still apply.
+a supplied string is trimmed, and an empty string clears it. Unknown venues return 404. The operation never
+moves reserved periods or changes saved booking setup/turnaround. Relevant suitability
+edits reassess active bookings; unsuitable approvals become **Requires attention**.
+See [the requirement-review workflow](venue-requirement-changes.md). Existing API
+authorization limitations above still apply.
 
 Update validation errors identify the affected API field in `message`, including
 JSON-level errors (explicit null, unknown selections, and fractional capacity).
 Malformed JSON without an identifiable field returns a general invalid-JSON error.
 Capacity must be a whole number from 1 to 50,000; layouts must be nonempty;
-operating information must be nonblank. Selection arrays reject null entries and
+an explicitly submitted operating schedule must contain at least one valid day.
+Null times, invalid day numbers, reversed/equal intervals and duplicate days are rejected. Selection arrays reject null entries and
 duplicates, and accessibility `none` cannot accompany another selection.
 
 ## VS07 verification — 2026-09-22

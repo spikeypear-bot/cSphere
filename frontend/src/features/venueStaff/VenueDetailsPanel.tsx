@@ -1,3 +1,4 @@
+import { OperatingHours } from '../../components/OperatingHours'
 import { Link, useLocation } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { venueLayoutLabels, venueAccessibilityLabels, venueFacilityLabels, type VenueDto } from '../../types/venue'
@@ -20,7 +21,7 @@ export function VenueDetailsPanel({ venue, linkToDetails = false }: { venue: Ven
     <h2 className="venue-card-preview__title">{venue.venueAddress}</h2>
     <p className="venue-card-preview__capacity">{venue.venueCapacity?.toLocaleString()} people</p>
     <dl className="venue-card-preview__information">
-      <div><dt>Operating information</dt><dd>{venue.operatingInformation}</dd></div>
+      <div><dt>Operating hours</dt><dd><OperatingHours hours={venue.operatingHours} /></dd></div>
       <div><dt>Accessibility provisions</dt>
         <dd>{venue.venueAccessibilities.map(value => venueAccessibilityLabels[value]).join(', ') || 'Not recorded'}</dd></div>
       <div><dt>Facilities</dt>

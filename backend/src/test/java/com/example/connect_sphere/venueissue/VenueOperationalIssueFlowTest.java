@@ -35,6 +35,7 @@ import jakarta.persistence.EntityManager;
 
 @Tag("integration")
 @Tag("VS13")
+@Tag("VS17")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -71,7 +72,7 @@ class VenueOperationalIssueFlowTest {
 
     private UUID venue() {
         UUID id = venueService.createVenue(new CreateVenueDto("VS13 Hall " + UUID.randomUUID(), 200,
-                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, List.of(), List.of())).venueId();
+                List.of(VenueLayout.theatre), "08:00-22:00 daily", null, List.of(), List.of(), com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek())).venueId();
         entityManager.flush();
         return id;
     }

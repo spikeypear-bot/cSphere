@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { useEffect, useRef, useState } from 'react'
 import type { VenueDto } from '../../types/venue'
 import { Button } from '../../components/ui/Button'
@@ -26,9 +27,15 @@ export function VenueSchedulePage() {
   }
   const changeMonth = (next: string) => { preserveScheduleHeight(); setMonth(next) }
   const title = new Intl.DateTimeFormat('en-SG', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))
+  const toolbar = <div className="venue-calendar__toolbar">
+      <h2 aria-live="polite">{title}</h2>
+      <Button type="button" className="venue-calendar__control" onClick={() => changeMonth(shiftMonth(month, -1))}>Previous month</Button>
+      <Button type="button" className="venue-calendar__control" onClick={() => changeMonth(singaporeDate().slice(0, 7))}>Today</Button>
+      <Button type="button" className="venue-calendar__control" onClick={() => changeMonth(shiftMonth(month, 1))}>Next month</Button>
+    </div>
   return <div className="feature-skeleton venue-calendar">
     <h1>Venue availability calendar</h1>
-    <p>All times are in Singapore time (SGT). Event, setup and turnaround times appear as separate entries. Active tentative holds reserve the full occupied period until their expiry. Pending requests do not reserve the venue.</p>
+    <p>Singapore time. Bookings requiring attention and active holds still reserve their occupied periods. Pending requests do not reserve the venue.</p>
     {venues.error ? <p role="alert">{venues.error} <Button onClick={venues.retry}>Retry venues</Button></p>
       : !venues.data ? <p role="status">Loading venues…</p> : !venues.data.length ? <p>No venues available.</p> : <div className="field venue-calendar__venue">
         <label htmlFor="calendar-venue">Venue</label>
@@ -37,16 +44,10 @@ export function VenueSchedulePage() {
         </select>
       </div>}
     <div>
-    <div className="venue-calendar__toolbar">
-      <h2 aria-live="polite">{title}</h2>
-      <Button type="button" className="venue-calendar__control" onClick={() => changeMonth(shiftMonth(month, -1))}>Previous month</Button>
-      <Button type="button" className="venue-calendar__control" onClick={() => changeMonth(singaporeDate().slice(0, 7))}>Today</Button>
-      <Button type="button" className="venue-calendar__control" onClick={() => changeMonth(shiftMonth(month, 1))}>Next month</Button>
-    </div>
     <div ref={scheduleFrame}>
     {selected && venues.data ? <Schedule key={`${selected}:${month}`} venueId={selected} onRefreshStart={preserveScheduleHeight}
-      venueName={venues.data.find(v => v.venueId === selected)?.venueAddress ?? selected} month={month} />
-      : <><CalendarLegend /><p>Select a venue to view its schedule.</p></>}
+      venueName={venues.data.find(v => v.venueId === selected)?.venueAddress ?? selected} month={month} toolbar={toolbar} />
+      : <><CalendarLegend /><p>Select a venue to view its schedule.</p>{toolbar}</>}
     </div>
     </div>
   </div>
@@ -56,13 +57,13 @@ function CalendarLegend({ onRefresh, loading = false }: { onRefresh?: () => void
   return <div className="venue-calendar__status-row">
     <ul className="venue-calendar__legend" aria-label="Calendar legend">
       {Object.entries(entryLabels).map(([type, label]) => <li key={type} data-kind={type} data-booking-status={type === 'unavailable' ? undefined : type}>{label}</li>)}
-      <li className="venue-calendar__conflict-legend">⚠ Conflict — occupied periods overlap</li>
+      <li className="venue-calendar__conflict-legend"><span aria-hidden="true">⚠</span><span>Conflict</span></li>
     </ul>
     {onRefresh && <Button type="button" className="venue-calendar__control" disabled={loading} onClick={onRefresh}>Refresh schedule</Button>}
   </div>
 }
 
-function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: string; venueName: string; month: string; onRefreshStart: () => void }) {
+function Schedule({ venueId, venueName, month, onRefreshStart, toolbar }: { toolbar: ReactNode; venueId: string; venueName: string; month: string; onRefreshStart: () => void }) {
   const days = calendarDays(month)
   const end = new Date(Date.parse(`${days.at(-1)}T00:00:00Z`) + 86400000).toISOString().slice(0, 10)
   const query = new URLSearchParams({ start: midnight(days[0]), end: midnight(end) })
@@ -81,25 +82,27 @@ function Schedule({ venueId, venueName, month, onRefreshStart }: { venueId: stri
   const conflictingIds = new Set(overlaps.flatMap(pair => [pair.first.bookingId, pair.second.bookingId]))
   return <section aria-label="Venue schedule">
     <CalendarLegend onRefresh={refresh} />
-    <BookingConflictList pairs={activeConflicts} venueName={venueName} />
-    <Link to={`/venue-staff/catalogue/${venueId}`}>Review all active conflicts for this venue</Link>
+    {activeConflicts.length > 0 && <div className="venue-calendar__conflicts">
+      <BookingConflictList pairs={activeConflicts} venueName={venueName} />
+      <Link to={`/venue-staff/catalogue/${venueId}`}>Review all active conflicts for this venue</Link>
+    </div>}
     {!days.filter(day => day.startsWith(month)).some(day => entriesOnDay(entries, day).length) && <p role="status">No schedule entries for this month.</p>}
     <p className="venue-calendar__hint">Select an entry for details. Arrows indicate that an entry continues across dates.</p>
+    {toolbar}
     <div className="venue-calendar__scroll" role="region" aria-label="Monthly calendar" tabIndex={0}>
-      <table className="venue-calendar__grid">
-        <caption className="venue-calendar__caption">{venueName} — {month} (SGT)</caption>
+      <table className="venue-calendar__grid" aria-label={`${venueName} — ${month} (SGT)`}>
         <thead><tr>{['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => <th scope="col" key={day}>{day}</th>)}</tr></thead>
         <tbody>{Array.from({ length: days.length / 7 }, (_, week) => <tr key={week}>
           {days.slice(week * 7, week * 7 + 7).map(day => <td key={day} data-outside={!day.startsWith(month)}>
             <time dateTime={day} aria-current={day === singaporeDate() ? 'date' : undefined}>{Number(day.slice(-2))}</time>
             <ul>{entriesOnDay(entries, day).map(entry => <li key={entry.id}>
               <button className="venue-calendar__entry" data-kind={entry.type} data-booking-status={entry.type === 'unavailable' ? undefined : entry.type}
-                data-conflict={entry.type === 'approved' && conflictingIds.has(entry.entryId)}
-                aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}${entry.type === 'approved' && conflictingIds.has(entry.entryId) ? ', Conflict' : ''}`}
+                data-conflict={(entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId)}
+                aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}${(entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId) ? ', Conflict' : ''}`}
                 onClick={() => setSelected(entry.id)}>
                 <span>{entryLabels[entry.type]}{entry.phase !== 'Unavailable' ? ` · ${entry.phase}` : ''}</span>
                 <strong>{entry.title}</strong><span>{dayTime(entry, day)}</span>
-                {entry.type === 'approved' && conflictingIds.has(entry.entryId) && <span>⚠ Conflict</span>}
+                {(entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId) && <span>⚠ Conflict</span>}
               </button>
             </li>)}</ul>
           </td>)}
@@ -127,7 +130,9 @@ function EntryDetails({ entry, venueName, conflicts, onClose }: { entry: Calenda
       {entry.type === 'unavailable' && <><dt>Reason</dt><dd>{entry.title}</dd></>}
     </dl>
     {conflicts.length > 0 && <BookingConflictList pairs={conflicts} venueName={venueName} />}
-    {entry.type !== 'unavailable' && <Link to={`/venue-staff/bookings/${entry.entryId}`}>View booking details</Link>}
-    <Button onClick={onClose}>Close</Button>
+    <div className="venue-calendar__detail-actions">
+      {entry.type !== 'unavailable' && <Link to={`/venue-staff/bookings/${entry.entryId}`}>View booking details</Link>}
+      <Button onClick={onClose}>Close</Button>
+    </div>
   </dialog>
 }

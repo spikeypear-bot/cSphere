@@ -158,3 +158,10 @@ events but cannot edit or approve it.
 See [Safety Officer API and workflow](safety-officer-api.md). The database additions
 are in `V22__safety_officer_readiness.sql`; the local development account is
 `so1` / `123456` (dev profile only).
+
+## Venue Staff console presentation (25 October 2026)
+The earlier skeleton-console note is historical for Venue Staff: its four home
+cards now open implemented catalogue, creation, approvals and calendar workflows.
+Developer scaffolding and story metadata are no longer displayed to staff.
+See [the presentation audit](venue-staff-presentation-audit.md) for current coverage
+and the completed structured-hour form/navigation test updates.

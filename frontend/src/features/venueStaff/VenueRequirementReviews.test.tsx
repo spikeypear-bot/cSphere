@@ -1,6 +1,6 @@
 // @stories VS17
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { VenueRequirementReviews } from './VenueRequirementReviews'
 import type { VenueRequirementReviewView } from '../../types/venueRequirementReview'
@@ -171,4 +171,32 @@ describe('VS17 booking requirement review workflow', () => {
     expect(setupRow.nextElementSibling).toHaveTextContent('Includes setup and turnaround.')
     expect(screen.getAllByText('Occupied period')).toHaveLength(1)
   })
+})
+
+it.each([null, {}, [{unexpected:'response'}]])('VS17 (failure): malformed review responses show retry and recover without crashing the booking: %j',async invalid=>{
+ const fetcher=vi.fn().mockResolvedValueOnce(json(invalid)).mockResolvedValueOnce(json([]))
+ vi.stubGlobal('fetch',fetcher);render(<VenueRequirementReviews bookingId="b1"/>)
+ expect(await screen.findByRole('alert')).toHaveTextContent('Could not load requirement reviews.')
+ expect(screen.queryByText('No approved requirement changes need review for this booking.')).not.toBeInTheDocument()
+ await userEvent.click(screen.getByRole('button',{name:'Retry requirement reviews'}))
+ await waitFor(()=>expect(screen.queryByRole('region',{name:'Venue requirement reviews'})).not.toBeInTheDocument())
+ expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+})
+
+it.each([{bookingId:'b1'},{eventId:'e1'}])('VS17 (boundary): an empty successful review list hides the whole section: %j',async props=>{
+ vi.stubGlobal('fetch',vi.fn(async()=>json([])))
+ render(<VenueRequirementReviews {...props}/>)
+ expect(screen.getByText('Loading requirement reviews\u2026')).toBeInTheDocument()
+ await waitFor(()=>expect(screen.queryByRole('region',{name:'Venue requirement reviews'})).not.toBeInTheDocument())
+ expect(screen.queryByRole('heading',{name:'Venue Requirement Reviews'})).not.toBeInTheDocument()
+})
+it('VS17 (failure): a refresh failure after an empty list shows retry instead of hiding the error',async()=>{
+ let failed=false
+ vi.stubGlobal('fetch',vi.fn(async()=>failed?json({message:'Offline'},503):json([])))
+ render(<VenueRequirementReviews bookingId="b1"/>)
+ await waitFor(()=>expect(screen.queryByRole('region',{name:'Venue requirement reviews'})).not.toBeInTheDocument())
+ failed=true;fireEvent.focus(window)
+ expect(await screen.findByRole('alert')).toHaveTextContent('Could not load requirement reviews.')
+ failed=false;await userEvent.click(screen.getByRole('button',{name:'Retry requirement reviews'}))
+ await waitFor(()=>expect(screen.queryByRole('region',{name:'Venue requirement reviews'})).not.toBeInTheDocument())
 })

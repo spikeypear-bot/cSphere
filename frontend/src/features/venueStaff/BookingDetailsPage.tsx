@@ -1,5 +1,6 @@
+import { BookingAssessment } from '../venueStaff/BookingAssessment'
 import { VenueRequirementReviews } from './VenueRequirementReviews'
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { apiClient } from '../../lib/apiClient'
 import { Button } from '../../components/ui/Button'
@@ -19,6 +20,20 @@ import { NO_HOLDS, useHoldDeadline } from './useHoldDeadline'
 /** Shared booking details for Catalogue and the VS02 pending queue. */
 export function BookingDetailsPage() {
   const { bookingId } = useParams()
+  const pageRef = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const page = pageRef.current
+    if (!page || typeof ResizeObserver === 'undefined') return
+    let height = 0
+    const preserveHeight = () => {
+      const next = page.getBoundingClientRect().height
+      if (next > height) { height = next; page.style.minHeight = `${height}px` }
+    }
+    preserveHeight()
+    const observer = new ResizeObserver(preserveHeight)
+    observer.observe(page)
+    return () => { observer.disconnect(); page.style.minHeight = '' }
+  }, [bookingId])
   const [timingRevision, setTimingRevision] = useState(0)
   const [holdFormFor, setHoldFormFor] = useState<string | null>(null)
   const [conflictState, setConflictState] = useState<{ bookingId?: string; items: VenueBookingConflict[]; periods: VenueUnavailabilityConflict[] }>({ bookingId, items: [], periods: [] })
@@ -32,12 +47,12 @@ export function BookingDetailsPage() {
   const expiredHolds = useHoldDeadline(booking?.holds ?? NO_HOLDS, retry)
   const data = booking ? { ...booking, status: booking.status ?? 'pending' } : undefined
   const highlights = data?.status === 'pending' ? [...conflicts, ...unavailablePeriods].map(conflict => bookingConflictHighlights(data.timing ?? data.event, conflict)) : []
-  return <div className="feature-skeleton booking-details-page">
+  return <div ref={pageRef} className="feature-skeleton booking-details-page">
     <Link to={fromApprovals ? '/venue-staff/booking-approvals' : data ? `/venue-staff/catalogue/${data.venue.venueId}` : '/venue-staff/catalogue'}>
       {fromApprovals ? 'Back to Booking Approvals' : data ? 'Back to venue details' : 'Back to venue catalogue'}
     </Link>
     <h1>Booking details</h1>
-    {data?.requiresAlternative && <p role="status" className="unavailability-warning">Alternative arrangements required. This booking is affected by venue unavailability; the event has not been cancelled.</p>}
+    {data?.requiresAlternative && data.status !== 'attention' && <p role="status" className="unavailability-warning">Alternative arrangements required. This booking is affected by venue unavailability; the event has not been cancelled.</p>}
     {data?.replacesBookingId && <p>This is a replacement request. <Link to={`/venue-staff/bookings/${data.replacesBookingId}`}>View original booking</Link></p>}
     {error && <div><p role="alert">{error}{data && " Showing the previously loaded booking; the requested booking could not be loaded."}</p><Button onClick={retry}>Try again</Button></div>}
     {!data ? (error ? null : <p role="status">Loading booking details…</p>)
@@ -59,6 +74,7 @@ export function BookingDetailsPage() {
             const current = await apiClient.get<VenueBookingDto>(`/venue-bookings/${data.bookingId}`, { cache: 'no-store' })
             replaceData(current)
           }} />}
+        <BookingAssessment bookingId={data.bookingId} onChanged={retry} />
         <VenueRequirementReviews key={`reviews:${data.bookingId}`} bookingId={data.bookingId} />
         {!loading && !error && data.bookingId === bookingId
           ? <BookingApproval key={`${bookingId}:${timingRevision}`} booking={data} onApproved={replaceData} onUnavailable={failRead}

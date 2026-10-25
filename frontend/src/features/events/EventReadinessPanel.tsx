@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
@@ -21,6 +22,7 @@ const STATE_TEXT: Record<Item['state'], string> = {
  * the buttons shown here are exactly the ones it will accept.
  */
 export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; onChanged: () => void }) {
+  const liveRevision = useLiveRefresh()
   const [readiness, setReadiness] = useState<EventReadinessDto | null>(null)
   const [failed, setFailed] = useState(false)
   const [reload, setReload] = useState(0)
@@ -36,7 +38,7 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
     apiClient.get<EventReadinessDto>(`/events/${eventId}/lifecycle`)
       .then((value) => {
         if (cancelled) return
-        if (value && Array.isArray(value.items)) setReadiness(value)
+        if (value && Array.isArray(value.items)) { setReadiness(value); setFailed(false) }
         else setFailed(true)
       })
       .catch(() => {
@@ -45,7 +47,7 @@ export function EventReadinessPanel({ eventId, onChanged }: { eventId: string; o
     return () => {
       cancelled = true
     }
-  }, [eventId, reload])
+  }, [eventId, reload, liveRevision])
 
   if (failed || !readiness) return null
 

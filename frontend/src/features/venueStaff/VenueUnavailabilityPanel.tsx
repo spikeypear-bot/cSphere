@@ -1,3 +1,4 @@
+import { BOOKING_STATUS_LABELS, type VenueBookingStatus } from '../../types/venueBookingStatus'
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -111,7 +112,7 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
         <h3>Existing bookings will be affected</h3>
         <p>These events will not be cancelled automatically. Alternative venue arrangements will be required.</p>
         <ul>{preview.affectedBookings.map(b => <li key={b.bookingId}>
-          <strong>{b.eventName}</strong> — {range(b.startDateTime, b.endDateTime)} · {b.status}
+          <strong>{b.eventName}</strong> — {range(b.startDateTime, b.endDateTime)} · <span className="venue-card-preview__tag booking-status-tag" data-booking-status={b.status}>{BOOKING_STATUS_LABELS[b.status as VenueBookingStatus] ?? 'Unknown status'}</span>
           <p>Including setup and turnaround: {range(b.effectiveStart, b.effectiveEnd)}</p>
         </li>)}</ul>
         <div className="venue-unavailability__actions">
@@ -158,11 +159,17 @@ function SettingsForm({ venueId, settings, onSaved }: { venueId: string; setting
       finally { setBusy(false) }
     }}>
       <fieldset disabled={busy}>
+        <div className="field">
         <label htmlFor="venue-setup">Setup (minutes)</label>
         <input id="venue-setup" required type="number" min={0} max={10080} step={1} value={setup} onChange={e => setSetup(e.target.value)} />
+        </div>
+        <div className="field">
         <label htmlFor="venue-turnaround">Turnaround (minutes)</label>
         <input id="venue-turnaround" required type="number" min={0} max={10080} step={1} value={turnaround} onChange={e => setTurnaround(e.target.value)} />
+        </div>
+        <div className="booking-approval__actions">
         <Button type="submit">Save setup and turnaround</Button>
+        </div>
       </fieldset>
       {feedback && <p role="status">{feedback}</p>}
     </form>

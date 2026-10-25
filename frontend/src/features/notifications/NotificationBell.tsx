@@ -19,6 +19,7 @@ function timeAgo(iso: string): string {
 }
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'venue_suitability_changed' || n.type === 'venue_arrangements_changed') return `Venue arrangement updated for "${n.eventName}"`
   if (n.type === 'venue_requirement_reviewed') return `Venue requirement review recorded for "${n.eventName}"`
   if (n.type === 'venue_requirement_changed') return `Venue requirement review required for "${n.eventName}"`
   if (n.type === 'venue_hold_expired') return `Tentative venue hold expired for "${n.eventName}"`
@@ -129,7 +130,7 @@ export function NotificationBell() {
                       {n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {n.message && n.type !== 'venue_requirement_changed' && n.type !== 'venue_requirement_reviewed' ? n.type === 'venue_unavailable' || n.type === 'venue_hold_expiring' ? (
+                      {n.message && n.type !== 'venue_requirement_changed' && n.type !== 'venue_requirement_reviewed' && n.type !== 'venue_suitability_changed' && n.type !== 'venue_arrangements_changed' ? n.type === 'venue_unavailable' || n.type === 'venue_hold_expiring' ? (
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>

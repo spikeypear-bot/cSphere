@@ -23,8 +23,9 @@ import com.example.connect_sphere.venuebooking.service.*;
 public class VenueRequirementReviewService {
     public record View(VenueRequirementReview review, List<ChangeRequestDto.FieldChange> changes,
             List<ChangeRequestDto.ImpactItem> checks, OffsetDateTime reservedStart, OffsetDateTime reservedEnd,
-            int setupDurationMinutes, int turnaroundDurationMinutes, boolean canReview, ChangeImpactService.BookingSummary suitability) {}
+            int setupDurationMinutes, int turnaroundDurationMinutes, boolean canReview, ChangeImpactService.BookingSummary suitability, String bookingStatus, boolean outcomeCurrent) {}
     public record Decision(String outcome, String note) {}
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private org.springframework.jdbc.core.JdbcTemplate jdbc;
     private final VenueRequirementReviewRepository reviews;
     private final VenueBookingRecordRepository bookings;
     private final EventRepository events;
@@ -61,6 +62,7 @@ public class VenueRequirementReviewService {
         var review=reviews.findForUpdate(reviewId).filter(r -> r.getBookingId().equals(bookingId))
                 .orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         if (!"pending".equals(review.getStatus())) throw new VenueBookingStateException("This requirement review has already been recorded. Refresh to see the outcome.");
+        if (booking.getStatus()==VenueBookingStatus.attention) throw new VenueBookingStateException("Resolve the booking assessment before recording this requirement review.");
         if (!active(booking,event)) throw new VenueBookingStateException("Only active pending or approved bookings can be reviewed. Refresh the booking details.");
         if (decision == null || !Set.of("suitable","action_required").contains(Objects.toString(decision.outcome(),"")))
             throw new InvalidVenueBookingException("Choose remains suitable or coordinator action required.");
@@ -90,10 +92,14 @@ public class VenueRequirementReviewService {
         return new View(review,ChangeFields.changes(review.getPreviousRequirements(),review.getNewRequirements()),
                 checks,booking.getStartDatetime()==null ? event.getStartDatetime() : booking.getStartDatetime(),
                 booking.getEndDatetime()==null ? event.getEndDatetime() : booking.getEndDatetime(),booking.getSetupDurationMinutes(),
-                booking.getTurnaroundDurationMinutes(),staff && "pending".equals(review.getStatus()) && active(booking,event),impact.bookingSummary(event,booking,checks));
+                booking.getTurnaroundDurationMinutes(),staff && "pending".equals(review.getStatus()) && booking.getStatus()!=VenueBookingStatus.attention && active(booking,event),impact.bookingSummary(event,booking,checks),booking.getStatus().name(),
+                jdbc==null || Boolean.FALSE.equals(jdbc.queryForObject("""
+                    SELECT EXISTS(SELECT 1 FROM venue_booking_assessments WHERE booking_id=? AND created_at>?)
+                    OR EXISTS(SELECT 1 FROM venue_requirement_reviews WHERE booking_id=? AND approved_at>?)
+                    """,Boolean.class,booking.getBookingId(),review.getReviewedAt()==null ? review.getApprovedAt() : review.getReviewedAt(),booking.getBookingId(),review.getApprovedAt())));
     }
     private static boolean active(VenueBookingRecord b, Event e) {
-        return (b.getStatus()==VenueBookingStatus.pending || b.getStatus()==VenueBookingStatus.approved)
+        return (b.getStatus()==VenueBookingStatus.pending || b.getStatus()==VenueBookingStatus.approved || b.getStatus()==VenueBookingStatus.attention)
                 && e.getStatus()!=EventStatus.cancelled && e.getStatus()!=EventStatus.completed
                 && e.getEndDatetime().isAfter(OffsetDateTime.now());
     }

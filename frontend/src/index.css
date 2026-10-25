@@ -167,3 +167,6 @@ code {
 [data-booking-status='approved'] { --booking-status-color: var(--success); --booking-status-bg: var(--success-soft); }
 [data-booking-status='rejected'] { --booking-status-color: var(--danger); --booking-status-bg: var(--danger-soft); }
 .booking-status-tag[data-booking-status='tentative'] { color: var(--booking-hold); background: var(--booking-hold-soft); }
+
+[data-booking-status='attention'] { --booking-status-color: var(--danger); --booking-status-bg: var(--danger-soft); color: var(--danger); }
+.booking-status-tag[data-booking-status='attention'] { color: var(--danger); background: var(--danger-soft); }

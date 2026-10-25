@@ -152,7 +152,7 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 | `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
 | `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
-| `operating_information` | `TEXT` | no | | Operating days/hours and constraints; must contain non-whitespace text (V6) |
+| `operating_information` | `TEXT` | no | | Derived compatibility summary of structured hours; stored text remains nonblank (V6/V39) |
 | `venue_facilities` | `facilities[]` | no | | Facilities present. Defaults to `{}` |
 | `additional_information` | `TEXT` | yes | | Free-text notes |
 
@@ -177,10 +177,7 @@ blank address/operating information and addresses over 500 characters; addresses
 are trimmed, not checked for real-world existence. These DTO/service rules are
 distinct from the database constraints documented above.
 
-Operating information remains human-readable text (for example, "Mon-Fri,
-09:00-18:00; closed on public holidays"). These constraints ensure it is present,
-not that the schedule can be calculated automatically. Structured hours, booking
-availability remain separate stories. Venue address remains required.
+Operating hours are entered as structured daily intervals. Creation and hours updates require at least one operating day. The service generates operating_information from these intervals for catalogue, search, booking and organiser readers. Legacy records without structured hours may retain stored text, but every API reader and display reports Operating hours not configured until structured days are supplied. Legacy prose is never parsed or advertised as opening hours. Hours changes retain booking reassessment. Venue address remains required.
 The Venue API now records accessibility/facility selections in the existing enum
 arrays. Omitted/null lists become empty; duplicate/null entries are rejected.
 Accessibility `none` explicitly records no provisions and is exclusive. The entity
@@ -601,3 +598,11 @@ decided outcomes. New `venue_requirement_reviewed` notifications reference the
 review, booking and event; previous notification constraint branches are retained.
 Outcomes, review audit and notification share a transaction; no booking/event,
 hold or equipment status/window changes are performed by review actions.
+
+
+### V36–V38: current venue suitability and booking assessment history (VS17)
+`venue_booking_status.attention` retains the reservation but blocks event readiness.
+`venue_booking_assessments` is append-only and stores booking, outcome, source, reason,
+actor/name/time, previous/current venue JSON (including opening hours), and requirement JSON.
+Notifications add `venue_suitability_changed` (EC) and `venue_arrangements_changed` (EO).
+New catalogue defaults do not change existing booking duration snapshots.

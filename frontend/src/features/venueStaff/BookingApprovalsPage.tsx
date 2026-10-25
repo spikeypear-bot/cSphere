@@ -25,7 +25,8 @@ export function BookingApprovalsPage() {
   const [filter, setFilter] = useState<string | null>(null)
   const holds = useMemo(() => (data ?? []).flatMap(b => b.holds ?? []), [data])
   const expired = useHoldDeadline(holds, retry)
-  const requests = (data ?? []).filter(b => b.status === 'pending')
+  const requests = (data ?? []).filter(b => b.status === 'pending' || b.status === 'attention')
+  const attention = requests.filter(b => b.status === 'attention')
   const status = (b: VenueBookingDto) => bookingDisplayStatus(b.status, b.holds, expired)
   const pending = requests.filter(b => status(b) === 'pending')
   const tentative = requests.filter(b => status(b) === 'tentative')
@@ -47,6 +48,9 @@ export function BookingApprovalsPage() {
         <Button variant="secondary" onClick={retry}>Try again</Button>
       </Card>
       : <>
+        {(filter === null || filter === 'attention') && attention.length > 0 && <section className="booking-approvals-section">
+          <h2>Bookings Requiring Attention</h2><BookingRequestList bookings={attention} />
+        </section>}
         <StatusFilter statuses={requests.map(b => ({ code: status(b), label: BOOKING_STATUS_LABELS[status(b)] }))}
           selected={filter} onChange={setFilter} label="Filter booking approvals by status" showSingle />
         {(filter === null || filter === 'pending') && <section className="booking-approvals-section" aria-labelledby="pending-bookings-heading">
@@ -67,7 +71,7 @@ export function BookingApprovalsPage() {
 
 function BookingRequestList({ bookings, held = false }: { bookings: VenueBookingDto[]; held?: boolean }) {
   return <ul className="booking-approvals-list">{bookings.map(booking => {
-    const status = held ? 'tentative' : 'pending'
+    const status = held ? 'tentative' : booking.status
     const hold = held ? booking.holds?.find(h => h.status === 'active') : undefined
     return <li key={booking.bookingId}>
       <Card className="feature-skeleton__body booking-approvals-card">

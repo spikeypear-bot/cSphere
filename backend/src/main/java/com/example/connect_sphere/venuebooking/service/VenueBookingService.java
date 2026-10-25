@@ -26,6 +26,7 @@ public class VenueBookingService {
     private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
     @org.springframework.beans.factory.annotation.Autowired
     private com.example.connect_sphere.venuebooking.hold.VenueHoldService holdService;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.changerequest.ChangeImpactService impact;
     private static final int MAX_TEXT_LENGTH = 2000;
 
     private final VenueBookingRepository bookings;
@@ -155,10 +156,10 @@ public class VenueBookingService {
             if (!original.getEventId().equals(eventId)
                     || !isEligibleReplacementSource(original)
                     || records.existsByReplacesBookingIdAndStatusIn(original.getBookingId(),
-                            List.of(VenueBookingStatus.approved))) {
+                            List.of(VenueBookingStatus.approved, VenueBookingStatus.attention))) {
                 throw new VenueBookingStateException("The original booking is no longer eligible for replacement. Refresh this event.");
             }
-            if (original.getStatus() == VenueBookingStatus.pending || original.getStatus() == VenueBookingStatus.approved) {
+            if (original.getStatus() == VenueBookingStatus.pending || original.getStatus() == VenueBookingStatus.approved || original.getStatus() == VenueBookingStatus.attention) {
                 if (holdService != null) holdService.endForBooking(original.getBookingId(), null);
                 original.setStatus(VenueBookingStatus.changed);
                 records.saveAndFlush(original);
@@ -172,6 +173,8 @@ public class VenueBookingService {
             announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_hold_converted, null,
                 "Tentative hold converted into an approved venue booking.");
         }
+        if (impact != null && impact.assessBooking(event,booking).stream().anyMatch(c -> "attention".equals(c.status()) && (c.key().endsWith("capacity") || c.key().endsWith("facilities"))))
+            throw new VenueBookingStateException("The venue no longer meets the approved event requirements. Review current suitability.");
         if (records.approvePending(bookingId, VenueBookingStatus.pending, VenueBookingStatus.approved) != 1) {
             throw new VenueBookingStateException("This booking is no longer pending. Refresh its details.");
         }
@@ -185,8 +188,8 @@ public class VenueBookingService {
         if (booking.getStatus() == VenueBookingStatus.rejected || booking.getStatus() == VenueBookingStatus.cancelled) {
             return true;
         }
-        return (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved)
-                && availability.affected(booking.getBookingId());
+        return (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved || booking.getStatus() == VenueBookingStatus.attention)
+                && (booking.getStatus() == VenueBookingStatus.attention || availability.affected(booking.getBookingId()));
     }
 
     /** VS04: use the same event lock as approval, submission and cancellation. */
@@ -236,8 +239,8 @@ public class VenueBookingService {
     }
 
     public List<VenueBookingDto> listPending() {
-        return bookings.findByStatusOrderByEventStartDatetimeAscBookingIdAsc(VenueBookingStatus.pending)
-                .stream().map(this::toDto).toList();
+        return java.util.stream.Stream.concat(bookings.findByStatusOrderByEventStartDatetimeAscBookingIdAsc(VenueBookingStatus.pending).stream(),
+                bookings.findByStatusOrderByEventStartDatetimeAscBookingIdAsc(VenueBookingStatus.attention).stream()).map(this::toDto).toList();
     }
 
     @Transactional
@@ -247,7 +250,7 @@ public class VenueBookingService {
         var event = events.findForUpdate(eventId).orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         var booking = records.findById(bookingId).orElseThrow(() -> new VenueBookingNotFoundException(bookingId));
         venues.findForUpdate(booking.getVenueId()).orElseThrow(() -> new VenueNotFoundException(booking.getVenueId()));
-        if ((booking.getStatus() != VenueBookingStatus.pending && booking.getStatus() != VenueBookingStatus.approved)
+        if ((booking.getStatus() != VenueBookingStatus.pending && booking.getStatus() != VenueBookingStatus.approved && booking.getStatus() != VenueBookingStatus.attention)
                 || event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.cancelled
                 || event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.completed)
             throw new VenueBookingStateException("Only active pending or approved booking timings can be edited.");
@@ -315,13 +318,13 @@ public class VenueBookingService {
                         event.getExpectedAttendance(), event.getVenueRequirements(),
                         List.copyOf(event.getAccessibilityNeeds()), event.getEquipmentRequirements()),
                 booking.getBookingNotes(), booking.getSuitabilityNote(), booking.getSubmittedAt(), booking.getRejectReason(),
-                availability.affected(booking.getBookingId()), booking.getReplacesBookingId(),
+                booking.getStatus() == VenueBookingStatus.attention || availability.affected(booking.getBookingId()), booking.getReplacesBookingId(),
                 booking.getAlternativeVenueId(),
                 alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
                 booking.getAlternativeArrangement(), availability.timing(booking.getVenue().getVenueId(), booking.getBookingId(),
                         start, end, booking.getSetupDurationMinutes(),
                         booking.getTurnaroundDurationMinutes(), booking.getTimingNote(),
-                        (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved)
+                        (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved || booking.getStatus() == VenueBookingStatus.attention)
                         && event.getStatus() != com.example.connect_sphere.event.entity.EventStatus.completed
                         && event.getStatus() != com.example.connect_sphere.event.entity.EventStatus.cancelled),
                 holds == null ? List.of() : holds.history(booking.getBookingId()));

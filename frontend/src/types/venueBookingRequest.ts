@@ -29,6 +29,8 @@ export interface EventVenueBookingDto {
   status: VenueBookingStatus
   venueId: string
   venueAddress: string | null
+  operatingHours?: import('./venue').VenueOperatingHour[]
+  operatingInformation?: string
   venueCapacity: number | null
   bookingNotes: string | null
   suitabilityNote: string | null
@@ -43,6 +45,7 @@ export interface EventVenueBookingDto {
 }
 
 export const BOOKING_STATUS_LABELS: Record<VenueBookingStatus, string> = {
+  attention: 'Requires attention',
   pending: 'Pending venue review',
   approved: 'Approved',
   changed: 'Changed',

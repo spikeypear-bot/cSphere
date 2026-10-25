@@ -91,7 +91,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Decision:** Build VS06A venue entry plus catalogue list/detail backend reads. Store required address, one overall capacity, supported layouts, required operating information and optional additional information. There is no booking request, approval state or per-layout capacity in this slice. Address and the application-generated UUID identify the venue; no venue-name column is added.
 - **Capacity:** One integer from 1 to 50,000 inclusive, shared by all selected layouts. The form starts at 50 and Venue Staff can change it. This is a frontend initial value, not a database default.
 - **Layouts:** API DTOs use `VenueLayout` with `classroom`, `theatre`, `boardroom`, `banquet`, `exhibition`; the entity uses `List<String>` and the database uses `supported_layouts text[]`. These are the implemented choices accepted in this task, not evidence of independent team/customer sign-off on an exhaustive vocabulary. At least one selection is required; duplicate/null selections are rejected.
-- **Validation:** Address is trimmed, required and limited to 500 characters by the service; it is not checked for real-world existence. Operating information is nonblank free text describing days/hours and closures. Structured opening-hour calculations remain outside this slice.
+- **Validation:** Address is trimmed, required and limited to 500 characters by the service; it is not checked for real-world existence. At this historical slice, operating information was nonblank free text. This has been superseded by the structured-hours implementation and canonical role displays; see `venue-operating-hours.md`.
 - **Source:** User instructions and approvals in this task, 2026-09-13/14; `VenueService`, `VenueLayout`, `VenueCreatePage` and `SCHEMA.md`.
 
 ### D13 — Local V5 revision during venue development
@@ -206,7 +206,7 @@ Built on `feature/ec01-ec02-ec03-review-clarification-booking` (2026-09-26), mig
 - **Approval re-checks EO02's submission rules** instead of trusting that nothing changed.
 - **Not-assigned coordinator now gets 403, not 409** (`ApiExceptionHandler`), per EC02's refined AC ("access-denied").
 - **Notifications for assignment and rejection are now sent after commit**, like approval already was (d1033d8). Before, a failing notification insert surfaced at commit, outside the try/catch meant to swallow it, and failed the whole request; it could also announce a change that was then rolled back.
-- **EC03/EC05 rules:** the booking uses the event's own times (no second copy); capacity blocks (attendance equal to capacity fits); missing required facilities block a request; a missing requested accessibility feature needs a written justification for Venue Staff; only *confirmed* bookings overlapping the event block a venue, and back-to-back is not an overlap; operational issues with overlapping affected periods also block a venue; at most one pending/confirmed request per event, enforced under a row lock on the event. `operating_information` remains descriptive text and is displayed but not parsed as a machine-checkable weekly schedule; structured operating hours remain a follow-up.
+- **EC03/EC05 rules:** the booking uses the event's own times (no second copy); capacity blocks (attendance equal to capacity fits); missing required facilities block a request; a missing requested accessibility feature needs a written justification for Venue Staff; only *confirmed* bookings overlapping the event block a venue, and back-to-back is not an overlap; operational issues with overlapping affected periods also block a venue; at most one pending/confirmed request per event, enforced under a row lock on the event. At this historical slice, `operating_information` was displayed as descriptive text. This is superseded by structured operating-hour checks and displays; see `venue-operating-hours.md`.
 - **Open, for the team:** (1) Customer Q&A: may a coordinator request a venue that is over capacity or missing a facility, with a justification? Changing the answer touches only `VenueSuitability`. (2) VS03/VS08 must re-run the overlap check when confirming. (3) "Venue Staff responsible for the venue" is not modelled; every VS user is notified.
 
 - **V14 follow-up (2026-09-26):**
@@ -658,3 +658,29 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - Decision, audit and notification are one transaction. Locks follow event →
   venue → review. No reservations, booking statuses, event/safety lifecycle or
   equipment periods change. See [workflow and verification](venue-requirement-changes.md).
+
+
+## VS17 — live venue suitability and approval invalidation (25 October 2026)
+User authorised a reservation-preserving `attention` booking state when current catalogue facts
+or approved requirements invalidate an approval. Reuse existing checks and lifecycle return to
+Planning, retain immutable decisions, and add independent append-only booking assessments.
+Restoration requires explicit VS reassessment; existing replacement/cancellation remain valid.
+EC and EO observe automatic five-second/focus refresh and consistent server status.
+See `venue-requirement-changes.md` for transactions, endpoints and recovery.
+
+
+## Canonical operating-hour displays across EO, EC and VS (25 October 2026)
+User requested consistent venue hours throughout the workflow. Structured weekly rows are
+authoritative for all venue read models, including EO arrangements and EC existing bookings.
+Legacy prose without structured hours is displayed as unconfigured. EC duplicate hours
+sections are removed and EO uses the Operating hours label. See venue-operating-hours.md.
+
+## Venue Staff presentation and structured-hour regression audit (25 October 2026)
+The user requested removal of leftover generated/scaffold text and consistent
+staff styles, then explicitly assigned all legacy hours form/navigation/fixture
+tests to this chat. Preserve human-entered descriptions/history and existing
+confirmation/state rules. Display structured operating hours in every role;
+legacy prose is compatibility data only, including plain mapper/service fallback
+construction. Existing valid fixture venues now declare explicit opening days.
+See venue-staff-presentation-audit.md and venue-operating-hours.md for the verified
+workflow map, test coverage and final unfiltered regression results.

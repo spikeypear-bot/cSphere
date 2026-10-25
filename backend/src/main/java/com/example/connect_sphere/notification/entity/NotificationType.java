@@ -2,6 +2,7 @@ package com.example.connect_sphere.notification.entity;
 
 /** Mirrors the Postgres `notification_type` enum (V12 migration). */
 public enum NotificationType {
+    venue_suitability_changed, venue_arrangements_changed,
     venue_requirement_reviewed,
     venue_requirement_changed,
     venue_hold_expired,

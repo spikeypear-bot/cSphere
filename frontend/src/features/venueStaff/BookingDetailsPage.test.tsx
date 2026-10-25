@@ -21,7 +21,7 @@ function page(path = '/venue-staff/catalogue') {
   // VS17 adds a separate review read; existing scenarios have no requirement changes.
   const originalFetch = globalThis.fetch
   vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/requirement-reviews')
-    ? Promise.resolve(response([])) : originalFetch(input, init))
+    ? Promise.resolve(response([])) : String(input).endsWith('/assessment') ? Promise.resolve(response({ bookingId: 'b1', status: 'pending', checks: [], history: [] })) : originalFetch(input, init))
   render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/venue-staff/catalogue" element={<VenueCataloguePage />} />
     <Route path="/venue-staff/catalogue/:venueId" element={<VenueDetailsPage />} />
@@ -132,7 +132,7 @@ it('offers a hold beside approval/rejection and updates release/conversion actio
   fireEvent.change(within(panel).getByLabelText('Hold expiry (Singapore time)'), { target: { value: '2099-03-01T10:00' } })
   await user.click(within(panel).getByRole('button', { name: 'Place tentative hold' }))
   expect(await within(panel).findByRole('button', { name: 'Release Hold' })).toBeInTheDocument()
-  expect(screen.getByLabelText('Status: tentative')).toHaveTextContent('Tentative Hold')
+  expect(screen.getByLabelText('Status: Tentative Hold')).toHaveTextContent('Tentative Hold')
   expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
   await user.click(within(panel).getByRole('button', { name: 'Release Hold' }))
   expect(await within(panel).findByText('Released', { exact: true })).toBeInTheDocument()
@@ -141,7 +141,7 @@ it('offers a hold beside approval/rejection and updates release/conversion actio
   fireEvent.change(within(panel).getByLabelText('Hold expiry (Singapore time)'), { target: { value: '2099-03-01T10:00' } })
   await user.click(within(panel).getByRole('button', { name: 'Place tentative hold' }))
   await user.click(await within(panel).findByRole('button', { name: 'Convert Hold to Approved Booking' }))
-  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   expect(within(panel).queryByRole('button', { name: 'Convert Hold to Approved Booking' })).not.toBeInTheDocument()
 })
 
@@ -154,11 +154,11 @@ it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'] as const)('e
     return response({ ...booking, status })
   }))
   page('/venue-staff/bookings/b1?from=booking-approvals')
-  expect(await screen.findByLabelText('Status: ' + status)).toHaveAttribute('data-booking-status', status)
+  expect(await screen.findByLabelText('Status: ' + ({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled', tentative: 'Tentative Hold', attention: 'Requires attention' })[status])).toHaveAttribute('data-booking-status', status)
   cleanup()
   page('/venue-staff/catalogue/v1')
   const list = await screen.findByRole('region', { name: 'Associated bookings' })
-  const label = await within(list).findByText(status, { selector: 'span' })
+  const label = await within(list).findByText(({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled' })[status], { selector: 'span' })
   expect(label).toHaveAttribute('data-booking-status', status)
 })
 
@@ -166,11 +166,11 @@ it.each([undefined, null])('defaults an absent booking status (%s) to pending an
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
     response({ ...booking, status: init.method === 'PATCH' ? 'approved' : status })))
   page('/venue-staff/bookings/b1?from=booking-approvals')
-  expect(await screen.findByLabelText('Status: pending')).toHaveTextContent('pending')
+  expect(await screen.findByLabelText('Status: Pending')).toHaveTextContent('Pending')
   const user = userEvent.setup()
   await user.click(screen.getByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
-  expect(await screen.findByLabelText('Status: approved')).toHaveTextContent('approved')
+  expect(await screen.findByLabelText('Status: Approved')).toHaveTextContent('Approved')
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
@@ -194,7 +194,7 @@ it('rejects with an alternative venue and arrangement and displays both suggesti
   await user.type(screen.getByLabelText('Alternative arrangement (optional)'), 'Move to the afternoon')
   await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-  await screen.findByLabelText('Status: rejected')
+  await screen.findByLabelText('Status: Rejected')
   const requirements = screen.getByRole('region', { name: 'Event Requirements' })
   const rejection = screen.getByRole('status', { name: 'Rejection reason' })
   expect(requirements).not.toContainElement(rejection)
@@ -225,7 +225,7 @@ it('allows rejection without an alternative when the venue list cannot be loaded
   await user.type(screen.getByLabelText('Rejection reason'), 'Unavailable')
   await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
 
-  await screen.findByLabelText('Status: rejected')
+  await screen.findByLabelText('Status: Rejected')
   expect(screen.getByRole('status', { name: 'Rejection reason' })).toHaveTextContent('Unavailable')
   const patch = fetch.mock.calls.find(call => call[1]?.method === 'PATCH')
   expect(JSON.parse(String(patch?.[1].body))).toEqual({
@@ -430,14 +430,14 @@ it('reviews the booking, cancels without writing, then approves exactly once and
   expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
   expect(fetch.mock.calls.find(call => call[1].method === 'PATCH')?.[0]).toBe('/api/venue-bookings/b1/approve')
   await act(async () => { finish(response({ ...booking, status: 'approved' })) })
-  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
 it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)('does not offer approval for %s', async status => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...booking, status })))
   page('/venue-staff/bookings/b1?from=booking-approvals')
-  await screen.findByLabelText('Status: ' + status)
+  await screen.findByLabelText('Status: ' + ({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled', tentative: 'Tentative Hold', attention: 'Requires attention' })[status])
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
@@ -454,8 +454,8 @@ it.each([404, 409, 503, 0])('keeps the booking pending and shows an error for fa
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
   expect(await screen.findByRole('alert')).toBeInTheDocument()
-  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
-  expect(screen.queryByLabelText('Status: approved')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Status: Pending')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Status: Approved')).not.toBeInTheDocument()
   expect(await screen.findByRole('button', { name: 'Approve Booking' })).toBeEnabled()
 })
 
@@ -478,7 +478,7 @@ it.each([false, true])('shows conflict details through automatic refresh (refres
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
   const alert = await screen.findByRole('alert')
-  expect(alert).toHaveTextContent(failRefresh ? 'Could not refresh booking details' : 'Latest booking status: pending')
+  expect(alert).toHaveTextContent(failRefresh ? 'Could not refresh booking details' : 'Latest booking status: Pending')
   expect(alert).toHaveTextContent('Evening workshop')
   expect(alert).toHaveTextContent('Booking ID: b2')
   expect(alert).toHaveTextContent('Second workshop')
@@ -486,8 +486,8 @@ it.each([false, true])('shows conflict details through automatic refresh (refres
   expect(alert).toHaveTextContent('Singapore time, UTC+08:00')
   expect(alert).toHaveTextContent('24 Sept 2026, 11:00 pm')
   expect(alert).toHaveTextContent('25 Sept 2026, 02:00 am')
-  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
-  expect(screen.queryByLabelText('Status: approved')).not.toBeInTheDocument()
+  expect(screen.getByLabelText('Status: Pending')).toBeInTheDocument()
+  expect(screen.queryByLabelText('Status: Approved')).not.toBeInTheDocument()
   expect(fetch).toHaveBeenLastCalledWith('/api/venue-bookings/b1', expect.objectContaining({ method: 'GET', cache: 'no-store' }))
   if (failRefresh) expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
   else {
@@ -520,7 +520,7 @@ it('shows a buffer-only restriction without falsely highlighting the event times
   expect(card).toHaveTextContent('24 Sept 2026, 11:30 pm')
   expect(card.querySelector('strong.booking-time-conflict')).toBeNull()
   expect(card.querySelector('dd.booking-time-conflict')).toHaveTextContent('11:30 pm')
-  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  expect(screen.getByLabelText('Status: Pending')).toBeInTheDocument()
 })
 
 it.each([false, true])('highlights the paired boundaries in the conflict card and current request (reverse: %s)', async reverse => {
@@ -567,7 +567,7 @@ it.each([false, true])('shows unavailable periods and highlights both sides (ref
   const card = await screen.findByRole('group', { name: 'Unavailable period: Maintenance' })
   expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
   expect(screen.getByRole('alert')).toHaveTextContent('Approval is blocked by the following recorded unavailable periods')
-  expect(screen.getByRole('alert')).not.toHaveTextContent('Latest booking status: pending')
+  expect(screen.getByRole('alert')).not.toHaveTextContent('Latest booking status: Pending')
   expect(screen.getByRole('alert')).not.toHaveTextContent('The following recorded unavailable periods conflict')
   expect(card).toHaveTextContent('Unavailability Reason')
   expect(card).not.toHaveTextContent('Setup Period')
@@ -575,7 +575,7 @@ it.each([false, true])('shows unavailable periods and highlights both sides (ref
   expect(card.querySelector('strong.booking-time-conflict')).toHaveTextContent('11:30 am')
   const currentPanel = screen.getByRole('region', { name: 'Event Requirements' })
   expect(currentPanel.querySelector('strong.booking-time-conflict')).toHaveTextContent('12:00 pm')
-  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  expect(screen.getByLabelText('Status: Pending')).toBeInTheDocument()
   if (failRefresh) expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
   else {
     await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
@@ -616,7 +616,7 @@ it.each(['approved', 'cancelled'] as const)('reconciles a stale approval conflic
   const user = userEvent.setup()
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
-  expect(await screen.findByLabelText('Status: ' + status)).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: ' + ({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled', tentative: 'Tentative Hold', attention: 'Requires attention' })[status])).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
   expect(screen.getByRole('alert')).toHaveTextContent('no longer pending')
 })
@@ -632,7 +632,7 @@ it('removes a booking deleted between review and approval', async () => {
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('could not be found')
-  expect(screen.queryByLabelText('Status: pending')).not.toBeInTheDocument()
+  expect(screen.queryByLabelText('Status: Pending')).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
@@ -651,10 +651,10 @@ it('requires a successful refresh after a lost response and failed read, then sh
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Refresh before attempting a booking decision again')
   expect(screen.getByRole('button', { name: 'Approve Booking' })).toBeDisabled()
-  expect(screen.getByLabelText('Status: pending')).toBeInTheDocument()
+  expect(screen.getByLabelText('Status: Pending')).toBeInTheDocument()
   online = true
   await user.click(screen.getByRole('button', { name: 'Refresh booking details' }))
-  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
   expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
 })
@@ -666,7 +666,7 @@ it('places the approval action in the venue information header', async () => {
   const heading = screen.getByRole('heading', { name: 'Venue Information' })
   expect(button.closest('.booking-details-page__section-header')).toBe(heading.parentElement?.parentElement)
   expect(heading.parentElement?.parentElement).toHaveClass('booking-details-page__section-header')
-  expect(within(screen.getByRole('region', { name: 'Event Requirements' })).getByLabelText('Status: pending')).toBeInTheDocument()
+  expect(within(screen.getByRole('region', { name: 'Event Requirements' })).getByLabelText('Status: Pending')).toBeInTheDocument()
   expect(heading.parentElement).not.toHaveTextContent('pending')
 })
 
@@ -701,9 +701,9 @@ it('requires a reason, cancels without writing, and displays the saved rejection
   expect(rejectionBanner).toHaveClass('booking-approval__confirmation')
   expect(within(rejectionBanner).getByText('Rejection Reason')).toBeInTheDocument()
   expect(within(rejectionBanner).getByText('Maintenance')).toBeInTheDocument()
-  expect(within(requirements).getByLabelText('Status: rejected')).toBeInTheDocument()
-  expect(screen.getAllByLabelText('Status: rejected')).toHaveLength(1)
-  expect(screen.getByLabelText('Status: rejected')).toBeInTheDocument()
+  expect(within(requirements).getByLabelText('Status: Rejected')).toBeInTheDocument()
+  expect(screen.getAllByLabelText('Status: Rejected')).toHaveLength(1)
+  expect(screen.getByLabelText('Status: Rejected')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Reject Booking' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
@@ -721,7 +721,7 @@ it('refreshes after a lost rejection response and displays the committed reason'
   await user.type(screen.getByRole('textbox', { name: 'Rejection reason' }), 'Unavailable')
   await user.click(screen.getByRole('button', { name: 'Confirm rejection' }))
   expect(await screen.findByText('Unavailable')).toBeInTheDocument()
-  expect(screen.getByLabelText('Status: rejected')).toBeInTheDocument()
+  expect(screen.getByLabelText('Status: Rejected')).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Reject Booking' })).not.toBeInTheDocument()
   expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
 })
@@ -740,7 +740,7 @@ it('VS03 (happy): immediate approval shows only approval confirmation and never 
   expect(screen.getByRole('heading', { name: 'Confirm booking approval' })).toBeInTheDocument()
   expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Confirm approval' }))
-  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   expect(screen.queryByRole('heading', { name: 'Confirm booking approval' })).not.toBeInTheDocument()
   expect(screen.queryByRole('region', { name: 'Tentative venue hold' })).not.toBeInTheDocument()
 })

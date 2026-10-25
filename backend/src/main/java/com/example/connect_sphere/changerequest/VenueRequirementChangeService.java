@@ -24,6 +24,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 public class VenueRequirementChangeService {
     private static final Set<String> FIELDS = Set.of("startDatetime", "endDatetime", "expectedAttendance",
             "venueRequirements", "accessibilityNeeds", "requiredFacilities");
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private BookingAssessmentService assessments;
     private final VenueRequirementReviewRepository reviews;
     private final VenueBookingRecordRepository bookings;
     private final VenueRepository venues;
@@ -59,7 +60,7 @@ public class VenueRequirementChangeService {
                 if (booking.getEndDatetime() == null) booking.setEndDatetime(oldEnd);
                 bookings.save(booking);
             }
-            if (booking.getStatus() != VenueBookingStatus.pending && booking.getStatus() != VenueBookingStatus.approved)
+            if (booking.getStatus() != VenueBookingStatus.pending && booking.getStatus() != VenueBookingStatus.approved && booking.getStatus() != VenueBookingStatus.attention)
                 continue;
             if (reviews.existsByChangeRequestIdAndBookingId(change.getChangeRequestId(), booking.getBookingId())) continue;
             var venue = venues.findById(booking.getVenueId()).orElseThrow();
@@ -85,6 +86,7 @@ public class VenueRequirementChangeService {
             reviews.saveAndFlush(review);
             notifications.createVenueRequirementChangedNotifications(recipients, review, ChangeFields.describe(changed));
         }
+        if (assessments != null) assessments.requirementsChanged(event,change.getDecidedBy());
     }
 
     private static Map<String, Object> snapshot(Map<String, Object> values) {

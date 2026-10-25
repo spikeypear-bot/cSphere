@@ -57,7 +57,7 @@ public class AvailabilityRepository {
                     COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' AS effective_start,
                     COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' AS effective_end
                 FROM venue_bookings b JOIN events e USING(event_id)
-                WHERE b.venue_id=? AND b.status='approved' AND e.status NOT IN ('cancelled','completed')
+                WHERE b.venue_id=? AND b.status IN ('approved','attention') AND e.status NOT IN ('cancelled','completed')
                 UNION ALL
                 SELECT b.booking_id, e.event_id, e.coordinator_id, 'Tentative hold: ' || e.event_name, 'hold',
                     h.reserved_start, h.reserved_end, h.reserved_start, h.reserved_end
@@ -83,7 +83,7 @@ public class AvailabilityRepository {
                        COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' AS effective_start,
                        COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' AS effective_end
                 FROM venue_bookings b JOIN events e ON e.event_id=b.event_id JOIN venues v ON v.venue_id=b.venue_id
-                WHERE b.venue_id=? AND b.status IN ('pending','approved')
+                WHERE b.venue_id=? AND b.status IN ('pending','approved','attention')
                 """ + filter + " ORDER BY COALESCE(b.start_datetime,e.start_datetime), b.booking_id", (r, n) -> new Booking(r.getObject("booking_id", UUID.class), r.getObject("event_id", UUID.class),
                         r.getObject("coordinator_id", UUID.class), r.getString("event_name"), r.getString("status"),
                         r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
@@ -128,7 +128,7 @@ public class AvailabilityRepository {
     public boolean affected(UUID bookingId) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
                 SELECT EXISTS(SELECT 1 FROM venue_unavailability_bookings i JOIN venue_bookings b USING(booking_id)
-                WHERE i.booking_id=? AND b.status IN ('pending','approved'))
+                WHERE i.booking_id=? AND b.status IN ('pending','approved','attention'))
                 """, Boolean.class, bookingId));
     }
 }

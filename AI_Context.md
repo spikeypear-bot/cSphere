@@ -519,3 +519,20 @@ semantic comparisons and impact checks are reused. V35 now adds immutable review
 page history/indicator, current suitability checks, and assignment-scoped coordinator
 outcome visibility and notifications. Review actions do not change reservations. See `docs/venue-requirement-changes.md` for
 scope, access limitations, transaction behaviour and outstanding source verification.
+
+
+## VS17 — live suitability (25 October 2026)
+Relevant venue edits or approved requirement changes now invalidate unsuitable approved bookings
+into `attention` while preserving their reservation. Staff explicitly restore approval through
+booking reassessment; EC/EO pages refresh automatically and events return through the existing
+Planning/safety flow. V36–V38 add the state and immutable assessment snapshots. Existing decided
+requirement reviews remain historic. See docs/venue-requirement-changes.md.
+
+## Venue Staff presentation audit (25 October 2026)
+Staff home now links to implemented features without scaffold copy. Shared booking
+labels and attention colours apply to staff lists, details, previews and calendars;
+attention reservations remain visible. Reassessment reuses existing review styles,
+review loading failures are retryable, and operational-issue inputs explicitly use
+Singapore time. See `docs/venue-staff-presentation-audit.md` for scope, evidence and
+completed structured-hour fixture updates and full regression evidence. No
+business-state or reservation rules were changed by the presentation audit.

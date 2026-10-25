@@ -1,4 +1,4 @@
-// @stories VS01 VS-C1  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS01 VS-C1 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -122,4 +122,14 @@ it.each(['preview', 'save'])('shows an overlapping-period error from %s and pres
   expect(screen.getByLabelText('Reason')).toHaveValue(' Maintenance ')
   expect(recorded).not.toHaveBeenCalled()
   expect(apiClient.post).toHaveBeenCalledTimes(stage === 'save' ? 2 : 1)
+})
+
+it('VS17 (conflict): affected booking previews use the attention label and retain the explicit confirmation step', async () => {
+ mount();fill()
+ vi.mocked(apiClient.post).mockResolvedValue({affectedBookings:[{...booking,status:'attention'}],previewToken:'token'})
+ await userEvent.click(screen.getByRole('button',{name:'Record Unavailability'}))
+ expect(await screen.findByText('Requires attention')).toHaveAttribute('data-booking-status','attention')
+ expect(screen.getByRole('button',{name:'Confirm recording unavailability'})).toBeInTheDocument()
+ expect(apiClient.post).toHaveBeenCalledTimes(1)
+ expect(apiClient.post).toHaveBeenCalledWith('/venues/v1/unavailability/preview',expect.anything())
 })
