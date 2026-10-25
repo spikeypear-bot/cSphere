@@ -42,8 +42,10 @@ export class ApiClientError extends Error {
   readonly unavailablePeriods: VenueUnavailabilityConflict[]
   /** EO-C2: the message to show next to each field the server refused. */
   readonly fieldErrors: Record<string, string> | null
+  /** D33: the equipment item a reservation was refused for. */
+  readonly equipmentId: string | null
 
-  constructor(message: string, status: number, missingFields: string[] | null = null, conflicts: VenueBookingConflict[] = [], unavailablePeriods: VenueUnavailabilityConflict[] = [], fieldErrors: Record<string, string> | null = null) {
+  constructor(message: string, status: number, missingFields: string[] | null = null, conflicts: VenueBookingConflict[] = [], unavailablePeriods: VenueUnavailabilityConflict[] = [], fieldErrors: Record<string, string> | null = null, equipmentId: string | null = null) {
     super(message)
     this.name = 'ApiClientError'
     this.status = status
@@ -51,6 +53,7 @@ export class ApiClientError extends Error {
     this.conflicts = conflicts
     this.unavailablePeriods = unavailablePeriods
     this.fieldErrors = fieldErrors
+    this.equipmentId = equipmentId
   }
 
   /** The session is gone or unrenewable — the caller must log in again. */
@@ -70,6 +73,7 @@ interface ApiErrorBody {
   conflicts?: unknown
   unavailablePeriods?: unknown
   fieldErrors?: unknown
+  equipmentId?: unknown
 }
 
 function fieldErrorsOf(value: unknown): Record<string, string> | null {
@@ -117,6 +121,7 @@ function failed(response: Response, json: unknown): ApiClientError {
     bookingConflicts(body.conflicts),
     unavailabilityConflicts(body.unavailablePeriods),
     fieldErrorsOf(body.fieldErrors),
+    typeof body.equipmentId === 'string' ? body.equipmentId : null,
   )
 }
 
