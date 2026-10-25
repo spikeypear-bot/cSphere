@@ -6,10 +6,10 @@ import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
 import { formatEventDateTime, formatEventTimeRange } from '../../venueStaff/formatEventDateTime'
-import { EquipmentPhoto } from './EquipmentPhoto'
 import { closeReport, decideOutcome, fetchReport } from './equipmentDamageApi'
 import { fetchEquipmentUnits } from '../status/equipmentStatusApi'
 import type { EquipmentUnit } from '../status/equipmentStatus.types'
+import { EquipmentSummaryCard } from '../shared/EquipmentSummaryCard'
 import {
   BLOCK_LABELS,
   outcomeLabel,
@@ -86,8 +86,7 @@ export function DamageReportDetailPage() {
         actions={<Link className="button button--secondary" to="/technical-support/faulty">Back to faulty equipment</Link>}
       />
 
-      <Card className="equipment-damage__summary">
-        <EquipmentPhoto name={report.equipmentName} />
+      <EquipmentSummaryCard name={report.equipmentName}>
         <dl>
           <div><dt>Damaged</dt><dd>{report.serialised ? `Unit ${report.serialNumber}` : `${report.quantity} unit${report.quantity === 1 ? '' : 's'}`}</dd></div>
           <div><dt>From</dt><dd>{formatEventDateTime(report.periodStart)}</dd></div>
@@ -101,7 +100,7 @@ export function DamageReportDetailPage() {
             </div>
           ) : null}
         </dl>
-      </Card>
+      </EquipmentSummaryCard>
 
       {notice ? <Notice>{notice}</Notice> : null}
       {actionError ? <Notice tone="danger">{actionError}</Notice> : null}
