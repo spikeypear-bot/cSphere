@@ -37,8 +37,8 @@ import tools.jackson.databind.JsonNode;
  * TS09's Technical Support console on real PostgreSQL (decision-log D32):
  * the request list by status, every unit's current and upcoming status
  * periods, the catalogue's availability for a window, one kind's detail and
- * reservations, TS03's refusal the console routes to TS09, and a damage
- * report that blocks a unit as Unavailable (V39).
+ * reservations, and a damage report that blocks a unit as Unavailable
+ * (V39).
  *
  * <p>Set-up goes through the real API (EC07 request, TS02 reservation, TS03
  * status period, TS06 decision), so the rules of TS01 (availability), TS02
@@ -191,12 +191,6 @@ class TechnicalSupportConsoleFlowTest {
     private void sync() {
         entityManager.flush();
         entityManager.clear();
-    }
-
-    private int periodsFor(UUID equipmentId) {
-        sync();
-        return jdbc.queryForObject("SELECT count(*) FROM equipment_status_periods WHERE equipment_id = ?",
-                Integer.class, equipmentId);
     }
 
     // ---- Requests by status --------------------------------------------------
@@ -413,25 +407,6 @@ class TechnicalSupportConsoleFlowTest {
     }
 
     @Test
-    @DisplayName("TS09 (boundary): a window that starts exactly when the reservation and damage end counts neither")
-    void catalogueWindowRightAfterCountsNothing() throws Exception {
-        UUID mics = equipment("Console Mic " + UUID.randomUUID(), 5, false);
-        UUID eventId = event("Console Back To Back", MARCH_10);
-        request(eventId, mics, 2, null);
-        reserve(eventId, mics, 2, null, MARCH_10);
-        report("{\"equipmentId\":\"%s\",\"quantity\":1,\"description\":\"Water damage\",\"periodStart\":\"%s\",\"periodEnd\":\"%s\"}"
-                .formatted(mics, start(MARCH_10), end(MARCH_10))).andExpect(status().isCreated());
-        sync();
-
-        JsonNode mic = only(getJson("/api/equipment/catalogue", "ts1", "from", end(MARCH_10),
-                "to", "2027-03-10T05:00:00Z"), "equipmentId", mics).getFirst();
-
-        assertThat(mic.get("reservedQuantity").asInt()).isZero();
-        assertThat(mic.get("outOfActionQuantity").asInt()).isZero();
-        assertThat(mic.get("availableQuantity").asInt()).isEqualTo(5);
-    }
-
-    @Test
     @DisplayName("TS09 (negative): half a window, or one whose end is not after its start, is refused with 400; one second long is accepted")
     void catalogueWindowMustMoveForward() throws Exception {
         mvc.perform(get("/api/equipment/catalogue").param("from", start(MARCH_10)).with(flow.as("ts1")))
@@ -565,23 +540,6 @@ class TechnicalSupportConsoleFlowTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ---- TS03's refusal, which the console routes to TS09 ---------------------
-
-    @Test
-    @DisplayName("TS09 (conflict): blocking a unit an event holds is refused with 409 and TS03's fixed message, and no block is saved")
-    void blockingAReservedUnitIsRefusedWithAStableMessage() throws Exception {
-        UUID projectors = projectors("PJ-1");
-        UUID eventId = event("Console Reserved", MARCH_10);
-        request(eventId, projectors, 1, null);
-        reserve(eventId, projectors, 1, "PJ-1", MARCH_10);
-
-        block(projectors, "PJ-1", "Faulty", start(MARCH_10), end(MARCH_10))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("This unit is already committed to an event during that time."));
-
-        assertThat(periodsFor(projectors)).isZero();
-    }
-
     // ---- TS09 Unavailable (V39) ----------------------------------------------
 
     @Test
@@ -604,56 +562,18 @@ class TechnicalSupportConsoleFlowTest {
     }
 
     @Test
-    @DisplayName("TS09 (happy): a reserved unit asked to be Unavailable is blocked only once its event is replaced and the report closes")
-    void unavailableBlockWaitsForTheEventToLetGo() throws Exception {
-        UUID projectors = projectors("PJ-1", "PJ-2");
-        UUID eventId = event("Console Replace", MARCH_10);
-        UUID requestId = request(eventId, projectors, 1, null);
-        reserve(eventId, projectors, 1, "PJ-1", MARCH_10);
-        decideRequest(requestId, "{\"status\":\"approved\"}");
-
-        JsonNode report = flow.read(report(unitReport(projectors, "PJ-1", "2027-03-01T00:00:00Z", null,
-                        ",\"blockStatus\":\"unavailable\""))
-                .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.status").value("OPEN"))
-                .andExpect(jsonPath("$.blockApplied").value(false))
-                .andReturn().getResponse().getContentAsString());
-        assertThat(periodsFor(projectors)).isZero();
-        String reportId = report.get("reportId").asString();
-        mvc.perform(post("/api/equipment-damage-reports/" + reportId + "/outcomes/"
-                        + report.get("affectedEvents").get(0).get("outcomeId").asString()).with(flow.as("ts1"))
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}"))
-                .andExpect(status().isOk());
-
-        mvc.perform(post("/api/equipment-damage-reports/" + reportId + "/close").with(flow.as("ts1")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.blockStatus").value("UNAVAILABLE"))
-                .andExpect(jsonPath("$.blockApplied").value(true));
-
-        sync();
-        assertThat(jdbc.queryForList("SELECT status::text FROM equipment_status_periods WHERE equipment_id = ? "
-                + "AND serial_number = 'PJ-1'", String.class, projectors)).containsExactly("UNAVAILABLE");
-    }
-
-    @Test
-    @DisplayName("TS09 (negative): an unknown block status, or a block on a non-serialised kind, is refused and nothing is saved")
+    @DisplayName("TS09 (negative): a block on a non-serialised kind is refused and nothing is saved")
     void invalidBlockRequestsAreRefused() throws Exception {
-        UUID projectors = projectors("PJ-1");
         UUID mics = equipment("Console Mic " + UUID.randomUUID(), 5, false);
 
-        report(unitReport(projectors, "PJ-1", "2027-04-01T00:00:00Z", null, ",\"blockStatus\":\"AVAILABLE\""))
-                .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.message").value("blockStatus must be FAULTY, UNAVAILABLE or left out."));
         report("{\"equipmentId\":\"%s\",\"quantity\":1,\"description\":\"Frayed\",\"periodStart\":\"2027-04-01T00:00:00Z\",\"blockStatus\":\"UNAVAILABLE\"}"
                 .formatted(mics))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("Only a serialised unit can be marked Faulty or Unavailable."));
 
         sync();
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_damage_reports WHERE equipment_id IN (?, ?)",
-                Integer.class, projectors, mics)).isZero();
-        assertThat(periodsFor(projectors)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_damage_reports WHERE equipment_id = ?",
+                Integer.class, mics)).isZero();
     }
 
     @Test

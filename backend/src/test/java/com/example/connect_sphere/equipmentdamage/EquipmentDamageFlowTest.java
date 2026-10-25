@@ -19,6 +19,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
@@ -46,6 +48,7 @@ import tools.jackson.databind.JsonNode;
 @Tag("TS01")
 @Tag("TS02")
 @Tag("TS06")
+@Tag("TS03")
 @Tag("EC07")
 @Tag("EO04")
 @SpringBootTest
@@ -631,26 +634,34 @@ class EquipmentDamageFlowTest {
         close(report).andExpect(status().isConflict());
     }
 
-    @Test
-    @DisplayName("TS09 AC4 (happy): a unit to be marked Faulty is blocked for the reported period once no event holds it; a non-serialised kind cannot be marked")
-    void theUnitIsMarkedFaultyWhenTheReportCloses() throws Exception {
+    @ParameterizedTest(name = "{0}")
+    @ValueSource(strings = {"FAULTY", "UNAVAILABLE"})
+    @DisplayName("TS09 AC4 (happy): a unit an event holds, asked to be blocked, is blocked for the reported period only once its event is replaced and the report closes; a non-serialised kind cannot be blocked")
+    void theUnitIsBlockedWhenTheReportCloses(String block) throws Exception {
         UUID projectors = projectors("PJ-1", "PJ-2");
         UUID eventId = event("TS09 Gala", MARCH_10);
         approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
-        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-04-01T00:00:00Z", "FAULTY"));
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, "2027-04-01T00:00:00Z", block));
+        assertThat(report.get("status").asString()).isEqualTo("OPEN");
+        assertThat(report.get("blockStatus").asString()).isEqualTo(block);
+        assertThat(report.get("blockApplied").asBoolean()).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_status_periods WHERE equipment_id = ?",
+                Integer.class, projectors)).isZero();
         decide(report, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}");
 
-        close(report).andExpect(status().isOk()).andExpect(jsonPath("$.blockApplied").value(true));
+        close(report).andExpect(status().isOk())
+                .andExpect(jsonPath("$.blockStatus").value(block))
+                .andExpect(jsonPath("$.blockApplied").value(true));
 
         sync();
-        assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_status_periods WHERE equipment_id = ? "
-                + "AND serial_number = 'PJ-1'", String.class, projectors)).isEqualTo("FAULTY");
+        assertThat(jdbc.queryForList("SELECT status::text FROM equipment_status_periods WHERE equipment_id = ? "
+                + "AND serial_number = 'PJ-1'", String.class, projectors)).containsExactly(block);
         assertThat(jdbc.queryForObject("SELECT period_end FROM equipment_status_periods WHERE equipment_id = ? "
                 + "AND serial_number = 'PJ-1'", Instant.class, projectors)).isEqualTo(Instant.parse("2027-04-01T00:00:00Z"));
 
         UUID cables = equipment("TS09 Cable " + UUID.randomUUID(), 5, false);
         report("{\"equipmentId\":\"" + cables + "\",\"quantity\":1,\"description\":\"Frayed\",\"periodStart\":\""
-                + DAMAGED_FROM + "\",\"blockStatus\":\"FAULTY\"}").andExpect(status().isBadRequest());
+                + DAMAGED_FROM + "\",\"blockStatus\":\"" + block + "\"}").andExpect(status().isBadRequest());
     }
 
     @Test

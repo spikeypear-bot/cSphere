@@ -1,13 +1,9 @@
 package com.example.connect_sphere.equipment;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -24,13 +20,12 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 /**
  * TS09 (decision-log D32): the Technical Support console's equipment reads —
- * the catalogue with and without a window, one kind's detail, and every
- * unit's current status periods (TS03's blocks). The clock is fixed at
+ * the catalogue with and without a window, and one kind's detail. The
+ * window's validation and every unit's status periods are covered end to end
+ * by {@code TechnicalSupportConsoleFlowTest}. The clock is fixed at
  * {@link #NOW}; repositories are stubs, and the availability calculator is a
  * mock only to show the plain catalogue never asks it anything.
  */
@@ -47,12 +42,10 @@ class EquipmentConsoleReadsTest {
     private final EquipmentRepository equipment = mock(EquipmentRepository.class);
     private final SerialisedEquipmentRepository units = mock(SerialisedEquipmentRepository.class);
     private final EquipmentStatusPeriodRepository periods = mock(EquipmentStatusPeriodRepository.class);
-    private final EquipmentLogRepository logs = mock(EquipmentLogRepository.class);
     private final EquipmentAvailabilityService availability = mock(EquipmentAvailabilityService.class);
     private final Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
     private final EquipmentCatalogueService catalogue =
             new EquipmentCatalogueService(equipment, units, periods, availability, clock);
-    private final EquipmentStatusService status = new EquipmentStatusService(units, periods, equipment, logs, clock);
 
     private final UUID projectorsId = UUID.randomUUID();
     private Equipment projectors;
@@ -97,22 +90,6 @@ class EquipmentConsoleReadsTest {
                 new EquipmentCatalogueResponse(projectorsId, "Projector", 3, true, 1, 1, 1));
     }
 
-    @Test
-    @DisplayName("TS09 (boundary): half a window or to equal to from is 400; to one second after from is accepted")
-    void windowBoundaries() {
-        for (Instant[] window : new Instant[][] {{FROM, null}, {null, TO}, {FROM, FROM}, {TO, FROM}}) {
-            assertThatThrownBy(() -> catalogue.catalogue(window[0], window[1]))
-                    .isInstanceOfSatisfying(ResponseStatusException.class,
-                            e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
-        }
-        Instant oneSecond = FROM.plusSeconds(1);
-        when(availability.forEquipment(List.of(projectors), FROM, oneSecond))
-                .thenReturn(Map.of(projectorsId, new EquipmentAvailabilityService.Availability(3, 0, 0, 3)));
-
-        assertThat(catalogue.catalogue(FROM, oneSecond)).hasSize(1);
-        verify(availability, never()).forEquipment(eq(List.of(projectors)), eq(FROM), eq(FROM));
-    }
-
     // ---- Detail ---------------------------------------------------------------
 
     @Test
@@ -142,61 +119,5 @@ class EquipmentConsoleReadsTest {
         assertThat(detail.units().get(1).statusPeriods())
                 .containsExactly(StatusPeriodResponse.from(endedNow), StatusPeriodResponse.from(later));
         assertThat(detail.units().get(2).statusPeriods()).isEmpty();
-    }
-
-    @Test
-    @DisplayName("TS09 (negative): an unknown kind is 404")
-    void unknownKindIsNotFound() {
-        assertThatThrownBy(() -> catalogue.detail(UUID.randomUUID()))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
-    }
-
-    // ---- Every unit's status periods (TS03 blocks) ----------------------------
-
-    @Test
-    @DisplayName("TS09 (happy): current periods are those overlapping now onwards, newest start first, each with its kind's name")
-    void currentPeriodsUseTheOverlapQueryFromNow() {
-        EquipmentStatusPeriod running = new EquipmentStatusPeriod(projectorsId, "PJ-1", EquipmentStatus.FAULTY,
-                FROM, null);
-        EquipmentStatusPeriod upcoming = new EquipmentStatusPeriod(projectorsId, "PJ-2", EquipmentStatus.UNAVAILABLE,
-                TO, TO.plusSeconds(3600));
-        when(periods.findOverlapping(eq(NOW), any())).thenReturn(List.of(running, upcoming));
-
-        List<UnitStatusPeriodResponse> listed = status.listAllPeriods(true);
-
-        assertThat(listed).containsExactly(
-                new UnitStatusPeriodResponse(upcoming.getId(), projectorsId, "Projector", "PJ-2",
-                        EquipmentStatus.UNAVAILABLE, TO, TO.plusSeconds(3600)),
-                new UnitStatusPeriodResponse(running.getId(), projectorsId, "Projector", "PJ-1",
-                        EquipmentStatus.FAULTY, FROM, null));
-        verify(periods, never()).findAll();
-    }
-
-    @Test
-    @DisplayName("TS09 (happy): current=false lists every period, ended ones too")
-    void allPeriodsIncludeEndedOnes() {
-        EquipmentStatusPeriod ended = new EquipmentStatusPeriod(projectorsId, "PJ-1", EquipmentStatus.FAULTY,
-                FROM.minusSeconds(7200), FROM);
-        when(periods.findAll()).thenReturn(List.of(ended));
-
-        assertThat(status.listAllPeriods(false)).extracting(UnitStatusPeriodResponse::id).containsExactly(ended.getId());
-        verify(periods, never()).findOverlapping(any(), any());
-    }
-
-    @Test
-    @DisplayName("TS09 (conflict): TS03's refusal to block a unit an event holds keeps its fixed message, which the console detects")
-    void committedUnitMessageIsFixed() {
-        when(units.existsById(any())).thenReturn(true);
-        when(equipment.findForUpdate(projectorsId)).thenReturn(Optional.of(projectors));
-        when(logs.findOverlappingForUnit(eq(projectorsId), eq("PJ-1"), any(), any()))
-                .thenReturn(List.of(new EquipmentLog(UUID.randomUUID(), projectorsId, 1, "PJ-1", FROM, TO)));
-
-        assertThatThrownBy(() -> status.addPeriod(projectorsId, "PJ-1", EquipmentStatus.UNAVAILABLE, FROM, TO))
-                .isInstanceOfSatisfying(ResponseStatusException.class, e -> {
-                    assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-                    assertThat(e.getReason()).isEqualTo("This unit is already committed to an event during that time.");
-                });
-        verify(periods, never()).save(any());
     }
 }

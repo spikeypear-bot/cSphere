@@ -2,13 +2,10 @@ package com.example.connect_sphere.equipment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.List;
 import java.util.UUID;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -16,14 +13,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.MediaType;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.equipment.DevEquipmentSeeder.SeedEquipment;
-import com.example.connect_sphere.testsupport.FlowSupport;
-import com.example.connect_sphere.user.repository.UserRepository;
 
 @Tag("integration")
 @Tag("TS09")
@@ -33,15 +26,6 @@ import com.example.connect_sphere.user.repository.UserRepository;
 class DevEquipmentSeederFlowTest {
 
     @Autowired JdbcTemplate jdbc;
-    @Autowired MockMvc mvc;
-    @Autowired UserRepository users;
-
-    private FlowSupport flow;
-
-    @BeforeEach
-    void setUp() {
-        flow = new FlowSupport(mvc, users);
-    }
 
     private int units(UUID equipmentId) {
         return jdbc.queryForObject(
@@ -129,21 +113,5 @@ class DevEquipmentSeederFlowTest {
         // Last: a failed statement aborts the surrounding (rolled-back) transaction.
         assertThatThrownBy(() -> jdbc.update(insert, id, "T".repeat(65)))
                 .isInstanceOf(DataIntegrityViolationException.class);
-    }
-
-    @Test
-    @DisplayName("TS09 (negative): a reservation naming a serial number over 64 characters is refused and nothing is saved")
-    void reservationRefusesOverlongSerial() throws Exception {
-        int before = jdbc.queryForObject("SELECT count(*) FROM equipment_logs", Integer.class);
-        String body = """
-                {"eventId":"%s","equipmentId":"%s","quantity":1,"serialNumber":"%s",
-                 "start":"2027-03-10T01:00:00Z","end":"2027-03-10T04:00:00Z"}
-                """.formatted(UUID.randomUUID(), UUID.randomUUID(), "S".repeat(65));
-
-        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1"))
-                        .contentType(MediaType.APPLICATION_JSON).content(body))
-                .andExpect(status().isBadRequest());
-
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs", Integer.class)).isEqualTo(before);
     }
 }

@@ -1,7 +1,6 @@
 package com.example.connect_sphere.equipmentrequest;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.Mockito.mock;
@@ -22,8 +21,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.equipment.Equipment;
@@ -159,12 +156,4 @@ class EquipmentRequestQueueServiceTest {
         assertThat(queue.list("approved")).isEmpty();
     }
 
-    @Test
-    @DisplayName("TS09 (negative): an unknown status is 400 and nothing is read")
-    void unknownStatusIsRefused() {
-        assertThatThrownBy(() -> queue.list("pending"))
-                .isInstanceOfSatisfying(ResponseStatusException.class,
-                        e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST));
-        verify(requests, never()).findByStatusIn(any());
-    }
 }

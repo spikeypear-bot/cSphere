@@ -388,6 +388,16 @@ class EquipmentBatchReservationFlowTest {
         assertThat(rowsOf(eventId, mixers)).containsExactly("MX-2:1:false", "MX-3:1:false");
     }
 
+    @Test
+    @DisplayName("TS09 (negative): a reservation naming a serial number over 64 characters is refused and nothing is saved")
+    void reservationRefusesOverlongSerial() throws Exception {
+        int before = jdbc.queryForObject("SELECT count(*) FROM equipment_logs", Integer.class);
+
+        single(UUID.randomUUID(), UUID.randomUUID(), 1, "S".repeat(65), null).andExpect(status().isBadRequest());
+
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs", Integer.class)).isEqualTo(before);
+    }
+
     // ---- TS09 reads spares --------------------------------------------------------------
 
     @Test

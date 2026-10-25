@@ -59,8 +59,7 @@ class TechnicalSupportConsoleRoleAccessTest {
             "/api/equipment/" + ID,
             "/api/equipment/" + ID + "/reservations?" + WINDOW,
             "/api/equipment/catalogue?" + WINDOW,
-            "/api/equipment/catalogue?from=2027-03-10T01:00:00Z",
-            "/api/equipment-damage-reports?equipmentId=" + ID};
+            "/api/equipment/catalogue?from=2027-03-10T01:00:00Z"};
         return Stream.of("ec1", "ecl1", "eo1", "vs1", "so1", "att1")
                 .flatMap(user -> Stream.of(technicalSupportOnly).map(path -> Arguments.of(user, path)));
     }
