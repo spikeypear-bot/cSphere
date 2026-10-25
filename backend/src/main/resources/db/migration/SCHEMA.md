@@ -149,6 +149,7 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 |---|---|---|---|---|
 | `venue_id` | `UUID` | no | PK | Identifier |
 | `venue_address` | `TEXT` | no | | Full address |
+| `venue_name` | `TEXT` | no | | Public display name (V35; legacy values start as the address) |
 | `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
 | `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
@@ -594,3 +595,18 @@ column to the six checklist keys, so a row written outside the service cannot
 hold an unknown item; adding a checklist item means updating that constraint. The decision's timeline entry
 (`event_request_activity.flagged_fields`) holds the same keys. See
 decision-log D30.
+
+## V35 update — attendee registration (AT01)
+
+`event_requests` and `events` add registration capacity, opening/closing timestamps,
+and attendee instructions. When registration is required, event-request approval
+requires a positive capacity and a valid window ending no later than event start.
+`event_registrations` stores the attendee and event, a unique public reference,
+confirmed/cancelled status, and registration timestamp. A partial unique index
+allows one active registration per attendee/event. The application locks the event
+row while validating the window and capacity, so concurrent registrations cannot
+overbook. `notification_type` gains `attendee_registration_confirmed`, with the
+event and confirmation message required by the notification shape check.
+
+`venues` adds a public display name (existing records use their saved address as
+the initial name); attendee event details show that name and the separate address.

@@ -26,6 +26,10 @@ export interface DraftFields {
   accessibilityNeeds: AccessibilityFeature[]
   requiredFacilities?: Facility[]
   registrationNeeds: boolean | null
+  registrationCapacity?: number | null
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
+  attendeeInstructions?: string | null
 }
 
 const BLANK_DRAFT: DraftFields = {
@@ -40,6 +44,10 @@ const BLANK_DRAFT: DraftFields = {
   accessibilityNeeds: [],
   requiredFacilities: [],
   registrationNeeds: null,
+  registrationCapacity: null,
+  registrationOpensAt: null,
+  registrationClosesAt: null,
+  attendeeInstructions: null,
 }
 
 // Autosave-UX enhancement to EO01: save automatically a short while after the
@@ -103,6 +111,10 @@ function toDraftFields(dto: EventRequestDto): DraftFields {
     accessibilityNeeds: dto.accessibilityNeeds,
     requiredFacilities: dto.requiredFacilities ?? [],
     registrationNeeds: dto.registrationNeeds,
+    registrationCapacity: dto.registrationCapacity ?? null,
+    registrationOpensAt: dto.registrationOpensAt ?? null,
+    registrationClosesAt: dto.registrationClosesAt ?? null,
+    attendeeInstructions: dto.attendeeInstructions ?? null,
   }
 }
 

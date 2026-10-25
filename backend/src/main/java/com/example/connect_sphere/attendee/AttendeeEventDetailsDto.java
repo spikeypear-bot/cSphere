@@ -18,8 +18,11 @@ public record AttendeeEventDetailsDto(
         OffsetDateTime registrationOpensAt,
         OffsetDateTime registrationClosesAt,
         Integer registrationCapacity,
+        Integer availablePlaces,
         String attendeeInstructions,
+        String registrationReference,
+        OffsetDateTime registeredAt,
         List<AttendeeVenue> venues) {
 
-    public record AttendeeVenue(UUID venueId, String address, boolean unavailable) { }
+    public record AttendeeVenue(UUID venueId, String name, String address, boolean unavailable) { }
 }

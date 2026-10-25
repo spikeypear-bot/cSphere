@@ -17,19 +17,26 @@ public record VenueDto(
         String additionalInformation,
         List<AccessibilityFeature> venueAccessibilities,
         List<Facility> venueFacilities,
-        List<VenueOperatingHourDto> operatingHours, int setupMinutes, int turnaroundMinutes) {
+        List<VenueOperatingHourDto> operatingHours, int setupMinutes, int turnaroundMinutes, String venueName) {
     public VenueDto(UUID venueId, String venueAddress, Integer venueCapacity,
             List<VenueLayout> supportedLayouts, String operatingInformation,
             String additionalInformation, List<AccessibilityFeature> venueAccessibilities,
             List<Facility> venueFacilities, List<VenueOperatingHourDto> operatingHours) {
         this(venueId, venueAddress, venueCapacity, supportedLayouts, operatingInformation,
-                additionalInformation, venueAccessibilities, venueFacilities, operatingHours, 0, 0);
+                additionalInformation, venueAccessibilities, venueFacilities, operatingHours, 0, 0, null);
     }
     public VenueDto(UUID venueId, String venueAddress, Integer venueCapacity,
             List<VenueLayout> supportedLayouts, String operatingInformation,
             String additionalInformation, List<AccessibilityFeature> venueAccessibilities,
             List<Facility> venueFacilities) {
         this(venueId, venueAddress, venueCapacity, supportedLayouts, operatingInformation,
-                additionalInformation, venueAccessibilities, venueFacilities, List.of());
+                additionalInformation, venueAccessibilities, venueFacilities, List.of(), 0, 0, null);
+    }
+    public VenueDto(UUID venueId, String venueAddress, Integer venueCapacity,
+            List<VenueLayout> supportedLayouts, String operatingInformation, String additionalInformation,
+            List<AccessibilityFeature> venueAccessibilities, List<Facility> venueFacilities,
+            List<VenueOperatingHourDto> operatingHours, int setupMinutes, int turnaroundMinutes) {
+        this(venueId, venueAddress, venueCapacity, supportedLayouts, operatingInformation,
+                additionalInformation, venueAccessibilities, venueFacilities, operatingHours, setupMinutes, turnaroundMinutes, null);
     }
 }

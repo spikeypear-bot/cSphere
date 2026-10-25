@@ -88,6 +88,18 @@ public class EventRequest {
     @Column(name = "registration_needs")
     private Boolean registrationNeeds;
 
+    @Column(name = "registration_capacity")
+    private Integer registrationCapacity;
+
+    @Column(name = "registration_opens_at")
+    private OffsetDateTime registrationOpensAt;
+
+    @Column(name = "registration_closes_at")
+    private OffsetDateTime registrationClosesAt;
+
+    @Column(name = "attendee_instructions")
+    private String attendeeInstructions;
+
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private EventRequestStatus status;
 

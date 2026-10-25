@@ -112,6 +112,7 @@ export function NumberField({ id, label, value, onChange, hint, error, min, whol
 
 interface DateTimeFieldProps {
   min?: string
+  max?: string
   id: string
   label: string
   value: string | null
@@ -125,7 +126,7 @@ interface DateTimeFieldProps {
  * typed and shown is always Singapore time, whatever zone the browser is in,
  * so "10:00" means the same moment to the organiser, the coordinator and the
  * venue (Singapore has no daylight saving: always GMT+8). */
-export function DateTimeField({ id, label, value, onChange, hint, error, min }: DateTimeFieldProps) {
+export function DateTimeField({ id, label, value, onChange, hint, error, min, max }: DateTimeFieldProps) {
   const localValue = value ? toDatetimeLocalValue(value) : ''
   return (
     <FieldShell label={label} hint={hint ?? SINGAPORE_TIME_HINT} error={error} htmlFor={id}>
@@ -133,6 +134,7 @@ export function DateTimeField({ id, label, value, onChange, hint, error, min }: 
         id={id}
         type="datetime-local"
         min={min ? toDatetimeLocalValue(min) : undefined}
+        max={max ? toDatetimeLocalValue(max) : undefined}
         aria-invalid={!!error}
         aria-describedby={error ? `${id}-error` : undefined}
         value={localValue}

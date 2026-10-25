@@ -43,6 +43,10 @@ function fieldsFrom(request: EventRequestDto): Fields {
     accessibilityNeeds: request.accessibilityNeeds,
     requiredFacilities: request.requiredFacilities ?? [],
     registrationNeeds: request.registrationNeeds,
+    registrationCapacity: request.registrationCapacity ?? null,
+    registrationOpensAt: request.registrationOpensAt ?? null,
+    registrationClosesAt: request.registrationClosesAt ?? null,
+    attendeeInstructions: request.attendeeInstructions ?? null,
   }
 }
 

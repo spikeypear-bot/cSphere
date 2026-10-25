@@ -23,13 +23,26 @@ public record SaveEventRequestRequest(
         String equipmentRequirements,
         List<AccessibilityFeature> accessibilityNeeds,
         List<Facility> requiredFacilities,
-        Boolean registrationNeeds) {
+        Boolean registrationNeeds,
+        Integer registrationCapacity,
+        OffsetDateTime registrationOpensAt,
+        OffsetDateTime registrationClosesAt,
+        String attendeeInstructions) {
+
+    public SaveEventRequestRequest(String eventName, String purpose, String description,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
+            String venueRequirements, String equipmentRequirements, List<AccessibilityFeature> accessibilityNeeds,
+            List<Facility> requiredFacilities, Boolean registrationNeeds) {
+        this(eventName, purpose, description, startDatetime, endDatetime, expectedAttendance, venueRequirements,
+                equipmentRequirements, accessibilityNeeds, requiredFacilities, registrationNeeds, null, null, null, null);
+    }
 
     public SaveEventRequestRequest(String eventName, String purpose, String description,
             OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
             String venueRequirements, String equipmentRequirements,
             List<AccessibilityFeature> accessibilityNeeds, Boolean registrationNeeds) {
         this(eventName, purpose, description, startDatetime, endDatetime, expectedAttendance,
-                venueRequirements, equipmentRequirements, accessibilityNeeds, List.of(), registrationNeeds);
+                venueRequirements, equipmentRequirements, accessibilityNeeds, List.of(), registrationNeeds,
+                null, null, null, null);
     }
 }

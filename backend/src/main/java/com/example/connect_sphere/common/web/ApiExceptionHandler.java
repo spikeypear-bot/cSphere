@@ -14,6 +14,7 @@ import com.example.connect_sphere.event.service.EventCancellationStateException;
 import com.example.connect_sphere.event.service.EventLifecycleException;
 import com.example.connect_sphere.event.service.EventLifecycleValidationException;
 import com.example.connect_sphere.event.service.EventNotFoundException;
+import com.example.connect_sphere.attendee.AttendeeRegistrationException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.event.service.EventReassignmentNotFoundException;
@@ -47,6 +48,11 @@ import com.example.connect_sphere.safety.InvalidReadinessUpdateException;
  * exception rather than catching in the controller. */
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(AttendeeRegistrationException.class)
+    public ResponseEntity<ApiError> handleAttendeeRegistration(AttendeeRegistrationException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getMessage()));
+    }
 
     @ExceptionHandler(VenueNotFoundException.class)
     public ResponseEntity<ApiError> handleVenueNotFound(VenueNotFoundException ex) {

@@ -22,6 +22,9 @@ const FIELD_IS_MISSING: Record<string, (fields: DraftFields) => boolean> = {
   expectedAttendance: (f) => f.expectedAttendance == null,
   venueRequirements: (f) => isBlank(f.venueRequirements),
   accessibilityNeeds: (f) => f.accessibilityNeeds.length === 0,
+  registrationCapacity: (f) => Boolean(f.registrationNeeds) && f.registrationCapacity == null,
+  registrationOpensAt: (f) => Boolean(f.registrationNeeds) && isBlank(f.registrationOpensAt),
+  registrationClosesAt: (f) => Boolean(f.registrationNeeds) && isBlank(f.registrationClosesAt),
 }
 
 export function getMissingRequiredFields(fields: DraftFields): string[] {

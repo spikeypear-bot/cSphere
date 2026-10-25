@@ -32,15 +32,38 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 
 @Tag("unit")
 @Tag("AT02")
+@Tag("AT01")
 class AttendeeEventDetailsServiceTest {
     private final EventRepository events = mock(EventRepository.class);
     private final VenueBookingRecordRepository bookings = mock(VenueBookingRecordRepository.class);
+    private final AttendeeRegistrationRepository registrations = mock(AttendeeRegistrationRepository.class);
     private final VenueRepository venues = mock(VenueRepository.class);
     private final AvailabilityService availability = mock(AvailabilityService.class);
     private final UUID eventId = UUID.randomUUID();
     private final AttendeeEventDetailsService service = new AttendeeEventDetailsService(events, bookings, venues,
             availability, new JourneyStatusResolver(events,
-                    Clock.fixed(Instant.parse("2027-01-01T00:00:00Z"), ZoneOffset.UTC)));
+                    Clock.fixed(Instant.parse("2027-01-01T00:00:00Z"), ZoneOffset.UTC)), registrations);
+
+    @Test
+    @DisplayName("AT02 AC1 (happy): attendee event list contains events confirmed at least once")
+    void listsConfirmedEventsForAttendees() {
+        Event event = new Event();
+        event.setEventId(eventId);
+        event.setEventName("Community Conference");
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-01T09:00:00+08:00"));
+        event.setEndDatetime(OffsetDateTime.parse("2027-03-01T17:00:00+08:00"));
+        event.setStatus(EventStatus.confirmed);
+        event.setFirstConfirmedAt(OffsetDateTime.parse("2026-12-01T12:00:00Z"));
+        event.setRegistrationNeeds(true);
+        when(events.findByFirstConfirmedAtIsNotNullOrderByStartDatetimeAsc()).thenReturn(List.of(event));
+
+        List<AttendeeEventListItemDto> results = service.list();
+
+        assertThat(results).hasSize(1);
+        assertThat(results.get(0).eventName()).isEqualTo("Community Conference");
+        assertThat(results.get(0).status()).isEqualTo("confirmed");
+        assertThat(results.get(0).registrationRequired()).isTrue();
+    }
 
     @Test
     @DisplayName("AT02 AC1 (happy): confirmed event returns attendee-facing approved details")

@@ -45,5 +45,6 @@ public enum NotificationType {
     event_cancellation_declined,
     /** EO07 (V33): Venue Staff / Technical Support told an event they had
      * arrangements for is cancelled. */
-    event_cancelled
+    event_cancelled,
+    attendee_registration_confirmed
 }

@@ -1,8 +1,9 @@
-// @stories AT02
+// @stories AT01 AT02
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AttendeeEventDetailsPage } from './AttendeeEventDetailsPage'
+import { AttendeeEventsPage } from './AttendeeEventsPage'
 
 const details = {
   eventId: 'event-1', eventName: 'Community Conference', description: 'Meet the community.',
@@ -11,7 +12,9 @@ const details = {
   accessibilityInformation: ['step_free_access'], registrationRequired: true,
   registrationOpensAt: null, registrationClosesAt: null, registrationCapacity: null,
   attendeeInstructions: null,
-  venues: [{ venueId: 'venue-1', address: '10 Bay Road', unavailable: false }],
+  availablePlaces: 8,
+  registrationReference: null, registeredAt: null,
+  venues: [{ venueId: 'venue-1', name: 'Bay Hall', address: '10 Bay Road', unavailable: false }],
 }
 
 function renderPage() {
@@ -20,9 +23,25 @@ function renderPage() {
   </MemoryRouter>)
 }
 
+function renderBrowsePage() {
+  return render(<MemoryRouter initialEntries={['/attendee/browse']}>
+    <Routes><Route path="/attendee/browse" element={<AttendeeEventsPage />} /></Routes>
+  </MemoryRouter>)
+}
+
 afterEach(() => { cleanup(); vi.restoreAllMocks() })
 
 describe('AT02 attendee event details', () => {
+  it('AT02 AC1 (happy): browse lists confirmed events and opens the attendee details route', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200,
+      text: async () => JSON.stringify([{ eventId: 'event-1', eventName: 'Community Conference',
+        startDatetime: '2027-03-01T09:00:00+08:00', endDatetime: '2027-03-01T17:00:00+08:00',
+        status: 'confirmed', registrationRequired: true }]) }))
+    renderBrowsePage()
+    const link = await screen.findByRole('link', { name: 'Community Conference' })
+    expect(link).toHaveAttribute('href', '/attendee/events/event-1')
+  })
+
   it('AT02 AC2 (happy): shows approved event, time zone, venue, accessibility and registration requirement', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => JSON.stringify(details) }))
     renderPage()
@@ -58,5 +77,32 @@ describe('AT02 attendee event details', () => {
     expect(await screen.findAllByText(/being re-confirmed/i)).toHaveLength(2)
     expect(screen.getByText('10 Bay Road')).toBeInTheDocument()
     expect(screen.getByText(/venue is currently unavailable/i)).toBeInTheDocument()
+  })
+
+  it('AT01 AC5 (happy): submits a registration and displays its unique confirmation reference', async () => {
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify(details) })
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({
+        reference: 'CS-123456789ABC', registeredAt: '2027-01-01T12:00:00Z',
+      }) }))
+    renderPage()
+    fireEvent.click(await screen.findByRole('button', { name: 'Register for this event' }))
+    expect(await screen.findByText(/CS-123456789ABC/)).toBeInTheDocument()
+  })
+
+  it('AT01 AC10 (failure): explains a failed save and offers a safe retry', async () => {
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify(details) })
+      .mockRejectedValueOnce(new TypeError('offline'))
+      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({
+        reference: 'CS-RETRY', registeredAt: '2027-01-01T12:00:00Z',
+      }) })
+    vi.stubGlobal('fetch', fetchMock)
+    renderPage()
+    const button = await screen.findByRole('button', { name: 'Register for this event' })
+    fireEvent.click(button)
+    expect(await screen.findByText(/registration could not be saved/i)).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Register for this event' }))
+    expect(await screen.findByText(/CS-RETRY/)).toBeInTheDocument()
   })
 })

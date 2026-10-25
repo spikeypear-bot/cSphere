@@ -50,6 +50,10 @@ export const FIELD_LABELS: Record<string, string> = {
   equipmentRequirements: 'Equipment requirements',
   accessibilityNeeds: 'Accessibility requirements',
   registrationNeeds: 'Registration',
+  registrationCapacity: 'Registration capacity',
+  registrationOpensAt: 'Registration opens',
+  registrationClosesAt: 'Registration closes',
+  attendeeInstructions: 'Attendee instructions',
 }
 
 export interface EventRequestDto {
@@ -67,6 +71,10 @@ export interface EventRequestDto {
   accessibilityNeeds: AccessibilityFeature[]
   requiredFacilities?: Facility[]
   registrationNeeds: boolean | null
+  registrationCapacity?: number | null
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
+  attendeeInstructions?: string | null
   status: EventRequestStatus
   createdAt: string
   updatedAt: string
@@ -100,6 +108,10 @@ export interface SaveEventRequestRequest {
   accessibilityNeeds?: AccessibilityFeature[]
   requiredFacilities?: Facility[]
   registrationNeeds?: boolean | null
+  registrationCapacity?: number | null
+  registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
+  attendeeInstructions?: string | null
 }
 
 /** The field names here match SaveEventRequestRequest's keys, which is what
@@ -113,6 +125,9 @@ export const REQUIRED_FIELD_LABELS: Record<string, string> = {
   expectedAttendance: 'Expected attendance',
   venueRequirements: 'Venue requirements',
   accessibilityNeeds: 'Accessibility requirements',
+  registrationCapacity: 'Registration capacity',
+  registrationOpensAt: 'Registration opens',
+  registrationClosesAt: 'Registration closes',
 }
 
 /** Same fields, in wizard-step order — the single list every "how complete is

@@ -260,6 +260,16 @@ public class NotificationService {
         }
     }
 
+    /** AT03: acknowledge an attendee's successful registration. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createAttendeeRegistrationConfirmation(UUID attendeeId, UUID eventId, String eventName,
+            String reference) {
+        Notification notification = base(attendeeId, NotificationType.attendee_registration_confirmed, eventName);
+        notification.setEventId(eventId);
+        notification.setMessage("Your registration is confirmed. Reference: " + reference);
+        saveBestEffort(notification);
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -374,6 +384,7 @@ public class NotificationService {
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
             case event_confirmed, event_cancelled -> null;
+            case attendee_registration_confirmed -> "/attendee/events/" + n.getEventId();
             case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();
             // EO03/EC-NEW3: the coordinator, or the Lead while unassigned, gets the
             // same link; the page sends each reader to their own console.

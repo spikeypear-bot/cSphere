@@ -76,6 +76,18 @@ public class Event {
     @Column(name = "registration_needs")
     private Boolean registrationNeeds;
 
+    @Column(name = "registration_capacity")
+    private Integer registrationCapacity;
+
+    @Column(name = "registration_opens_at")
+    private OffsetDateTime registrationOpensAt;
+
+    @Column(name = "registration_closes_at")
+    private OffsetDateTime registrationClosesAt;
+
+    @Column(name = "attendee_instructions")
+    private String attendeeInstructions;
+
     private String organisation;
 
     @Column(name = "actual_attendance")
