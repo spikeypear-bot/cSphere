@@ -1,28 +1,133 @@
-/* Role console layout: side navigation beside the page (components/layout). */
+/* Role console layout: side navigation docked to the left edge below the
+ * app-wide header, the page beside it (components/layout). Above 900px the
+ * nav is docked and can collapse to an icon rail; below, it is a drawer. */
 
-/* The app-wide content column is 900px; a console with side navigation needs
- * room for both. */
+/* The app-wide content column is a centred 900px; a console takes the full
+ * width under the header instead, and sets its own page column. */
 .app-shell__content:has(.console-shell) {
-  max-width: 1200px;
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-shell__content:has(.console-shell) > .app-shell__access-denied {
+  margin: 1.25rem 1.25rem 0;
 }
 
 .console-shell {
+  --side-nav-width: 15rem;
+  --side-nav-rail: 4rem;
+  flex: 1;
   display: grid;
-  grid-template-columns: 13rem minmax(0, 1fr);
-  gap: 2rem;
-  align-items: start;
+  grid-template-columns: auto minmax(0, 1fr);
+}
+
+/* The docked column: full height, so its panel colour and border run the
+ * whole length of the page while the nav inside stays in view. */
+.console-shell__rail {
+  width: var(--side-nav-width);
+  background: var(--panel);
+  border-inline-end: 1px solid var(--hairline);
+  transition: width 180ms ease;
+}
+
+.console-shell--collapsed .console-shell__rail {
+  width: var(--side-nav-rail);
 }
 
 .console-shell__page {
   min-width: 0;
+  padding: 2rem clamp(1.25rem, 3vw, 2.5rem) 4rem;
+}
+
+.console-shell__content {
+  max-width: 70rem;
+  margin-inline: auto;
+}
+
+.console-shell__bar,
+.console-shell__backdrop {
+  display: none;
+}
+
+.console-shell__menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.console-shell__menu:hover {
+  border-color: var(--accent);
+  color: var(--accent-strong);
 }
 
 .side-nav {
   position: sticky;
-  top: 1rem;
+  top: 0;
+  max-height: 100svh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding: 1rem 0.75rem;
 }
 
-.side-nav__toggle {
+.side-nav__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  min-height: 2.25rem;
+  padding-inline-start: 0.75rem;
+}
+
+.side-nav__title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.side-nav__button {
+  flex-shrink: 0;
+  display: inline-grid;
+  place-items: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid transparent;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 1.15rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.side-nav__button:hover {
+  background: var(--paper);
+  border-color: var(--hairline);
+  color: var(--ink);
+}
+
+.side-nav__close {
   display: none;
 }
 
@@ -36,12 +141,38 @@
 }
 
 .side-nav__link {
-  display: block;
-  padding: 0.55rem 0.8rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 2.5rem;
+  padding: 0.5rem 0.75rem;
   border-radius: var(--radius-sm);
   color: var(--ink-soft);
   text-decoration: none;
   font-weight: 500;
+  white-space: nowrap;
+  overflow-wrap: normal;
+}
+
+.side-nav__link .nav-icon,
+.side-nav__letter {
+  flex-shrink: 0;
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.side-nav__letter::before {
+  content: attr(data-letter);
+  display: grid;
+  place-items: center;
+  height: 100%;
+  font-weight: 700;
+}
+
+.side-nav__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .side-nav__link:hover {
@@ -56,45 +187,96 @@
 }
 
 .side-nav__link:focus-visible,
-.side-nav__toggle:focus-visible {
+.side-nav__button:focus-visible,
+.console-shell__menu:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 2px;
 }
 
-/* Tablets and phones: the nav sits above the page behind a Menu toggle. */
+/* Desktop rail: icons only. Labels stay in the page for screen readers and
+ * appear as each link's tooltip (title). */
+@media (min-width: 901px) {
+  .side-nav--collapsed .side-nav__head {
+    justify-content: center;
+    padding-inline-start: 0;
+  }
+
+  .side-nav--collapsed .side-nav__title,
+  .side-nav--collapsed .side-nav__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  .side-nav--collapsed .side-nav__link {
+    justify-content: center;
+    padding-inline: 0;
+  }
+}
+
+/* Tablets and phones: the nav is an off-canvas drawer behind a Menu button. */
 @media (max-width: 900px) {
   .console-shell {
     grid-template-columns: minmax(0, 1fr);
-    gap: 1rem;
+  }
+
+  .console-shell__rail {
+    display: contents;
+  }
+
+  .console-shell__page {
+    padding: 1rem 1rem 3rem;
+  }
+
+  .console-shell__bar {
+    display: flex;
+    margin-bottom: 1rem;
   }
 
   .side-nav {
-    position: static;
-  }
-
-  .side-nav__toggle {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.45rem 0.85rem;
-    border: 1px solid var(--hairline-strong);
-    border-radius: var(--radius-sm);
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 50;
+    width: min(18rem, 85vw);
+    max-height: none;
     background: var(--panel);
-    color: var(--ink);
-    font: inherit;
-    cursor: pointer;
+    border-inline-end: 1px solid var(--hairline);
+    box-shadow: 0 0 2rem rgba(33, 29, 22, 0.18);
+    transform: translateX(-100%);
+    visibility: hidden;
+    transition: transform 200ms ease, visibility 0s linear 200ms;
   }
 
-  .side-nav__list {
+  .side-nav--open {
+    transform: none;
+    visibility: visible;
+    transition: transform 200ms ease;
+  }
+
+  .side-nav__collapse {
     display: none;
-    margin-top: 0.5rem;
-    padding: 0.5rem;
-    border: 1px solid var(--hairline);
-    border-radius: var(--radius-md);
-    background: var(--panel);
   }
 
-  .side-nav__list--open {
-    display: flex;
+  .side-nav__close {
+    display: inline-grid;
+  }
+
+  .console-shell__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 40;
+    background: rgba(33, 29, 22, 0.45);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .console-shell__rail,
+  .side-nav,
+  .side-nav--open {
+    transition: none;
   }
 }
