@@ -86,16 +86,21 @@ describe('App routing — role consoles', () => {
     expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
   })
 
-  it('TS09 (happy): opens the Technical Support dashboard inside its side navigation', async () => {
+  it('TS09 (happy): opens equipment requests from the Technical Support dashboard side navigation', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
+    const user = userEvent.setup()
     signInAs('technical-support', 'tech1', 'ConnectSphere')
     renderApp('/technical-support')
 
-    const nav = screen.getByRole('navigation', { name: 'Technical Support' })
-    expect(within(nav).getByRole('link', { name: 'Equipment requests' })).toHaveAttribute('href', '/technical-support/requests')
-    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
-
     expect(await screen.findByRole('heading', { name: 'Technical Support Staff console' })).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Technical Support' })
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+    const requestsLink = within(nav).getByRole('link', { name: 'Equipment requests' })
+    expect(requestsLink).toHaveAttribute('href', '/technical-support/requests')
+    await user.click(requestsLink)
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Equipment requests' })).toBeInTheDocument()
+    expect(requestsLink).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
   })
 

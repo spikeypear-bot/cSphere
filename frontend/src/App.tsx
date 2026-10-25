@@ -42,8 +42,8 @@ import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { AppShell as ConsoleShell } from './components/layout/AppShell'
 import { technicalSupportNav } from './features/technicalSupport/technicalSupportNav'
 import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
-import { EquipmentReviewPage } from './features/technicalSupport/review/EquipmentReviewPage'
-import { EquipmentReservationPage } from './features/technicalSupport/reservations/EquipmentReservationPage'
+import { EquipmentRequestsPage } from './features/technicalSupport/requests/EquipmentRequestsPage'
+import { EquipmentRequestDetailPage } from './features/technicalSupport/requests/EquipmentRequestDetailPage'
 import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
 import { DamageReportsPage } from './features/technicalSupport/damage/DamageReportsPage'
 import { DamageReportFormPage } from './features/technicalSupport/damage/DamageReportFormPage'
@@ -178,9 +178,11 @@ function TechnicalSupportRoutes() {
     <ConsoleShell navLabel="Technical Support" items={technicalSupportNav}>
       <Routes>
         <Route index element={<TechnicalSupportDashboardPage />} />
-        <Route path="availability" element={<EquipmentReviewPage />} />
+        <Route path="requests" element={<EquipmentRequestsPage />} />
+        <Route path="requests/:requestId" element={<EquipmentRequestDetailPage />} />
+        <Route path="availability" element={<Navigate to="/technical-support/requests" replace />} />
+        <Route path="reservations" element={<Navigate to="/technical-support/requests" replace />} />
         <Route path="status" element={<EquipmentStatusPage />} />
-        <Route path="reservations" element={<EquipmentReservationPage />} />
         {/* TS09: damaged equipment reports and their outcomes. */}
         <Route path="damaged-equipment" element={<DamageReportsPage />} />
         <Route path="damaged-equipment/new" element={<DamageReportFormPage />} />

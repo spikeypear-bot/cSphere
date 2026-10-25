@@ -1,10 +1,10 @@
+// @stories TS01 TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
-import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../../test/apiStubs'
-import { EquipmentReviewPage } from './EquipmentReviewPage'
+import { EquipmentRequestDetailPage } from '../requests/EquipmentRequestDetailPage'
 import { toLocalInputValue } from '../reservations/reservationUtils'
 
 const eventStart = '2027-03-10T09:00:00+08:00'
@@ -15,10 +15,10 @@ const localToIso = (value: string) => new Date(value).toISOString()
 
 function renderPage() {
   return render(
-    <MemoryRouter initialEntries={['/technical-support/availability']}>
+    <MemoryRouter initialEntries={['/technical-support/requests/request-1']}>
       <SessionProvider>
         <Routes>
-          <Route path="/technical-support/availability" element={<EquipmentReviewPage />} />
+          <Route path="/technical-support/requests/:requestId" element={<EquipmentRequestDetailPage />} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,
@@ -33,10 +33,13 @@ function reviewRoutes(availabilityQuantity: number, statuses: string[]) {
     eventStart,
     eventEnd,
     technicalRequirement: 'Presentation equipment',
+    status: 'processing',
   }
   const unitsUrl = `/api/equipment/units?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
   return stubApi({
-    'GET /api/equipment-requests/processing': () => jsonResponse(200, [request]),
+    // TS01 now runs on the request's own page, beside TS02/TS06.
+    'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
+    'GET /api/equipment/events/event-1/reservations': () => jsonResponse(200, []),
     'GET /api/equipment-requests/request-1/lines': () => jsonResponse(200, [
       { equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 2 },
     ]),
@@ -67,14 +70,13 @@ describe('TS01 equipment request review', () => {
 
   it('compares itemised requirements with period availability and suitable unit statuses', async () => {
     const calls = reviewRoutes(2, ['Available', 'Available'])
-    const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /Town Hall/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
 
-    expect(await screen.findByRole('status')).toHaveTextContent(
+    expect(await screen.findByText(
       'This equipment request can be fulfilled for the event period.',
-    )
+    )).toHaveAttribute('role', 'status')
     expect(screen.getByText('Requested')).toBeInTheDocument()
     expect(screen.getByText('2 of 2')).toBeInTheDocument()
     expect(screen.getByText('Suitable units (status Available)')).toBeInTheDocument()
@@ -85,10 +87,9 @@ describe('TS01 equipment request review', () => {
 
   it('rejects a request when enough stock exists but no units are suitable', async () => {
     const calls = reviewRoutes(2, ['Faulty', 'Unavailable'])
-    const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /Town Hall/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
 
     expect(await screen.findByText('This equipment request cannot be fully fulfilled as-is.'))
       .toBeInTheDocument()
@@ -101,10 +102,9 @@ describe('TS01 equipment request review', () => {
 
   it('flags insufficient quantity even when units have suitable status', async () => {
     const calls = reviewRoutes(1, ['Available', 'Available'])
-    const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /Town Hall/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
 
     expect(await screen.findByText('This equipment request cannot be fully fulfilled as-is.'))
       .toBeInTheDocument()

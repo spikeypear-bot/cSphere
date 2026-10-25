@@ -1,6 +1,14 @@
 export type EquipmentRequestStatus = 'processing' | 'approved' | 'rejected'
 /** What `GET /api/equipment-requests?status=` accepts (D32). */
 export type EquipmentRequestFilter = EquipmentRequestStatus | 'all'
+export const EQUIPMENT_REQUEST_FILTERS: EquipmentRequestFilter[] = ['processing', 'approved', 'rejected', 'all']
+/** Words for the request status the server sends (lowercase codes). */
+export const EQUIPMENT_REQUEST_FILTER_LABELS: Record<EquipmentRequestFilter, string> = {
+  processing: 'Awaiting review',
+  approved: 'Approved',
+  rejected: 'Rejected',
+  all: 'All',
+}
 
 // AC 1: an event that needs equipment (status = processing). The fields after
 // `status` were added for the console (D32, docs/equipment-damage-api.md);

@@ -8,7 +8,7 @@ import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import { AppShell } from '../../components/layout/AppShell'
 import { technicalSupportNav } from './technicalSupportNav'
 import { TechnicalSupportDashboardPage } from './dashboard/TechnicalSupportDashboardPage'
-import { EquipmentReservationPage } from './reservations/EquipmentReservationPage'
+import { EquipmentRequestDetailPage } from './requests/EquipmentRequestDetailPage'
 import { EquipmentStatusPage } from './status/equipmentStatusPage'
 import { toLocalInputValue } from './reservations/reservationUtils'
 
@@ -17,6 +17,8 @@ const eventEnd = '2027-03-10T12:00:00+08:00'
 const localStart = toLocalInputValue(eventStart)
 const localEnd = toLocalInputValue(eventEnd)
 const localToIso = (value: string) => new Date(value).toISOString()
+// TS01's unit check runs on the same request page as TS02/TS06.
+const unitsUrl = `/api/equipment/units?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
 
 function renderRoutes(path: string) {
   return render(
@@ -25,7 +27,7 @@ function renderRoutes(path: string) {
         <AppShell navLabel="Technical Support" items={technicalSupportNav}>
         <Routes>
           <Route path="/technical-support" element={<TechnicalSupportDashboardPage />} />
-          <Route path="/technical-support/reservations" element={<EquipmentReservationPage />} />
+          <Route path="/technical-support/requests/:requestId" element={<EquipmentRequestDetailPage />} />
           <Route path="/technical-support/status" element={<EquipmentStatusPage />} />
         </Routes>
         </AppShell>
@@ -90,7 +92,8 @@ describe('Technical Support UI integration', () => {
     }
     const availabilityUrl = `/api/equipment/requests/request-1/availability?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
     const routes = {
-      'GET /api/equipment-requests/processing': () => jsonResponse(200, [request]),
+      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
+      [`GET ${unitsUrl}`]: () => jsonResponse(200, []),
       'GET /api/equipment-requests/request-1/lines': () => jsonResponse(200, [line]),
       'GET /api/equipment/events/event-1/reservations': () => jsonResponse(200, [reservation]),
       [`GET ${availabilityUrl}`]: () => jsonResponse(200, [availability]),
@@ -98,15 +101,15 @@ describe('Technical Support UI integration', () => {
     }
     const calls = stubApi(routes)
     const user = userEvent.setup()
-    renderRoutes('/technical-support/reservations')
+    renderRoutes('/technical-support/requests/request-1')
 
-    await user.click(await screen.findByRole('button', { name: /Town Hall/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
     expect(await screen.findByText('Projector: 1 needed')).toBeInTheDocument()
     expect(await screen.findByText('Projector: 3 of 4 available')).toBeInTheDocument()
     await user.selectOptions(screen.getByLabelText('Equipment'), 'projector-1')
     await user.click(screen.getByRole('button', { name: 'Reserve' }))
 
-    expect(await screen.findByRole('status')).toHaveTextContent('Reserved 1 × Projector')
+    expect(await screen.findByText(/Reserved 1 × Projector/)).toHaveAttribute('role', 'status')
     expect(screen.getAllByText(/1 × Projector/)).toHaveLength(2)
     const post = calls.find(call => call.method === 'POST')
     expect(post?.body).toMatchObject({
@@ -143,7 +146,8 @@ describe('Technical Support UI integration', () => {
     const availabilityUrl = `/api/equipment/requests/request-1/availability?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
     let decisionAttempts = 0
     const calls = stubApi({
-      'GET /api/equipment-requests/processing': () => jsonResponse(200, [request]),
+      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
+      [`GET ${unitsUrl}`]: () => jsonResponse(200, []),
       'GET /api/equipment-requests/request-1/lines': () => jsonResponse(200, [
         { equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 2 },
       ]),
@@ -169,9 +173,9 @@ describe('Technical Support UI integration', () => {
       },
     })
     const user = userEvent.setup()
-    renderRoutes('/technical-support/reservations')
+    renderRoutes('/technical-support/requests/request-1')
 
-    await user.click(await screen.findByRole('button', { name: /Town Hall/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
     expect(await screen.findByText('Projector: 1 of 2 reserved')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save approved decision' })).toBeDisabled()
     await user.selectOptions(screen.getByLabelText('Decision'), 'rejected')
@@ -219,7 +223,8 @@ describe('Technical Support UI integration', () => {
     }
     const availabilityUrl = `/api/equipment/requests/request-2/availability?start=${encodeURIComponent(localToIso(localStart))}&end=${encodeURIComponent(localToIso(localEnd))}`
     const calls = stubApi({
-      'GET /api/equipment-requests/processing': () => jsonResponse(200, [request]),
+      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request]),
+      [`GET ${unitsUrl}`]: () => jsonResponse(200, []),
       'GET /api/equipment-requests/request-2/lines': () => jsonResponse(200, [
         { equipmentId: 'screen-1', equipmentName: 'Screen', quantity: 2 },
       ]),
@@ -241,9 +246,9 @@ describe('Technical Support UI integration', () => {
       }),
     })
     const user = userEvent.setup()
-    renderRoutes('/technical-support/reservations')
+    renderRoutes('/technical-support/requests/request-2')
 
-    await user.click(await screen.findByRole('button', { name: /Planning Meeting/ }))
+    expect(await screen.findByRole('heading', { level: 1, name: 'Planning Meeting' })).toBeInTheDocument()
     expect(await screen.findByText('Screen: 2 of 2 reserved')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Save approved decision' }))
 

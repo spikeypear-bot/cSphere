@@ -166,6 +166,22 @@
   font-weight: 600;
 }
 
+.tech-heading-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.6rem;
+}
+
+.tech-heading-row h2 {
+  margin: 0;
+  margin-inline-end: auto;
+}
+
+.tech-facts dd {
+  font-size: 0.95rem;
+}
+
 .tech-load-error {
   display: grid;
   justify-items: start;
