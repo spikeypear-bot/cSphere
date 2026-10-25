@@ -1,0 +1,100 @@
+/* Role console layout: side navigation beside the page (components/layout). */
+
+/* The app-wide content column is 900px; a console with side navigation needs
+ * room for both. */
+.app-shell__content:has(.console-shell) {
+  max-width: 1200px;
+}
+
+.console-shell {
+  display: grid;
+  grid-template-columns: 13rem minmax(0, 1fr);
+  gap: 2rem;
+  align-items: start;
+}
+
+.console-shell__page {
+  min-width: 0;
+}
+
+.side-nav {
+  position: sticky;
+  top: 1rem;
+}
+
+.side-nav__toggle {
+  display: none;
+}
+
+.side-nav__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.side-nav__link {
+  display: block;
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius-sm);
+  color: var(--ink-soft);
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.side-nav__link:hover {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.side-nav__link[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  font-weight: 600;
+}
+
+.side-nav__link:focus-visible,
+.side-nav__toggle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* Tablets and phones: the nav sits above the page behind a Menu toggle. */
+@media (max-width: 900px) {
+  .console-shell {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 1rem;
+  }
+
+  .side-nav {
+    position: static;
+  }
+
+  .side-nav__toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.85rem;
+    border: 1px solid var(--hairline-strong);
+    border-radius: var(--radius-sm);
+    background: var(--panel);
+    color: var(--ink);
+    font: inherit;
+    cursor: pointer;
+  }
+
+  .side-nav__list {
+    display: none;
+    margin-top: 0.5rem;
+    padding: 0.5rem;
+    border: 1px solid var(--hairline);
+    border-radius: var(--radius-md);
+    background: var(--panel);
+  }
+
+  .side-nav__list--open {
+    display: flex;
+  }
+}
