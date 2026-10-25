@@ -1,8 +1,7 @@
 // @stories TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup } from '@testing-library/react'
 import { EQUIPMENT_MEDIA, equipmentMediaFor } from './equipmentCatalogueMedia'
-import { EquipmentImageCredits } from './EquipmentImageCredits'
 
 describe('equipment catalogue media (TS09)', () => {
   afterEach(cleanup)
@@ -29,12 +28,4 @@ describe('equipment catalogue media (TS09)', () => {
     }
   })
 
-  it('TS09 (happy): credits list links each requested photo to its source and licence', () => {
-    render(<EquipmentImageCredits names={['Projector', 'Power Bank']} />)
-    const items = within(screen.getByRole('region', { name: 'Image credits' })).getAllByRole('listitem')
-    expect(items).toHaveLength(2)
-    expect(within(items[0]).getByRole('link', { name: 'CC BY-SA 4.0' })).toHaveAttribute(
-      'href', 'https://creativecommons.org/licenses/by-sa/4.0')
-    expect(items[1]).toHaveTextContent('Power Bank: USB power bank by Ronggy, Public domain')
-  })
 })

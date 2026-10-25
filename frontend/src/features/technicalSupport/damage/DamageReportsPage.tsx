@@ -5,7 +5,6 @@ import { Card } from '../../../components/ui/Card'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
 import { formatEventDateTime } from '../../venueStaff/formatEventDateTime'
-import { EquipmentImageCredits } from '../../equipment/EquipmentImageCredits'
 import { EquipmentPhoto } from './EquipmentPhoto'
 import { fetchReports } from './equipmentDamageApi'
 import type { DamageReport } from './equipmentDamage.types'
@@ -81,7 +80,6 @@ export function DamageReportsPage() {
               )
             })}
           </ul>
-          <EquipmentImageCredits names={[...new Set(reports.map((r) => r.equipmentName))]} />
         </>
       )}
     </section>

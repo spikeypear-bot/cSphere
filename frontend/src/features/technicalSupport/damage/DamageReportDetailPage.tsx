@@ -6,7 +6,6 @@ import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
 import { formatEventDateTime, formatEventTimeRange } from '../../venueStaff/formatEventDateTime'
-import { EquipmentImageCredits } from '../../equipment/EquipmentImageCredits'
 import { EquipmentPhoto } from './EquipmentPhoto'
 import { closeReport, decideOutcome, fetchReport, fetchUnits } from './equipmentDamageApi'
 import {
@@ -124,7 +123,6 @@ export function DamageReportDetailPage() {
         </div>
       ) : null}
 
-      <EquipmentImageCredits names={[report.equipmentName]} />
     </section>
   )
 }

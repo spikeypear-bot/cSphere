@@ -4,7 +4,6 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
-import { EquipmentImageCredits } from '../../equipment/EquipmentImageCredits'
 import { EquipmentPhoto } from './EquipmentPhoto'
 import { fetchCatalogue, fetchUnits, reportDamage } from './equipmentDamageApi'
 import { DESCRIPTION_MAX, type CatalogueItem, type EquipmentUnitStatus } from './equipmentDamage.types'
@@ -217,7 +216,6 @@ export function DamageReportFormPage() {
             {error ? <p role="alert">{error}</p> : null}
             <Button type="submit" disabled={submitting}>{submitting ? 'Saving…' : 'Save damage report'}</Button>
           </form>
-          {equipment ? <EquipmentImageCredits names={[equipment.equipmentName]} /> : null}
         </Card>
       )}
     </section>

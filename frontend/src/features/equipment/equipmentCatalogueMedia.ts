@@ -4,9 +4,8 @@
 // equipments.equipment_type is still the agreed general code 'E' until the team
 // settles a code table (SCHEMA.md §5).
 //
-// Every photo is from Wikimedia Commons and resized to at most 640px. Credit is
-// required by most of these licences, so render EquipmentImageCredits wherever
-// the photos appear.
+// Every photo is from Wikimedia Commons and resized to at most 640px. Each
+// entry keeps its source, author and licence, though the UI does not show them.
 import audioMixer from '../../assets/equipment/audio-mixer.jpg'
 import badgeLanyards from '../../assets/equipment/badge-lanyards.jpg'
 import badgePrinter from '../../assets/equipment/badge-printer.jpg'

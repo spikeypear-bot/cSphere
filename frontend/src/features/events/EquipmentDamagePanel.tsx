@@ -4,7 +4,6 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { ApiClientError } from '../../lib/apiClient'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
-import { EquipmentImageCredits } from '../equipment/EquipmentImageCredits'
 import { EquipmentPhoto } from '../technicalSupport/damage/EquipmentPhoto'
 import { fetchEventDamage, resolveShortfall } from '../technicalSupport/damage/equipmentDamageApi'
 import { DESCRIPTION_MAX, outcomeLabel, type EventEquipmentDamage } from '../technicalSupport/damage/equipmentDamage.types'
@@ -67,7 +66,6 @@ export function EquipmentDamagePanel({ eventId, readOnly }: { eventId: string; r
           </li>
         ))}
       </ul>
-      <EquipmentImageCredits names={[...new Set(items.map((item) => item.equipmentName))]} />
     </Card>
   )
 }

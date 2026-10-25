@@ -82,7 +82,6 @@ describe('TS09 Technical Support reports damaged equipment', () => {
     expect(items[1]).toHaveTextContent('HDMI Cable · 5 damaged')
     expect(items[1]).toHaveTextContent('Closed')
     expect(screen.getByRole('img', { name: 'Projector' })).toBeInTheDocument()
-    expect(screen.getByRole('region', { name: 'Image credits' })).toHaveTextContent('Projector')
   })
 
   it('TS09 AC22 (failure): a list that cannot load says so and Try again reloads it', async () => {
