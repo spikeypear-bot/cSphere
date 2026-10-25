@@ -21,6 +21,10 @@ public interface EquipmentDamageOutcomeRepository extends JpaRepository<Equipmen
 
     Optional<EquipmentDamageOutcome> findByAdditionalRequestId(UUID requestId);
 
+    /** D32: which of these equipment requests answer a shortfall (AC19). */
+    @Query("select o.additionalRequestId from EquipmentDamageOutcome o where o.additionalRequestId in :requestIds")
+    List<UUID> shortfallRequestIds(@Param("requestIds") java.util.Collection<UUID> requestIds);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select o from EquipmentDamageOutcome o where o.outcomeId = :id")
     Optional<EquipmentDamageOutcome> findForUpdate(@Param("id") UUID id);

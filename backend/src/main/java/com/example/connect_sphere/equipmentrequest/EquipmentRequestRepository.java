@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 
 public interface EquipmentRequestRepository extends JpaRepository<EquipmentRequest, UUID> {
     List<EquipmentRequest> findByStatus(EquipmentRequestStatus status);
+    List<EquipmentRequest> findByStatusIn(java.util.Collection<EquipmentRequestStatus> statuses);
     List<EquipmentRequest> findByEventId(UUID eventId);
 
     @Lock(LockModeType.PESSIMISTIC_WRITE)
