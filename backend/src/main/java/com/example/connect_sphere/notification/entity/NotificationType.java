@@ -46,5 +46,8 @@ public enum NotificationType {
     /** EO07 (V33): Venue Staff / Technical Support told an event they had
      * arrangements for is cancelled. */
     event_cancelled,
-    attendee_registration_confirmed
+    attendee_registration_confirmed,
+    /** TS09 (V38): the assigned coordinator told what Technical Support
+     * decided for their event after equipment was reported damaged. */
+    equipment_damage_outcome
 }

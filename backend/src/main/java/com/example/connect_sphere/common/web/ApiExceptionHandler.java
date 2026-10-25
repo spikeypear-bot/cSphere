@@ -272,6 +272,12 @@ public class ApiExceptionHandler {
                 .body(ApiError.of("You do not have permission to perform this action."));
     }
 
+    /** D33: a refused reservation line names its equipment item. */
+    @ExceptionHandler(com.example.connect_sphere.equipment.ReservationLineException.class)
+    public ResponseEntity<ApiError> handleReservationLine(com.example.connect_sphere.equipment.ReservationLineException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(ApiError.forEquipment(ex.getReason(), ex.getEquipmentId()));
+    }
+
     @ExceptionHandler(ResponseStatusException.class)
     public ResponseEntity<ApiError> handleResponseStatus(ResponseStatusException ex) {
         return ResponseEntity.status(ex.getStatusCode()).body(ApiError.of(ex.getReason()));

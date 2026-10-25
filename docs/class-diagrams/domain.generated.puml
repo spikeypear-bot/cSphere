@@ -23,8 +23,10 @@ enum ActivityType {
 	{field} +coordinator_assigned
 	{field} +coordinator_reassigned
 	{field} +equipment_approved
+	{field} +equipment_damage_outcome
 	{field} +equipment_rejected
 	{field} +equipment_requested
+	{field} +equipment_shortfall_resolved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
 	{field} +event_cancelled
@@ -155,7 +157,10 @@ class EquipmentLog <<Entity>>  {
 	{field} -loanedUntil : Instant
 	{field} -quantity : int
 	{field} -serialNumber : String
+	{field} -spare : boolean
 	{field} -technicalRequirements : String
+	{method} +reduceBy ( units : int ) : void
+	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
 
 
@@ -181,8 +186,65 @@ class SerialisedEquipment <<Entity>>  {
 
 
 class SerialisedEquipmentId {
+	{field} {static} +MAX_SERIAL_NUMBER_LENGTH : int
 	{field} -equipmentId : UUID
 	{field} -serialNumber : String
+}
+
+
+enum DamageBlockStatus {
+	{field} +FAULTY
+	{field} +UNAVAILABLE
+}
+
+
+enum DamageOutcome {
+	{field} +COVERED
+	{field} +REPLACED
+	{field} +SHORT
+}
+
+
+enum DamageReportStatus {
+	{field} +CLOSED
+	{field} +OPEN
+}
+
+
+class EquipmentDamageOutcome <<Entity>>  {
+	{field} +additionalRequestId : UUID
+	{field} +decidedAt : Instant
+	{field} +decidedBy : UUID
+	{field} +eventId : UUID
+	{field} +outcomeId : UUID {id}
+	{field} +reducedBy : int
+	{field} +replacementSerialNumber : String
+	{field} +reportId : UUID
+	{field} +resolutionNote : String
+	{field} +resolvedAt : Instant
+	{field} +resolvedBy : UUID
+	{field} +shortfall : int
+}
+
+
+class EquipmentDamageReport <<Entity>>  {
+	{field} +blockApplied : boolean
+	{field} +closedAt : Instant
+	{field} +description : String
+	{field} +equipmentId : UUID
+	{field} +periodEnd : Instant
+	{field} +periodStart : Instant
+	{field} +quantity : int
+	{field} +reportId : UUID {id}
+	{field} +reportedAt : Instant
+	{field} +reportedBy : UUID
+	{field} +serialNumber : String
+}
+
+
+enum ShortfallResolution {
+	{field} +ADDITIONAL_REQUEST
+	{field} +NOTE
 }
 
 
@@ -228,7 +290,9 @@ class Event <<Entity>>  {
 	{field} +firstConfirmedAt : OffsetDateTime
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +requiredFacilities : List<String>
 	{field} +safetyApprovedAt : OffsetDateTime
 	{field} +safetyFeedback : String
@@ -272,6 +336,16 @@ enum EventReassignmentStatus {
 	{field} +approved
 	{field} +declined
 	{field} +pending
+}
+
+
+class EventRegistration <<Entity>>  {
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +reference : String
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +status : String
 }
 
 
@@ -344,6 +418,7 @@ enum NotificationType {
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +equipment_damage_outcome
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -567,6 +642,10 @@ EquipmentStatusPeriod --> "1" EquipmentStatus : status
 SerialisedEquipment "0..*" --> "1" Equipment : equipment
 SerialisedEquipment --> "1" EquipmentStatus : status
 SerialisedEquipment *-- SerialisedEquipmentId : id
+EquipmentDamageOutcome --> "0..1" DamageOutcome : outcome
+EquipmentDamageOutcome --> "0..1" ShortfallResolution : resolution
+EquipmentDamageReport --> "0..1" DamageBlockStatus : blockStatus
+EquipmentDamageReport --> "1" DamageReportStatus : status
 EquipmentRequest --> "1" EquipmentRequestStatus : status
 EquipmentRequestLine "0..*" --> "1" Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
@@ -586,6 +665,14 @@ VenueBookingRecord --> "1" VenueBookingStatus : status
 VenueEvent --> "1" EventStatus : status
 
 
+EquipmentDamageOutcome "0..*" --> "0..1" EquipmentRequest : additionalRequestId
+EquipmentDamageOutcome "0..*" --> "0..1" User : decidedBy
+EquipmentDamageOutcome "0..*" --> "1" Event : eventId
+EquipmentDamageOutcome "0..*" --> "1" EquipmentDamageReport : reportId
+EquipmentDamageOutcome "0..*" --> "0..1" User : resolvedBy
+EquipmentDamageReport "0..*" --> "1" Equipment : equipmentId
+EquipmentDamageReport "0..*" --> "0..1" SerialisedEquipment : equipmentId, serialNumber
+EquipmentDamageReport "0..*" --> "1" User : reportedBy
 EquipmentLog "0..*" --> "1" Equipment : equipmentId
 EquipmentLog "0..*" --> "0..1" SerialisedEquipment : equipmentId, serialNumber
 EquipmentLog "0..*" --> "1" Event : eventId
@@ -604,6 +691,7 @@ ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy
 EventReassignmentRequest "0..*" --> "1" Event : eventId
 EventReassignmentRequest "0..*" --> "1" User : requesterUserId
+EventRegistration "0..*" --> "1" Event : eventId
 RequestActivity "0..*" --> "1" User : actorUserId
 RequestActivity "0..*" --> "0..1" Event : eventId
 RequestActivity "0..*" --> "1" EventRequest : requestId

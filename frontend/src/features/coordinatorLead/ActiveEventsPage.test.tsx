@@ -1,4 +1,4 @@
-// @stories ECL-C4
+// @stories ECL-C4 TS09
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -83,7 +83,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     ['coordinator', 'ec1', /Event Coordinator console/i],
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
-    ['technical-support', 'ts1', /Technical Support Staff console/i],
+    ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /Attendee console/i],
   ] as const)('ECL-C4 AC1 (negative): a signed-in %s opening the URL directly is sent to their own console, told why, and no events are read', async (role, username, ownConsole) => {
     window.localStorage.clear()

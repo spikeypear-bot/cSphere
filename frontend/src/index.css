@@ -28,6 +28,8 @@
   --success-soft: #e3ead9;
   --danger: #9c3b3b;
   --danger-soft: #f5dcdc;
+  --warning: #b45309;
+  --warning-soft: #ffedd5;
 
   --role-organiser: #b3502e;
   --role-coordinator: #9c7a1f;
@@ -74,6 +76,8 @@
     --success-soft: #26301f;
     --danger: #d98686;
     --danger-soft: #3a2222;
+    --warning: #f0a35e;
+    --warning-soft: #3a2614;
 
     --role-organiser: #e07a4f;
     --role-coordinator: #d9b24c;

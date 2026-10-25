@@ -11,6 +11,8 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 
 import com.example.connect_sphere.common.web.RestAccessDeniedHandler;
 import com.example.connect_sphere.common.web.RestAuthenticationEntryPoint;
@@ -150,6 +152,10 @@ public class SecurityConfig{
 		    // are the organiser's and fall under this rule too; which request is
 		    // the organisation check in EventCancellationService.
 		    .requestMatchers("/api/event-requests/**").hasRole("EO")
+		    // D32: the catalogue with a from/to window adds stock levels for
+		    // that window (reserved, out of action, available) — Technical
+		    // Support's console, not something organisers or coordinators use.
+		    .requestMatchers(catalogueWithWindow()).hasRole("TECHNICIAN")
 		    // Organisers need the catalogue to choose equipment for a request;
 		    // Coordinators and technicians use it for availability and requests.
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/catalogue").hasAnyRole("EO", "EC", "TECHNICIAN")
@@ -165,13 +171,29 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/events/*/reservations")
 			    .hasAnyRole("TECHNICIAN", "SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/requests/*/availability").hasRole("TECHNICIAN")
+		    // D32: the console's per-kind detail, a kind's reservations (which
+		    // name events, so not for coordinators — ECL-C7) and every unit's
+		    // status periods. /units stays open to coordinators (TS03) and
+		    // must sit above the one-segment /api/equipment/* rule.
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/units").hasAnyRole("TECHNICIAN", "EC")
+		    .requestMatchers(HttpMethod.GET, "/api/equipment/status-periods", "/api/equipment/*",
+			    "/api/equipment/*/reservations").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/equipment/**").hasAnyRole("TECHNICIAN", "EC")
 		    .requestMatchers("/api/equipment/**").hasRole("TECHNICIAN")
-		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests/processing",
+		    .requestMatchers(HttpMethod.GET, "/api/equipment-requests", "/api/equipment-requests/processing",
 			    "/api/equipment-requests/*/lines").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
+		    // TS09: Technical Support report damaged equipment and decide each
+		    // affected event. The event's assigned coordinator reads and resolves
+		    // its shortfalls; the Lead reads any (ECL-C7). Which event is the
+		    // assignment check in EventEquipmentDamageService. Must sit above the
+		    // GET /api/events/** rule below, which would let an Organiser read it.
+		    .requestMatchers("/api/equipment-damage-reports", "/api/equipment-damage-reports/**").hasRole("TECHNICIAN")
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-damage").hasAnyRole("EC", "ECL")
+		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-damage/*/resolve").hasRole("EC")
+		    .requestMatchers("/api/events/*/equipment-damage", "/api/events/*/equipment-damage/**").denyAll()
 		    // SO-C3/SO-C4: the Safety Officer's checklist and decision.
 		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")
@@ -192,6 +214,8 @@ public class SecurityConfig{
 		    // events is the organisation check in EventArrangementsService.
 		    // Must sit above the GET /api/events/** rule below.
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/arrangements").hasRole("EO")
+		    // EO10: registration information; the owning organisation is checked in the service.
+		    .requestMatchers(HttpMethod.GET, "/api/events/*/registrations").hasRole("EO")
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.
@@ -231,4 +255,12 @@ public class SecurityConfig{
     }
 
 
+
+    /** GET /api/equipment/catalogue carrying from or to (D32). */
+    private static RequestMatcher catalogueWithWindow() {
+	RequestMatcher catalogue = PathPatternRequestMatcher.withDefaults()
+		.matcher(HttpMethod.GET, "/api/equipment/catalogue");
+	return request -> catalogue.matches(request)
+		&& (request.getParameter("from") != null || request.getParameter("to") != null);
+    }
 }

@@ -87,3 +87,26 @@ export interface CoordinatorEventsDto {
   coordinatorName: string
   events: { requestId: string | null; event: EventDto }[]
 }
+
+export type RegistrationState = 'not_required' | 'not_yet_open' | 'open' | 'closed' | 'full'
+export type RegistrationStatus = 'confirmed' | 'withdrawn' | 'event_cancelled'
+
+export interface RegistrationInfoDto {
+  eventId: string
+  eventName: string
+  registrationRequired: boolean
+  registrationState: RegistrationState
+  capacity: number | null
+  confirmedCount: number
+  placesRemaining: number | null
+  opensAt: string | null
+  closesAt: string | null
+  message: string | null
+  attendees: {
+    registrationId: string
+    name: string
+    reference: string
+    registeredAt: string
+    status: RegistrationStatus
+  }[]
+}

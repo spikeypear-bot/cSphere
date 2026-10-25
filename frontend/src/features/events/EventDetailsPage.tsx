@@ -13,6 +13,7 @@ import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../ty
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { EventCancellationPanel } from './EventCancellationPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
+import { OrganiserRegistrations } from './OrganiserRegistrations'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
@@ -24,6 +25,7 @@ import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
+import { EquipmentDamagePanel } from './EquipmentDamagePanel'
 
 /**
  * One page per event, shared by the Organiser and the Event Coordinator. Both
@@ -150,6 +152,7 @@ export function EventDetailsPage() {
         <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserRegistrations key={`registrations-${reloadToken}`} eventId={event.eventId} /> : null}
       {/* EO07: the organiser asks for cancellation; the assigned coordinator decides. */}
       <EventCancellationPanel event={event} role={role} onChanged={() => setReloadToken((n) => n + 1)} />
 
@@ -165,6 +168,10 @@ export function EventDetailsPage() {
             Request equipment
           </Link>
         </Card>
+      ) : null}
+      {/* TS09: damaged equipment the event relied on; the Lead reads it only. */}
+      {role === 'coordinator' || role === 'coordinator-lead' ? (
+        <EquipmentDamagePanel eventId={event.eventId} readOnly={role !== 'coordinator'} />
       ) : null}
 
       {role === 'coordinator' ? (
