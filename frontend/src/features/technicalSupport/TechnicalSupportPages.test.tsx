@@ -9,7 +9,9 @@ import { AppShell } from '../../components/layout/AppShell'
 import { technicalSupportNav } from './technicalSupportNav'
 import { TechnicalSupportDashboardPage } from './dashboard/TechnicalSupportDashboardPage'
 import { EquipmentRequestDetailPage } from './requests/EquipmentRequestDetailPage'
-import { EquipmentStatusPage } from './status/equipmentStatusPage'
+import { FaultyEquipmentPage } from './faulty/FaultyEquipmentPage'
+import { ReportProblemPage } from './faulty/ReportProblemPage'
+import { EquipmentDetailPage } from './inventory/EquipmentDetailPage'
 import { toLocalInputValue } from './reservations/reservationUtils'
 
 const eventStart = '2027-03-10T09:00:00+08:00'
@@ -28,7 +30,9 @@ function renderRoutes(path: string) {
         <Routes>
           <Route path="/technical-support" element={<TechnicalSupportDashboardPage />} />
           <Route path="/technical-support/requests/:requestId" element={<EquipmentRequestDetailPage />} />
-          <Route path="/technical-support/status" element={<EquipmentStatusPage />} />
+          <Route path="/technical-support/faulty" element={<FaultyEquipmentPage />} />
+          <Route path="/technical-support/faulty/new" element={<ReportProblemPage />} />
+          <Route path="/technical-support/inventory/:equipmentId" element={<EquipmentDetailPage />} />
         </Routes>
         </AppShell>
       </SessionProvider>
@@ -261,74 +265,86 @@ describe('Technical Support UI integration', () => {
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
   })
 
-  it('saves faulty and available status changes and displays the refreshed status', async () => {
-    const unit = {
-      equipmentId: 'projector-1',
-      equipmentName: 'Projector',
-      serialNumber: 'P-01',
-      status: 'Available',
-    }
-    const viewedStart = '2026-09-25T09:00'
-    const viewedEnd = '2026-09-25T17:00'
-    const unitsUrl = `/api/equipment/units?start=${encodeURIComponent(localToIso(viewedStart))}&end=${encodeURIComponent(localToIso(viewedEnd))}`
-    const periodsUrl = '/api/equipment/projector-1/units/P-01/periods'
-    const blocks: { id: string; status: 'Faulty' | 'Unavailable'; start: string; end: string | null }[] = []
+  it('TS03 TS09 (happy): marks a unit Faulty, shows the refreshed status, then marks it available again', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date(2026, 8, 25, 9, 0))
+    const unit = { serialNumber: 'P-01', status: 'Available' as 'Available' | 'Faulty', statusPeriods: [] as object[] }
+    const block = { id: 'period-1', status: 'Faulty', start: localToIso('2026-09-25T09:00'), end: localToIso('2026-09-25T17:00') }
+    // The equipment page's default window: 25 Sep and the next seven days.
+    const windowQuery = `from=${encodeURIComponent(new Date(2026, 8, 25).toISOString())}&to=${encodeURIComponent(new Date(2026, 9, 3).toISOString())}`
     const calls = stubApi({
-      [`GET ${unitsUrl}`]: () => jsonResponse(200, [{ ...unit }]),
-      [`GET ${periodsUrl}`]: () => jsonResponse(200, [...blocks]),
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [
+        { equipmentId: 'projector-1', equipmentName: 'Projector', totalQuantity: 1, serialised: true },
+      ]),
+      'GET /api/equipment/projector-1': () => jsonResponse(200, {
+        equipmentId: 'projector-1', equipmentName: 'Projector', serialised: true, totalQuantity: 1, units: [{ ...unit }],
+      }),
       'POST /api/equipment/projector-1/units/P-01/periods': body => {
-        const data = body as { status: 'Available' | 'Faulty' | 'Unavailable'; start: string; end: string | null }
-        blocks.splice(0)
+        const data = body as { status: 'Faulty'; start: string; end: string | null }
         unit.status = data.status
-        if (data.status !== 'Available') {
-          blocks.push({ id: `period-${blocks.length + 1}`, status: data.status, start: data.start, end: data.end })
-        }
+        unit.statusPeriods = [{ ...block, status: data.status, start: data.start, end: data.end }]
         return jsonResponse(204, null)
       },
+      'DELETE /api/equipment/periods/period-1': () => {
+        unit.status = 'Available'
+        unit.statusPeriods = []
+        return jsonResponse(204, null)
+      },
+      'GET /api/equipment/status-periods?current=true': () => jsonResponse(200, unit.statusPeriods.map((p) => ({
+        ...p, equipmentId: 'projector-1', equipmentName: 'Projector', serialNumber: 'P-01',
+      }))),
+      'GET /api/equipment-damage-reports': () => jsonResponse(200, []),
+      'GET /api/equipment-damage-reports?equipmentId=projector-1': () => jsonResponse(200, []),
+      [`GET /api/equipment/projector-1/reservations?${windowQuery}`]: () => jsonResponse(200, []),
     })
     const user = userEvent.setup()
-    renderRoutes('/technical-support/status')
+    renderRoutes('/technical-support/faulty/new?equipment=projector-1&serial=P-01')
 
-    await user.click(await screen.findByRole('button', { name: /Projector P-01 — Available/ }))
+    await screen.findByRole('option', { name: 'P-01 (Available)' })
     await user.selectOptions(screen.getByLabelText('Status'), 'Faulty')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
+    await user.type(screen.getByLabelText('Starts'), '2026-09-25T09:00')
+    await user.type(screen.getByLabelText('Ends (optional)'), '2026-09-25T17:00')
+    await user.type(screen.getByLabelText('Description'), 'Lamp flickers')
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
     expect(await screen.findByRole('status')).toHaveTextContent('marked Faulty')
-    expect(await screen.findByRole('button', { name: /Projector P-01 — Faulty/ })).toBeInTheDocument()
+    const blocked = await screen.findByRole('link', { name: 'Projector · P-01' })
+    expect(blocked).toHaveAttribute('href', '/technical-support/inventory/projector-1')
 
-    await user.selectOptions(screen.getByLabelText('Status'), 'Available')
-    await user.click(screen.getByRole('button', { name: 'Save' }))
-    expect(await screen.findByRole('status')).toHaveTextContent('marked Available')
-    expect(await screen.findByRole('button', { name: /Projector P-01 — Available/ })).toBeInTheDocument()
+    await user.click(blocked)
+    expect(await screen.findByText('Faulty now')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Remove (mark available)' }))
+    expect(await screen.findByText('P-01 is available again for that period.')).toBeInTheDocument()
+    expect(await screen.findByText('Available now')).toBeInTheDocument()
 
-    const statusUpdates = calls.filter(call => call.method === 'POST')
-    expect(statusUpdates.map(call => (call.body as { status: string }).status)).toEqual(['Faulty', 'Available'])
+    const statusUpdates = calls.filter(call => call.method === 'POST' || call.method === 'DELETE')
+    expect(statusUpdates.map(call => `${call.method} ${(call.body as { status?: string } | undefined)?.status ?? ''}`.trim()))
+      .toEqual(['POST Faulty', 'DELETE'])
     expect(statusUpdates.every(
       call => new Headers(call.headers).get('Authorization') === 'Bearer access-1',
     )).toBe(true)
+    vi.useRealTimers()
   })
 
-  it('does not change the displayed status when the draft is cancelled', async () => {
-    const unit = {
-      equipmentId: 'projector-1',
-      equipmentName: 'Projector',
-      serialNumber: 'P-01',
-      status: 'Available',
-    }
-    const viewedStart = '2026-09-25T09:00'
-    const viewedEnd = '2026-09-25T17:00'
-    const unitsUrl = `/api/equipment/units?start=${encodeURIComponent(localToIso(viewedStart))}&end=${encodeURIComponent(localToIso(viewedEnd))}`
+  it('TS03 TS09 (negative): leaving the form without saving changes nothing', async () => {
     const calls = stubApi({
-      [`GET ${unitsUrl}`]: () => jsonResponse(200, [unit]),
-      'GET /api/equipment/projector-1/units/P-01/periods': () => jsonResponse(200, []),
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [
+        { equipmentId: 'projector-1', equipmentName: 'Projector', totalQuantity: 1, serialised: true },
+      ]),
+      'GET /api/equipment/projector-1': () => jsonResponse(200, {
+        equipmentId: 'projector-1', equipmentName: 'Projector', serialised: true, totalQuantity: 1,
+        units: [{ serialNumber: 'P-01', status: 'Available', statusPeriods: [] }],
+      }),
+      'GET /api/equipment/status-periods?current=true': () => jsonResponse(200, []),
+      'GET /api/equipment-damage-reports': () => jsonResponse(200, []),
     })
     const user = userEvent.setup()
-    renderRoutes('/technical-support/status')
+    renderRoutes('/technical-support/faulty/new?equipment=projector-1&serial=P-01')
 
-    await user.click(await screen.findByRole('button', { name: /Projector P-01 — Available/ }))
+    await screen.findByRole('option', { name: 'P-01 (Available)' })
     await user.selectOptions(screen.getByLabelText('Status'), 'Faulty')
-    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    await user.click(screen.getByRole('link', { name: 'Back to faulty equipment' }))
 
-    expect(screen.getByText('Status for the period above:')).toHaveTextContent('Available')
+    expect(await screen.findByText('No unit is marked Faulty or Unavailable.')).toBeInTheDocument()
     expect(calls.filter(call => call.method === 'POST')).toHaveLength(0)
   })
 })

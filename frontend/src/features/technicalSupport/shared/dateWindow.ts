@@ -46,3 +46,9 @@ export function rangeToWindow(range: DateRange): { from: string; to: string } | 
   end.setDate(end.getDate() + 1)
   return { from: start.toISOString(), to: end.toISOString() }
 }
+
+/** ?from=&to= days from a link, defaulting to today and the next seven days. */
+export function rangeFromParams(params: URLSearchParams): DateRange {
+  const fallback = rangeFromToday(7)
+  return { from: params.get('from') ?? fallback.from, to: params.get('to') ?? fallback.to }
+}

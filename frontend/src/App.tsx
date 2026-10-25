@@ -44,7 +44,8 @@ import { technicalSupportNav } from './features/technicalSupport/technicalSuppor
 import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
 import { EquipmentRequestsPage } from './features/technicalSupport/requests/EquipmentRequestsPage'
 import { EquipmentRequestDetailPage } from './features/technicalSupport/requests/EquipmentRequestDetailPage'
-import { EquipmentStatusPage } from './features/technicalSupport/status/equipmentStatusPage'
+import { InventoryPage } from './features/technicalSupport/inventory/InventoryPage'
+import { EquipmentDetailPage } from './features/technicalSupport/inventory/EquipmentDetailPage'
 import { FaultyEquipmentPage } from './features/technicalSupport/faulty/FaultyEquipmentPage'
 import { ReportProblemPage } from './features/technicalSupport/faulty/ReportProblemPage'
 import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
@@ -182,7 +183,9 @@ function TechnicalSupportRoutes() {
         <Route path="requests/:requestId" element={<EquipmentRequestDetailPage />} />
         <Route path="availability" element={<Navigate to="/technical-support/requests" replace />} />
         <Route path="reservations" element={<Navigate to="/technical-support/requests" replace />} />
-        <Route path="status" element={<EquipmentStatusPage />} />
+        <Route path="status" element={<Navigate to="/technical-support/inventory" replace />} />
+        <Route path="inventory" element={<InventoryPage />} />
+        <Route path="inventory/:equipmentId" element={<EquipmentDetailPage />} />
         {/* TS03 blocks and TS09 damage reports, reported through one form. */}
         <Route path="faulty" element={<FaultyEquipmentPage />} />
         <Route path="faulty/new" element={<ReportProblemPage />} />
