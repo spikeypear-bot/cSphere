@@ -22,11 +22,11 @@ Implemented against the requirements supplied in this conversation; the live bac
 | `GET /api/events/{eventId}/venue-bookings/{bookingId}/history` | Assigned EC; booking must belong to event |
 | `GET /api/venue-bookings/{bookingId}/history` | All Venue Staff; other roles forbidden |
 
-History contains chronological before/after booking JSON, event requirement snapshots, timestamp and actor when supplied by the calling workflow. There is no history mutation endpoint. Records begin with V42; pre-migration changes cannot be reconstructed. Normal cancellation and replacement do not delete records.
+History contains chronological before/after booking JSON, event requirement snapshots, timestamp and actor when supplied by the calling workflow. There is no history mutation endpoint. Records begin with V50; pre-migration changes cannot be reconstructed. Normal cancellation and replacement do not delete records.
 
 ## Persistence and rollout
 
-V42 adds `venue_booking_requirements`, booking requirements/group linkage, `venue_booking_history` with an insert/update trigger, readiness fingerprints and the rejection notification type. Active legacy replacement chains share a group; terminal-only legacy chains remain historical. Existing safety decisions need current per-booking attestations before reconfirmation. Apply this new migration through the normal reviewed deployment; never modify an applied migration.
+V50 adds `venue_booking_requirements`, booking requirements/group linkage, `venue_booking_history` with an insert/update trigger, readiness fingerprints and the rejection notification type. Active legacy replacement chains share a group; terminal-only legacy chains remain historical. Existing safety decisions need current per-booking attestations before reconfirmation. Apply this new migration through the normal reviewed deployment; never modify an applied migration.
 
 ## Regression evidence
 
@@ -42,4 +42,4 @@ Execution logs are retained under `logs/vs-review-20261025/`. The backend is tes
 - Frontend: all 685 tests in 65 files passed; production build and ESLint passed. Vite retains its bundle-size advisory.
 - Traceability: 167 files, 64 stories, zero untraced files. Six High-priority stories elsewhere remain without tests.
 - `git diff --check` passed. No commit, push or production migration was performed.
-- Browser E2E was not run during this verification. Migration V42 was exercised against the isolated PostgreSQL test database.
+- Browser E2E was not run during this verification. Migration V50 was exercised against the isolated PostgreSQL test database.

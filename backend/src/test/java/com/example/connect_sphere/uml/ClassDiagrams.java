@@ -178,7 +178,12 @@ final class ClassDiagrams {
         // "\n" on every OS, so CI's up-to-date check compares like with like.
         String diagram = String.join("\n", lines);
         Files.createDirectories(OUTPUT_DIR);
-        Files.writeString(OUTPUT_DIR.resolve(level + ".generated.puml"), diagram, StandardCharsets.UTF_8);
+        Path output = OUTPUT_DIR.resolve(level + ".generated.puml");
+        // Several tests generate the same diagram. Leave identical output alone
+        // so Windows readers/indexers cannot block a redundant overwrite.
+        if (!Files.exists(output) || !Files.readString(output, StandardCharsets.UTF_8).equals(diagram)) {
+            Files.writeString(output, diagram, StandardCharsets.UTF_8);
+        }
         return diagram;
     }
 

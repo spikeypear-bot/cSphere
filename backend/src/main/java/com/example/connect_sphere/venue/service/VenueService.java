@@ -49,6 +49,8 @@ public class VenueService {
         venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.turnaroundMinutes(), 0));
         venue.setVenueId(UUID.randomUUID());
         venue.setVenueAddress(input.venueAddress().strip());
+        venue.setVenueName(input.venueName() == null || input.venueName().isBlank()
+                ? input.venueAddress().strip() : input.venueName().strip());
         venue.setVenueCapacity(input.venueCapacity());
         venue.setSupportedLayouts(new ArrayList<>(input.supportedLayouts().stream()
                 .map(Enum::name).toList()));
@@ -78,7 +80,8 @@ public class VenueService {
                 current.additionalInformation(),
                 input.getVenueAccessibilities() == null ? current.venueAccessibilities() : input.getVenueAccessibilities(),
                 input.getVenueFacilities() == null ? current.venueFacilities() : input.getVenueFacilities(),
-                input.getOperatingHours() == null ? current.operatingHours() : input.getOperatingHours());
+                input.getOperatingHours() == null ? current.operatingHours() : input.getOperatingHours(),
+                null, null, input.getVenueName() == null ? current.venueName() : input.getVenueName());
         validate(merged);
         if (input.getOperatingHours() != null && input.getOperatingHours().isEmpty()) throw new InvalidVenueException(List.of("operatingHours must contain at least one operating day"));
         boolean characteristicsChanged = !java.util.Objects.equals(current.venueCapacity(),merged.venueCapacity())
@@ -93,6 +96,7 @@ public class VenueService {
         if (input.getVenueAccessibilities() != null) venue.setVenueAccessibilities(labels(merged.venueAccessibilities()));
         if (input.getVenueFacilities() != null) venue.setVenueFacilities(labels(merged.venueFacilities()));
         if (input.getOperatingHours() != null) venue.setOperatingInformation(summarizeHours(merged.operatingHours()));
+        if (input.getVenueName() != null) venue.setVenueName(input.getVenueName().strip());
         if (input.getAdditionalInformation() != null) venue.setAdditionalInformation(input.getAdditionalInformation().strip());
         Venue saved = repository.save(venue);
         if (input.getOperatingHours() != null) saveHours(id, input.getOperatingHours());
@@ -114,6 +118,9 @@ public class VenueService {
             errors.add("venueAddress is required");
         } else if (input.venueAddress().strip().length() > 500) {
             errors.add("venueAddress must be at most 500 characters");
+        }
+        if (input.venueName() != null && (input.venueName().isBlank() || input.venueName().strip().length() > 200)) {
+            errors.add("venueName must contain 1 to 200 characters");
         }
         if (input.venueCapacity() == null || input.venueCapacity() < 1 || input.venueCapacity() > 50000) {
             errors.add("venueCapacity must be between 1 and 50000");
@@ -173,7 +180,7 @@ public class VenueService {
         VenueDto base = mapper.toDto(venue);
         return new VenueDto(base.venueId(), base.venueAddress(), base.venueCapacity(), base.supportedLayouts(),
                 VenueHoursService.summary(values), base.additionalInformation(), base.venueAccessibilities(),
-                base.venueFacilities(), values, venue.getSetupMinutes(), venue.getTurnaroundMinutes());
+                base.venueFacilities(), values, venue.getSetupMinutes(), venue.getTurnaroundMinutes(), venue.getVenueName());
     }
 
     private static String summarizeHours(List<VenueOperatingHourDto> values) {

@@ -14,6 +14,7 @@ import com.example.connect_sphere.event.service.EventCancellationStateException;
 import com.example.connect_sphere.event.service.EventLifecycleException;
 import com.example.connect_sphere.event.service.EventLifecycleValidationException;
 import com.example.connect_sphere.event.service.EventNotFoundException;
+import com.example.connect_sphere.attendee.AttendeeRegistrationException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.event.service.EventReassignmentNotFoundException;
@@ -47,6 +48,11 @@ import com.example.connect_sphere.safety.InvalidReadinessUpdateException;
  * exception rather than catching in the controller. */
 @RestControllerAdvice
 public class ApiExceptionHandler {
+
+    @ExceptionHandler(AttendeeRegistrationException.class)
+    public ResponseEntity<ApiError> handleAttendeeRegistration(AttendeeRegistrationException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getMessage()));
+    }
 
     @ExceptionHandler(VenueNotFoundException.class)
     public ResponseEntity<ApiError> handleVenueNotFound(VenueNotFoundException ex) {
@@ -264,6 +270,12 @@ public class ApiExceptionHandler {
     public ResponseEntity<ApiError> handleAccessDenied(AccessDeniedException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(ApiError.of("You do not have permission to perform this action."));
+    }
+
+    /** D33: a refused reservation line names its equipment item. */
+    @ExceptionHandler(com.example.connect_sphere.equipment.ReservationLineException.class)
+    public ResponseEntity<ApiError> handleReservationLine(com.example.connect_sphere.equipment.ReservationLineException ex) {
+        return ResponseEntity.status(ex.getStatusCode()).body(ApiError.forEquipment(ex.getReason(), ex.getEquipmentId()));
     }
 
     @ExceptionHandler(ResponseStatusException.class)

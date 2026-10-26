@@ -28,12 +28,12 @@ steps.
 
 ## Persistence and transaction boundary
 
-V34 adds `venue_requirement_reviews`, referencing the approved change, booking,
+V42 adds `venue_requirement_reviews`, referencing the approved change, booking,
 event, venue, coordinator and approving user. Each review snapshots the event
 name, venue address, coordinator identity/contact, approval timestamp, supported
 venue requirements before/after, actual reserved window and saved durations.
 `pending` is review state, independent of booking status and notification read state.
-V35 extends review state to `suitable` and `action_required`, with a reviewer,
+V43 extends review state to `suitable` and `action_required`, with a reviewer,
 review timestamp, comment and captured check results. Historical snapshots and
 decided outcomes cannot be updated or deleted (database trigger).
 
@@ -80,7 +80,7 @@ current code and the latest migration sections rather than those old summaries.
 The booking-write entity's old comment also described event-derived times; it
 has been corrected in this slice.
 
-## Review workflow and API (V35)
+## Review workflow and API (V43)
 
 | Endpoint | Permission | Behaviour |
 |---|---|---|
@@ -137,7 +137,7 @@ and booking; resolving an older review does not resolve a newer one.
 The current backend run passed **515** unit/integration/regression tests against
 isolated PostgreSQL 18, including approval/rejection, cancellations and release,
 replacement, tentative holds, setup/turnaround conflicts, change-request audit,
-safety lifecycle and equipment periods. V1–V35 migrated successfully on a fresh
+safety lifecycle and equipment periods. V1–V43 migrated successfully on a fresh
 database. The wider frontend run passed **257** cases across 19 files. The real Chromium
 staff-to-coordinator journey passed against the packaged application. Lint and
 traceability passed (152 test files; zero untraced files).
@@ -189,7 +189,7 @@ bookings until approved. Capacity, facilities, accessibility, occupied opening h
 existing availability checks are reused. Changed supported layouts require staff judgement
 when written venue requirements exist. Suitable bookings keep their state.
 
-V36 adds booking `attention` (Requires attention) and two role-specific notification types.
+V44 adds booking `attention` (Requires attention) and two role-specific notification types.
 Affected previously approved bookings move to attention, retaining their saved start/end,
 setup/turnaround and reservation. Attention is included in availability, schedule, active
 booking limits, cancellation, replacement and requirement-change processing. It does not
@@ -197,7 +197,7 @@ count as an approved arrangement for safety readiness. `EventLifecycleService` r
 future safety-stage or confirmed events to Planning and clears safety approval; restoring
 a booking does not automatically reconfirm the event. Terminal events are not invalidated.
 
-V37/V38 add append-only booking assessment history, including catalogue values before/after
+V45/V46 add append-only booking assessment history, including catalogue values before/after
 an edit (including structured hours), approved requirement snapshots, actor, reason and time.
 Existing approved-change snapshots and completed requirement-review outcomes stay immutable.
 Review responses identify whether a saved decision still describes the current arrangement;

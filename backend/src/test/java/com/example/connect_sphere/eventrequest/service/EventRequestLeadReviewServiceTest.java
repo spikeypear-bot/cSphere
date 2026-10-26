@@ -53,6 +53,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("ELC-C6")
 @Tag("ELC-C5")
 @Tag("EC-NEW4")
+@Tag("AT01")
 class EventRequestLeadReviewServiceTest {
 
     @Mock private EventRequestRepository repository;
@@ -724,6 +725,8 @@ class EventRequestLeadReviewServiceTest {
         entity.setEquipmentRequirements("Two wireless microphones");
         entity.setAccessibilityNeeds(List.of(AccessibilityFeature.none));
         entity.setRegistrationNeeds(true);
+        entity.setRegistrationCapacity(150);
+        entity.setRegistrationOpensAt(STARTS.minusDays(30));
         OffsetDateTime submitted = OffsetDateTime.now().minusDays(1);
         entity.setCreatedAt(submitted);
         entity.setUpdatedAt(submitted);

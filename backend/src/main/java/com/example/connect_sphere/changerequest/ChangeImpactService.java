@@ -268,7 +268,7 @@ public class ChangeImpactService {
     }
 
     private void safetyImpact(Event event, Set<String> changedFields, List<ImpactItem> items) {
-        if (!SAFETY_STAGES.contains(event.getStatus())) {
+        if (!EventStatus.IN_OR_PAST_SAFETY_CHECK.contains(event.getStatus())) {
             return;
         }
         boolean replan = changedFields.stream().anyMatch(ChangeFields.AFFECTS_ARRANGEMENTS::contains);

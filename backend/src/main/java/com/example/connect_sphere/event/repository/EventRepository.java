@@ -33,4 +33,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     /** SO-C1 + EC08: every event not yet confirmed, soonest first. */
     List<Event> findByStatusInOrderByStartDatetimeAsc(Collection<EventStatus> statuses);
+
+    /** AT02: attendee catalogue is limited to events that have been confirmed at least once. */
+    List<Event> findByFirstConfirmedAtIsNotNullOrderByStartDatetimeAsc();
 }

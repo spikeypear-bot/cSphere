@@ -28,6 +28,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("EO09")
 @Tag("EO19")
 @Tag("EC-C3")
+@Tag("AT01")
 class NotificationServiceTest {
 
     @Mock
@@ -78,6 +79,23 @@ class NotificationServiceTest {
         service.createCoordinatorAssignmentNotification(
                 RECIPIENT, UUID.randomUUID(), null, "Town Hall", "ec2", "ec2@connectsphere.test", true);
         assertThat(captureSaved().getIsReassignment()).isTrue();
+    }
+
+    @Test
+    @DisplayName("AT01 AC9 (happy): saves a confirmation notification with the registration reference")
+    void attendeeRegistrationConfirmationCarriesEventAndReference() {
+        UUID eventId = UUID.randomUUID();
+
+        service.createAttendeeRegistrationConfirmation(RECIPIENT, eventId, "Town Hall", "CS-ABC123");
+
+        Notification saved = captureSaved();
+        assertThat(saved.getRecipientUserId()).isEqualTo(RECIPIENT);
+        assertThat(saved.getEventId()).isEqualTo(eventId);
+        assertThat(saved.getType()).isEqualTo(NotificationType.attendee_registration_confirmed);
+        assertThat(saved.getEventName()).isEqualTo("Town Hall");
+        assertThat(saved.getMessage()).contains("CS-ABC123");
+        assertThat(saved.getOccurredAt()).isNotNull();
+        assertThat(saved.getReadAt()).isNull();
     }
 
     @Test

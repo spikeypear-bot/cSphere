@@ -32,6 +32,7 @@ import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.service.EventArrangementsService;
 import com.example.connect_sphere.event.service.EventLifecycleService;
+import com.example.connect_sphere.event.service.EventRegistrationService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
@@ -68,6 +69,9 @@ class AssignedEventsAccessTest {
 
     @MockitoBean
     private EventArrangementsService arrangements;
+
+    @MockitoBean
+    private EventRegistrationService eventRegistrationService;
 
     /** A token for {@link #CALLER_ID} with the given role claim, run through the real converter. */
     private JwtRequestPostProcessor tokenFor(String roleClaim) {

@@ -4,11 +4,12 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
+import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../types/event'
 import type { VenueDto } from '../../types/venue'
 import type { EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { useSafetyData } from './useSafetyData'
 import { ReadinessChecklistPanel } from './ReadinessChecklistPanel'
+import { SafetyDecisionSummary } from './SafetyDecisionSummary'
 import type { ReadinessDto, ReadinessItem } from './readinessTypes'
 import './safetyOfficer.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
@@ -42,6 +43,8 @@ export function SafetyEventDetailsPage() {
   )
   const [savingItem, setSavingItem] = useState<string | null>(null)
   const [reviewNote, setReviewNote] = useState('')
+  // SO-C5/SO-C6: the checklist items a rejection or request for changes concerns.
+  const [flaggedItems, setFlaggedItems] = useState<string[]>([])
   const [actionError, setActionError] = useState<string | null>(null)
   const [reviewing, setReviewing] = useState(false)
   const readiness = readinessState.data
@@ -70,12 +73,18 @@ export function SafetyEventDetailsPage() {
       const result = await apiClient.post<ReadinessDto>(`/safety/events/${eventId}/approval`, {
         decision,
         note: reviewNote,
+        flaggedItems: decision === 'approve' ? [] : flaggedItems,
       })
       readinessState.setData(result)
       eventState.reload()
       setReviewNote('')
+      setFlaggedItems([])
     } catch (err) {
       setActionError(err instanceof ApiClientError ? err.message : 'Could not save the safety review.')
+      // The event may have been decided meanwhile (e.g. by another Safety
+      // Officer): show its current state. What was typed is kept.
+      eventState.reload()
+      readinessState.reload()
     } finally {
       setReviewing(false)
     }
@@ -86,10 +95,12 @@ export function SafetyEventDetailsPage() {
 
   // EC08: the checklist can be worked on until a decision is made; a
   // decision is possible once the coordinator has sent the event for review.
-  const checklistEditable = event.status === 'pending' || event.status === 'awaiting_safety_review'
-    || event.status === 'safety_changes_requested'
+  const checklistEditable = isPlanningEditable(event.status) || event.status === 'awaiting_safety_review'
   const awaitingDecision = event.status === 'awaiting_safety_review'
   const noteGiven = reviewNote.trim() !== ''
+  const canSendBack = noteGiven && flaggedItems.length > 0
+  const toggleFlag = (key: string, on: boolean) => setFlaggedItems((current) =>
+    on ? [...current, key] : current.filter((k) => k !== key))
   return (
     <div className="page">
       <PageHeader
@@ -156,10 +167,9 @@ export function SafetyEventDetailsPage() {
       {readiness ? (
         <Card className="safety-panel">
           <h2>Safety approval</h2>
-          <p>Current approval: {readiness.approvalStatus.replaceAll('_', ' ')}</p>
-          {readiness.approvalNote ? <p>Note: {readiness.approvalNote}</p> : null}
-          {readiness.reviewedBy ? <p>Reviewed by {readiness.reviewedBy}{readiness.reviewedAt ? ` · ${new Date(readiness.reviewedAt).toLocaleString()}` : ''}</p> : null}
-          {event.status === 'pending' || event.status === 'safety_changes_requested' ? (
+          <h3>{awaitingDecision && readiness.approvalStatus !== 'not_reviewed' ? 'Previous decision' : 'Latest decision'}</h3>
+          <SafetyDecisionSummary readiness={readiness} />
+          {isPlanningEditable(event.status) ? (
             <p role="status">Waiting for the Event Coordinator to send this event for its safety check.
               You can work on the checklist in the meantime.</p>
           ) : null}
@@ -174,15 +184,29 @@ export function SafetyEventDetailsPage() {
               <p id="safety-review-note-hint" className="field-hint">
                 Optional when approving. Required to request changes or reject, so the coordinator knows what to fix.
               </p>
+              <fieldset className="safety-flags" aria-describedby="safety-flags-hint">
+                <legend>Checklist items this decision concerns</legend>
+                <p id="safety-flags-hint" className="field-hint">
+                  Select at least one to request changes or reject. Not used when approving.
+                </p>
+                {readiness.items.map((item) => (
+                  <label key={item.itemKey} className="safety-flags__option">
+                    <input type="checkbox" checked={flaggedItems.includes(item.itemKey)} disabled={reviewing}
+                      aria-label={`Raise: ${item.label}`}
+                      onChange={(e) => toggleFlag(item.itemKey, e.target.checked)} />
+                    <span>{item.label}</span>
+                  </label>
+                ))}
+              </fieldset>
               <div className="safety-actions">
                 <Button disabled={reviewing || readiness.completedItems !== readiness.totalItems}
                   onClick={() => void review('approve')}>
                   {reviewing ? 'Saving…' : 'Approve'}
                 </Button>
-                <Button variant="secondary" disabled={reviewing || !noteGiven} onClick={() => void review('request_changes')}>
+                <Button variant="secondary" disabled={reviewing || !canSendBack} onClick={() => void review('request_changes')}>
                   Request changes
                 </Button>
-                <Button variant="secondary" disabled={reviewing || !noteGiven} onClick={() => void review('reject')}>
+                <Button variant="secondary" disabled={reviewing || !canSendBack} onClick={() => void review('reject')}>
                   Reject
                 </Button>
               </div>

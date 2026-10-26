@@ -118,16 +118,39 @@ public class EventArrangementsService {
     }
 
     /** Approved equipment only, merged by item so the organiser sees one line
-     * per piece of equipment. */
+     * per piece of equipment. TS09: less any shortfall recorded after
+     * equipment was reported damaged; an item with nothing left is not shown. */
     private List<OrganiserArrangementsDto.Equipment> equipmentOf(Event event) {
         Map<String, Integer> quantities = new LinkedHashMap<>();
+        java.util.Set<UUID> counted = new java.util.HashSet<>();
         equipmentRequests.findByEventId(event.getEventId()).stream()
                 .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
                 .flatMap(r -> equipmentLines.findByIdRequestId(r.getId()).stream())
-                .forEach((EquipmentRequestLine line) -> quantities.merge(
-                        line.getEquipment().getName(), line.getQuantity(), Integer::sum));
+                .forEach((EquipmentRequestLine line) -> {
+                    int quantity = line.getQuantity();
+                    if (shortfalls != null) {
+                        // TS09: the ledger's need covers every approved line of the kind,
+                        // less recorded shortfalls (as TS06 counts it), so each kind counts once.
+                        UUID equipmentId = line.getId().getEquipmentId();
+                        if (!counted.add(equipmentId)) {
+                            return;
+                        }
+                        quantity = shortfalls.need(event.getEventId(), equipmentId, null);
+                    }
+                    quantities.merge(line.getEquipment().getName(), quantity, Integer::sum);
+                });
         return quantities.entrySet().stream()
+                .filter(e -> e.getValue() > 0)
                 .map(e -> new OrganiserArrangementsDto.Equipment(e.getKey(), e.getValue())).toList();
+    }
+
+    /** TS09: recorded equipment shortfalls. Setter-injected so existing
+     * constructions of this service keep working; absent in plain unit tests. */
+    private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
+        this.shortfalls = shortfalls;
     }
 
     private static List<String> copy(List<?> values) {

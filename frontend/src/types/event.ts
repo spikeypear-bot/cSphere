@@ -19,6 +19,12 @@ export const EVENT_STATUS_LABELS: Record<EventStatus, string> = {
   completed: 'Completed',
 }
 
+/** EC08: venues and equipment can still be changed, in Planning or after the
+ * Safety Officer asked for changes. Mirrors EventStatus.isPlanningEditable(). */
+export function isPlanningEditable(status: EventStatus): boolean {
+  return status === 'pending' || status === 'safety_changes_requested'
+}
+
 export interface EventDto {
   eventId: string
   eventName: string
@@ -80,4 +86,27 @@ export interface CoordinatorEventsDto {
   coordinatorId: string
   coordinatorName: string
   events: { requestId: string | null; event: EventDto }[]
+}
+
+export type RegistrationState = 'not_required' | 'not_yet_open' | 'open' | 'closed' | 'full'
+export type RegistrationStatus = 'confirmed' | 'withdrawn' | 'event_cancelled'
+
+export interface RegistrationInfoDto {
+  eventId: string
+  eventName: string
+  registrationRequired: boolean
+  registrationState: RegistrationState
+  capacity: number | null
+  confirmedCount: number
+  placesRemaining: number | null
+  opensAt: string | null
+  closesAt: string | null
+  message: string | null
+  attendees: {
+    registrationId: string
+    name: string
+    reference: string
+    registeredAt: string
+    status: RegistrationStatus
+  }[]
 }

@@ -36,7 +36,7 @@ Venue Details offers **Release unavailable period**, an explicit reason/confirma
 
 ## Recovery and schema
 
-- V40 adds release metadata, `venue_replan_tasks`, and `notification_outbox`. V41 explicitly requires a release reason at the database boundary. Existing migrations are unchanged; both additions preserve application data.
+- V48 adds release metadata, `venue_replan_tasks`, and `notification_outbox`. V49 explicitly requires a release reason at the database boundary. Existing migrations are unchanged; both additions preserve application data.
 - Replanning runs immediately after commit when possible and otherwise every `venue.recovery.delay-ms` (default 30000).
 - Notification delivery runs immediately after commit when possible and otherwise every `notifications.retry-delay-ms` (default 30000).
 - Each scheduled pass handles up to 100 pending items. Failures are logged and retained; completed work remains as operational history.

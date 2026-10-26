@@ -55,13 +55,13 @@ public class SafetyOfficerController {
         return toItems(events.findByStatusInOrderByStartDatetimeAsc(PRE_CONFIRMATION));
     }
 
-    private static final List<EventStatus> PRE_CONFIRMATION = List.of(EventStatus.pending,
-            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested, EventStatus.safety_approved);
+    private static final List<EventStatus> PRE_CONFIRMATION = List.copyOf(EventStatus.BEFORE_CONFIRMATION);
+
 
     @GetMapping("/events/{eventId}")
     public EventDto getEvent(@PathVariable UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!ReadinessService.VISIBLE.contains(event.getStatus())) {
+        if (!EventStatus.ACTIVE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return toDto(event);

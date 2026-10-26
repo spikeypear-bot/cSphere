@@ -149,6 +149,7 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 |---|---|---|---|---|
 | `venue_id` | `UUID` | no | PK | Identifier |
 | `venue_address` | `TEXT` | no | | Full address |
+| `venue_name` | `TEXT` | no | | Public display name (V35; legacy values start as the address) |
 | `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
 | `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
@@ -243,19 +244,23 @@ item is later unchecked; `updated_by`/`updated_at` track the most recent edit.
 | `updated_by` | `UUID` | yes | FK → `users` | Most recent editor |
 | `updated_at` | `TIMESTAMPTZ` | yes | | Most recent edit time |
 
-### `event_safety_reviews` (V22, SO-C4)
+### `event_safety_reviews` (V22, SO-C4; V34, SO-C5/SO-C6)
 
-The latest Safety Officer decision for an event (`approved` or `rejected`), with
-the reviewer, time, and optional note. Approval updates `events.status` to
-`confirmed` in the same transaction; rejection leaves the event in Planning.
+The latest Safety Officer decision for an event, with the reviewer, time, note
+and the checklist items it concerns. Since EC08 (V23, D22) a decision does not
+confirm the event: approval moves it to `safety_approved` for the coordinator to
+confirm, and a rejection or a request for changes returns it to the coordinator
+as `safety_changes_requested`, with the note in `events.safety_feedback`. Each
+decision overwrites this row; the event's timeline keeps every decision.
 
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `event_id` | `UUID` | no | PK, FK → `events` | Event under review, cascade-deleted with the event |
 | `review_status` | `VARCHAR(32)` | no | | `approved`, `rejected` or `changes_requested` (V23; widened from 16 in V24) |
-| `note` | `VARCHAR(2000)` | no | | Optional review note |
+| `note` | `VARCHAR(2000)` | no | | Review note: optional for an approval, required (1–2,000 characters after trimming, checked by `ReadinessService`) for a rejection or a request for changes |
 | `reviewed_by` | `UUID` | no | FK → `users` | Safety Officer who made the latest decision |
 | `reviewed_at` | `TIMESTAMPTZ` | no | | Time of the latest decision |
+| `flagged_items` | `TEXT[]` | no | | V34: readiness checklist item keys (`event_readiness_items.item_key`) the rejection or request for changes concerns, in checklist order; at least one for those decisions, none for an approval (checked by `ReadinessService`). Default `{}`. `chk_safety_review_flagged_items` allows only the six checklist keys |
 
 ---
 
@@ -321,7 +326,7 @@ Individual physical units of high-value equipment. Only used where `equipments.s
 | Column | Type | Null | Key | Description |
 |---|---|---|---|---|
 | `equipment_id` | `UUID` | no | PK, FK → `equipments` | Which kind of equipment |
-| `serial_number` | `VARCHAR(255)` | no | PK | Serial, unique only within an `equipment_id` |
+| `serial_number` | `VARCHAR(64)` | no | PK | Serial, unique only within an `equipment_id` |
 | `status` | `equipment_status` | no | | Condition/availability of this unit |
 
 **Primary key:** `(equipment_id, serial_number)` — serials are only assumed unique per equipment kind.
@@ -366,9 +371,10 @@ from; `equipment_requests` records intent, this records reality.
 | `equipment_id` | `UUID` | no | FK → `equipments` | Equipment kind |
 | `quantity` | `INTEGER` | no | | Units issued. `1` for a serialised unit |
 | `technical_requirements` | `TEXT` | yes | | Free-text notes |
-| `serial_number` | `VARCHAR(255)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
+| `serial_number` | `VARCHAR(64)` | yes | FK → `serialised_equipments` | Set for serialised units, null for bulk loans |
 | `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
 | `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
+| `spare` | `BOOLEAN` | no | | V40. `true` for an extra unit held beyond the requested quantity; default `false` |
 
 **Foreign keys:** `(equipment_id, serial_number)` is a *composite* FK to `serialised_equipments`,
 so a log row cannot cite a serial belonging to a different equipment kind. Because
@@ -576,7 +582,116 @@ logs of cancelled or completed events (decision-log D28).
 (V31) and EO03/EC-NEW3's change-request types (V32). See
 [EO07 API](../../../../../../docs/event-cancellation-api.md).
 
-## V34 update — venue requirement reviews (VS17)
+## V34 update — safety decisions name checklist items (SO-C5, SO-C6)
+
+`event_safety_reviews` adds `flagged_items` (`TEXT[]`, not null, default `{}`):
+the readiness checklist items (SO-C3) a rejection or a request for changes
+concerns, so the coordinator sees what to fix. `ReadinessService` requires at
+least one known item for those decisions and none for an approval; reviews made
+before V34 keep an empty list. `chk_safety_review_flagged_items` also limits the
+column to the six checklist keys, so a row written outside the service cannot
+hold an unknown item; adding a checklist item means updating that constraint. The decision's timeline entry
+(`event_request_activity.flagged_fields`) holds the same keys. See
+decision-log D30.
+
+## V35/V36 registration schema and V41 attendee extension (EO10, AT01, AT02)
+
+V35 creates `event_registrations` with the unique `reference` field and statuses
+`confirmed`, `withdrawn`, `event_cancelled`. V36 removes the separate event
+closing timestamp: registration closes exactly at `events.start_datetime`.
+
+V41 extends those tables without recreating them. Requests gain optional capacity,
+opening time and attendee instructions; events gain attendee instructions alongside
+their existing capacity/opening fields. Registration-required requests must supply
+a positive capacity and opening time before event start to submit or approve.
+Responses derive `registrationClosesAt` from event/request start; legacy input is
+normalised to start and never stored as a separate column.
+
+Registrations gain nullable `attendee_id` (users FK) and `attendee_email` so old
+EO10 rows remain intact without fabricated identities. AT01 supplies both fields
+for new registrations, using the existing `reference` column. A partial unique
+index allows only one confirmed row per identified attendee/event. All confirmed
+rows, including legacy rows, consume capacity. The event row is locked while
+checking capacity and inserting a registration.
+
+V41 adds `attendee_registration_confirmed` while retaining V38's full notification
+shape constraint, including `equipment_damage_outcome`; both require event and
+message. Venues gain a public display name, initialised from their saved address.
+
+## V37 update — serial number length (TS09)
+
+`serialised_equipments.serial_number`, `equipment_logs.serial_number` and
+`equipment_status_periods.serial_number` are `VARCHAR(64)` (were `VARCHAR(255)`). Serial numbers
+are short codes whose format depends on the equipment kind (e.g. `EPS-EBU04-7K2Q9M` for a
+projector, a 15-digit IMEI-style number for a mobile Wi-Fi unit); the dev seeder
+(`DevEquipmentSeeder`) generates them at random per kind. The composite foreign keys
+`(equipment_id, serial_number)` are unchanged. A reservation naming a serial number longer than
+64 characters is refused with 400.
+
+## V38 update — equipment damage reports (TS09)
+
+The serial columns use V37's `VARCHAR(64)` length.
+
+`equipment_damage_reports` records Technical Support's report that equipment is damaged for a
+period. Columns: `report_id` (UUID PK), `equipment_id` (required FK → `equipments`),
+`serial_number` (`VARCHAR(64)`, set for a serialised unit; composite FK with `equipment_id` →
+`serialised_equipments`, skipped when null), `quantity` (≥ 1; exactly 1 when a serial is given),
+`description` (trimmed, 1–2000 characters), `period_start` (required), `period_end` (nullable =
+no known end; after the start when given), `mark_faulty` (asked for a TS03 Faulty block),
+`faulty_marked` (the block was added when the report closed), `status` (`OPEN`, `CLOSED`; `closed_at`
+set exactly when closed), `reported_by` (FK → `users`) and `reported_at`. A non-serialised report's
+`quantity` stops counting as available for its period (TS09 AC5).
+
+`equipment_damage_outcomes` has one row per event a report affects (`UNIQUE (report_id, event_id)`):
+`outcome` (`COVERED`, `REPLACED`, `SHORT`; null until decided, with `decided_by`/`decided_at`),
+`shortfall` (units the event is short; > 0 exactly when `SHORT`), `reduced_by` (non-serialised units
+taken off the event's reservations), `replacement_serial_number` (required for `REPLACED`),
+`additional_request_id` (nullable FK → `equipment_requests`, unique when set: the coordinator's
+request for this shortfall), and `resolution` (`NOTE`, `ADDITIONAL_REQUEST`) with
+`resolution_note` (1–2000 characters, required for `NOTE`), `resolved_by` and `resolved_at`. Only a
+`SHORT` outcome can be resolved.
+
+Deciding an outcome changes `equipment_logs`: a replacement updates the reservation's
+`serial_number`; covered and short outcomes delete the damaged unit's reservation; a non-serialised
+reduction lowers `quantity` (deleting the row at 0). What was decided stays on the outcome row.
+
+`notification_type` gains `equipment_damage_outcome` (needs `event_id` and `message`). The recreated
+`chk_notification_shape` keeps every V33 branch. See
+[TS09 API](../../../../../../docs/equipment-damage-api.md) and decision-log D31.
+
+## V39 update — damage report block status (TS09)
+
+A damage report can now ask for the damaged unit to be blocked
+as **Unavailable** as well as Faulty (TS03's two block statuses):
+
+- `equipment_damage_reports.block_status` (`text`, nullable; `FAULTY` or `UNAVAILABLE`): the TS03 block to
+  add when the report closes. Back-filled to `FAULTY` where `mark_faulty` was true, then
+  `mark_faulty` is dropped (V38's check tying `faulty_marked` to it goes with it).
+- `faulty_marked` is renamed `block_applied`: the requested block was added on close.
+- `chk_damage_block_serialised`: a block needs a serialised unit (`serial_number` set).
+  `chk_damage_block_applied`: `block_applied` only when a block was asked for.
+
+The API reads and returns only `blockStatus`/`blockApplied` (the earlier `markFaulty`/`faultyMarked`
+fields were removed before release). See [TS09 API](../../../../../../docs/equipment-damage-api.md)
+and decision-log D32.
+
+## V40 update — spare reservations (TS02)
+
+`equipment_logs.spare` (`BOOLEAN NOT NULL DEFAULT false`) marks a
+reservation as a **spare**: an extra unit held beyond what the event's requests ask for.
+
+- TS02 refuses a reservation that would take the event's non-spare reservations of a kind (those
+  overlapping the new window) above the quantity requested. The excess must be reserved as spare.
+- Spares still count as reserved everywhere else: availability (they hold stock), TS06's "everything is
+  reserved" check and TS09's "covered by spare".
+- A serialised unit is always one row with its serial; a serialised kind reserved without serials gets
+  free, working units picked by the server.
+- Existing rows are back-filled `false` by the default.
+
+See [TS09 API](../../../../../../docs/equipment-damage-api.md) § Technical Support console and
+decision-log D33.
+
+## V42 update — venue requirement reviews (VS17)
 
 `venue_requirement_reviews` snapshots each active booking affected by an approved
 event change, including supported venue requirements before/after, approval and
@@ -588,7 +703,7 @@ read state. `(change_request_id, booking_id)` is unique. Notifications gain a
 All earlier notification shape branches remain intact. See
 [VS17 design](../../../../../../docs/venue-requirement-changes.md).
 
-## V35 update — venue requirement review outcomes (VS17)
+## V43 update — venue requirement review outcomes (VS17)
 
 Review statuses extend to `suitable` and `action_required`. The latter requires a
 nonblank comment (maximum 2000 characters); both require reviewed_by (user FK),
@@ -600,7 +715,7 @@ Outcomes, review audit and notification share a transaction; no booking/event,
 hold or equipment status/window changes are performed by review actions.
 
 
-### V36–V38: current venue suitability and booking assessment history (VS17)
+### V44–V46: current venue suitability and booking assessment history (VS17)
 `venue_booking_status.attention` retains the reservation but blocks event readiness.
 `venue_booking_assessments` is append-only and stores booking, outcome, source, reason,
 actor/name/time, previous/current venue JSON (including opening hours), and requirement JSON.
@@ -608,7 +723,7 @@ Notifications add `venue_suitability_changed` (EC) and `venue_arrangements_chang
 New catalogue defaults do not change existing booking duration snapshots.
 
 
-## V40–V41: venue workflow recovery and release
+## V48–V49: venue workflow recovery and release
 
 `venue_unavailability` retains `released_at`, `released_by` (user FK), and `release_reason`. Released periods stop blocking but their rows and impact links remain. Database checks require complete release metadata and a nonblank reason of at most 2000 characters.
 
@@ -617,10 +732,15 @@ New catalogue defaults do not change existing booking duration snapshots.
 `notification_outbox` stores a stable `notification_id`, JSONB payload, `created_at`, and `delivered_at`, with a partial pending index. Delivery writes the corresponding notification and marks its work item in one transaction. It retains payload snapshots as internal operational history. See [workflow repair contracts](../../../../../../docs/venue-workflow-repair.md).
 
 
-## V42: independent multi-venue requirements and evidence
+## V50: independent multi-venue requirements and evidence
 `venue_booking_requirements` retains event linkage and withdrawal metadata. `venue_bookings.requirement_id` groups replacement chains; `requirements` JSON stores per-room overrides. Active legacy chains are backfilled; terminal-only historical chains remain unrequired. `venue_booking_history` snapshots every subsequent booking insert/update and event requirements. `event_readiness_items.arrangement_fingerprint` binds each venue attestation to current facts. Rejection notification shape requires the booking, event, reason and message. See `docs/multiple-venue-bookings.md` for API and rollout semantics.
 
-## V43: Venue Staff approval outcome
+SO-C5/SO-C6 feedback retains all six standard checklist keys and also accepts
+`venue_safety_<booking UUID>` keys. The database rejects malformed keys;
+`ReadinessService` additionally requires each selected key to belong to the
+event's current checklist before saving a decision.
+
+## V51: Venue Staff approval outcome
 
 `notification_type` adds `venue_booking_approved`. Its notification shape requires
 `event_id`, `venue_booking_id` and `message`. Booking approval and hold conversion

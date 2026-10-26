@@ -1,7 +1,12 @@
 package com.example.connect_sphere.safety;
 
 import java.time.OffsetDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
+
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -28,6 +33,12 @@ public class EventSafetyReview {
     @Column(name = "reviewed_at", nullable = false)
     private OffsetDateTime reviewedAt;
 
+    /** SO-C5/SO-C6 (V34): the checklist items a rejection or a request for
+     * changes concerns; empty for an approval. */
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "flagged_items", columnDefinition = "text[]", nullable = false)
+    private List<String> flaggedItems = new ArrayList<>();
+
     protected EventSafetyReview() {
     }
 
@@ -44,10 +55,12 @@ public class EventSafetyReview {
     public String getNote() { return note; }
     public UUID getReviewedBy() { return reviewedBy; }
     public OffsetDateTime getReviewedAt() { return reviewedAt; }
+    public List<String> getFlaggedItems() { return flaggedItems; }
 
-    public void update(String status, String reason, UUID reviewer, OffsetDateTime at) {
+    public void update(String status, String reason, List<String> flagged, UUID reviewer, OffsetDateTime at) {
         reviewStatus = status;
         note = reason;
+        flaggedItems = new ArrayList<>(flagged);
         reviewedBy = reviewer;
         reviewedAt = at;
     }

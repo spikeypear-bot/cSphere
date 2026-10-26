@@ -57,7 +57,8 @@ public class EventRequestService {
     static final Set<String> FLAGGABLE_FIELDS = Set.of(
             "eventName", "purpose", "description", "startDatetime", "endDatetime",
             "expectedAttendance", "venueRequirements", "equipmentRequirements",
-            "accessibilityNeeds", "requiredFacilities", "registrationNeeds");
+            "accessibilityNeeds", "requiredFacilities", "registrationNeeds", "registrationCapacity",
+            "registrationOpensAt", "attendeeInstructions");
 
     private final EventRequestRepository repository;
     private final EventRequestMapper mapper;
@@ -373,6 +374,9 @@ public class EventRequestService {
         event.setAccessibilityNeeds(entity.getAccessibilityNeeds().stream().map(Enum::name).toList());
         event.setRequiredFacilities(entity.getRequiredFacilities() == null ? List.of() : entity.getRequiredFacilities());
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
+        event.setRegistrationCapacity(entity.getRegistrationCapacity());
+        event.setRegistrationOpensAt(entity.getRegistrationOpensAt());
+        event.setAttendeeInstructions(entity.getAttendeeInstructions());
         event.setOrganisation(entity.getOrganisation());
         event.setCoordinatorId(actingCoordinatorId);
         event.setStatus(EventStatus.pending);
@@ -717,6 +721,16 @@ public class EventRequestService {
         if (attendance != null && attendance < 1) {
             problems.put("expectedAttendance", "Expected attendance must be at least 1.");
         }
+        if (Boolean.TRUE.equals(entity.getRegistrationNeeds())) {
+            Integer capacity = entity.getRegistrationCapacity();
+            if (capacity != null && capacity < 1) {
+                problems.put("registrationCapacity", "Registration capacity must be at least 1.");
+            }
+            OffsetDateTime opens = entity.getRegistrationOpensAt();
+            if (opens != null && start != null && !opens.isBefore(start)) {
+                problems.put("registrationOpensAt", "Registration must open before the event start.");
+            }
+        }
         return problems;
     }
 
@@ -765,6 +779,9 @@ public class EventRequestService {
         values.put("accessibilityNeeds", e.getAccessibilityNeeds() == null ? List.of()
                 : e.getAccessibilityNeeds().stream().map(Enum::name).toList());
         values.put("registrationNeeds", e.getRegistrationNeeds());
+        values.put("registrationCapacity", e.getRegistrationCapacity());
+        values.put("registrationOpensAt", e.getRegistrationOpensAt() == null ? null : e.getRegistrationOpensAt().toString());
+        values.put("attendeeInstructions", e.getAttendeeInstructions());
         return values;
     }
 
@@ -801,7 +818,8 @@ public class EventRequestService {
                 e.getEquipmentRequirements(), e.getAccessibilityNeeds() == null ? List.of() : List.copyOf(e.getAccessibilityNeeds()),
                 e.getRequiredFacilities() == null ? List.of()
                         : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
-                e.getRegistrationNeeds());
+                e.getRegistrationNeeds(), e.getRegistrationCapacity(), e.getRegistrationOpensAt(),
+                e.getStartDatetime(), e.getAttendeeInstructions());
     }
 
     /** EO03: proposed details must be submittable exactly as a new request is
@@ -830,6 +848,9 @@ public class EventRequestService {
             event.setAccessibilityNeeds(request.getAccessibilityNeeds().stream().map(Enum::name).toList());
             event.setRequiredFacilities(request.getRequiredFacilities() == null ? List.of() : request.getRequiredFacilities());
             event.setRegistrationNeeds(request.getRegistrationNeeds());
+            event.setRegistrationCapacity(request.getRegistrationCapacity());
+            event.setRegistrationOpensAt(request.getRegistrationOpensAt());
+            event.setAttendeeInstructions(request.getAttendeeInstructions());
             eventRepository.save(event);
         }
     }
@@ -848,6 +869,9 @@ public class EventRequestService {
         entity.setRequiredFacilities(request.requiredFacilities() == null
                 ? List.of() : request.requiredFacilities().stream().map(Enum::name).toList());
         entity.setRegistrationNeeds(request.registrationNeeds());
+        entity.setRegistrationCapacity(request.registrationCapacity());
+        entity.setRegistrationOpensAt(request.registrationOpensAt());
+        entity.setAttendeeInstructions(request.attendeeInstructions());
     }
 
     private EventRequest findOwned(String organisation, UUID requestId) {
@@ -904,6 +928,10 @@ public class EventRequestService {
         }
         if (entity.getAccessibilityNeeds() == null || entity.getAccessibilityNeeds().isEmpty()) {
             missing.add("accessibilityNeeds");
+        }
+        if (Boolean.TRUE.equals(entity.getRegistrationNeeds())) {
+            if (entity.getRegistrationCapacity() == null) missing.add("registrationCapacity");
+            if (entity.getRegistrationOpensAt() == null) missing.add("registrationOpensAt");
         }
         return missing;
     }

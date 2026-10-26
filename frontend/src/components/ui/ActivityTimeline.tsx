@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import type { ActivityDto, ActivityTypeName } from '../../types/activity'
 import { FIELD_LABELS } from '../../types/eventRequest'
+import { CHECKLIST_ITEM_LABELS } from '../../features/safetyOfficer/checklistItems'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import { changedFields } from '../../lib/fieldChanges'
 import { JOURNEY_LABELS } from '../../types/status'
 import './ActivityTimeline.css'
+import { formatSingaporeDateTime } from '../../lib/singaporeTime'
 
 const ROLE_LABELS: Record<string, string> = {
   ec: 'Event Coordinator',
@@ -55,6 +57,8 @@ const TITLES: Record<ActivityTypeName, string> = {
   equipment_requested: 'requested equipment',
   equipment_approved: 'approved the equipment request',
   equipment_rejected: 'rejected the equipment request',
+  equipment_damage_outcome: 'reported damaged equipment and decided the outcome',
+  equipment_shortfall_resolved: 'accepted an equipment shortfall',
   sent_for_safety_review: 'sent the event for its Operational Safety Check',
   safety_review_withdrawn: 'withdrew the event from safety review',
   safety_approved: 'approved the Operational Safety Check',
@@ -96,14 +100,12 @@ function askedValues(entries: ActivityDto[], index: number) {
 /** Entries whose message is a conversation turn, shown as a speech bubble. */
 const CONVERSATIONAL: ActivityTypeName[] = ['clarification_requested', 'clarification_responded', 'rejected',
   'safety_changes_requested', 'safety_rejected', 'safety_review_withdrawn', 'returned_to_planning',
-  'venue_booking_rejected', 'equipment_rejected']
+  'venue_booking_rejected', 'equipment_rejected', 'equipment_shortfall_resolved']
 
-function exactTime(iso: string) {
-  return new Intl.DateTimeFormat('en-SG', {
-    timeZone: 'Asia/Singapore', day: 'numeric', month: 'short', year: 'numeric',
-    hour: '2-digit', minute: '2-digit', hour12: true,
-  }).format(new Date(iso))
-}
+/** SO-C5/SO-C6: these entries flag readiness checklist items, not request fields. */
+const SAFETY_DECISIONS: ActivityDto['type'][] = ['safety_changes_requested', 'safety_rejected']
+
+const exactTime = formatSingaporeDateTime
 
 /**
  * The request's audit trail and change log (EC01/EC02/EO26, EC-NEW5), oldest
@@ -209,11 +211,19 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
               </ul>
             ) : null}
             {entry.flaggedFields.length > 0 && questions.length === 0 ? (
-              <ul className="activity-timeline__flags" aria-label="Fields that need attention">
-                {entry.flaggedFields.map((field) => (
-                  <li key={field}>{FIELD_LABELS[field] ?? field}</li>
-                ))}
-              </ul>
+              SAFETY_DECISIONS.includes(entry.type) ? (
+                <ul className="activity-timeline__flags" aria-label="Checklist items concerned">
+                  {entry.flaggedFields.map((key) => (
+                    <li key={key}>{CHECKLIST_ITEM_LABELS[key] ?? key}</li>
+                  ))}
+                </ul>
+              ) : (
+                <ul className="activity-timeline__flags" aria-label="Fields that need attention">
+                  {entry.flaggedFields.map((field) => (
+                    <li key={field}>{FIELD_LABELS[field] ?? field}</li>
+                  ))}
+                </ul>
+              )
             ) : null}
             {entry.fromStatus && entry.toStatus ? (
               <p className="activity-timeline__status">

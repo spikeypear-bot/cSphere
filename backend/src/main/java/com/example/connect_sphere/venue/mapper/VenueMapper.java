@@ -22,6 +22,6 @@ public abstract class VenueMapper {
             : hours.forVenue(entity.getVenueId());
         return new VenueDto(mapped.venueId(),mapped.venueAddress(),mapped.venueCapacity(),mapped.supportedLayouts(),
             schedule.summary(),mapped.additionalInformation(),mapped.venueAccessibilities(),mapped.venueFacilities(),
-            schedule.hours(),mapped.setupMinutes(),mapped.turnaroundMinutes());
+            schedule.hours(),mapped.setupMinutes(),mapped.turnaroundMinutes(),mapped.venueName());
     }
 }

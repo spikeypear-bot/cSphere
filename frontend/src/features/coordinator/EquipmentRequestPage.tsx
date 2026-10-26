@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
@@ -8,6 +8,7 @@ import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import type { EventDto } from '../../types/event'
+import type { EventEquipmentDamage } from '../technicalSupport/damage/equipmentDamage.types'
 import './EquipmentRequestPage.css'
 
 interface EquipmentCatalogueItem {
@@ -39,6 +40,9 @@ interface DraftLine {
 
 export function EquipmentRequestPage() {
   const { eventId } = useParams<{ eventId: string }>()
+  // TS09 AC19: opened from a damage shortfall, the request is for what is missing.
+  const shortfallId = useSearchParams()[0].get('shortfall')
+  const [shortfall, setShortfall] = useState<EventEquipmentDamage | null>(null)
   const [event, setEvent] = useState<EventDto | null>(null)
   const [catalogue, setCatalogue] = useState<EquipmentCatalogueItem[]>([])
   const [requests, setRequests] = useState<EquipmentRequestDetails[]>([])
@@ -57,12 +61,22 @@ export function EquipmentRequestPage() {
       apiClient.get<EventDto>(`/events/${eventId}`),
       apiClient.get<EquipmentCatalogueItem[]>('/equipment/catalogue'),
       apiClient.get<EquipmentRequestDetails[]>(`/events/${eventId}/equipment-requests`),
-    ]).then(([loadedEvent, loadedCatalogue, loadedRequests]) => {
+      shortfallId
+        ? apiClient.get<EventEquipmentDamage[]>(`/events/${eventId}/equipment-damage`)
+        : Promise.resolve([] as EventEquipmentDamage[]),
+    ]).then(([loadedEvent, loadedCatalogue, loadedRequests, loadedDamage]) => {
       if (cancelled) return
       setEvent(loadedEvent)
       setCatalogue(loadedCatalogue)
       setRequests(loadedRequests)
-      setTechnicalRequirement(loadedEvent.equipmentRequirements ?? '')
+      const missing = loadedDamage.find((item) => item.outcomeId === shortfallId && item.canRequestAdditional) ?? null
+      setShortfall(missing)
+      if (missing) {
+        setItems([{ equipmentId: missing.equipmentId, quantity: missing.shortfall }])
+        setTechnicalRequirement(`Replaces ${missing.shortfall} × ${missing.equipmentName} reported damaged.`)
+      } else {
+        setTechnicalRequirement(loadedEvent.equipmentRequirements ?? '')
+      }
     }).catch((err: unknown) => {
       if (!cancelled) {
         if (isNotAssigned(err)) setNotAssigned(true)
@@ -72,9 +86,13 @@ export function EquipmentRequestPage() {
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
-  }, [eventId])
+  }, [eventId, shortfallId])
 
-  const activeRequest = requests.find((request) => request.status !== 'rejected')
+  // An additional request for a shortfall sits beside the approved one; only a
+  // request still awaiting review blocks it.
+  const activeRequest = shortfall
+    ? requests.find((request) => request.status === 'processing')
+    : requests.find((request) => request.status !== 'rejected')
   const availableItems = catalogue.filter((equipment) =>
     !items.some((item) => item.equipmentId === equipment.equipmentId))
   const hasDetails = technicalRequirement.trim() !== '' || items.length > 0
@@ -104,9 +122,12 @@ export function EquipmentRequestPage() {
       const created = await apiClient.post<EquipmentRequestDetails>(`/events/${eventId}/equipment-request`, {
         technicalRequirement: technicalRequirement.trim(),
         items,
+        ...(shortfall ? { shortfallOutcomeId: shortfall.outcomeId } : {}),
       })
       setRequests((current) => [...current, created])
-      setSuccess('Equipment request submitted to Technical Support for review.')
+      setSuccess(shortfall
+        ? 'Additional request for the shortfall submitted to Technical Support for review.'
+        : 'Equipment request submitted to Technical Support for review.')
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Could not submit the equipment request.')
     } finally {
@@ -133,6 +154,14 @@ export function EquipmentRequestPage() {
 
       {error ? <p role="alert">{error}</p> : null}
       {success ? <Notice>{success}</Notice> : null}
+      {shortfallId && !shortfall ? (
+        <Notice tone="info">This shortfall can no longer take an additional request.</Notice>
+      ) : null}
+      {shortfall && !activeRequest ? (
+        <Notice tone="info">
+          Additional request for the shortfall: {shortfall.shortfall} × {shortfall.equipmentName} reported damaged.
+        </Notice>
+      ) : null}
 
       {requests.filter((request) => request.status === 'rejected').map((request) => (
         <Card key={request.requestId} className="equipment-request__previous">
@@ -159,7 +188,7 @@ export function EquipmentRequestPage() {
             </ul>
           ) : null}
         </Card>
-      ) : event.status !== 'pending' ? (
+      ) : event.status !== 'pending' && !shortfall ? (
         <Card className="equipment-request__existing">
           <p>Equipment requests can only be submitted while this event is in Planning.</p>
         </Card>

@@ -103,7 +103,7 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
 
   await test.step('SO-C3/SO-C4: the Safety Officer completes the checklist and approves', async () => {
     await officer.goto(`/safety-officer/events/${eventId}`)
-    const boxes = officer.getByRole('checkbox')
+    const boxes = officer.getByRole('list', { name: 'Readiness checklist' }).getByRole('checkbox')
     const token = await apiToken(request, 'so1')
     const readiness = await apiGet<{ items: { itemKey: string; label: string }[] }>(request, token, `/api/safety/events/${eventId}/readiness`)
     expect(readiness.items.filter(i => i.itemKey.startsWith('venue_safety_')).map(i => i.itemKey).sort())
@@ -122,7 +122,7 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
       if (i + 1 < total) await expect(officer.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled()
     }
     await officer.getByRole('button', { name: 'Approve' }).click()
-    await expect(officer.getByText('Current approval: approved')).toBeVisible()
+    await expect(officer.locator('.safety-decision').getByText('Approved', { exact: true })).toBeVisible()
   })
 
   await test.step('EC08 AC25, AC29: the coordinator confirms; the event is Confirmed (EC-NEW2 AC12)', async () => {

@@ -22,6 +22,18 @@ class VenueMapperTest {
     private final VenueMapper mapper = Mappers.getMapper(VenueMapper.class);
 
     @Test
+    @org.junit.jupiter.api.DisplayName("VS17 (cross-cutting): deriving operating hours retains the public venue name")
+    void preservesPublicNameWhenDerivingHours() {
+        Venue venue = new Venue();
+        venue.setVenueName("Public Hall");
+        venue.setVenueAddress("10 Example Road");
+        var dto = mapper.toDto(venue);
+        assertEquals("Public Hall", dto.venueName());
+        assertEquals("10 Example Road", dto.venueAddress());
+        assertEquals("Operating hours not configured", dto.operatingInformation());
+    }
+
+    @Test
     void mapsEmptySelectionsToEmptyResponseLists() {
         var dto = mapper.toDto(new Venue());
         assertEquals(List.of(), dto.venueAccessibilities());

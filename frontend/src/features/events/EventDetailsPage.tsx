@@ -12,20 +12,23 @@ import { ActivityTimeline } from '../../components/ui/ActivityTimeline'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { ActivityDto } from '../../types/activity'
-import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
+import { EVENT_STATUS_LABELS, isPlanningEditable, type EventDto } from '../../types/event'
 import { EventReadinessPanel } from './EventReadinessPanel'
 import { EventCancellationPanel } from './EventCancellationPanel'
 import { OrganiserArrangements } from './OrganiserArrangements'
+import { OrganiserRegistrations } from './OrganiserRegistrations'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import { BOOKING_STATUS_LABELS, type EventVenueBookingDto } from '../../types/venueBookingRequest'
 import { ReadinessChecklistPanel } from '../safetyOfficer/ReadinessChecklistPanel'
+import { SafetyDecisionSummary } from '../safetyOfficer/SafetyDecisionSummary'
 import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
+import { EquipmentDamagePanel } from './EquipmentDamagePanel'
 
 /**
  * One page per event, shared by the Organiser and the Event Coordinator. Both
@@ -81,7 +84,7 @@ export function EventDetailsPage() {
   const journey = event.journeyStatus ?? null
   // Planning-stage edits (venues, equipment) stay open while changes are
   // requested by the Safety Officer, matching EventStatus.isPlanningEditable.
-  const planning = event.status === 'pending' || event.status === 'safety_changes_requested'
+  const planning = isPlanningEditable(event.status)
 
   return (
     <div className="page">
@@ -154,6 +157,7 @@ export function EventDetailsPage() {
         <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserRegistrations key={`registrations-${reloadToken}`} eventId={event.eventId} /> : null}
       {/* EO07: the organiser asks for cancellation; the assigned coordinator decides. */}
       <EventCancellationPanel event={event} role={role} onChanged={() => setReloadToken((n) => n + 1)} />
 
@@ -170,6 +174,10 @@ export function EventDetailsPage() {
           </Link>
         </Card>
       ) : null}
+      {/* TS09: damaged equipment the event relied on; the Lead reads it only. */}
+      {role === 'coordinator' || role === 'coordinator-lead' ? (
+        <EquipmentDamagePanel eventId={event.eventId} readOnly={role !== 'coordinator'} />
+      ) : null}
 
       {role === 'coordinator' ? (
         readinessState.error ? <p role="alert">Could not load readiness checklist. {readinessState.error}</p>
@@ -177,13 +185,7 @@ export function EventDetailsPage() {
             <>
               <Card className="event-details__history">
                 <h2>Safety Officer's review</h2>
-                <p>Current approval: {readinessState.data.approvalStatus.replace('_', ' ')}</p>
-                {readinessState.data.approvalNote ? <p>Note: {readinessState.data.approvalNote}</p> : null}
-                {readinessState.data.reviewedBy ? (
-                  <p>Reviewed by {readinessState.data.reviewedBy}
-                    {readinessState.data.reviewedAt ? ` · ${new Date(readinessState.data.reviewedAt).toLocaleString()}` : ''}
-                  </p>
-                ) : null}
+                <SafetyDecisionSummary readiness={readinessState.data} />
               </Card>
               <ReadinessChecklistPanel
                 readiness={readinessState.data}

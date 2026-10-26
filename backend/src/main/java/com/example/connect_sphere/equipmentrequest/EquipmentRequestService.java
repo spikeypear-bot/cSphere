@@ -3,10 +3,10 @@ package com.example.connect_sphere.equipmentrequest;
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentRepository;
 import com.example.connect_sphere.event.entity.Event;
+import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
-import com.example.connect_sphere.safety.ReadinessService;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +34,15 @@ public class EquipmentRequestService {
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     void setChangeLog(org.springframework.context.ApplicationEventPublisher changeLog) {
         this.changeLog = changeLog;
+    }
+
+    /** TS09: open equipment shortfalls. Setter-injected like the change log;
+     * absent in plain unit tests, where no request is for a shortfall. */
+    private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
+        this.shortfalls = shortfalls;
     }
 
     private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
@@ -67,7 +76,7 @@ public class EquipmentRequestService {
     @Transactional(readOnly = true)
     public List<EquipmentRequestDetailsResponse> listForSafetyOfficer(UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!ReadinessService.VISIBLE.contains(event.getStatus())) {
+        if (!EventStatus.ACTIVE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return requests.findByEventId(eventId).stream()
@@ -85,7 +94,18 @@ public class EquipmentRequestService {
             throw new EquipmentRequestStateException(
                     "Equipment can only be requested while the event is in Planning.");
         }
-        if (requests.findByEventId(eventId).stream()
+        // TS09 AC19, AC21: an open equipment shortfall allows an additional
+        // request alongside the approved one, but never a second one awaiting
+        // review. Without one, EC07's rule applies unchanged.
+        com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome shortfall = null;
+        if (input != null && input.shortfallOutcomeId() != null && shortfalls != null) {
+            shortfall = shortfalls.requireOpenShortfall(eventId, input.shortfallOutcomeId());
+            if (requests.findByEventId(eventId).stream()
+                    .anyMatch(request -> request.getStatus() == EquipmentRequestStatus.processing)) {
+                throw new EquipmentRequestStateException(
+                        "This event already has an equipment request awaiting review.");
+            }
+        } else if (requests.findByEventId(eventId).stream()
                 .anyMatch(request -> request.getStatus() != EquipmentRequestStatus.rejected)) {
             throw new EquipmentRequestStateException(
                     "This event already has an equipment request awaiting review or already approved.");
@@ -131,6 +151,9 @@ public class EquipmentRequestService {
         for (SubmitEquipmentRequest.Item item : requestedItems) {
             lines.save(new EquipmentRequestLine(
                     new EquipmentRequestLineId(requestId, item.equipmentId()), item.quantity()));
+        }
+        if (shortfall != null) {
+            shortfalls.linkAdditionalRequest(shortfall, requestId);
         }
         int units = requestedItems.stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_requested, coordinatorId,

@@ -50,6 +50,7 @@ function organiserPage(apiStatus: string, requests: () => EventCancellationReque
   return stubApi({
     [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event(apiStatus, journeyCode)),
     [`GET /api/events/${EVENT}/arrangements`]: () => jsonResponse(200, { view: 'not_confirmed', venues: [] }),
+    [`GET /api/events/${EVENT}/registrations`]: () => jsonResponse(200, { registrationRequired: false, registrationState: 'not_required', attendees: [] }),
     [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}/cancellation-requests`]: () => jsonResponse(200, requests()),
     ...extra,

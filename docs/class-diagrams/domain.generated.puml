@@ -7,6 +7,7 @@ legend top left
 + field: has a getter and a setter (every field is private in the code)
 Multiplicities come from the database foreign keys
 Lines labelled with a UUID field: foreign keys the entity stores as an id
+AttendeeRegistration, EventRegistration both map table event_registrations
 Event, VenueEvent both map table events
 VenueBooking, VenueBookingRecord both map table venue_bookings
 endlegend
@@ -23,8 +24,10 @@ enum ActivityType {
 	{field} +coordinator_assigned
 	{field} +coordinator_reassigned
 	{field} +equipment_approved
+	{field} +equipment_damage_outcome
 	{field} +equipment_rejected
 	{field} +equipment_requested
+	{field} +equipment_shortfall_resolved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
 	{field} +event_cancelled
@@ -74,6 +77,18 @@ class RequestActivity <<Entity>>  {
 	{field} +occurredAt : OffsetDateTime
 	{field} +requestId : UUID
 	{field} +toStatus : String
+}
+
+
+class AttendeeRegistration <<Entity>>  {
+	{field} +attendeeEmail : String
+	{field} +attendeeId : UUID
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +registrationReference : String
+	{field} +status : String
 }
 
 
@@ -185,7 +200,10 @@ class EquipmentLog <<Entity>>  {
 	{field} -loanedUntil : Instant
 	{field} -quantity : int
 	{field} -serialNumber : String
+	{field} -spare : boolean
 	{field} -technicalRequirements : String
+	{method} +reduceBy ( units : int ) : void
+	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
 
 
@@ -211,8 +229,65 @@ class SerialisedEquipment <<Entity>>  {
 
 
 class SerialisedEquipmentId {
+	{field} {static} +MAX_SERIAL_NUMBER_LENGTH : int
 	{field} -equipmentId : UUID
 	{field} -serialNumber : String
+}
+
+
+enum DamageBlockStatus {
+	{field} +FAULTY
+	{field} +UNAVAILABLE
+}
+
+
+enum DamageOutcome {
+	{field} +COVERED
+	{field} +REPLACED
+	{field} +SHORT
+}
+
+
+enum DamageReportStatus {
+	{field} +CLOSED
+	{field} +OPEN
+}
+
+
+class EquipmentDamageOutcome <<Entity>>  {
+	{field} +additionalRequestId : UUID
+	{field} +decidedAt : Instant
+	{field} +decidedBy : UUID
+	{field} +eventId : UUID
+	{field} +outcomeId : UUID {id}
+	{field} +reducedBy : int
+	{field} +replacementSerialNumber : String
+	{field} +reportId : UUID
+	{field} +resolutionNote : String
+	{field} +resolvedAt : Instant
+	{field} +resolvedBy : UUID
+	{field} +shortfall : int
+}
+
+
+class EquipmentDamageReport <<Entity>>  {
+	{field} +blockApplied : boolean
+	{field} +closedAt : Instant
+	{field} +description : String
+	{field} +equipmentId : UUID
+	{field} +periodEnd : Instant
+	{field} +periodStart : Instant
+	{field} +quantity : int
+	{field} +reportId : UUID {id}
+	{field} +reportedAt : Instant
+	{field} +reportedBy : UUID
+	{field} +serialNumber : String
+}
+
+
+enum ShortfallResolution {
+	{field} +ADDITIONAL_REQUEST
+	{field} +NOTE
 }
 
 
@@ -246,6 +321,7 @@ enum EquipmentRequestStatus {
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
+	{field} +attendeeInstructions : String
 	{field} +confirmedAt : OffsetDateTime
 	{field} +confirmedBy : UUID
 	{field} +coordinatorId : UUID
@@ -258,7 +334,9 @@ class Event <<Entity>>  {
 	{field} +firstConfirmedAt : OffsetDateTime
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +requiredFacilities : List<String>
 	{field} +safetyApprovedAt : OffsetDateTime
 	{field} +safetyFeedback : String
@@ -305,6 +383,16 @@ enum EventReassignmentStatus {
 }
 
 
+class EventRegistration <<Entity>>  {
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +reference : String
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +status : String
+}
+
+
 enum EventStatus {
 	{field} +awaiting_safety_review
 	{field} +cancelled
@@ -317,6 +405,7 @@ enum EventStatus {
 
 
 class EventRequest <<Entity>>  {
+	{field} +attendeeInstructions : String
 	{field} +coordinatorId : UUID
 	{field} +createdAt : OffsetDateTime
 	{field} +createdBy : UUID
@@ -328,7 +417,9 @@ class EventRequest <<Entity>>  {
 	{field} +expectedAttendance : Integer
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +rejectionReason : String
 	{field} +requestId : UUID {id}
 	{field} +requestType : Character
@@ -369,12 +460,14 @@ class Notification <<Entity>>  {
 
 
 enum NotificationType {
+	{field} +attendee_registration_confirmed
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +equipment_damage_outcome
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -388,7 +481,9 @@ enum NotificationType {
 	{field} +request_cancelled
 	{field} +status_change
 	{field} +venue_arrangements_changed
+	{field} +venue_booking_approved
 	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
 	{field} +venue_booking_requested
 	{field} +venue_hold_expired
 	{field} +venue_hold_expiring
@@ -403,15 +498,17 @@ enum NotificationType {
 
 class EventSafetyReview <<Entity>>  {
 	{field} -eventId : UUID {id}
+	{field} -flaggedItems : List<String>
 	{field} -note : String
 	{field} -reviewStatus : String
 	{field} -reviewedAt : OffsetDateTime
 	{field} -reviewedBy : UUID
-	{method} +update ( status : String , reason : String , reviewer : UUID , at : OffsetDateTime ) : void
+	{method} +update ( status : String , reason : String , flagged : List , reviewer : UUID , at : OffsetDateTime ) : void
 }
 
 
 class ReadinessItemState <<Entity>>  {
+	{field} +arrangementFingerprint : String
 	{field} -checked : boolean
 	{field} -checkedAt : OffsetDateTime
 	{field} -checkedBy : UUID
@@ -467,6 +564,7 @@ class Venue <<Entity>>  {
 	{field} +venueCapacity : Integer
 	{field} +venueFacilities : List<String>
 	{field} +venueId : UUID {id}
+	{field} +venueName : String
 }
 
 
@@ -512,6 +610,8 @@ class VenueBooking <<Entity>>  {
 	{field} -endDatetime : OffsetDateTime
 	{field} -rejectReason : String
 	{field} -replacesBookingId : UUID
+	{field} -requirementId : UUID
+	{field} -requirements : BookingRequirements
 	{field} -setupDurationMinutes : int
 	{field} -startDatetime : OffsetDateTime
 	{field} -submittedAt : OffsetDateTime
@@ -530,6 +630,8 @@ class VenueBookingRecord <<Entity>>  {
 	{field} +eventId : UUID
 	{field} +rejectReason : String
 	{field} +replacesBookingId : UUID
+	{field} +requirementId : UUID
+	{field} +requirements : BookingRequirements
 	{field} +setupDurationMinutes : int
 	{field} +startDatetime : OffsetDateTime
 	{field} +submittedAt : OffsetDateTime
@@ -560,6 +662,7 @@ class VenueEvent <<Entity>>  {
 	{field} -eventId : UUID {id}
 	{field} -eventName : String
 	{field} -expectedAttendance : Integer
+	{field} -requiredFacilities : List<String>
 	{field} -startDatetime : OffsetDateTime
 	{field} -venueRequirements : String
 }
@@ -602,6 +705,10 @@ EquipmentStatusPeriod --> "1" EquipmentStatus : status
 SerialisedEquipment "0..*" --> "1" Equipment : equipment
 SerialisedEquipment --> "1" EquipmentStatus : status
 SerialisedEquipment *-- SerialisedEquipmentId : id
+EquipmentDamageOutcome --> "0..1" DamageOutcome : outcome
+EquipmentDamageOutcome --> "0..1" ShortfallResolution : resolution
+EquipmentDamageReport --> "0..1" DamageBlockStatus : blockStatus
+EquipmentDamageReport --> "1" DamageReportStatus : status
 EquipmentRequest --> "1" EquipmentRequestStatus : status
 EquipmentRequestLine "0..*" --> "1" Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
@@ -621,6 +728,14 @@ VenueBookingRecord --> "1" VenueBookingStatus : status
 VenueEvent --> "1" EventStatus : status
 
 
+EquipmentDamageOutcome "0..*" --> "0..1" EquipmentRequest : additionalRequestId
+EquipmentDamageOutcome "0..*" --> "0..1" User : decidedBy
+EquipmentDamageOutcome "0..*" --> "1" Event : eventId
+EquipmentDamageOutcome "0..*" --> "1" EquipmentDamageReport : reportId
+EquipmentDamageOutcome "0..*" --> "0..1" User : resolvedBy
+EquipmentDamageReport "0..*" --> "1" Equipment : equipmentId
+EquipmentDamageReport "0..*" --> "0..1" SerialisedEquipment : equipmentId, serialNumber
+EquipmentDamageReport "0..*" --> "1" User : reportedBy
 EquipmentLog "0..*" --> "1" Equipment : equipmentId
 EquipmentLog "0..*" --> "0..1" SerialisedEquipment : equipmentId, serialNumber
 EquipmentLog "0..*" --> "1" Event : eventId
@@ -639,6 +754,9 @@ ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy
 EventReassignmentRequest "0..*" --> "1" Event : eventId
 EventReassignmentRequest "0..*" --> "1" User : requesterUserId
+AttendeeRegistration "0..*" --> "0..1" User : attendeeId
+AttendeeRegistration "0..*" --> "1" Event : eventId
+EventRegistration "0..*" --> "1" Event : eventId
 RequestActivity "0..*" --> "1" User : actorUserId
 RequestActivity "0..*" --> "0..1" Event : eventId
 RequestActivity "0..*" --> "1" EventRequest : requestId

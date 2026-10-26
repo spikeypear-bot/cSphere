@@ -8,6 +8,41 @@ Line ends: }o zero or many, |o zero or one, || exactly one
 Postgres enum types are listed on their own; columns name them as their type
 endlegend
 
+entity equipment_damage_outcomes {
+	* outcome_id : uuid <<PK>>
+	--
+	* report_id : uuid <<FK>>
+	* event_id : uuid <<FK>>
+	outcome : text
+	* shortfall : integer
+	* reduced_by : integer
+	replacement_serial_number : character varying(64)
+	decided_by : uuid <<FK>>
+	decided_at : timestamp with time zone
+	additional_request_id : uuid <<FK>>
+	resolution : text
+	resolution_note : text
+	resolved_by : uuid <<FK>>
+	resolved_at : timestamp with time zone
+}
+
+entity equipment_damage_reports {
+	* report_id : uuid <<PK>>
+	--
+	* equipment_id : uuid <<FK>>
+	serial_number : character varying(64) <<FK>>
+	* quantity : integer
+	* description : text
+	* period_start : timestamp with time zone
+	period_end : timestamp with time zone
+	* block_applied : boolean
+	* status : text
+	* reported_by : uuid <<FK>>
+	* reported_at : timestamp with time zone
+	closed_at : timestamp with time zone
+	block_status : text
+}
+
 entity equipment_logs {
 	* log_id : uuid <<PK>>
 	--
@@ -15,9 +50,10 @@ entity equipment_logs {
 	* equipment_id : uuid <<FK>>
 	* quantity : integer
 	technical_requirements : text
-	serial_number : character varying(255) <<FK>>
+	serial_number : character varying(64) <<FK>>
 	* loaned_from : timestamp with time zone
 	* loaned_until : timestamp with time zone
+	* spare : boolean
 }
 
 entity equipment_request_equipments {
@@ -40,7 +76,7 @@ entity equipment_status_periods {
 	* status_period_id : uuid <<PK>>
 	--
 	* equipment_id : uuid <<FK>>
-	* serial_number : character varying(255) <<FK>>
+	* serial_number : character varying(64) <<FK>>
 	* status : equipment_status
 	* period_start : timestamp with time zone
 	period_end : timestamp with time zone
@@ -97,6 +133,7 @@ entity event_readiness_items {
 	checked_at : timestamp with time zone
 	updated_by : uuid <<FK>>
 	updated_at : timestamp with time zone
+	arrangement_fingerprint : text
 }
 
 entity event_reassignment_requests {
@@ -109,6 +146,18 @@ entity event_reassignment_requests {
 	* requested_at : timestamp with time zone
 	decided_at : timestamp with time zone
 	decision_reason : text
+}
+
+entity event_registrations {
+	* registration_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* attendee_name : text
+	* reference : text
+	* registered_at : timestamp with time zone
+	* status : text
+	attendee_id : uuid <<FK>>
+	attendee_email : text
 }
 
 entity event_request_activity {
@@ -153,6 +202,9 @@ entity event_requests {
 	coordinator_id : uuid <<FK>>
 	rejection_reason : text
 	* required_facilities : facilities[]
+	registration_capacity : integer
+	registration_opens_at : timestamp with time zone
+	attendee_instructions : text
 }
 
 entity event_safety_reviews {
@@ -162,6 +214,7 @@ entity event_safety_reviews {
 	* note : character varying(2000)
 	* reviewed_by : uuid <<FK>>
 	* reviewed_at : timestamp with time zone
+	* flagged_items : text[]
 }
 
 entity events {
@@ -188,6 +241,9 @@ entity events {
 	first_confirmed_at : timestamp with time zone
 	confirmed_at : timestamp with time zone
 	confirmed_by : uuid <<FK>>
+	registration_capacity : integer
+	registration_opens_at : timestamp with time zone
+	attendee_instructions : text
 }
 
 entity notification_outbox {
@@ -231,7 +287,7 @@ entity refresh_tokens {
 
 entity serialised_equipments {
 	* equipment_id : uuid <<PK>> <<FK>>
-	* serial_number : character varying(255) <<PK>>
+	* serial_number : character varying(64) <<PK>>
 	--
 	* status : equipment_status
 }
@@ -262,6 +318,17 @@ entity venue_booking_assessments {
 	previous_venue_snapshot : jsonb
 }
 
+entity venue_booking_history {
+	* history_id : bigint <<PK>>
+	--
+	* booking_id : uuid <<FK>>
+	* changed_at : timestamp with time zone
+	actor_id : uuid <<FK>>
+	previous_booking : jsonb
+	* booking : jsonb
+	* event_requirements : jsonb
+}
+
 entity venue_booking_holds {
 	* hold_id : uuid <<PK>>
 	--
@@ -274,6 +341,15 @@ entity venue_booking_holds {
 	* created_at : timestamp with time zone
 	ended_at : timestamp with time zone
 	reminded_at : timestamp with time zone
+}
+
+entity venue_booking_requirements {
+	* requirement_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	withdrawn_at : timestamp with time zone
+	withdrawn_by : uuid <<FK>>
+	withdrawal_reason : text
 }
 
 entity venue_bookings {
@@ -297,6 +373,8 @@ entity venue_bookings {
 	timing_note : text
 	timing_updated_at : timestamp with time zone
 	timing_updated_by : uuid <<FK>>
+	requirements : jsonb
+	requirement_id : uuid <<FK>>
 }
 
 entity venue_operating_hours {
@@ -396,6 +474,7 @@ entity venues {
 	additional_information : text
 	* setup_minutes : integer
 	* turnaround_minutes : integer
+	* venue_name : text
 }
 
 enum accessibilities {
@@ -476,10 +555,14 @@ enum notification_type {
 	event_cancellation_declined
 	event_cancelled
 	request_cancelled
+	equipment_damage_outcome
+	attendee_registration_confirmed
 	venue_requirement_changed
 	venue_requirement_reviewed
 	venue_suitability_changed
 	venue_arrangements_changed
+	venue_booking_rejected
+	venue_booking_approved
 }
 
 enum user_role {
@@ -501,6 +584,14 @@ enum venue_booking_status {
 	attention
 }
 
+equipment_damage_outcomes }o--o| equipment_requests : additional_request_id
+equipment_damage_outcomes }o--o| users : decided_by
+equipment_damage_outcomes }o--|| events : event_id
+equipment_damage_outcomes }o--|| equipment_damage_reports : report_id
+equipment_damage_outcomes }o--o| users : resolved_by
+equipment_damage_reports }o--|| equipments : equipment_id
+equipment_damage_reports }o--o| serialised_equipments : equipment_id, serial_number
+equipment_damage_reports }o--|| users : reported_by
 equipment_logs }o--|| equipments : equipment_id
 equipment_logs }o--o| serialised_equipments : equipment_id, serial_number
 equipment_logs }o--|| events : event_id
@@ -520,6 +611,8 @@ event_readiness_items }o--|| events : event_id
 event_readiness_items }o--o| users : updated_by
 event_reassignment_requests }o--|| events : event_id
 event_reassignment_requests }o--|| users : requester_user_id
+event_registrations }o--o| users : attendee_id
+event_registrations }o--|| events : event_id
 event_request_activity }o--|| users : actor_user_id
 event_request_activity }o--o| events : event_id
 event_request_activity }o--|| event_requests : request_id
@@ -539,11 +632,16 @@ refresh_tokens }o--|| users : user_id
 serialised_equipments }o--|| equipments : equipment_id
 venue_booking_assessments }o--o| users : actor_id
 venue_booking_assessments }o--|| venue_bookings : booking_id
+venue_booking_history }o--o| users : actor_id
+venue_booking_history }o--|| venue_bookings : booking_id
 venue_booking_holds }o--|| venue_bookings : booking_id
 venue_booking_holds }o--|| users : created_by
+venue_booking_requirements }o--|| events : event_id
+venue_booking_requirements }o--o| users : withdrawn_by
 venue_bookings }o--o| venues : alternative_venue_id
 venue_bookings }o--|| events : event_id
 venue_bookings }o--o| venue_bookings : replaces_booking_id
+venue_bookings }o--o| venue_booking_requirements : requirement_id
 venue_bookings }o--o| users : submitted_by
 venue_bookings }o--o| users : timing_updated_by
 venue_bookings }o--|| venues : venue_id

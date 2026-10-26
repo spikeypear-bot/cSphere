@@ -28,7 +28,7 @@ public class EquipmentLog {
     private String technicalRequirements;
 
     // Set only when reserving a specific serialised unit; null for quantity-only reservations.
-    @Column(name = "serial_number")
+    @Column(name = "serial_number", length = SerialisedEquipmentId.MAX_SERIAL_NUMBER_LENGTH)
     private String serialNumber;
 
     @Column(name = "loaned_from", nullable = false)
@@ -37,10 +37,19 @@ public class EquipmentLog {
     @Column(name = "loaned_until", nullable = false)
     private Instant loanedUntil;
 
+    /** V40 (D33): an extra unit held beyond what the event requested. */
+    @Column(nullable = false)
+    private boolean spare;
+
     protected EquipmentLog() {}
 
     public EquipmentLog(UUID eventId, UUID equipmentId, int quantity,
                         String serialNumber, Instant loanedFrom, Instant loanedUntil) {
+        this(eventId, equipmentId, quantity, serialNumber, loanedFrom, loanedUntil, false);
+    }
+
+    public EquipmentLog(UUID eventId, UUID equipmentId, int quantity,
+                        String serialNumber, Instant loanedFrom, Instant loanedUntil, boolean spare) {
         this.id = UUID.randomUUID();
         this.eventId = eventId;
         this.equipmentId = equipmentId;
@@ -48,6 +57,7 @@ public class EquipmentLog {
         this.serialNumber = serialNumber;
         this.loanedFrom = loanedFrom;
         this.loanedUntil = loanedUntil;
+        this.spare = spare;
     }
 
     public UUID getId() { return id; }
@@ -57,4 +67,18 @@ public class EquipmentLog {
     public String getSerialNumber() { return serialNumber; }
     public Instant getLoanedFrom() { return loanedFrom; }
     public Instant getLoanedUntil() { return loanedUntil; }
+    public boolean isSpare() { return spare; }
+
+    /** TS09 AC10: the same reservation, now held by another unit of the kind. */
+    public void replaceUnit(String replacementSerialNumber) {
+        this.serialNumber = replacementSerialNumber;
+    }
+
+    /** TS09 AC11: fewer units of a non-serialised kind for this reservation. */
+    public void reduceBy(int units) {
+        if (units < 0 || units > quantity) {
+            throw new IllegalArgumentException("Cannot reduce " + quantity + " by " + units);
+        }
+        this.quantity -= units;
+    }
 }

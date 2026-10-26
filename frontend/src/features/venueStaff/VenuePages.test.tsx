@@ -24,7 +24,8 @@ it('defaults capacity to 50 and rejects missing fields without POST', async () =
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); page()
   expect(screen.getByLabelText('Overall capacity')).toHaveValue(50)
   await userEvent.click(screen.getByRole('button', { name: 'Save venue' }))
-  expect(screen.getAllByRole('alert')).toHaveLength(3)
+  expect(screen.getAllByRole('alert')).toHaveLength(4)
+  expect(screen.getByText('Enter the venue name.')).toBeInTheDocument()
   expect(screen.getByText('Enter the venue address.')).toBeInTheDocument()
   expect(screen.getByText('Select at least one layout.')).toBeInTheDocument()
   expect(screen.getByText('Select at least one operating day.')).toBeInTheDocument()
@@ -37,7 +38,8 @@ it.each(['-1', '0', '50001', '1.5'])('rejects capacity %s', async capacity => {
   await user.type(screen.getByLabelText('Overall capacity'), capacity)
   await user.click(screen.getByRole('button', { name: 'Save venue' }))
   expect(screen.getByText('Enter a whole number from 1 to 50,000.')).toBeInTheDocument()
-  expect(screen.getAllByRole('alert')).toHaveLength(4)
+  expect(screen.getAllByRole('alert')).toHaveLength(5)
+  expect(screen.getByText('Enter the venue name.')).toBeInTheDocument()
   expect(fetch).not.toHaveBeenCalled()
 })
 it('shows only the edited invalid field and clears its error when corrected', async () => {
@@ -59,6 +61,7 @@ it('shows only the edited invalid field and clears its error when corrected', as
 })
 async function fillForm() {
   const user = userEvent.setup()
+  await user.type(screen.getByLabelText('Venue name'), 'Example Hall')
   await user.type(screen.getByLabelText('Venue address'), ' Example Road ')
   await user.click(screen.getByRole('button', { name: 'Theatre' }))
   await user.click(screen.getByRole('checkbox', {name:'Monday'}))
@@ -75,7 +78,7 @@ it('POSTs trimmed input then GETs the catalogue and displays success', async () 
   expect(screen.getByText(venue.venueId)).toBeInTheDocument()
   expect(fetch.mock.calls[0][0]).toBe('/api/venues')
   expect(fetch.mock.calls[0][1].method).toBe('POST')
-  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ venueAddress: 'Example Road', venueCapacity: 50,
+  expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ venueName: 'Example Hall', venueAddress: 'Example Road', venueCapacity: 50,
     supportedLayouts: ['theatre'], additionalInformation: null,
     venueAccessibilities: [], venueFacilities: [], operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'17:00'}], setupMinutes: 0, turnaroundMinutes: 0 })
   expect(fetch.mock.calls[1][1].method).toBe('GET')

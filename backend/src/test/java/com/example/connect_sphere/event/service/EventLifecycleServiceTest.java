@@ -65,6 +65,8 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("ECL-C7")
 @Tag("EO07")
 @Tag("VS17")
+@Tag("SO-C5")
+@Tag("SO-C6")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
@@ -530,6 +532,23 @@ class EventLifecycleServiceTest {
         ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
         verify(activity).record(entry.capture());
         assertThat(entry.getValue().type()).isEqualTo(ActivityType.safety_rejected);
+    }
+
+    @Test
+    @DisplayName("SO-C5 AC7, AC11, SO-C6 AC7, AC12 (happy): a decision's checklist items are kept on its timeline entry, and the event returns to the coordinator")
+    void aDecisionsChecklistItemsAreKeptOnItsTimelineEntry() {
+        Event event = readyEvent(EventStatus.awaiting_safety_review);
+
+        service.recordSafetyDecision(OFFICER, event.getEventId(), EventLifecycleService.SafetyDecision.REJECT,
+                "Exits blocked.", List.of("capacity_facilities", "safety_operations"));
+
+        assertThat(event.getStatus()).isEqualTo(EventStatus.safety_changes_requested);
+        assertThat(event.getSafetyFeedback()).isEqualTo("Exits blocked.");
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activity).record(entry.capture());
+        assertThat(entry.getValue().type()).isEqualTo(ActivityType.safety_rejected);
+        assertThat(entry.getValue().message()).isEqualTo("Exits blocked.");
+        assertThat(entry.getValue().flaggedFields()).containsExactly("capacity_facilities", "safety_operations");
     }
 
     // ---- automatic return to Planning ------------------------------------

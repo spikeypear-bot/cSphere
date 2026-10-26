@@ -1,6 +1,6 @@
-// @stories AU04 DEV05  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories AU04 DEV05 TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup } from '@testing-library/react'
+import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
@@ -83,20 +83,24 @@ describe('App routing — role consoles', () => {
   it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
     signInAs('attendee', 'att1', 'Acme Pte Ltd')
     renderApp('/')
-    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
   })
 
-  it('opens equipment request review from the Technical Support console', async () => {
+  it('TS09 (happy): opens equipment requests from the Technical Support dashboard side navigation', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     const user = userEvent.setup()
     signInAs('technical-support', 'tech1', 'ConnectSphere')
     renderApp('/technical-support')
 
-    const reviewLink = screen.getByRole('link', { name: /Equipment request review/i })
-    expect(reviewLink).toHaveAttribute('href', '/technical-support/availability')
-    await user.click(reviewLink)
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good (morning|afternoon|evening), tech1$/ })).toBeInTheDocument()
+    const nav = screen.getByRole('navigation', { name: 'Technical Support' })
+    expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
+    const requestsLink = within(nav).getByRole('link', { name: 'Equipment requests' })
+    expect(requestsLink).toHaveAttribute('href', '/technical-support/requests')
+    await user.click(requestsLink)
 
-    expect(await screen.findByRole('heading', { name: 'Equipment request review' })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: 'Equipment requests' })).toBeInTheDocument()
+    expect(requestsLink).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
   })
 
@@ -106,7 +110,7 @@ describe('App routing — role consoles', () => {
 
     // Their own console, not the login page: the session is valid, this just
     // isn't their area. The server rejects the API calls regardless (D20).
-    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
 
     // AU06 — a silent redirect reads as the app misbehaving. Originally
     // delivered on the role-select screen (PR #11); it moved to AppShell when
@@ -119,7 +123,7 @@ describe('App routing — role consoles', () => {
     signInAs('attendee', 'att1')
     renderApp('/attendee')
 
-    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -175,8 +179,8 @@ describe('App routing — role consoles', () => {
     ['coordinator', 'ec1', /Event Coordinator console/i],
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
-    ['technical-support', 'ts1', /Technical Support Staff console/i],
-    ['attendee', 'att1', /Attendee console/i],
+    ['technical-support', 'ts1', /^Good \w+, ts1$/],
+    ['attendee', 'att1', /^Welcome$/i],
   ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
@@ -186,7 +190,7 @@ describe('App routing — role consoles', () => {
     signInAs(role, username)
     renderApp('/coordinator-lead/assignments')
 
-    expect(await screen.findByRole('heading', { name: ownConsole })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: ownConsole })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Coordinator assignments' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/assignments')

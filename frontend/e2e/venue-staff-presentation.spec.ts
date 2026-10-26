@@ -13,6 +13,7 @@ test('VS17 (cross-cutting): staff navigation, structured details, issue times an
  await staff.getByRole('button',{name:'Save venue'}).click()
  await expect(staff.getByText('Select at least one operating day.')).toBeVisible()
  const createdName=uniqueName('Staff form hall')
+ await staff.getByLabel('Venue name',{exact:true}).fill(createdName)
  await staff.getByLabel('Venue address',{exact:true}).fill(createdName)
  await staff.getByRole('button',{name:'Theatre',exact:true}).click()
  await staff.getByRole('checkbox',{name:'Monday',exact:true}).check()

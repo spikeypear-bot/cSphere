@@ -1,5 +1,6 @@
 package com.example.connect_sphere.safety;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;
@@ -43,11 +44,12 @@ public class ReadinessService {
     private final EventRequestRepository eventRequests;
     private final NotificationService notifications;
     private final EventLifecycleService lifecycle;
+    private final Clock clock;
 
     public ReadinessService(EventRepository events, ReadinessItemStateRepository itemStates,
             EventSafetyReviewRepository reviews, UserRepository users,
             EventRequestRepository eventRequests, NotificationService notifications,
-            EventLifecycleService lifecycle) {
+            EventLifecycleService lifecycle, Clock clock) {
         this.events = events;
         this.itemStates = itemStates;
         this.reviews = reviews;
@@ -55,6 +57,7 @@ public class ReadinessService {
         this.eventRequests = eventRequests;
         this.notifications = notifications;
         this.lifecycle = lifecycle;
+        this.clock = clock;
     }
 
     @Transactional(readOnly = true)
@@ -87,7 +90,7 @@ public class ReadinessService {
             throw new InvalidReadinessUpdateException("Checklist notes must be 2000 characters or fewer.");
         }
 
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         ReadinessItemState state = itemStates.findByEventIdAndItemKey(eventId, definition.key())
                 .orElseGet(() -> new ReadinessItemState(eventId, definition.key(), false, "", actorId, now));
         if(!java.util.Objects.equals(state.getArrangementFingerprint(),fingerprint(eventId,definition.key())))
@@ -140,18 +143,46 @@ public class ReadinessService {
                     ? "Explain why the safety arrangement is rejected, so the coordinator knows what to fix."
                     : "Explain what needs to change, so the coordinator knows what to fix.");
         }
+        List<String> flagged = flaggedItems(eventId, outcome, input.flaggedItems());
         String status = switch (outcome) {
             case APPROVE -> "approved";
             case REQUEST_CHANGES -> "changes_requested";
             case REJECT -> "rejected";
         };
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         EventSafetyReview review = reviews.findByEventId(eventId)
                 .orElseGet(() -> new EventSafetyReview(eventId, status, note, safetyOfficerId, now));
-        review.update(status, note, safetyOfficerId, now);
+        review.update(status, note, flagged, safetyOfficerId, now);
         reviews.save(review);
-        lifecycle.recordSafetyDecision(safetyOfficerId, eventId, outcome, note.isEmpty() ? null : note);
+        lifecycle.recordSafetyDecision(safetyOfficerId, eventId, outcome, note.isEmpty() ? null : note, flagged);
         return readiness(event);
+    }
+
+    /**
+     * SO-C5/SO-C6: a rejection or a request for changes names at least one
+     * checklist item; an approval names none. Returned in checklist order,
+     * once each.
+     */
+    private List<String> flaggedItems(UUID eventId, SafetyDecision outcome, List<String> requested) {
+        List<String> given = requested == null ? List.of() : requested;
+        if (outcome == SafetyDecision.APPROVE) {
+            if (!given.isEmpty()) {
+                throw new InvalidReadinessUpdateException(
+                        "Checklist items are only selected when requesting changes or rejecting.");
+            }
+            return List.of();
+        }
+        if (given.isEmpty()) {
+            throw new InvalidReadinessUpdateException(outcome == SafetyDecision.REJECT
+                    ? "Select at least one checklist item the rejection concerns."
+                    : "Select at least one checklist item that needs changing.");
+        }
+        List<String> unknown = given.stream()
+                .filter(key -> definitions(eventId).stream().noneMatch(item -> item.key().equals(key))).toList();
+        if (!unknown.isEmpty()) {
+            throw new InvalidReadinessUpdateException("Unknown checklist item(s): " + String.join(", ", unknown) + ".");
+        }
+        return definitions(eventId).stream().map(StandardItem::key).filter(given::contains).toList();
     }
 
     private ReadinessDto readiness(UUID eventId) {
@@ -182,6 +213,7 @@ public class ReadinessService {
                 review == null || review.getReviewedBy() == null ? null
                         : users.findById(review.getReviewedBy()).map(User::getUsername).orElse(null),
                 review == null ? null : review.getReviewedAt(),
+                review == null ? List.of() : List.copyOf(review.getFlaggedItems()),
                 completed, items.size(), items);
     }
 
@@ -207,14 +239,9 @@ public class ReadinessService {
         return state!=null && state.isChecked() && java.util.Objects.equals(state.getArrangementFingerprint(),fingerprint(eventId,key));
     }
 
-    /** Events from Planning through the safety check to Confirmed (EC08 adds the safety stages). */
-    public static final java.util.Set<EventStatus> VISIBLE = java.util.EnumSet.of(EventStatus.pending,
-            EventStatus.awaiting_safety_review, EventStatus.safety_changes_requested,
-            EventStatus.safety_approved, EventStatus.confirmed);
-
     private Event activeEvent(UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!VISIBLE.contains(event.getStatus())) {
+        if (!EventStatus.ACTIVE.contains(event.getStatus())) {
             throw new EventNotFoundException(eventId);
         }
         return event;
