@@ -44,8 +44,13 @@ public class EventVenueBookingController {
             @org.springframework.web.bind.annotation.RequestParam(required = false) java.math.BigDecimal setupDurationMinutes,
             @org.springframework.web.bind.annotation.RequestParam(required = false) java.math.BigDecimal turnaroundDurationMinutes,
             @org.springframework.web.bind.annotation.RequestParam(required = false) java.time.OffsetDateTime startDatetime,
-            @org.springframework.web.bind.annotation.RequestParam(required = false) java.time.OffsetDateTime endDatetime) {
-        return service.venueOptions(userIdOf(jwt), eventId, setupDurationMinutes, turnaroundDurationMinutes, startDatetime, endDatetime);
+            @org.springframework.web.bind.annotation.RequestParam(required = false) java.time.OffsetDateTime endDatetime,
+            @org.springframework.web.bind.annotation.RequestParam(required=false) Integer expectedAttendance,
+            @org.springframework.web.bind.annotation.RequestParam(required=false) List<String> requiredFacilities,
+            @org.springframework.web.bind.annotation.RequestParam(required=false) List<String> accessibilityNeeds,
+            @org.springframework.web.bind.annotation.RequestParam(required=false) String venueRequirements) {
+        return service.venueOptions(userIdOf(jwt), eventId, setupDurationMinutes, turnaroundDurationMinutes, startDatetime, endDatetime,
+                new com.example.connect_sphere.venuebooking.dto.BookingRequirements(expectedAttendance,requiredFacilities,accessibilityNeeds,venueRequirements));
     }
 
     @GetMapping("/venue-bookings")
@@ -76,6 +81,16 @@ public class EventVenueBookingController {
             @PathVariable UUID eventId,
             @RequestBody SubmitVenueBookingRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.submit(userIdOf(jwt), eventId, request));
+    }
+
+    @PostMapping("/venue-bookings/{bookingId}/withdraw-requirement")
+    public EventVenueBookingDto withdraw(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID eventId,
+            @PathVariable UUID bookingId,@RequestBody java.util.Map<String,String> body) {
+        return service.withdrawRequirement(userIdOf(jwt),eventId,bookingId,body.get("reason"));
+    }
+    @GetMapping("/venue-bookings/{bookingId}/history")
+    public List<java.util.Map<String,Object>> history(@AuthenticationPrincipal Jwt jwt,@PathVariable UUID eventId,@PathVariable UUID bookingId) {
+        return service.history(userIdOf(jwt),eventId,bookingId);
     }
 
     @PostMapping("/venue-bookings/batch")

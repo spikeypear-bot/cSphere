@@ -153,3 +153,6 @@ Coordinators can request multiple venues, each with its own booking window, setu
 - [Existing booking conflict review, scope and API](docs/venue-booking-conflicts.md)
 
 Incoming migrations through V26 are retained. Databases that used the superseded unpublished local V23/V24 timing migrations need separate migration-history reconciliation before running this branch; do not rewrite applied migrations or blindly repair checksums.
+
+
+Venue Staff reliability and release contracts: [workflow repairs](docs/venue-workflow-repair.md), including private booking access, timed operational impacts, unavailable-period release/history, and durable lifecycle/notification retries. Shared Venue Staff access is retained.

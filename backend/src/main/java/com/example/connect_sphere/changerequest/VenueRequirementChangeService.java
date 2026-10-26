@@ -63,6 +63,10 @@ public class VenueRequirementChangeService {
             if (booking.getStatus() != VenueBookingStatus.pending && booking.getStatus() != VenueBookingStatus.approved && booking.getStatus() != VenueBookingStatus.attention)
                 continue;
             if (reviews.existsByChangeRequestIdAndBookingId(change.getChangeRequestId(), booking.getBookingId())) continue;
+            var before = snapshot(change.getOriginalValues(), booking.getRequirements());
+            var after = snapshot(change.getProposedValues(), booking.getRequirements());
+            var roomChanges = ChangeFields.changes(before, after);
+            if (roomChanges.isEmpty()) continue;
             var venue = venues.findById(booking.getVenueId()).orElseThrow();
             var review = new VenueRequirementReview();
             review.setReviewId(UUID.randomUUID());
@@ -81,20 +85,27 @@ public class VenueRequirementChangeService {
             review.setReservedEnd(booking.getEndDatetime() == null ? oldEnd : booking.getEndDatetime());
             review.setSetupDurationMinutes(booking.getSetupDurationMinutes());
             review.setTurnaroundDurationMinutes(booking.getTurnaroundDurationMinutes());
-            review.setPreviousRequirements(snapshot(change.getOriginalValues()));
-            review.setNewRequirements(snapshot(change.getProposedValues()));
+            review.setPreviousRequirements(before);
+            review.setNewRequirements(after);
             reviews.saveAndFlush(review);
-            notifications.createVenueRequirementChangedNotifications(recipients, review, ChangeFields.describe(changed));
+            notifications.createVenueRequirementChangedNotifications(recipients, review, ChangeFields.describe(roomChanges));
         }
         if (assessments != null) assessments.requirementsChanged(event,change.getDecidedBy());
     }
 
-    private static Map<String, Object> snapshot(Map<String, Object> values) {
+    private static Map<String, Object> snapshot(Map<String, Object> values,
+            com.example.connect_sphere.venuebooking.dto.BookingRequirements overrides) {
         Map<String, Object> copy = new LinkedHashMap<>();
         FIELDS.stream().sorted().forEach(key -> {
             Object value = values.get(key);
             copy.put(key, value instanceof List<?> list ? List.copyOf(list) : value);
         });
+        if (overrides != null) {
+            if (overrides.expectedAttendance()!=null) copy.put("expectedAttendance",overrides.expectedAttendance());
+            if (overrides.requiredFacilities()!=null) copy.put("requiredFacilities",overrides.requiredFacilities());
+            if (overrides.accessibilityNeeds()!=null) copy.put("accessibilityNeeds",overrides.accessibilityNeeds());
+            if (overrides.venueRequirements()!=null) copy.put("venueRequirements",overrides.venueRequirements());
+        }
         return copy;
     }
 }

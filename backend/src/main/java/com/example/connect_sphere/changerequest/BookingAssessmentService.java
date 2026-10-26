@@ -74,7 +74,11 @@ public class BookingAssessmentService {
         String reason=String.join(" ",failed);
         if (layoutChanged && e.getVenueRequirements()!=null && !e.getVenueRequirements().isBlank())
             reason += " Supported layouts changed. Staff must reassess the written venue requirements.";
-        if (reason.isBlank()) return; // Recovery requires an explicit staff decision.
+        if (reason.isBlank()) {
+            if(b.getStatus()==VenueBookingStatus.approved)
+                lifecycle.returnToPlanning(e.getEventId(),actor,"Venue details changed; review current venue safety checks.");
+            return;
+        } // Recovery requires an explicit staff decision.
         var history=history(b.getBookingId());
         if (b.getStatus()!=VenueBookingStatus.approved && b.getStatus()!=VenueBookingStatus.attention) return;
         if (b.getStatus()==VenueBookingStatus.attention && !history.isEmpty() && history.getFirst().reason().equals(reason)

@@ -33,6 +33,8 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingStateExceptio
 @SpringBootTest
 @AutoConfigureMockMvc
 @Tag("VS03")
+@Tag("VS02")
+@Tag("VS04")
 @Tag("VS17")
 @Tag("VS08")
 class VenueBookingApprovalTest {
@@ -289,11 +291,14 @@ class VenueBookingApprovalTest {
     }
 
     @ParameterizedTest @ValueSource(strings={"completed", "cancelled"})
-    void approvedBookingBlocksRegardlessOfEventStatus(String eventStatus) throws Exception {
+    @org.junit.jupiter.api.DisplayName("VS08 VS17 (boundary): final-event reservations do not block approval, matching search")
+    void finalEventBookingDoesNotBlockApproval(String eventStatus) throws Exception {
         UUID venue = venue(), existing = booking(venue, "approved"), requested = booking(venue, "pending");
         jdbc.update("UPDATE events SET status=?::event_status WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)", eventStatus, existing);
         mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(user("vs").roles("VS")))
-                .andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts[0].bookingId").value(existing.toString()));
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("approved"));
+        assertThat(statusOf(existing)).isEqualTo("approved"); // Historical source is retained.
+        assertThat(statusOf(requested)).isEqualTo("approved");
     }
 
     @Test void midnightOverlapUsesInstantsAcrossOffsets() throws Exception {
@@ -329,5 +334,73 @@ class VenueBookingApprovalTest {
         UUID loser = winner.equals(a) ? b : a;
         mvc.perform(patch("/api/venue-bookings/" + loser + "/approve").with(user("vs").roles("VS")))
                 .andExpect(status().isConflict()).andExpect(jsonPath("$.conflicts[0].bookingId").value(winner.toString()));
+    }
+
+    @ParameterizedTest @ValueSource(strings={"", "   "})
+    @org.junit.jupiter.api.DisplayName("VS03 (negative): changed accessibility requires a nonblank justification before approval")
+    void currentAccessibilityIsRevalidated(String justification) throws Exception {
+        UUID v=venue(),id=booking(v,"pending");
+        jdbc.update("UPDATE events SET accessibility_needs='{step_free_access}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
+        jdbc.update("UPDATE venues SET venue_accessibilities='{step_free_access}' WHERE venue_id=?",v);
+        jdbc.update("UPDATE venue_bookings SET suitability_note=? WHERE booking_id=?",justification,id);
+        assertThat(bookings.get(id).venue().venueAccessibilities()).contains(com.example.connect_sphere.common.enums.AccessibilityFeature.step_free_access);
+        jdbc.update("UPDATE venues SET venue_accessibilities='{}' WHERE venue_id=?",v);
+        String before=snapshot(id);
+        mvc.perform(patch("/api/venue-bookings/"+id+"/approve").with(user("vs2").roles("VS")))
+            .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("justification")));
+        assertThat(statusOf(id)).isEqualTo("pending");assertThat(snapshot(id)).isEqualTo(before);
+    }
+    @Test @org.junit.jupiter.api.DisplayName("VS03 (happy): existing accessibility justification permits approval with missing access")
+    void justifiedAccessibilityRemainsSupported() throws Exception {
+        UUID id=booking(venue(),"pending");
+        jdbc.update("UPDATE events SET accessibility_needs='{step_free_access}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
+        mvc.perform(patch("/api/venue-bookings/"+id+"/approve").with(user("another-vs").roles("VS"))).andExpect(status().isOk());
+        assertThat(statusOf(id)).isEqualTo("approved");
+    }
+    @Test @org.junit.jupiter.api.DisplayName("VS03 (boundary): explicit empty accessibility override does not inherit event needs")
+    void emptyAccessibilityOverrideIsPreserved() throws Exception {
+        UUID id=booking(venue(),"pending");
+        jdbc.update("UPDATE events SET accessibility_needs='{step_free_access}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
+        jdbc.update("UPDATE venue_bookings SET suitability_note=NULL,requirements=?::jsonb WHERE booking_id=?","{\"accessibilityNeeds\":[]}",id);
+        mvc.perform(patch("/api/venue-bookings/"+id+"/approve").with(user("vs").roles("VS"))).andExpect(status().isOk());
+        assertThat(statusOf(id)).isEqualTo("approved");
+    }
+    @Test @org.junit.jupiter.api.DisplayName("VS02 (happy): list and detail resolve inherited and explicit room requirements consistently")
+    void effectiveRequirementsAreConsistent() throws Exception {
+        UUID id=booking(venue(),"pending");
+        jdbc.update("UPDATE events SET required_facilities='{stage}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
+        assertThat(bookings.get(id).effectiveRequirements().requiredFacilities()).containsExactly("stage");
+        assertThat(bookings.listPending().stream().filter(b -> b.bookingId().equals(id)).findFirst().orElseThrow().effectiveRequirements())
+            .isEqualTo(bookings.get(id).effectiveRequirements());
+        jdbc.update("UPDATE venue_bookings SET requirements=?::jsonb WHERE booking_id=?","{\"expectedAttendance\":25,\"venueRequirements\":\"Breakout seating\",\"requiredFacilities\":[]}",id);
+        var detail=bookings.get(id);
+        assertThat(detail.effectiveRequirements().expectedAttendance()).isEqualTo(25);
+        assertThat(detail.effectiveRequirements().venueRequirements()).isEqualTo("Breakout seating");
+        assertThat(detail.effectiveRequirements().requiredFacilities()).isEmpty();
+        assertThat(detail.event().expectedAttendance()).isEqualTo(100);
+        mvc.perform(get("/api/venue-bookings/"+id).with(user("vs").roles("VS")))
+            .andExpect(status().isOk()).andExpect(jsonPath("$.effectiveRequirements.requiredFacilities").isEmpty());
+    }
+    @Test @org.junit.jupiter.api.DisplayName("VS02 VS03 (cross-cutting): related bookings are event-scoped read-only summaries and decisions stay independent")
+    void relatedBookingsAndIndependentDecision() throws Exception {
+        UUID a=booking(venue(),"pending"),b=booking(venue(),"pending"),unrelated=booking(venue(),"pending");
+        UUID event=jdbc.queryForObject("SELECT event_id FROM venue_bookings WHERE booking_id=?",UUID.class,a);
+        jdbc.update("UPDATE venue_bookings SET event_id=?,start_datetime='2027-04-01T10:00:00+08',end_datetime='2027-04-01T11:00:00+08',setup_duration_minutes=30 WHERE booking_id=?",event,b);
+        var related=bookings.get(a).relatedBookings();assertThat(related).hasSize(1);
+        assertThat(related.getFirst().bookingId()).isEqualTo(b);assertThat(related.getFirst().status().name()).isEqualTo("pending");
+        assertThat(related.getFirst().venueAddress()).startsWith("VS03");
+        assertThat(related.getFirst().effectiveStart()).isEqualTo(related.getFirst().startDatetime().minusMinutes(30));
+        String before=snapshot(b),other=snapshot(unrelated);
+        mvc.perform(get("/api/venue-bookings/"+a).with(user("vs2").roles("VS"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$.event.eventId").value(event.toString())).andExpect(jsonPath("$.bookingId").value(a.toString()));
+        mvc.perform(get("/api/venue-bookings/"+a).with(user("ec").roles("EC"))).andExpect(status().isForbidden());
+        mvc.perform(patch("/api/venue-bookings/"+a+"/approve").with(user("vs2").roles("VS"))).andExpect(status().isOk());
+        assertThat(statusOf(b)).isEqualTo("pending");assertThat(snapshot(b)).isEqualTo(before);assertThat(snapshot(unrelated)).isEqualTo(other);
+        String approved=snapshot(a);
+        mvc.perform(patch("/api/venue-bookings/"+b+"/reject").with(user("vs2").roles("VS")).contentType("application/json").content("{\"reason\":\"Room no longer needed\"}"))
+            .andExpect(status().isOk());
+        assertThat(statusOf(a)).isEqualTo("approved");assertThat(snapshot(a)).isEqualTo(approved);
+        assertThat(statusOf(unrelated)).isEqualTo("pending");assertThat(snapshot(unrelated)).isEqualTo(other);
+
     }
 }

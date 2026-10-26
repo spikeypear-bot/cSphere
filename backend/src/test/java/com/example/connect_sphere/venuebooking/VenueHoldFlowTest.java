@@ -142,7 +142,8 @@ class VenueHoldFlowTest {
         assertThat(holds.history(pending).getFirst().endedAt()).isNull();
         assertThat(statusOf(a)).isEqualTo("approved");assertThat(statusOf(b)).isEqualTo("approved");
         assertThat(statusOf(pending)).isEqualTo("pending");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE event_id IN (SELECT event_id FROM venue_bookings WHERE venue_id=?)",Integer.class,v)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE event_id IN (SELECT event_id FROM venue_bookings WHERE venue_id=?) AND type::text<>'venue_booking_approved'",Integer.class,v)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id IN (?,?) AND type::text='venue_booking_approved' AND recipient_user_id=?",Integer.class,a,b,coordinator)).isEqualTo(2);
     }
     @Test @DisplayName("VS-C3 release (regression): manual release frees approval and removes calendar hold without modifying other reservations")
     void releaseFreesApproval(){

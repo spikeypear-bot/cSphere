@@ -98,11 +98,12 @@ function Schedule({ venueId, venueName, month, onRefreshStart, toolbar }: { tool
             <ul>{entriesOnDay(entries, day).map(entry => <li key={entry.id}>
               <button className="venue-calendar__entry" data-kind={entry.type} data-booking-status={entry.type === 'unavailable' ? undefined : entry.type}
                 data-conflict={(entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId)}
-                aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}${(entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId) ? ', Conflict' : ''}`}
+                data-restriction-conflict={!!entry.conflictReasons?.length}
+                aria-label={`${entryLabels[entry.type]} · ${entry.phase}: ${entry.title}, ${day}, ${dayTime(entry, day)}${!!entry.conflictReasons?.length || (entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId) ? ', Conflict' : ''}`}
                 onClick={() => setSelected(entry.id)}>
                 <span>{entryLabels[entry.type]}{entry.phase !== 'Unavailable' ? ` · ${entry.phase}` : ''}</span>
                 <strong>{entry.title}</strong><span>{dayTime(entry, day)}</span>
-                {(entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId) && <span>⚠ Conflict</span>}
+                {(!!entry.conflictReasons?.length || (entry.type === 'approved' || entry.type === 'attention') && conflictingIds.has(entry.entryId)) && <span>⚠ Conflict</span>}
               </button>
             </li>)}</ul>
           </td>)}
@@ -130,8 +131,9 @@ function EntryDetails({ entry, venueName, conflicts, onClose }: { entry: Calenda
       {entry.type === 'unavailable' && <><dt>Reason</dt><dd>{entry.title}</dd></>}
     </dl>
     {conflicts.length > 0 && <BookingConflictList pairs={conflicts} venueName={venueName} />}
+    {!!entry.conflictReasons?.length && <div role="alert"><h3>Conflicting restrictions</h3><ul>{entry.conflictReasons.map(reason => <li key={reason}>{reason}</li>)}</ul></div>}
     <div className="venue-calendar__detail-actions">
-      {entry.type !== 'unavailable' && <Link to={`/venue-staff/bookings/${entry.entryId}`}>View booking details</Link>}
+      {entry.type !== 'unavailable' && entry.type !== 'issue' && <Link to={`/venue-staff/bookings/${entry.entryId}`}>View booking details</Link>}
       <Button onClick={onClose}>Close</Button>
     </div>
   </dialog>

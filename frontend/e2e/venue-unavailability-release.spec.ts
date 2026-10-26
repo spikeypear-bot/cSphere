@@ -1,0 +1,50 @@
+// @stories VS17 VS01 VS-C1 EC08 AU04
+import { expect, test } from '@playwright/test'
+import { apiGet, apiToken, confirmedEventByApi, createVenue, signedIn, uniqueName } from './support.ts'
+
+test('VS17 VS01 (cross-cutting): staff release unavailability, retain history and restore availability without restoring event confirmation', async ({ browser, request }, testInfo) => {
+  test.setTimeout(120_000)
+  const venueId = await createVenue(request, uniqueName('Release venue'))
+  const day = new Date(Date.now() + 5 * 86400000).toISOString().slice(0, 10)
+  const eventId = await confirmedEventByApi(request, uniqueName('Release event'), venueId,
+    `${day}T10:00:00+08:00`, `${day}T12:00:00+08:00`)
+  const ec = await apiToken(request, 'ec1')
+  const bookings = await apiGet<{ bookingId: string; status: string; requiresAlternative: boolean }[]>(request, ec, `/api/events/${eventId}/venue-bookings`)
+  const bookingId = bookings[0].bookingId
+  const staff = await signedIn(browser, 'vs1')
+  await staff.goto(`/venue-staff/catalogue/${venueId}`)
+  const panel = staff.getByRole('region', { name: 'Unavailability', exact: true })
+  await panel.getByLabel('Start date/time').fill(`${day}T10:30`)
+  await panel.getByLabel('End date/time').fill(`${day}T11:00`)
+  await panel.getByLabel('Reason', { exact: true }).fill('Inspection required')
+  await panel.getByRole('button', { name: 'Record Unavailability' }).click()
+  await panel.getByRole('button', { name: 'Confirm recording unavailability' }).click()
+  await expect(panel.getByText(/Unavailability recorded/)).toBeVisible()
+  await expect.poll(async () => (await apiGet<{ canSendForReview: boolean }>(request, ec, `/api/events/${eventId}/lifecycle`)).canSendForReview).toBe(false)
+  for (const account of ['ec2', 'eo5', 'att1']) {
+    const token = await apiToken(request, account)
+    const direct = await request.get(`/api/venue-bookings/${bookingId}`, { headers: { Authorization: `Bearer ${token}` } })
+    expect(direct.status()).toBe(403)
+  }
+  const sharedStaff = await apiToken(request, 'vs2')
+  expect((await request.get(`/api/venue-bookings/${bookingId}`, { headers: { Authorization: `Bearer ${sharedStaff}` } })).ok()).toBeTruthy()
+  await panel.getByRole('button', { name: 'Release unavailable period' }).click()
+  await panel.getByLabel('Reason for releasing this period').fill('Inspection complete; venue reopened')
+  await panel.getByRole('button', { name: 'Confirm release' }).click()
+  await expect(panel.getByText(/Unavailable period released/)).toBeVisible()
+  const after = await apiGet<typeof bookings>(request, ec, `/api/events/${eventId}/venue-bookings`)
+  expect(after).toHaveLength(1)
+  expect(after[0]).toMatchObject({ bookingId, status: 'approved', requiresAlternative: false })
+  const readiness = await apiGet<{ canSendForReview: boolean; canConfirm: boolean; journeyStatus: { code: string } }>(request, ec, `/api/events/${eventId}/lifecycle`)
+  expect(readiness.canSendForReview).toBe(true)
+  expect(readiness.canConfirm).toBe(false)
+  expect(readiness.journeyStatus.code).toBe('PLANNING')
+  await panel.getByRole('button', { name: 'View unavailability history' }).click()
+  await expect(panel.getByText('Released: Inspection complete; venue reopened')).toBeVisible()
+  await staff.screenshot({ path: testInfo.outputPath('release-history-desktop.png'), fullPage: true })
+  await staff.setViewportSize({ width: 390, height: 844 })
+  await panel.getByRole('button', { name: 'Hide unavailability history' }).scrollIntoViewIfNeeded()
+  expect(await staff.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await staff.screenshot({ path: testInfo.outputPath('release-history-mobile.png'), fullPage: true })
+  await staff.context().close()
+})

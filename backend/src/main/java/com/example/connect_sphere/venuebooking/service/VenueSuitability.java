@@ -28,6 +28,10 @@ public record VenueSuitability(
         List<String> missingAccessibility,
         List<String> missingFacilities) {
 
+    public static VenueSuitability of(Event event, Venue venue, com.example.connect_sphere.venuebooking.entity.VenueBookingRecord booking) {
+        return of(booking.getRequirements()==null ? event : booking.getRequirements().apply(event), venue);
+    }
+
     public static VenueSuitability of(Event event, Venue venue) {
         List<String> required = event.getAccessibilityNeeds() == null ? List.of()
                 : event.getAccessibilityNeeds().stream().filter(need -> !"none".equals(need)).toList();

@@ -12,6 +12,8 @@ import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime
 import { useVenueRead } from './useVenueRead'
 import '../../components/skeleton.css'
 import './BookingApprovalsPage.css'
+import { venueFacilityLabels, venueAccessibilityLabels, type Facility } from '../../types/venue'
+import type { AccessibilityFeature } from '../../types/eventRequest'
 
 function requirementsSummary(value: string | null | undefined) {
   const text = value?.trim()
@@ -80,13 +82,18 @@ function BookingRequestList({ bookings, held = false }: { bookings: VenueBooking
           <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status}>Status: {BOOKING_STATUS_LABELS[status]}</span>
         </div>
         <dl>
+          <div><dt>Event ID</dt><dd>{booking.event.eventId}</dd></div>
+          <div><dt>Booking ID</dt><dd>{booking.bookingId}</dd></div>
+          <div><dt>Current coordinator</dt><dd>{booking.currentCoordinatorName ?? 'Unassigned'}{booking.currentCoordinatorEmail ? ` (${booking.currentCoordinatorEmail})` : ''}</dd></div>
           <div><dt>Requested venue</dt><dd>{booking.venue.venueAddress?.trim() || 'Not specified'}</dd></div>
           <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd></div>
           <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd></div>
           {booking.timing && <div><dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd></div>}
           {hold && <div><dt>Hold expiry (SGT)</dt><dd>{formatEventDateTime(hold.expiresAt)}</dd></div>}
-          <div><dt>Expected attendance</dt><dd>{booking.event.expectedAttendance.toLocaleString()} people</dd></div>
-          <div><dt>Venue requirements summary</dt><dd>{requirementsSummary(booking.event.venueRequirements)}</dd></div>
+          <div><dt>Expected attendance</dt><dd>{(booking.effectiveRequirements?.expectedAttendance ?? booking.requirements?.expectedAttendance ?? booking.event.expectedAttendance).toLocaleString()} people</dd></div>
+          <div><dt>Venue requirements summary</dt><dd>{requirementsSummary(booking.effectiveRequirements?.venueRequirements ?? booking.requirements?.venueRequirements ?? booking.event.venueRequirements)}</dd></div>
+          <div><dt>Required facilities</dt><dd>{(booking.effectiveRequirements?.requiredFacilities ?? booking.requirements?.requiredFacilities ?? []).map(f => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None specified'}</dd></div>
+          <div><dt>Accessibility requirements</dt><dd>{(booking.effectiveRequirements?.accessibilityNeeds ?? booking.requirements?.accessibilityNeeds ?? booking.event.accessibilityNeeds).map(f => venueAccessibilityLabels[f as AccessibilityFeature] ?? f).join(', ') || 'None specified'}</dd></div>
         </dl>
         <Link to={`/venue-staff/bookings/${booking.bookingId}?from=booking-approvals`}>View booking details</Link>
       </Card>

@@ -37,7 +37,13 @@ public record OrganiserArrangementsDto(
     public record Venue(UUID venueId, String name, Integer capacity, List<String> layouts,
             List<String> accessibilities, List<String> facilities, String operatingInformation,
             boolean noLongerAvailable, boolean requiresAttention, List<String> suitabilityIssues,
-            List<com.example.connect_sphere.venue.dto.VenueOperatingHourDto> operatingHours) {
+            List<com.example.connect_sphere.venue.dto.VenueOperatingHourDto> operatingHours,
+            UUID bookingId,OffsetDateTime startDatetime,OffsetDateTime endDatetime) {
+        public Venue(UUID id,String name,Integer capacity,List<String> layouts,List<String> access,List<String> facilities,
+                String information,boolean unavailable,boolean attention,List<String> issues,
+                List<com.example.connect_sphere.venue.dto.VenueOperatingHourDto> hours) {
+            this(id,name,capacity,layouts,access,facilities,information,unavailable,attention,issues,hours,null,null,null);
+        }
         public Venue(UUID id,String name,Integer capacity,List<String> layouts,List<String> access,List<String> facilities,String information,boolean unavailable) {
             this(id,name,capacity,layouts,access,facilities,information,unavailable,false,List.of(),List.of());
         }

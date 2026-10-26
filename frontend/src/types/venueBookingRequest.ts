@@ -20,7 +20,17 @@ export interface VenueOptionDto {
 import type { VenueBookingStatus } from './venueBookingStatus'
 export type { VenueBookingStatus } from './venueBookingStatus'
 
+export interface BookingRequirements {
+  expectedAttendance?: number | null
+  requiredFacilities?: string[] | null
+  accessibilityNeeds?: string[] | null
+  venueRequirements?: string | null
+}
+
 export interface EventVenueBookingDto {
+  requirements?: BookingRequirements | null
+  requirementId?: string | null
+  requirementOutstanding?: boolean
   holds?: import('./venueHold').VenueHold[]
   timing?: import('./bookingTiming').BookingTiming
   bookingId: string

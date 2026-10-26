@@ -119,7 +119,7 @@ public class ChangeImpactService {
     @Transactional(readOnly = true)
     public BookingSummary bookingSummary(Event event, VenueBookingRecord booking, List<ImpactItem> assessed) {
         Venue venue = venues.findById(booking.getVenueId()).orElseThrow();
-        var fit = VenueSuitability.of(event, venue);
+        var fit = VenueSuitability.of(event, venue, booking);
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
         var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
         var durations = new Settings(booking.getSetupDurationMinutes(), booking.getTurnaroundDurationMinutes());
@@ -151,7 +151,7 @@ public class ChangeImpactService {
             rows.add(result("schedule", "Event schedule", false, "Reserved " + period(start,end)
                     + "; event " + period(event.getStartDatetime(),event.getEndDatetime())));
         }
-        return new BookingSummary(rows,event.getVenueRequirements(),List.copyOf(venue.getSupportedLayouts()),occupied.start(),occupied.end());
+        return new BookingSummary(rows,booking.getRequirements()==null ? event.getVenueRequirements() : booking.getRequirements().apply(event).getVenueRequirements(),List.copyOf(venue.getSupportedLayouts()),occupied.start(),occupied.end());
     }
 
     private static ImpactItem result(String key, String title, boolean ok, String detail) {
@@ -218,7 +218,7 @@ public class ChangeImpactService {
                     "Occupied " + period(occupied.start(), occupied.end())
                             + " including setup and turnaround, which is outside the venue's opening hours on a single day."));
         }
-        VenueSuitability fit = VenueSuitability.of(after, venue);
+        VenueSuitability fit = VenueSuitability.of(after, venue, booking);
         if (!fit.capacityOk()) {
             items.add(new ImpactItem(key + "capacity", "venue", ATTENTION, name + " is too small",
                     "It holds " + fit.capacity() + "; " + fit.expectedAttendance() + " are expected."));

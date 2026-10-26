@@ -43,6 +43,7 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
             FROM VenueBookingRecord b, Event e
             WHERE e.eventId = b.eventId AND b.venueId = :venueId
               AND b.bookingId <> :bookingId AND (b.status = :status OR (cast(:status as String) = 'approved' AND cast(b.status as String) = 'attention'))
+              AND cast(e.status as String) NOT IN ('cancelled','completed')
               AND COALESCE(b.startDatetime, e.startDatetime) < :end AND COALESCE(b.endDatetime, e.endDatetime) > :start
             ORDER BY COALESCE(b.startDatetime, e.startDatetime), b.bookingId
             """)
@@ -73,8 +74,7 @@ public interface VenueBookingRecordRepository extends JpaRepository<VenueBooking
     @Query("SELECT b FROM VenueBookingRecord b WHERE b.eventId = :eventId ORDER BY b.submittedAt DESC NULLS LAST")
     List<VenueBookingRecord> findForEvent(@Param("eventId") UUID eventId);
 
-    /** EC03 "one active booking request per event". */
-    Optional<VenueBookingRecord> findFirstByEventIdAndStatusIn(UUID eventId, Collection<VenueBookingStatus> statuses);
+    // All event workflows use findForEvent; one event can have several active bookings.
 
     /** An approved booking of any venue that overlaps [start, end), for
      * another event. Half-open on both sides: a booking that ends exactly

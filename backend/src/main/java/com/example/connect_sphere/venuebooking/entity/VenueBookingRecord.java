@@ -31,6 +31,13 @@ import lombok.Setter;
 @Setter
 public class VenueBookingRecord {
 
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "requirements", columnDefinition = "jsonb")
+    private com.example.connect_sphere.venuebooking.dto.BookingRequirements requirements;
+
+    @Column(name = "requirement_id")
+    private UUID requirementId;
+
     @Id
     @Column(name = "booking_id")
     private UUID bookingId;

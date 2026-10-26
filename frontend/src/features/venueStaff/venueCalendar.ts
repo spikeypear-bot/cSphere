@@ -12,21 +12,28 @@ export function approvedOverlaps(schedule: VenueSchedule) {
 export interface CalendarEntry {
   id: string
   entryId: string
-  type: Extract<VenueBookingDisplayStatus, 'approved' | 'attention' | 'tentative' | 'pending'> | 'unavailable'
-  phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable' | 'Reserved period'
+  type: Extract<VenueBookingDisplayStatus, 'approved' | 'attention' | 'tentative' | 'pending'> | 'unavailable' | 'issue'
+  phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable' | 'Reserved period' | 'Operational issue'
   title: string
   start: string
   end: string
   expiresAt?: string
   eventStart?: string
   eventEnd?: string
+  conflictReasons?: string[]
 }
-export const entryLabels = { attention: BOOKING_STATUS_LABELS.attention, approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable' }
+export const entryLabels = { attention: BOOKING_STATUS_LABELS.attention, approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable', issue: 'Blocking operational issue' }
 export function calendarEntries(schedule: VenueSchedule, expired = new Set<string>()): CalendarEntry[] {
   const entries: CalendarEntry[] = schedule.unavailablePeriods.map(p => ({
     id: `unavailable:${p.unavailabilityId}`, entryId: p.unavailabilityId, type: 'unavailable',
     phase: 'Unavailable', title: p.reason, start: p.startDateTime, end: p.endDateTime,
   }))
+  for (const issue of schedule.operationalIssues ?? []) {
+    if (!issue.affectedFrom || !issue.affectedUntil) continue
+    entries.push({ id: `issue:${issue.issueId}`, entryId: issue.issueId, type: 'issue', phase: 'Operational issue',
+      title: issue.description, start: issue.affectedFrom, end: issue.affectedUntil })
+  }
+  const restrictions = [...entries]
   const activeHolds = (schedule.holds ?? []).filter(h => h.status === 'active' && !expired.has(h.holdId))
   for (const h of activeHolds) entries.push({ id: 'hold:' + h.holdId, entryId: h.bookingId, type: 'tentative',
     phase: 'Reserved period', title: h.eventName, start: h.reservedStart, end: h.reservedEnd, expiresAt: h.expiresAt })
@@ -41,6 +48,11 @@ export function calendarEntries(schedule: VenueSchedule, expired = new Set<strin
     ] as const) {
       if (Date.parse(end) > Date.parse(start)) entries.push({ ...base, id: `booking:${b.bookingId}:${phase}`, phase, start, end })
     }
+  }
+  for (const entry of entries) {
+    if (entry.type === 'unavailable' || entry.type === 'issue') continue
+    entry.conflictReasons = restrictions.filter(r => Date.parse(r.start) < Date.parse(entry.end)
+      && Date.parse(r.end) > Date.parse(entry.start)).map(r => `${entryLabels[r.type]}: ${r.title}`)
   }
   return entries.sort((a, b) => Date.parse(a.start) - Date.parse(b.start) || a.id.localeCompare(b.id))
 }

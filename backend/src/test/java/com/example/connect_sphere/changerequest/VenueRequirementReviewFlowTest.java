@@ -34,6 +34,8 @@ class VenueRequirementReviewFlowTest {
     @Autowired PlatformTransactionManager transactions;
     @Autowired ChangeRequestService changes;
     @Autowired VenueRequirementChangeService recorder;
+    @Autowired VenueRequirementReviewService reviewService;
+    @Autowired com.example.connect_sphere.venuebooking.service.VenueBookingService bookingService;
     @Autowired ChangeRequestRepository changeRows;
     @Autowired com.example.connect_sphere.event.repository.EventRepository events;
     private FlowSupport flow;
@@ -66,6 +68,64 @@ class VenueRequirementReviewFlowTest {
         changes.approve(new ChangeRequestService.Caller(com.example.connect_sphere.user.entity.UserRole.ec,
                 flow.idOf("ec1"), "ConnectSphere"), changeId, List.of());
         em.flush();
+    }
+    @Test @Transactional @DisplayName("VS17 (boundary): maximum-length rejection and alternative notes produce bounded audit summaries and preserve sibling bookings")
+    void maximumRejectionDoesNotOverflowAudit() throws Exception {
+        fixture();UUID room=bookingIds.getFirst();
+        String tooLong="{\"reason\":\""+"x".repeat(2001)+"\"}";
+        mvc.perform(patch("/api/venue-bookings/"+room+"/reject").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(tooLong))
+            .andExpect(status().isUnprocessableEntity());
+        assertThat(jdbc.queryForObject("SELECT status::text FROM venue_bookings WHERE booking_id=?",String.class,room)).isEqualTo("pending");
+        String body="{\"reason\":\""+"x".repeat(2000)+"\",\"alternativeArrangement\":\""+"y".repeat(2000)+"\"}";
+        mvc.perform(patch("/api/venue-bookings/"+room+"/reject").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(body)).andExpect(status().isOk());
+        assertThat(jdbc.queryForObject("SELECT max(length(message)) FROM event_request_activity WHERE event_id=?",Integer.class,eventId)).isLessThanOrEqualTo(2000);
+        assertThat(jdbc.queryForObject("SELECT status::text FROM venue_bookings WHERE booking_id=?",String.class,bookingIds.get(1))).isEqualTo("approved");
+    }
+    @Test @Transactional @DisplayName("VS17 (conflict): superseded reviews remain historical and cannot emit a stale outcome notice")
+    void supersededReviewCannotBeDecided() throws Exception {
+        fixture();approve();UUID booking=bookingIds.get(0);
+        UUID older=jdbc.queryForObject("SELECT review_id FROM venue_requirement_reviews WHERE booking_id=?",UUID.class,booking);
+        String response=mvc.perform(post("/api/change-requests").with(flow.as("eo1"))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"requestId\":\""+requestId+"\",\"reason\":\"More guests again\",\"details\":"+FlowSupport.requestBody(name,250,"none")+"}"))
+            .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        changeId=UUID.fromString(flow.read(response).get("changeRequestId").asString());approve();
+        jdbc.update("UPDATE events SET coordinator_id=? WHERE event_id=?",flow.idOf("ec2"),eventId);em.clear();
+        var history=reviewService.forBooking(booking);var old=history.stream().filter(v -> v.review().getReviewId().equals(older)).findFirst().orElseThrow();
+        assertThat(old.outcomeCurrent()).isFalse();assertThat(old.canReview()).isFalse();
+        assertThat(old.currentCoordinatorName()).isEqualTo("ec2");assertThat(old.review().getCoordinatorName()).isEqualTo("ec1");
+        long before=jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'type'='venue_requirement_reviewed' AND payload->>'event_id'=?",Long.class,eventId.toString());
+        mvc.perform(post("/api/venue-bookings/"+booking+"/requirement-reviews/"+older+"/decision").with(flow.as("vs1"))
+            .contentType(MediaType.APPLICATION_JSON).content("{\"outcome\":\"suitable\"}" )).andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT status FROM venue_requirement_reviews WHERE review_id=?",String.class,older)).isEqualTo("pending");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'type'='venue_requirement_reviewed' AND payload->>'event_id'=?",Long.class,eventId.toString())).isEqualTo(before);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE requirement_review_id=? AND type::text='venue_requirement_reviewed'",Long.class,older)).isZero();
+    }
+    @Test @Transactional @DisplayName("VS17 (conflict): a booking timing revision makes an open review historical")
+    void changedTimingCannotBeReviewed() throws Exception {
+        fixture();approve();UUID booking=bookingIds.get(0);UUID review=reviewService.forBooking(booking).getFirst().review().getReviewId();
+        bookingService.updateTiming(booking,flow.idOf("vs1"),new com.example.connect_sphere.venuebooking.dto.UpdateBookingTimingRequest(java.math.BigDecimal.TEN,java.math.BigDecimal.ZERO,"Crew access",0,0));
+        assertThat(reviewService.forBooking(booking).getFirst().canReview()).isFalse();
+        assertThatThrownBy(() -> reviewService.decide(booking,review,flow.idOf("vs1"),new VenueRequirementReviewService.Decision("suitable",null)))
+            .isInstanceOf(com.example.connect_sphere.venuebooking.service.VenueBookingStateException.class);
+        assertThat(jdbc.queryForObject("SELECT status FROM venue_requirement_reviews WHERE review_id=?",String.class,review)).isEqualTo("pending");
+    }
+    @Test @Transactional @DisplayName("VS17 (happy): unchanged room overrides suppress notices while inherited attendance still generates a review")
+    void overridesSuppressIrrelevantReviews() throws Exception {
+        fixture();UUID room=bookingIds.get(0);
+        jdbc.update("UPDATE venue_bookings SET requirements='{\"expectedAttendance\":75,\"requiredFacilities\":[],\"accessibilityNeeds\":[],\"venueRequirements\":\"\"}'::jsonb WHERE booking_id=?",room);em.clear();approve();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_requirement_reviews WHERE booking_id=?",Long.class,room)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=? AND type::text='venue_requirement_changed'",Long.class,room)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_requirement_reviews WHERE booking_id=? AND previous_requirements->>'expectedAttendance'='100' AND new_requirements->>'expectedAttendance'='200'",Long.class,bookingIds.get(1))).isEqualTo(1);
+    }
+    @Test @Transactional @DisplayName("VS17 (boundary): affected room snapshots keep overridden attendance and explicit empty lists alongside inherited text changes")
+    void effectiveSnapshotsPreserveExplicitEmptyValues() throws Exception {
+        fixture();UUID room=bookingIds.get(0);
+        jdbc.update("UPDATE venue_bookings SET requirements='{\"expectedAttendance\":75,\"requiredFacilities\":[],\"accessibilityNeeds\":[]}'::jsonb WHERE booking_id=?",room);em.clear();
+        var change=changeRows.findById(changeId).orElseThrow();var values=new LinkedHashMap<>(change.getProposedValues());values.put("venueRequirements","New room layout");change.setProposedValues(values);changeRows.saveAndFlush(change);approve();
+        var review=reviewService.forBooking(room).getFirst().review();
+        assertThat(review.getPreviousRequirements()).containsEntry("expectedAttendance",75).containsEntry("requiredFacilities",List.of()).containsEntry("accessibilityNeeds",List.of());
+        assertThat(review.getNewRequirements()).containsEntry("expectedAttendance",75).containsEntry("requiredFacilities",List.of()).containsEntry("accessibilityNeeds",List.of()).containsEntry("venueRequirements","New room layout");
+        assertThat(reviewService.forBooking(room).getFirst().changes()).extracting(c -> c.field()).containsExactly("venueRequirements");
     }
     @Test @Transactional @DisplayName("VS17 (happy): approval creates two reviews and staff-only booking alerts, with historical values and independent read state")
     void approvalAndAudit() throws Exception {

@@ -45,7 +45,7 @@ import jakarta.persistence.EntityManager;
  * bookings, equipment requests). Real filter chain, real PostgreSQL; every
  * test rolls back.
  */
-@Tag("integration")
+@Tag("integration") @Tag("VS17") @Tag("EC-C2")
 @Tag("ECL-C7")
 @Tag("ELC-C5")
 @Tag("AU04")
@@ -123,6 +123,8 @@ class CoordinatorAssignmentScopeTest {
                 // Venue options, booking requests, cancellation, replacement (EC03/EC-C2/EC10)
                 get(event + "/venue-options"),
                 get(event + "/venue-bookings"),
+                get(event + "/venue-bookings/" + o.bookingId() + "/history"),
+                post(event + "/venue-bookings/" + o.bookingId() + "/withdraw-requirement").contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Not mine\"}"),
                 post(event + "/venue-bookings").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"venueId\":\"" + UUID.randomUUID() + "\"}"),
                 post(event + "/venue-bookings/batch").contentType(MediaType.APPLICATION_JSON).content("{\"requests\":[]}"),

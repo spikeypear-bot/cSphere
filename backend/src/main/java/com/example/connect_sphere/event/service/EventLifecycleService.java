@@ -11,11 +11,7 @@ import java.util.stream.Stream;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.event.TransactionalEventListener;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
@@ -36,7 +32,6 @@ import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venueavailability.AvailabilityService;
-import com.example.connect_sphere.venueavailability.VenueBecameUnavailable;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.hold.VenueHoldService;
@@ -75,9 +70,13 @@ public class EventLifecycleService {
     private final UserRepository users;
     private final JourneyStatusResolver statuses;
     private final Clock clock;
+    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.venuebooking.service.BookingPlanService bookingPlan;
+    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.VenueSafetyChecklist venueChecklist;
+
     /** EO07: releases a cancelled event's active venue holds. Null only for
      * callers built before EO07 that never cancel an event. */
     private final VenueHoldService holds;
+    @Autowired private com.example.connect_sphere.venue.repository.VenueRepository cancellationVenues;
 
     @Autowired
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
@@ -142,13 +141,18 @@ public class EventLifecycleService {
             venueDetail = "No venue has been booked yet.";
         } else if (affected > 0) {
             venueDetail = plural(affected, "venue has", "venues have")
-                    + " become unavailable. Request a replacement.";
+                    + " an unavailable period or operational issue. Resolve the issue or request a replacement.";
         } else if (active.stream().anyMatch(b -> b.getStatus() == VenueBookingStatus.attention)) {
             venueDetail = "Venue suitability requires attention. Resolve the affected bookings with Venue Staff.";
         } else if (pending > 0) {
             venueDetail = plural(pending, "booking is", "bookings are") + " still waiting for Venue Staff.";
         } else {
             venueDetail = plural(approved, "venue booking", "venue bookings") + " approved.";
+        }
+        long outstandingRequirements=bookingPlan==null?0:bookingPlan.outstanding(event.getEventId());
+        if(outstandingRequirements>0 && pending==0) {
+            venuesOk=false;
+            venueDetail="Required venue arrangements remain unresolved. Replace rejected bookings or explicitly withdraw the requirement.";
         }
         if (!venuesOk) {
             arrangementBlockers.add(venueDetail);
@@ -215,6 +219,8 @@ public class EventLifecycleService {
         if (datePassed) {
             blockers.add(0, "This event's end date and time has already passed.");
         }
+        if((status==EventStatus.safety_approved || status==EventStatus.confirmed) && venueChecklist!=null && !venueChecklist.complete(event.getEventId()))
+            blockers.add("The current venue arrangements require fresh Safety Officer checks.");
         boolean planningStage = status == EventStatus.pending || status == EventStatus.safety_changes_requested;
         boolean canSend = planningStage && blockers.isEmpty();
         boolean canConfirm = status == EventStatus.safety_approved && blockers.isEmpty();
@@ -272,6 +278,7 @@ public class EventLifecycleService {
                         + journey.label() + ").";
             });
         }
+        if(venueChecklist!=null) venueChecklist.lockVenues(eventId);
         // Re-check at the moment of confirming: something may have changed
         // since the Safety Officer approved.
         EventReadinessDto readiness = readinessOf(event);
@@ -291,15 +298,13 @@ public class EventLifecycleService {
         UUID organiser = eventRequests.findByEventId(eventId).map(EventRequest::getCreatedBy).orElse(null);
         List<UUID> staff = staffInvolved(saved);
         String message = saved.getEventName() + " is confirmed for " + singaporeDate(saved.getStartDatetime()) + ".";
-        afterCommit(() -> {
-            if (organiser != null) {
-                notifications.createStatusChangeNotification(organiser, null, saved.getEventId(),
-                        saved.getEventName(), "confirmed", null);
-            }
-            if (!staff.isEmpty()) {
-                notifications.createEventConfirmedNotifications(staff, saved.getEventId(), saved.getEventName(), message);
-            }
-        });
+        if (organiser != null) {
+            notifications.createStatusChangeNotification(organiser, null, saved.getEventId(),
+                    saved.getEventName(), "confirmed", null);
+        }
+        if (!staff.isEmpty()) {
+            notifications.createEventConfirmedNotifications(staff, saved.getEventId(), saved.getEventName(), message);
+        }
         return readinessOf(saved);
     }
 
@@ -322,6 +327,8 @@ public class EventLifecycleService {
                     + statuses.forEvent(event).label() + ").");
         }
         if (decision == SafetyDecision.APPROVE) {
+            var current=readinessOf(event);
+            if(!current.blockers().isEmpty()) throw new EventNotReadyException("Venue or equipment arrangements changed during safety review.",current.blockers());
             event.setStatus(EventStatus.safety_approved);
             event.setSafetyApprovedAt(now());
             event.setSafetyFeedback(null);
@@ -342,15 +349,13 @@ public class EventLifecycleService {
         if (coordinatorId != null) {
             UUID id = event.getEventId();
             String name = event.getEventName();
-            afterCommit(() -> {
-                if (decision == SafetyDecision.APPROVE) {
-                    notifications.createSafetyApprovedNotification(coordinatorId, id, name);
-                } else {
-                    notifications.createReturnedToPlanningNotification(coordinatorId, id, name,
-                            (decision == SafetyDecision.REJECT ? "The Safety Officer rejected the safety arrangement: "
-                                    : "The Safety Officer asked for changes: ") + note);
-                }
-            });
+            if (decision == SafetyDecision.APPROVE) {
+                notifications.createSafetyApprovedNotification(coordinatorId, id, name);
+            } else {
+                notifications.createReturnedToPlanningNotification(coordinatorId, id, name,
+                        (decision == SafetyDecision.REJECT ? "The Safety Officer rejected the safety arrangement: "
+                                : "The Safety Officer asked for changes: ") + note);
+            }
         }
     }
 
@@ -384,8 +389,8 @@ public class EventLifecycleService {
         record(event, ActivityType.returned_to_planning, actorId, reason, from);
         UUID coordinator = event.getCoordinatorId();
         if (coordinator != null) {
-            afterCommit(() -> notifications.createReturnedToPlanningNotification(
-                    coordinator, eventId, event.getEventName(), reason));
+            notifications.createReturnedToPlanningNotification(
+                    coordinator, eventId, event.getEventName(), reason);
         }
         return true;
     }
@@ -396,10 +401,12 @@ public class EventLifecycleService {
      * never takes event locks inside the venue/booking locks (which booking
      * approval takes in the opposite order and would deadlock).
      */
-    @TransactionalEventListener(fallbackExecution = true)
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void onVenueBecameUnavailable(VenueBecameUnavailable change) {
-        change.eventIds().forEach(id -> returnToPlanning(id, change.actorId(), change.reason()));
+    @Transactional
+    public void returnToPlanningForVenueImpact(UUID eventId, UUID actor, String reason) {
+        events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        // A delayed retry must not undo arrangements that have already been resolved.
+        if (bookings.findForEvent(eventId).stream().anyMatch(b -> availability.affected(b.getBookingId())))
+            returnToPlanning(eventId,actor,reason);
     }
 
     // ---- Cancellation (EO07) ---------------------------------------------------
@@ -437,6 +444,9 @@ public class EventLifecycleService {
         List<VenueBookingRecord> released = bookings.findForEvent(eventId).stream()
                 .filter(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved || b.getStatus() == VenueBookingStatus.attention)
                 .toList();
+        // Acquire every venue before ending any hold; matches batch/approval order.
+        released.stream().map(VenueBookingRecord::getVenueId).distinct().sorted()
+                .forEach(id -> cancellationVenues.findForUpdate(id).orElseThrow());
         for (VenueBookingRecord booking : released) {
             holds.endForBooking(booking.getBookingId(), actorId);
             booking.setStatus(VenueBookingStatus.cancelled);
@@ -456,7 +466,7 @@ public class EventLifecycleService {
             String name = saved.getEventName();
             String notice = name + " (" + singaporeDate(saved.getStartDatetime())
                     + ") has been cancelled. Its venue bookings and equipment are no longer needed.";
-            afterCommit(() -> notifications.createEventCancelledNotifications(staff, eventId, name, notice));
+            notifications.createEventCancelledNotifications(staff, eventId, name, notice);
         }
         return new Cancellation(released.stream().map(VenueBookingRecord::getBookingId).toList(), staff);
     }
@@ -527,16 +537,4 @@ public class EventLifecycleService {
         return OffsetDateTime.now(clock);
     }
 
-    private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
-    }
 }

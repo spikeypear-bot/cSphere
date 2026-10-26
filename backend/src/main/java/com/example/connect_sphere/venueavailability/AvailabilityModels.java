@@ -7,7 +7,13 @@ import java.util.UUID;
 public final class AvailabilityModels {
     private AvailabilityModels() {}
     public record Period(UUID unavailabilityId, UUID venueId, OffsetDateTime startDateTime,
-            OffsetDateTime endDateTime, String reason, OffsetDateTime createdAt) {}
+            OffsetDateTime endDateTime, String reason, OffsetDateTime createdAt,
+            OffsetDateTime releasedAt, String releaseReason) {
+        public Period(UUID id, UUID venue, OffsetDateTime start, OffsetDateTime end, String reason, OffsetDateTime created) {
+            this(id,venue,start,end,reason,created,null,null);
+        }
+    }
+    public record Release(String reason) {}
     public record Booking(UUID bookingId, UUID eventId, UUID coordinatorId, String eventName,
             String status, OffsetDateTime startDateTime, OffsetDateTime endDateTime,
             OffsetDateTime effectiveStart, OffsetDateTime effectiveEnd,
@@ -51,5 +57,6 @@ public final class AvailabilityModels {
     }
     public record Schedule(Settings settings, List<Booking> bookings, List<Period> unavailablePeriods,
             List<com.example.connect_sphere.venuebooking.hold.VenueHold> holds,
-            List<TimingConflictService.Overlap> activeConflicts) {}
+            List<TimingConflictService.Overlap> activeConflicts, List<OperationalIssue> operationalIssues) {}
+    public record OperationalIssue(UUID issueId, String description, OffsetDateTime affectedFrom, OffsetDateTime affectedUntil) {}
 }

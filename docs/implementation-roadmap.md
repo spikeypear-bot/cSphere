@@ -21,7 +21,7 @@ The team has already planned 4 sprints (`Estimation` sheet: 310 total points, ~2
 
 | Story | Goal | Likely files/modules | Data | API/UI | Tests | Risk | DoD |
 |---|---|---|---|---|---|---|---|
-| DEV02 (Done per backlog) | Normalised relational schema | `backend/.../db/migration/V2__init_tables.sql`, `SCHEMA.md` | Already exists | n/a | Schema reviewed against DoD checklist (threaded comment D24) | Acknowledged gaps (no booking-overlap constraint, no audit table) — don't treat as silently resolved | Verify checklist item-by-item against current migration before calling this truly closed |
+| DEV02 (Done per backlog) | Normalised relational schema | `backend/.../db/migration/V2__init_tables.sql`, `SCHEMA.md` | Already exists | n/a | Schema reviewed against DoD checklist (threaded comment D24) | Acknowledged gaps (no database booking-overlap constraint; workflow-specific audit histories now exist) — don't treat as silently resolved | Verify checklist item-by-item against current migration before calling this truly closed |
 | DEV04 | CI pipeline runs tests on every commit | new `.github/workflows/*.yml` (or equivalent) | n/a | n/a | At least one real backend test executed by the pipeline | No CI exists yet — greenfield; keep it minimal (build + test) first | Pipeline runs from a fresh clone, fails on a failing test, documented in README |
 | DEV01 | C1/C2 (Context/Container) diagrams | `docs/architecture/` (new) — Structurizr DSL or C4-PlantUML | n/a | n/a | Reviewed against threaded-comment E28 checklist (consistent with implemented DB/access-control/deployment, no invented components) | Diagrams drawn from imagination rather than the real implemented shape | Diagram matches what's actually built, version-controlled, updated when architecture changes |
 | AU04 | Role-scoped access (no real accounts yet — see D6a) | frontend: "Login as [Role]" selector + role-aware routing; backend: TBD whether the selected role is validated server-side this phase (Q2) | `users.role` (exists, but not yet tied to a real session) | Role-selector page; every role-specific screen/endpoint | Negative tests: at minimum, one role's pages cannot be reached from another role's selector path; server-side test once Q2 is resolved | Q2 unresolved — decide before wiring role-gated endpoints, or scope this story down to front-end routing only for Slice 0 | Selector routes correctly per role; DoD scoped explicitly to whatever Q2 decides (front-end-only vs. also server-enforced) |
@@ -104,7 +104,7 @@ Backlog stories: EO03, EO07, EO10–EO12, VS17, VS24, TS09, AT01–AT08, AU01A/B
 ## Build now vs. defer unless required (recap)
 
 **Build now:** all stories listed in Slices 0–3 above (everything currently `Within Scope, Included`/`Added`).
-**Defer:** event programme/sessions, document attachments, in-app comments, tentative holds, dashboards, most reporting/export, appeals, user guides, waiting lists, on-site technical-staff assignment, recurring-event reuse, event categories — do not build these without an explicit backlog scope change.
+**Defer:** event programme/sessions, document attachments, in-app comments, dashboards, most reporting/export, appeals, user guides, waiting lists, on-site technical-staff assignment, recurring-event reuse, event categories — do not build these without an explicit backlog scope change.
 
 ## Sensible MVP/demo path
 
@@ -165,3 +165,8 @@ cards now open implemented catalogue, creation, approvals and calendar workflows
 Developer scaffolding and story metadata are no longer displayed to staff.
 See [the presentation audit](venue-staff-presentation-audit.md) for current coverage
 and the completed structured-hour form/navigation test updates.
+
+
+## Venue workflow correction slice — 25 October 2026
+
+User-authorised audit corrections and unavailable-period release are implemented in the current slice. Individual staff assignment is explicitly excluded by the user; staff access remains shared. See [workflow repairs](venue-workflow-repair.md) for behaviour and validation. The earlier planned booking/audit gaps must be read against the current migrations and workflow-specific histories.

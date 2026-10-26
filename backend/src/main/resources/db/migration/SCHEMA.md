@@ -483,7 +483,7 @@ delete once real entities exist.
 | 3 | ~~`CHAR(1)` code mappings undocumented~~ | **Resolved in V3** for `request_type` (`C`/`A`) — see §2. `equipment_type` still TODO. |
 | 4 | `event_requests` has several nullable fields that `events` requires | Approval path must handle this. Widened in V3 (`event_name`, `purpose`, `expected_attendance`, `venue_requirements` are now also nullable, to support `draft` status) — `EventRequestService.submit()` is where completeness is enforced before a request may leave `draft`. |
 | 5 | `equipment_requirements` vs `equipment_requests.technical_requirement` | Overlapping free text — confirm which is authoritative |
-| 6 | ~~No audit of who approved a request~~ | **Resolved in V13** for event requests: `event_request_activity` records who submitted, assigned, clarified, responded, approved, rejected and requested a venue, and when. Bookings and registrations are not yet covered (rest of DEV07). |
+| 6 | ~~No audit of who approved a request~~ | **Resolved in V13** for event requests: `event_request_activity` records who submitted, assigned, clarified, responded, approved, rejected and requested a venue, and when. Venue booking decisions and lifecycle activity are now recorded, with hold, requirement review and assessment histories in V29/V34–V38. A universal audit log remains separate. |
 | 7 | `equipment_logs` has no return/check-in flag | Availability is inferred purely from the loan window |
 | 8 | `event_requests.accessibility_needs` is `text[]`, not the shared enum-array type | V4 migration — ORM limitation, not a data-modelling choice. Revisit if `venues`/`events` entities need the same values and a consistent type is wanted across tables. |
 
@@ -606,3 +606,24 @@ hold or equipment status/window changes are performed by review actions.
 actor/name/time, previous/current venue JSON (including opening hours), and requirement JSON.
 Notifications add `venue_suitability_changed` (EC) and `venue_arrangements_changed` (EO).
 New catalogue defaults do not change existing booking duration snapshots.
+
+
+## V40–V41: venue workflow recovery and release
+
+`venue_unavailability` retains `released_at`, `released_by` (user FK), and `release_reason`. Released periods stop blocking but their rows and impact links remain. Database checks require complete release metadata and a nonblank reason of at most 2000 characters.
+
+`venue_replan_tasks` stores `task_id`, `event_id` (FK, cascade on explicit event deletion), `actor_id` (user FK), `reason`, `created_at`, and `completed_at`. Its partial pending index supports retry workers.
+
+`notification_outbox` stores a stable `notification_id`, JSONB payload, `created_at`, and `delivered_at`, with a partial pending index. Delivery writes the corresponding notification and marks its work item in one transaction. It retains payload snapshots as internal operational history. See [workflow repair contracts](../../../../../../docs/venue-workflow-repair.md).
+
+
+## V42: independent multi-venue requirements and evidence
+`venue_booking_requirements` retains event linkage and withdrawal metadata. `venue_bookings.requirement_id` groups replacement chains; `requirements` JSON stores per-room overrides. Active legacy chains are backfilled; terminal-only historical chains remain unrequired. `venue_booking_history` snapshots every subsequent booking insert/update and event requirements. `event_readiness_items.arrangement_fingerprint` binds each venue attestation to current facts. Rejection notification shape requires the booking, event, reason and message. See `docs/multiple-venue-bookings.md` for API and rollout semantics.
+
+## V43: Venue Staff approval outcome
+
+`notification_type` adds `venue_booking_approved`. Its notification shape requires
+`event_id`, `venue_booking_id` and `message`. Booking approval and hold conversion
+enqueue the same outcome for the coordinator assigned when the decision commits.
+The conditional pending-to-approved update prevents duplicate outcomes; rollback
+also removes the outbox work. Previous notification shapes remain valid.

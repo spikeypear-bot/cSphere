@@ -26,6 +26,7 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 @RequestMapping("/api/safety")
 public class SafetyOfficerController {
 
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository bookings;
     private final EventRepository events;
     private final ReadinessService readiness;
     private final VenueRepository venues;
@@ -100,9 +101,19 @@ public class SafetyOfficerController {
                 .collect(java.util.stream.Collectors.toMap(Venue::getVenueId, Venue::getVenueAddress));
         return rows.stream().map(event -> new SafetyEventListItemDto(
                 event.getEventId(), event.getEventName(), event.getStartDatetime(), event.getEndDatetime(),
-                event.getVenueId() == null ? null : venueById.get(event.getVenueId()), event.getStatus().name(),
+                venueSummary(event,venueById), event.getStatus().name(),
                 statuses.forEvent(event)))
                 .toList();
+    }
+
+    private String venueSummary(Event event,java.util.Map<UUID,String> legacy) {
+        if(bookings==null) return event.getVenueId()==null?null:legacy.get(event.getVenueId());
+        var ids=bookings.findForEvent(event.getEventId()).stream()
+            .filter(b -> b.getStatus()==com.example.connect_sphere.venuebooking.entity.VenueBookingStatus.approved
+                || b.getStatus()==com.example.connect_sphere.venuebooking.entity.VenueBookingStatus.attention
+                || b.getStatus()==com.example.connect_sphere.venuebooking.entity.VenueBookingStatus.pending)
+            .map(com.example.connect_sphere.venuebooking.entity.VenueBookingRecord::getVenueId).distinct().toList();
+        return venues.findAllById(ids).stream().map(Venue::getVenueAddress).sorted().collect(java.util.stream.Collectors.joining("; "));
     }
 
     private static EventDto toDto(Event event) {

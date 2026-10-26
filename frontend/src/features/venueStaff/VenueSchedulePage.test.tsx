@@ -21,6 +21,19 @@ async function mount() {
   fireEvent.change(await screen.findByLabelText('Venue'), { target: { value: 'v1' } })
   await screen.findByRole('table')
 }
+it('VS17 (conflict): displays a timed operational issue and explains its setup-only booking conflict', async () => {
+  vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
+    ? [{ venueId: 'v1', venueAddress: 'Main Hall' }]
+    : { ...schedule, unavailablePeriods: [], operationalIssues: [{ issueId: 'i1', description: 'Loading bay closed', affectedFrom: at('09:00'), affectedUntil: at('10:00') }] })
+  await mount()
+  const table = screen.getByRole('table')
+  expect(within(table).getByRole('button', { name: /Blocking operational issue.*Loading bay closed/ })).toBeInTheDocument()
+  const setup = within(table).getByRole('button', { name: /Approved booking · Setup/ })
+  expect(setup).toHaveAttribute('data-restriction-conflict', 'true')
+  expect(within(table).getByRole('button', { name: /Approved booking · Event/ })).toHaveAttribute('data-restriction-conflict', 'false')
+  fireEvent.click(setup)
+  expect(within(screen.getByRole('dialog')).getByRole('alert')).toHaveTextContent('Blocking operational issue: Loading bay closed')
+})
 async function mountWithClock() {
   vi.useFakeTimers()
   await act(async () => { render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>) })

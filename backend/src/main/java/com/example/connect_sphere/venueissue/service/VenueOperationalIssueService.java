@@ -24,6 +24,10 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
 
 @Service
 public class VenueOperationalIssueService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.connect_sphere.venueavailability.AvailabilityRepository availability;
+    @org.springframework.beans.factory.annotation.Autowired
+    private org.springframework.context.ApplicationEventPublisher publisher;
     private static final int MAX_DESCRIPTION_LENGTH = 2000;
 
     private final VenueOperationalIssueRepository issues;
@@ -46,13 +50,23 @@ public class VenueOperationalIssueService {
             throw new VenueNotFoundException(venueId);
         }
         validate(request);
+        venues.findForUpdate(venueId).orElseThrow(() -> new VenueNotFoundException(venueId));
         VenueOperationalIssue issue = new VenueOperationalIssue(
                 venueId,
                 request.description().strip(),
                 request.affectedFrom(),
                 request.affectedUntil(),
                 userId);
-        return VenueOperationalIssueDto.from(issues.saveAndFlush(issue));
+        var saved=issues.saveAndFlush(issue);
+        if (request.affectedFrom()!=null && availability!=null && publisher!=null) {
+            var affected=availability.bookings(venueId).stream().filter(b ->
+                b.effectiveStart().isBefore(request.affectedUntil()) && b.effectiveEnd().isAfter(request.affectedFrom())).toList();
+            // Same durable lifecycle handling as recorded unavailability; preserve all commitments.
+            availability.notifyOperationalIssue(venueId,affected,request.description().strip());
+            if (!affected.isEmpty()) publisher.publishEvent(new com.example.connect_sphere.venueavailability.VenueBecameUnavailable(
+                affected.stream().map(b -> b.eventId()).distinct().toList(),userId,"A venue operational issue requires review: "+request.description().strip()));
+        }
+        return VenueOperationalIssueDto.from(saved);
     }
 
     @Transactional(readOnly = true)

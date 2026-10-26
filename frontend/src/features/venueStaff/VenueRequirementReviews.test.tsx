@@ -21,6 +21,20 @@ function view(id = 'r1', bookingId = 'b1'): VenueRequirementReviewView {
       occupiedStart: '2027-03-10T00:30:00Z', occupiedEnd: '2027-03-10T04:45:00Z' } }
 }
 function json(body: unknown, status = 200): Response { return { ok: status < 400, status, text: async () => JSON.stringify(body) } as Response }
+describe('VS17 audit review currency', () => {
+  it('VS17 (conflict): superseded pending reviews retain history and hide decision forms even when an old response says actionable', async () => {
+    const old = { ...view(), outcomeCurrent: false, canReview: true, currentCoordinatorName: 'ec2', currentCoordinatorEmail: 'ec2@example.test' }
+    const fetcher = vi.fn(async () => json([old]))
+    vi.stubGlobal('fetch', fetcher)
+    render(<VenueRequirementReviews bookingId="b1" />)
+    expect(await screen.findByRole('heading', { name: 'Main Hall — Previous review' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save review' })).not.toBeInTheDocument()
+    expect(screen.getByText(/This review has been superseded/)).toBeInTheDocument()
+    expect(screen.getByText(/Current coordinator: ec2/)).toBeInTheDocument()
+    expect(screen.getByText(/Coordinator at approval: ec1/)).toBeInTheDocument()
+    expect(fetcher.mock.calls).toHaveLength(1)
+  })
+})
 function decided(v: VenueRequirementReviewView, outcome: 'suitable' | 'action_required' = 'suitable', note: string | null = null) {
   return { ...v, canReview: false, review: { ...v.review, status: outcome, reviewerName: 'vs1', reviewedAt: '2027-03-02T01:00:00Z', reviewNote: note, reviewedChecks: v.checks } }
 }

@@ -15,8 +15,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
@@ -162,9 +160,9 @@ public class ChangeRequestService {
         List<UUID> recipients = coordinator != null ? List.of(coordinator)
                 : users.findByRole(UserRole.ecl).stream().map(User::getUserId).toList();
         String name = nameOf(origin, event);
-        afterCommit(() -> notifications.createChangeRequestNotifications(recipients,
+        notifications.createChangeRequestNotifications(recipients,
                 NotificationType.change_request_submitted, requestId, origin.getEventId(), name,
-                "Change requested: " + ChangeFields.describe(changes) + ". Reason: " + reason));
+                "Change requested: " + ChangeFields.describe(changes) + ". Reason: " + reason);
         return view(saved, organiser, origin, event);
     }
 
@@ -189,9 +187,9 @@ public class ChangeRequestService {
         UUID coordinator = coordinatorOf(origin, event);
         if (coordinator != null) {
             String name = nameOf(origin, event);
-            afterCommit(() -> notifications.createChangeRequestNotifications(List.of(coordinator),
+            notifications.createChangeRequestNotifications(List.of(coordinator),
                     NotificationType.change_request_withdrawn, origin.getRequestId(), origin.getEventId(), name,
-                    "The organiser withdrew their change request."));
+                    "The organiser withdrew their change request.");
         }
         return view(saved, organiser, origin, event);
     }
@@ -253,10 +251,10 @@ public class ChangeRequestService {
         }
 
         String name = nameOf(origin, event);
-        afterCommit(() -> notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
+        notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
                 NotificationType.change_request_decided, origin.getRequestId(), origin.getEventId(), name,
                 "Your change request was approved: " + summary
-                        + (replan ? ". The arrangements will be re-confirmed." : ".")));
+                        + (replan ? ". The arrangements will be re-confirmed." : "."));
         return view(saved, coordinator, origin, eventOf(origin));
     }
 
@@ -278,9 +276,9 @@ public class ChangeRequestService {
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
                 ActivityType.change_rejected, coordinator.userId(), fitActivityMessage("Rejected: " + reason), null, null, null));
         String name = nameOf(origin, event);
-        afterCommit(() -> notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
+        notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
                 NotificationType.change_request_decided, origin.getRequestId(), origin.getEventId(), name,
-                "Your change request was rejected: " + reason));
+                "Your change request was rejected: " + reason);
         return view(saved, coordinator, origin, event);
     }
 
@@ -496,16 +494,4 @@ public class ChangeRequestService {
         return OffsetDateTime.now(clock);
     }
 
-    private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
-    }
 }

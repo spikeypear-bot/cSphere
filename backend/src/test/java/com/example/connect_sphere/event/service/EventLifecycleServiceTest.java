@@ -64,6 +64,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("EC-NEW2")
 @Tag("ECL-C7")
 @Tag("EO07")
+@Tag("VS17")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
@@ -142,7 +143,7 @@ class EventLifecycleServiceTest {
         EventReadinessDto readiness = service.readiness(COORDINATOR, event.getEventId());
 
         assertThat(readiness.canSendForReview()).isFalse();
-        assertThat(item(readiness, "venues").detail()).isEqualTo("1 venue has become unavailable. Request a replacement.");
+        assertThat(item(readiness, "venues").detail()).isEqualTo("1 venue has an unavailable period or operational issue. Resolve the issue or request a replacement.");
     }
 
     @Test
@@ -540,8 +541,9 @@ class EventLifecycleServiceTest {
         Event event = readyEvent(status);
         event.setSafetyApprovedAt(OffsetDateTime.parse("2026-12-01T00:00:00Z"));
 
-        service.onVenueBecameUnavailable(new VenueBecameUnavailable(List.of(event.getEventId()), VS_USER,
-                "A venue for this event became unavailable: flooding"));
+        when(availability.affected(eventBookings.getFirst().getBookingId())).thenReturn(true);
+        service.returnToPlanningForVenueImpact(event.getEventId(), VS_USER,
+                "A venue for this event became unavailable: flooding");
 
         assertThat(event.getStatus()).isEqualTo(EventStatus.pending);
         assertThat(event.getSafetyApprovedAt()).isNull();

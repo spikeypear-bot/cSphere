@@ -190,6 +190,14 @@ entity events {
 	confirmed_by : uuid <<FK>>
 }
 
+entity notification_outbox {
+	* notification_id : uuid <<PK>>
+	--
+	* payload : jsonb
+	* created_at : timestamp with time zone
+	delivered_at : timestamp with time zone
+}
+
 entity notifications {
 	* notification_id : uuid <<PK>>
 	--
@@ -311,6 +319,16 @@ entity venue_operational_issues {
 	* created_at : timestamp with time zone
 }
 
+entity venue_replan_tasks {
+	* task_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* actor_id : uuid <<FK>>
+	* reason : text
+	* created_at : timestamp with time zone
+	completed_at : timestamp with time zone
+}
+
 entity venue_requirement_reviews {
 	* review_id : uuid <<PK>>
 	--
@@ -355,6 +373,9 @@ entity venue_unavailability {
 	* reason : text
 	* created_by : uuid <<FK>>
 	* created_at : timestamp with time zone
+	released_at : timestamp with time zone
+	released_by : uuid <<FK>>
+	release_reason : text
 }
 
 entity venue_unavailability_bookings {
@@ -529,6 +550,8 @@ venue_bookings }o--|| venues : venue_id
 venue_operating_hours }o--|| venues : venue_id
 venue_operational_issues }o--|| users : created_by
 venue_operational_issues }o--|| venues : venue_id
+venue_replan_tasks }o--|| users : actor_id
+venue_replan_tasks }o--|| events : event_id
 venue_requirement_reviews }o--|| users : approved_by
 venue_requirement_reviews }o--|| venue_bookings : booking_id
 venue_requirement_reviews }o--|| event_change_requests : change_request_id
@@ -539,6 +562,7 @@ venue_requirement_reviews }o--|| venues : venue_id
 venue_timing_conflicts }o--|| venue_bookings : first_booking_id
 venue_timing_conflicts }o--|| venue_bookings : second_booking_id
 venue_unavailability }o--|| users : created_by
+venue_unavailability }o--o| users : released_by
 venue_unavailability }o--|| venues : venue_id
 venue_unavailability_bookings }o--|| venue_bookings : booking_id
 venue_unavailability_bookings }o--|| venue_unavailability : unavailability_id

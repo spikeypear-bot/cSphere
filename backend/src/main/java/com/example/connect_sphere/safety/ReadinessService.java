@@ -33,6 +33,7 @@ public class ReadinessService {
             new StandardItem("equipment", "Required equipment is reserved or confirmed unavailable"),
             new StandardItem("registration", "Registration and attendance arrangements are ready"),
             new StandardItem("safety_operations", "Safety, emergency, and on-site operational arrangements are ready"));
+    @org.springframework.beans.factory.annotation.Autowired private VenueSafetyChecklist venueChecklist;
     private static final int MAX_NOTE_LENGTH = 2000;
 
     private final EventRepository events;
@@ -74,7 +75,8 @@ public class ReadinessService {
     public ReadinessDto updateItem(UUID actorId, UUID eventId, String itemKey, UpdateReadinessItemRequest input) {
         Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         requirePlanning(event);
-        StandardItem definition = STANDARD_ITEMS.stream()
+        if(venueChecklist!=null) venueChecklist.lockVenues(eventId);
+        StandardItem definition = definitions(eventId).stream()
                 .filter(item -> item.key().equals(itemKey)).findFirst()
                 .orElseThrow(() -> new InvalidReadinessUpdateException("Select a standard readiness item."));
         if (input == null || input.checked() == null) {
@@ -88,7 +90,10 @@ public class ReadinessService {
         OffsetDateTime now = OffsetDateTime.now();
         ReadinessItemState state = itemStates.findByEventIdAndItemKey(eventId, definition.key())
                 .orElseGet(() -> new ReadinessItemState(eventId, definition.key(), false, "", actorId, now));
+        if(!java.util.Objects.equals(state.getArrangementFingerprint(),fingerprint(eventId,definition.key())))
+            state.update(false,note,actorId,now);
         state.update(input.checked(), note, actorId, now);
+        state.setArrangementFingerprint(fingerprint(eventId,definition.key()));
         itemStates.save(state);
         return readiness(event);
     }
@@ -125,6 +130,7 @@ public class ReadinessService {
             throw new InvalidReadinessUpdateException("Approval notes must be 2000 characters or fewer.");
         }
         if (outcome == SafetyDecision.APPROVE) {
+            if(venueChecklist!=null) venueChecklist.lockVenues(eventId);
             List<String> outstanding = outstandingItems(eventId);
             if (!outstanding.isEmpty()) {
                 throw new IncompleteReadinessException(outstanding);
@@ -155,10 +161,10 @@ public class ReadinessService {
     private ReadinessDto readiness(Event event) {
         Map<String, ReadinessItemState> states = itemStates.findByEventId(event.getEventId()).stream()
                 .collect(Collectors.toMap(ReadinessItemState::getItemKey, Function.identity()));
-        List<ReadinessItemDto> items = STANDARD_ITEMS.stream().map(item -> {
+        List<ReadinessItemDto> items = definitions(event.getEventId()).stream().map(item -> {
             ReadinessItemState state = states.get(item.key());
             return new ReadinessItemDto(
-                    item.key(), item.label(), state != null && state.isChecked(),
+                    item.key(), item.label(), current(event.getEventId(),item.key(),state),
                     state == null ? "" : state.getNote(),
                     state == null || state.getCheckedBy() == null ? null
                             : users.findById(state.getCheckedBy()).map(User::getUsername).orElse(null),
@@ -182,10 +188,23 @@ public class ReadinessService {
     private List<String> outstandingItems(UUID eventId) {
         Map<String, ReadinessItemState> states = itemStates.findByEventId(eventId).stream()
                 .collect(Collectors.toMap(ReadinessItemState::getItemKey, Function.identity()));
-        return STANDARD_ITEMS.stream()
-                .filter(item -> !states.containsKey(item.key()) || !states.get(item.key()).isChecked())
+        return definitions(eventId).stream()
+                .filter(item -> !current(eventId,item.key(),states.get(item.key())))
                 .map(StandardItem::label)
                 .toList();
+    }
+
+    private List<StandardItem> definitions(UUID eventId) {
+        var result=new java.util.ArrayList<>(STANDARD_ITEMS);
+        if(venueChecklist!=null) venueChecklist.items(eventId).forEach(i -> result.add(new StandardItem(i.key(),i.label())));
+        return result;
+    }
+    private String fingerprint(UUID eventId,String key) {
+        if(!key.startsWith("venue_safety_") || venueChecklist==null) return null;
+        return venueChecklist.items(eventId).stream().filter(i -> i.key().equals(key)).map(VenueSafetyChecklist.Item::fingerprint).findFirst().orElse(null);
+    }
+    private boolean current(UUID eventId,String key,ReadinessItemState state) {
+        return state!=null && state.isChecked() && java.util.Objects.equals(state.getArrangementFingerprint(),fingerprint(eventId,key));
     }
 
     /** Events from Planning through the safety check to Confirmed (EC08 adds the safety stages). */

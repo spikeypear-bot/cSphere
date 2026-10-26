@@ -56,6 +56,7 @@ function AssociatedBookings({ venueId }: { venueId: string }) {
         : <ul className="associated-bookings">{bookings.data.map(booking => <li key={booking.bookingId}>
           <Card className="feature-skeleton__body">
             <h3>{booking.event.eventName}</h3>
+            <p>Event ID: {booking.event.eventId} · Booking ID: {booking.bookingId}</p>
             <p>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)} (Singapore time)</p>
             {booking.timing && <p><strong>Venue Occupied (SGT):</strong> {formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</p>}
             <p>Status: <span className="venue-card-preview__tag booking-status-tag" data-booking-status={bookingDisplayStatus(booking.status ?? 'pending', booking.holds, expired)}>{BOOKING_STATUS_LABELS[bookingDisplayStatus(booking.status ?? 'pending', booking.holds, expired)]}</span></p>

@@ -1155,10 +1155,10 @@ class EventLifecycleService {
 	{field} -clock : Clock
 	{method} +cancel ( actorId : UUID , eventId : UUID , message : String ) : Cancellation
 	{method} +confirm ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
-	{method} +onVenueBecameUnavailable ( change : VenueBecameUnavailable ) : void
 	{method} +readiness ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
 	{method} +recordSafetyDecision ( officerId : UUID , eventId : UUID , decision : SafetyDecision , feedback : String ) : void
 	{method} +returnToPlanning ( eventId : UUID , actorId : UUID , reason : String ) : boolean
+	{method} +returnToPlanningForVenueImpact ( eventId : UUID , actor : UUID , reason : String ) : void
 	{method} +sendForSafetyReview ( coordinatorId : UUID , eventId : UUID ) : EventReadinessDto
 	{method} +withdrawFromSafetyReview ( coordinatorId : UUID , eventId : UUID , reason : String ) : EventReadinessDto
 }
@@ -1548,7 +1548,21 @@ interface NotificationRepository {
 }
 
 
+class NotificationDelivery {
+	{field} -jdbc : JdbcTemplate
+	{method} +deliver ( id : UUID ) : void
+}
+
+
 class NotificationNotFoundException {
+}
+
+
+class NotificationOutbox {
+	{field} -jdbc : JdbcTemplate
+	{field} -json : ObjectMapper
+	{method} +enqueue ( n : Notification ) : void
+	{method} +retry () : void
 }
 
 
@@ -1957,9 +1971,11 @@ class VenueService {
 
 class AvailabilityController {
 	{method} +create ( venueId : UUID , jwt : Jwt , request : Request ) : Period
+	{method} +history ( venueId : UUID ) : List
 	{method} +invalidBody () : ApiError
 	{method} +list ( venueId : UUID ) : List
 	{method} +preview ( venueId : UUID , request : Request ) : Preview
+	{method} +release ( venueId : UUID , periodId : UUID , jwt : Jwt , request : Release ) : Period
 	{method} +schedule ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : ResponseEntity
 	{method} +settings ( venueId : UUID ) : Settings
 	{method} +settings ( venueId : UUID , settings : Settings ) : Settings
@@ -1993,6 +2009,8 @@ class AvailabilityModels.Period {
 	{field} -createdAt : OffsetDateTime
 	{field} -endDateTime : OffsetDateTime
 	{field} -reason : String
+	{field} -releaseReason : String
+	{field} -releasedAt : OffsetDateTime
 	{field} -startDateTime : OffsetDateTime
 	{field} -unavailabilityId : UUID
 	{field} -venueId : UUID
@@ -2001,6 +2019,11 @@ class AvailabilityModels.Period {
 
 class AvailabilityModels.Preview {
 	{field} -previewToken : String
+}
+
+
+class AvailabilityModels.Release {
+	{field} -reason : String
 }
 
 
@@ -2032,10 +2055,13 @@ class AvailabilityRepository {
 	{method} +bookings ( venueId : UUID ) : List
 	{method} +bookings ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
 	{method} +hasOperationalIssue ( venueId : UUID , period : EffectivePeriod ) : boolean
+	{method} +history ( venueId : UUID ) : List
 	{method} +insert ( id : UUID , venueId : UUID , actor : UUID , r : Request , affected : List ) : void
+	{method} +notifyOperationalIssue ( venueId : UUID , affected : List , reason : String ) : void
 	{method} +outsideOperatingHours ( venueId : UUID , period : EffectivePeriod ) : boolean
 	{method} +periods ( venueId : UUID ) : List
 	{method} +periods ( venueId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
+	{method} +release ( venueId : UUID , id : UUID , actor : UUID , reason : String ) : Period
 	{method} +settings ( venueId : UUID ) : Settings
 	{method} +settings ( venueId : UUID , s : Settings ) : void
 }
@@ -2049,11 +2075,13 @@ class AvailabilityService {
 	{method} +conflictsForBooking ( venueId : UUID , bookingId : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : List
 	{method} +create ( id : UUID , actor : UUID , r : Request ) : Period
 	{method} +hasOperationalIssue ( id : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : boolean
+	{method} +history ( id : UUID ) : List
 	{method} +list ( id : UUID ) : List
 	{method} +outsideOperatingHours ( id : UUID , start : OffsetDateTime , end : OffsetDateTime ) : boolean
 	{method} +outsideOperatingHours ( id : UUID , start : OffsetDateTime , end : OffsetDateTime , durations : Settings ) : boolean
 	{method}  {static} +overlaps ( a : OffsetDateTime , b : OffsetDateTime , c : OffsetDateTime , d : OffsetDateTime ) : boolean
 	{method} +preview ( id : UUID , r : Request ) : Preview
+	{method} +release ( venueId : UUID , periodId : UUID , actor : UUID , request : Release ) : Period
 	{method} +schedule ( id : UUID ) : Schedule
 	{method} +schedule ( id : UUID , start : OffsetDateTime , end : OffsetDateTime ) : Schedule
 	{method} +settings ( id : UUID ) : Settings
@@ -2109,6 +2137,19 @@ class VenueBecameUnavailable {
 	{field} -actorId : UUID
 	{field} -eventIds : List<UUID>
 	{field} -reason : String
+}
+
+
+class VenueReplanQueue {
+	{field} -jdbc : JdbcTemplate
+	{method} +enqueue ( change : VenueBecameUnavailable ) : void
+	{method} +retry () : void
+}
+
+
+class VenueReplanWorker {
+	{field} -jdbc : JdbcTemplate
+	{method} +process ( id : UUID ) : void
 }
 
 
@@ -2588,6 +2629,7 @@ class InvalidVenueOperationalIssueException {
 
 class VenueOperationalIssueService {
 	{field} {static} -MAX_DESCRIPTION_LENGTH : int
+	{field} -publisher : ApplicationEventPublisher
 	{method} +create ( venueId : UUID , userId : UUID , request : CreateVenueOperationalIssueRequest ) : VenueOperationalIssueDto
 	{method} +list ( venueId : UUID ) : List
 	{method} +listForCoordinator ( coordinatorId : UUID ) : List
@@ -2791,7 +2833,9 @@ EventRequestService --> NotificationService : notificationService
 EventRequestService --> UserRepository : userRepository
 NotificationController --> NotificationService : service
 Notification --> NotificationType : type
+NotificationOutbox --> NotificationDelivery : delivery
 NotificationService --> NotificationRepository : repository
+NotificationService --> NotificationOutbox : outbox
 EventReadinessController --> ReadinessService : readiness
 ReadinessDto --> "0..*" ReadinessItemDto : items
 ReadinessService --> "0..*" EventStatus : VISIBLE
@@ -2858,6 +2902,8 @@ TimingConflictService --> VenueRepository : venues
 TimingConflictService --> AvailabilityRepository : availability
 TimingConflictService.Overlap --> AvailabilityModels.Booking : first
 TimingConflictService.Overlap --> AvailabilityModels.Booking : second
+VenueReplanQueue --> VenueReplanWorker : worker
+VenueReplanWorker --> EventLifecycleService : lifecycle
 EventVenueBookingController --> VenueBookingRequestService : service
 VenueBookingController --> VenueBookingService : service
 BookingTimingDto --> "0..*" VenueBookingConflictDto : conflicts
@@ -2929,6 +2975,7 @@ CoordinatorVenueOperationalIssueDto --> "0..*" CoordinatorVenueOperationalIssueD
 VenueOperationalIssueService --> VenueRepository : venues
 VenueOperationalIssueService --> VenueBookingRecordRepository : bookings
 VenueOperationalIssueService --> VenueOperationalIssueRepository : issues
+VenueOperationalIssueService --> AvailabilityRepository : availability
 
 
 @enduml

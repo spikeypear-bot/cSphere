@@ -1,5 +1,5 @@
 import { Card } from '../../components/ui/Card'
-import { venueAccessibilityLabels } from '../../types/venue'
+import { venueAccessibilityLabels, venueFacilityLabels, type Facility } from '../../types/venue'
 import type { AccessibilityFeature } from '../../types/eventRequest'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { BOOKING_STATUS_LABELS, type VenueBookingDisplayStatus } from '../../types/venueBookingStatus'
@@ -7,14 +7,15 @@ import { BookingTimingConflicts } from '../../components/BookingTimingSummary'
 
 import { formatEventDateTime } from './formatEventDateTime'
 
-export function EventRequirementsPanel({ event, timing, status, highlightStart, highlightEnd }: {
+export function EventRequirementsPanel({ event, timing, status, highlightStart, highlightEnd, requirements }: {
+  requirements?: VenueBookingDto['requirements']
   event: VenueBookingDto['event']
   timing?: VenueBookingDto['timing']
   status: VenueBookingDisplayStatus
   highlightStart?: boolean
   highlightEnd?: boolean
 }) {
-  const accessibility = event.accessibilityNeeds.map(value => value === 'none' ? 'No accessibility requirements'
+  const accessibility = (requirements?.accessibilityNeeds ?? event.accessibilityNeeds).map(value => value === 'none' ? 'No accessibility requirements'
     : venueAccessibilityLabels[value as AccessibilityFeature] ?? value).join(', ')
   return <Card className="feature-skeleton__body event-requirements-panel">
     <div className="event-requirements-panel__header">
@@ -30,9 +31,10 @@ export function EventRequirementsPanel({ event, timing, status, highlightStart, 
         : formatEventDateTime(timing?.startDatetime ?? event.startDatetime)} – {highlightEnd
         ? <strong className="booking-time-conflict">{formatEventDateTime(timing?.endDatetime ?? event.endDatetime)} (overlap)</strong>
         : formatEventDateTime(timing?.endDatetime ?? event.endDatetime)}</dd></div>
-      <div><dt>Expected Attendance</dt><dd>{event.expectedAttendance.toLocaleString()} people</dd></div>
-      <div><dt>Venue Requirements</dt><dd>{event.venueRequirements?.trim() || 'Not specified'}</dd></div>
+      <div><dt>Expected Attendance</dt><dd>{(requirements?.expectedAttendance ?? event.expectedAttendance).toLocaleString()} people</dd></div>
+      <div><dt>Venue Requirements</dt><dd>{(requirements?.venueRequirements ?? event.venueRequirements)?.trim() || 'Not specified'}</dd></div>
       <div><dt>Accessibility Requirements</dt><dd>{accessibility || 'Not specified'}</dd></div>
+      {requirements?.requiredFacilities && <div><dt>Required Facilities for This Room</dt><dd>{requirements.requiredFacilities.map(f => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None specified'}</dd></div>}
       <div><dt>Equipment Requirements</dt><dd>{event.equipmentRequirements?.trim() || 'Not specified'}</dd></div>
     </dl>
     <BookingTimingConflicts timing={timing} bookingLinks />

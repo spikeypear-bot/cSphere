@@ -10,6 +10,8 @@ export type NotificationTypeName =
   | 'venue_requirement_reviewed'
   | 'venue_requirement_changed'
   | 'venue_booking_requested'
+  | 'venue_booking_rejected'
+  | 'venue_booking_approved'
   | 'venue_booking_cancelled'
   | 'venue_unavailable'
   | 'event_confirmed'

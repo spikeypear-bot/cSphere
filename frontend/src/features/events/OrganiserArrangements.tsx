@@ -112,9 +112,10 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
           {data.venues.map((venue) => {
             const missing = needs.filter((n) => !venue.accessibilities.includes(n))
             return (
-              <li key={venue.venueId} className="arrangements__venue" data-unavailable={venue.noLongerAvailable || undefined}>
+              <li key={venue.bookingId ?? venue.venueId} className="arrangements__venue" data-unavailable={venue.noLongerAvailable || undefined}>
                 <div className="arrangements__venue-title">
                   <strong>{venue.name}</strong>
+                  {venue.startDatetime && venue.endDatetime && <span>{formatDate(venue.startDatetime)} to {formatDate(venue.endDatetime)}</span>}
                   {venue.requiresAttention && <span className="journey-badge journey-badge--danger journey-badge--small">Requires attention</span>}
                   {venue.noLongerAvailable ? <span className="journey-badge journey-badge--danger journey-badge--small">No longer available</span> : null}
                 </div>

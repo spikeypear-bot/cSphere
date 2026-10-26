@@ -47,6 +47,8 @@ function describe(n: NotificationDto): string {
   if (n.type === 'event_safety_approved') return `"${n.eventName}" passed its safety check and is ready to confirm`
   if (n.type === 'clarification_requested') return `Clarification needed on "${n.eventName}"`
   if (n.type === 'clarification_responded') return `"${n.eventName}" was updated and resubmitted`
+  if (n.type === 'venue_booking_rejected') return n.message ?? `Venue booking for "${n.eventName}" was rejected`
+  if (n.type === 'venue_booking_approved') return n.message ?? `Venue booking for "${n.eventName}" was approved`
   if (n.type === 'venue_booking_requested') return `New venue booking request for "${n.eventName}"`
   if (n.type === 'venue_booking_cancelled') return `Venue booking request for "${n.eventName}" was cancelled`
   if (n.type === 'coordinator_assignment') {

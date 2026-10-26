@@ -35,6 +35,19 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); window.l
 const activeHold = { holdId: 'h1', bookingId: 'b2', status: 'active', serverTime: '2027-03-01T00:00:00Z',
   expiresAt: '2027-03-01T01:00:00Z', reservedStart: booking.event.startDatetime, reservedEnd: booking.event.endDatetime }
 
+it('VS17 (happy): queue identifies the event and booking, current coordinator and effective room requirements', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => response([{ ...booking, currentCoordinatorName: 'ec2', currentCoordinatorEmail: 'ec2@example.test',
+    effectiveRequirements: { expectedAttendance: 75, venueRequirements: 'Breakout', requiredFacilities: [], accessibilityNeeds: [] } }])))
+  page()
+  const pending = await screen.findByRole('region', { name: 'Pending booking requests' })
+  expect(within(pending).getByText('e1')).toBeInTheDocument()
+  expect(within(pending).getByText('b1')).toBeInTheDocument()
+  expect(within(pending).getByText('ec2 (ec2@example.test)')).toBeInTheDocument()
+  expect(within(pending).getByText('75 people')).toBeInTheDocument()
+  expect(within(pending).getByText('Breakout')).toBeInTheDocument()
+  expect(within(pending).getAllByText('None specified')).toHaveLength(2)
+})
+
 it('separates tentative holds from pending requests and filters the two queues with counts', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => response([booking, { ...booking, bookingId: 'b2', holds: [activeHold],
     event: { ...booking.event, eventName: 'Held workshop' } }])))
@@ -236,4 +249,21 @@ it('approves from the queue and removes the booking when returning', async () =>
   expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   await user.click(screen.getByRole('link', { name: 'Back to Booking Approvals' }))
   expect(await screen.findByText('No pending booking requests found.')).toBeInTheDocument()
+})
+
+
+it.each([
+  [undefined, '120 people', 'Classroom seating'],
+  [{ expectedAttendance: 25, venueRequirements: 'Breakout seating' }, '25 people', 'Breakout seating'],
+  [{ expectedAttendance: 25, venueRequirements: '' }, '25 people', 'Not specified'],
+])('VS02 (boundary): queue and details show the same effective requirements (%j)', async (effectiveRequirements, attendance, requirements) => {
+  const current = {...booking, effectiveRequirements}
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/booking-requests') || url.endsWith('/bookings') ? [current] : current)))
+  page()
+  expect(await screen.findByText(attendance)).toBeInTheDocument()
+  expect(screen.getByText(requirements)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('link', {name: 'View booking details'}))
+  const detail = await screen.findByRole('region', {name: 'Event Requirements'})
+  expect(within(detail).getByText(attendance)).toBeInTheDocument()
+  expect(within(detail).getByText('Venue Requirements').nextElementSibling).toHaveTextContent(requirements)
 })

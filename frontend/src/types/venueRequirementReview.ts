@@ -17,6 +17,8 @@ export interface VenueRequirementReviewView {
     occupiedStart: string; occupiedEnd: string
   }
   outcomeCurrent?: boolean
+  currentCoordinatorName?: string | null
+  currentCoordinatorEmail?: string | null
   bookingStatus?: string
   canReview: boolean
 }

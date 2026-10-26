@@ -42,11 +42,20 @@ public class AvailabilityService {
         if (!venues.existsById(id)) throw new VenueNotFoundException(id);
     }
     public List<Period> list(UUID id) { requireVenue(id); return repository.periods(id); }
+    public List<Period> history(UUID id) { requireVenue(id); return repository.history(id); }
+    @Transactional
+    public Period release(UUID venueId, UUID periodId, UUID actor, Release request) {
+        venues.findForUpdate(venueId).orElseThrow(() -> new VenueNotFoundException(venueId));
+        if (request==null || request.reason()==null || request.reason().isBlank() || request.reason().strip().length()>2000)
+            throw new InvalidVenueBookingException("Explain the release in 1 to 2000 characters.");
+        // Only availability changes. Booking status, reservations and impact history remain intact.
+        return repository.release(venueId,periodId,actor,request.reason().strip());
+    }
     public Schedule schedule(UUID id) {
         requireVenue(id);
         var bookings = repository.bookings(id);
         return new Schedule(repository.settings(id), bookings, repository.periods(id), scheduleHolds(id, null, null),
-                TimingConflictService.overlaps(bookings));
+                TimingConflictService.overlaps(bookings), repository.operationalIssues(id,null,null));
     }
     public Schedule schedule(UUID id, OffsetDateTime start, OffsetDateTime end) {
         if (start == null && end == null) return schedule(id);
@@ -55,7 +64,7 @@ public class AvailabilityService {
             throw new InvalidVenueBookingException("Provide both start and end, with a positive schedule range of at most 93 days.");
         requireVenue(id);
         return new Schedule(repository.settings(id), repository.bookings(id, start, end), repository.periods(id, start, end), scheduleHolds(id, start, end),
-                TimingConflictService.overlaps(repository.bookings(id)));
+                TimingConflictService.overlaps(repository.bookings(id)), repository.operationalIssues(id,start,end));
     }
     public Settings settings(UUID id) { requireVenue(id); return repository.settings(id); }
 

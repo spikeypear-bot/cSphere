@@ -1,4 +1,4 @@
-// @stories VS17 EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 EC03 EC-C2 EC10 EC08  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within, waitFor, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -55,7 +55,7 @@ it('submits one linked replacement for a rejected booking while preserving other
   })
 })
 
-it('does not offer the original or another active event venue as a replacement', async () => {
+it('EC10 (happy): offers same-venue rescheduling while preserving another active event venue', async () => {
   seedSession('coordinator')
   const source = {
     bookingId: 'old-booking', status: 'rejected', venueId: 'v1', venueAddress: '1 Harbour Road',
@@ -73,7 +73,7 @@ it('does not offer the original or another active event venue as a replacement',
   renderPage(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=old-booking`)
 
   expect(await screen.findByRole('heading', { name: 'Find a replacement venue' })).toBeInTheDocument()
-  expect(screen.queryByRole('button', { name: /1 Harbour Road/ })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: /1 Harbour Road/ })).toBeInTheDocument()
   expect(screen.queryByRole('button', { name: /2 Garden Lane/ })).not.toBeInTheDocument()
   expect(screen.getByRole('button', { name: /5 Marina Place/ })).toBeInTheDocument()
 })
@@ -446,5 +446,21 @@ describe('VenueBookingRequestPage (EC03)', () => {
 
     expect(await screen.findByRole('heading', { name: "This event isn't assigned to you" })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Go to My events' })).toHaveAttribute('href', '/coordinator/my-events')
+  })
+})
+
+
+describe('VS17 EC-C2 EC08 independent room requirements', () => {
+  it('EC08 (happy): explicitly withdraws a rejected requirement with its reason', async () => {
+    seedSession('coordinator')
+    const booking = { bookingId: 'rejected-room', status: 'rejected', venueId: 'v1', venueAddress: '1 Harbour Road', requirementOutstanding: true }
+    const calls = stubApi({ ...routes([booking]),
+      [`POST /api/events/${EVENT}/venue-bookings/rejected-room/withdraw-requirement`]: () => jsonResponse(200, {...booking, requirementOutstanding: false}) })
+    renderPage()
+    await screen.findByText('This venue requirement still blocks event readiness.')
+    await userEvent.type(screen.getByLabelText('Reason this venue is no longer required'), 'Breakout removed')
+    await userEvent.click(screen.getByRole('button', { name: 'Withdraw venue requirement' }))
+    await waitFor(() => expect(screen.queryByText('This venue requirement still blocks event readiness.')).not.toBeInTheDocument())
+    expect(calls.find(c => c.method === 'POST')?.body).toEqual({reason: 'Breakout removed'})
   })
 })

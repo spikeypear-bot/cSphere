@@ -35,7 +35,6 @@ export function SafetyEventDetailsPage() {
   const eventState = useSafetyData<EventDto>(eventId ? `/safety/events/${eventId}` : null)
   const readinessState = useSafetyData<ReadinessDto>(eventId ? `/safety/events/${eventId}/readiness` : null)
   const event = eventState.data
-  const venueState = useSafetyData<VenueDto>(event?.venueId ? `/venues/${event.venueId}` : null)
   const bookingState = useSafetyData<EventVenueBookingDto[]>(event ? `/events/${event.eventId}/venue-bookings` : null)
   const equipmentState = useSafetyData<EquipmentRequest[]>(event ? `/events/${event.eventId}/equipment-requests` : null)
   const reservationsState = useSafetyData<EquipmentReservation[]>(
@@ -112,23 +111,12 @@ export function SafetyEventDetailsPage() {
       </Card>
 
       <Card className="safety-panel">
-        <h2>Venue</h2>
-        {!event.venueId ? <p>Venue not yet finalised.</p> : null}
-        {venueState.error ? <p role="alert">Could not load venue details. {venueState.error}</p> : null}
-        {venueState.loading && !venueState.data ? <p role="status">Loading venue details…</p> : null}
-        {venueState.data ? (
-          <dl className="safety-details-grid">
-            <div><dt>Venue</dt><dd>{venueState.data.venueAddress}</dd></div>
-            <div><dt>Capacity</dt><dd>{venueState.data.venueCapacity?.toLocaleString() ?? 'Not finalised'}</dd></div>
-            <div><dt>Facilities</dt><dd>{venueState.data.venueFacilities.length ? venueState.data.venueFacilities.join(', ') : 'None listed'}</dd></div>
-            <div><dt>Accessibility</dt><dd>{venueState.data.venueAccessibilities.length ? venueState.data.venueAccessibilities.join(', ') : 'None listed'}</dd></div>
-          </dl>
-        ) : null}
-        <p>Booking status: {bookingState.error ? `Could not load booking details. ${bookingState.error}` :
-          bookingState.loading ? 'Loading…' : bookingState.data?.length
-            ? bookingState.data.map((booking) => `${booking.venueAddress ?? 'Venue'} — ${booking.status}`).join('; ')
-            : 'No venue booking has been submitted.'}</p>
-          {bookingState.data?.map(booking => <BookingTimingSummary key={booking.bookingId} timing={booking.timing} />)}
+        <h2>Venues</h2>
+        {bookingState.error && <p role="alert">Could not load booking details. {bookingState.error}</p>}
+        {bookingState.loading && <p role="status">Loading booking details…</p>}
+        {bookingState.data?.filter(b => ['pending', 'approved', 'attention'].includes(b.status)).map(booking =>
+          <VenueArrangement key={booking.bookingId} booking={booking} event={event} />)}
+        {bookingState.data?.length === 0 && <p>No venue booking has been submitted.</p>}
       </Card>
 
       <Card className="safety-panel">
@@ -209,4 +197,24 @@ export function SafetyEventDetailsPage() {
       <Link to="/safety-officer" className="button button--secondary">Back to events</Link>
     </div>
   )
+}
+
+function VenueArrangement({ booking, event }: { booking: EventVenueBookingDto; event: EventDto }) {
+  const venueState = useSafetyData<VenueDto>(`/venues/${booking.venueId}`)
+  const requirements = booking.requirements
+  return <section className="safety-resource">
+    <h3><span>{booking.venueAddress ?? 'Venue'}</span> — {booking.status}</h3>
+    {venueState.error && <p role="alert">Could not load venue details. {venueState.error}</p>}
+    <dl className="safety-details-grid">
+      <div><dt>Capacity</dt><dd>{booking.venueCapacity ?? 'Not finalised'}</dd></div>
+      <div><dt>Expected attendance in this room</dt><dd>{requirements?.expectedAttendance ?? event.expectedAttendance}</dd></div>
+      <div><dt>Required facilities</dt><dd>{(requirements?.requiredFacilities ?? event.requiredFacilities ?? []).join(', ') || 'None specified'}</dd></div>
+      <div><dt>Accessibility needs</dt><dd>{(requirements?.accessibilityNeeds ?? event.accessibilityNeeds).join(', ') || 'None specified'}</dd></div>
+      <div><dt>Venue requirements</dt><dd>{requirements?.venueRequirements ?? event.venueRequirements}</dd></div>
+      <div><dt>Available facilities</dt><dd>{venueState.data?.venueFacilities.join(', ') || 'None listed'}</dd></div>
+      <div><dt>Available accessibility</dt><dd>{venueState.data?.venueAccessibilities.join(', ') || 'None listed'}</dd></div>
+    </dl>
+    <BookingTimingSummary timing={booking.timing} />
+    {booking.requiresAlternative && <p role="alert">This booking needs an alternative venue arrangement.</p>}
+  </section>
 }

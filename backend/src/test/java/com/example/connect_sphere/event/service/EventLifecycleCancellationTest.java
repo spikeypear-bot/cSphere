@@ -60,6 +60,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  */
 @Tag("unit")
 @Tag("EO07")
+@Tag("VS17")
 class EventLifecycleCancellationTest {
 
     @Mock private EventRepository events;
@@ -71,6 +72,7 @@ class EventLifecycleCancellationTest {
     @Mock private NotificationService notifications;
     @Mock private UserRepository users;
     @Mock private VenueHoldService holds;
+    @Mock private com.example.connect_sphere.venue.repository.VenueRepository cancellationVenues;
 
     private EventLifecycleService service;
 
@@ -90,6 +92,8 @@ class EventLifecycleCancellationTest {
         Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
         service = new EventLifecycleService(events, bookings, equipment, eventRequests, availability, activity,
                 notifications, users, new JourneyStatusResolver(events, clock), clock, holds);
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"cancellationVenues",cancellationVenues);
+        when(cancellationVenues.findForUpdate(any())).thenReturn(Optional.of(new com.example.connect_sphere.venue.entity.Venue()));
         when(events.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(bookings.findForEvent(any())).thenReturn(eventBookings);
@@ -125,6 +129,7 @@ class EventLifecycleCancellationTest {
         VenueBookingRecord booking = new VenueBookingRecord();
         booking.setBookingId(UUID.randomUUID());
         booking.setEventId(event.getEventId());
+        booking.setVenueId(UUID.randomUUID());
         booking.setStatus(status);
         eventBookings.add(booking);
         return booking;

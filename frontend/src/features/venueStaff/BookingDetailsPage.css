@@ -1,4 +1,34 @@
 .booking-details-page { max-width: none; overflow-anchor: none; }
+.booking-context-section { min-width: 0; }
+.booking-context-section > h2 {
+  margin: 0 0 .75rem;
+  font-family: var(--sans);
+  font-size: var(--section-heading-size);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+.booking-context-card { min-width: 0; overflow-wrap: anywhere; }
+.booking-context-card .booking-identity-fields,
+.booking-context-card .booking-related-card__timings {
+  margin: 0;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem 1.5rem;
+}
+.booking-identity-fields__event { grid-column: 1 / -1; }
+.booking-context-card .booking-context-card__id { font-size: .8rem; color: var(--ink-faint); }
+.booking-related-list { display: grid; gap: 1rem; list-style: none; padding: 0; margin: 0; }
+.booking-related-list > li { min-width: 0; }
+.booking-related-card__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .5rem 1rem; }
+.booking-related-card__header h3 { min-width: 0; flex: 1 1 12rem; margin: 0; font-size: 1rem; font-weight: 600; white-space: pre-line; }
+.booking-related-card__header .booking-status-tag { flex-shrink: 0; }
+.booking-context-card .booking-related-card__id { margin: .5rem 0 1.25rem; }
+.booking-context-section__empty { margin: 0; color: var(--ink-soft); font-size: .9rem; }
+@media (max-width: 640px) {
+  .booking-context-card .booking-identity-fields,
+  .booking-context-card .booking-related-card__timings { grid-template-columns: minmax(0, 1fr); }
+}
 .booking-detail-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
 .booking-detail-layout > * { min-width: 0; min-height: 0; overflow-wrap: anywhere; }
 .booking-details-page .event-requirements-panel h3 { margin: 0.75rem 0 0; }

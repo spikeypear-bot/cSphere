@@ -684,3 +684,14 @@ legacy prose is compatibility data only, including plain mapper/service fallback
 construction. Existing valid fixture venues now declare explicit opening days.
 See venue-staff-presentation-audit.md and venue-operating-hours.md for the verified
 workflow map, test coverage and final unfiltered regression results.
+
+
+## Venue workflow audit corrections — 25 October 2026
+
+User instruction: carry out the audit fixes. The user subsequently chose shared staff access and cross-role protection, superseding the proposed individual-ownership extension. Unavailable-period release and durable lifecycle/notification recovery are authorised. Final events are excluded consistently from occupancy; all replacement sources require a different venue, reconciling conflicting earlier approval/replacement tests with the recorded workflow. Existing accessibility justification, strict tentative holds, saved duration snapshots and explicit reassessment are retained. See [repair specification](venue-workflow-repair.md). No live backlog edits were possible; the team must synchronise scope and execution evidence.
+
+
+## Multi-venue requirements and replacement policy — 26 October 2026
+The user explicitly chose: rejected required venues block readiness until replacement approval or explicit withdrawal; healthy approved arrangements may be replaced or rescheduled at the same venue while retaining the original reservation until approval. This supersedes the different-venue restriction in the 25 October repair decision. Preserve shared VS access, independent reservations, live unavailability impact flags and historical records. See [implementation contract](multiple-venue-bookings.md).
+
+D20 additions: the assigned EC may read booking history and withdraw rejected/cancelled requirements under `/api/events/{eventId}/venue-bookings/{bookingId}`; staff history `/api/venue-bookings/{bookingId}/history` is VS-only. Assignment and booking/event membership are enforced in the service.

@@ -4,6 +4,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { apiClient } from '../../lib/apiClient'
 import { Button } from '../../components/ui/Button'
+import { Card } from '../../components/ui/Card'
 import type { VenueBookingDto, VenueBookingConflict, VenueUnavailabilityConflict } from '../../types/venueBooking'
 import { bookingConflictHighlights } from './bookingConflictHighlights'
 import { VenueDetailsPanel } from './VenueDetailsPanel'
@@ -14,7 +15,8 @@ import { BookingApproval, BookingInformationHeading } from './BookingApproval'
 import { VenueHoldPanel } from './VenueHoldPanel'
 import { BookingTimingEditor } from './BookingTimingEditor'
 import { BookingDecisionPanel } from './BookingDecisionPanel'
-import { bookingDisplayStatus } from '../../types/venueBookingStatus'
+import { formatEventTimeRange } from './formatEventDateTime'
+import { BOOKING_STATUS_LABELS, bookingDisplayStatus } from '../../types/venueBookingStatus'
 import { NO_HOLDS, useHoldDeadline } from './useHoldDeadline'
 
 /** Shared booking details for Catalogue and the VS02 pending queue. */
@@ -74,6 +76,35 @@ export function BookingDetailsPage() {
             const current = await apiClient.get<VenueBookingDto>(`/venue-bookings/${data.bookingId}`, { cache: 'no-store' })
             replaceData(current)
           }} />}
+        <section aria-label="Booking identity" className="booking-context-section">
+          <h2>Booking identity</h2>
+          <Card className="feature-skeleton__body booking-context-card">
+            <dl className="venue-card-preview__information booking-identity-fields">
+              <div className="booking-identity-fields__event"><dt>Event:</dt>{' '}<dd>{data.event.eventName}</dd></div>
+              <div><dt>Event ID:</dt>{' '}<dd className="booking-context-card__id">{data.event.eventId}</dd></div>
+              <div><dt>Booking ID:</dt>{' '}<dd className="booking-context-card__id">{data.bookingId}</dd></div>
+              <div><dt>Current coordinator:</dt><dd>{data.currentCoordinatorName ?? 'Unassigned'}{data.currentCoordinatorEmail ? ` (${data.currentCoordinatorEmail})` : ''}</dd></div>
+            </dl>
+          </Card>
+        </section>
+        <section aria-label="Other bookings for this event" className="booking-context-section">
+          <h2>Other bookings for this event</h2>
+          {!data.relatedBookings?.length ? <p className="booking-context-section__empty">No other bookings for this event.</p> : <ul className="booking-related-list">
+            {data.relatedBookings.map(related => <li key={related.bookingId}>
+              <Card className="feature-skeleton__body booking-context-card">
+                <div className="booking-related-card__header">
+                  <h3>{related.venueAddress}</h3>
+                  <span className="venue-card-preview__tag booking-status-tag" data-booking-status={related.status}>{BOOKING_STATUS_LABELS[related.status]}</span>
+                </div>
+                <p className="venue-card-preview__id booking-related-card__id">Booking ID: {related.bookingId}</p>
+                <dl className="venue-card-preview__information booking-related-card__timings">
+                  <div><dt>Booking window (SGT)</dt><dd>{formatEventTimeRange(related.startDatetime, related.endDatetime)}</dd></div>
+                  <div><dt>Venue occupied (SGT)</dt><dd>{formatEventTimeRange(related.effectiveStart, related.effectiveEnd)}</dd></div>
+                </dl>
+              </Card>
+            </li>)}
+          </ul>}
+        </section>
         <BookingAssessment bookingId={data.bookingId} onChanged={retry} />
         <VenueRequirementReviews key={`reviews:${data.bookingId}`} bookingId={data.bookingId} />
         {!loading && !error && data.bookingId === bookingId
@@ -89,7 +120,7 @@ export function BookingDetailsPage() {
           <div className="booking-requirements-column" aria-busy={loading}>
             {loading && <span className="booking-loading-notice" role="status">Loading next booking…</span>}
             <section aria-labelledby="event-requirements-heading">
-              <EventRequirementsPanel event={data.event} timing={data.timing} status={bookingDisplayStatus(data.status, data.holds, expiredHolds)}
+              <EventRequirementsPanel requirements={data.effectiveRequirements ?? data.requirements} event={data.event} timing={data.timing} status={bookingDisplayStatus(data.status, data.holds, expiredHolds)}
                 highlightStart={highlights.some(h => h.requestStart)} highlightEnd={highlights.some(h => h.requestEnd)} />
             </section>
             {(data.bookingNotes || data.suitabilityNote) && <CoordinatorNotes booking={data} />}

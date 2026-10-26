@@ -7,6 +7,7 @@
 .venue-calendar__status-row > .button { justify-self: end; }
 .venue-calendar__legend { display: flex; flex-wrap: wrap; gap: .5rem; list-style: none; padding: 0; margin: 0; }
 .venue-calendar [data-kind="unavailable"] { --entry-color: #9d354b; --entry-bg: #fdeef1; }
+.venue-calendar [data-kind="issue"] { --entry-color: #9d354b; --entry-bg: #fdeef1; }
 .venue-calendar__legend > li { border-left: 4px solid var(--entry-color); background: var(--entry-bg); color: var(--entry-color); padding: .4rem .7rem; white-space: nowrap; }
 .venue-calendar__scroll { overflow-x: auto; margin-top: 0; }
 .venue-calendar__grid { width: 100%; min-width: 850px; border-collapse: collapse; table-layout: fixed; }
@@ -20,6 +21,7 @@
 .venue-calendar__entry { display: grid; gap: .25rem; width: 100%; text-align: left; border: 0; border-left: 3px solid var(--entry-color); border-radius: 3px; background: var(--entry-bg); color: var(--entry-color); padding: .5rem; cursor: pointer; font: inherit; font-size: .75rem; overflow-wrap: anywhere; }
 .venue-calendar__entry strong { font-size: .85rem; }
 .venue-calendar__entry[data-conflict="true"] { box-shadow: inset 0 0 0 2px #b36b00; }
+.venue-calendar__entry[data-restriction-conflict="true"] { box-shadow: inset 0 0 0 2px #b36b00; }
 .venue-calendar__legend .venue-calendar__conflict-legend { display: inline-flex; align-items: center; gap: .5rem; border: 2px solid #b36b00; color: var(--ink); background: var(--surface); }
 .venue-calendar__entry:hover { filter: brightness(.95); }
 .venue-calendar__entry:focus-visible { outline: 3px solid #245d99; outline-offset: 2px; }

@@ -293,8 +293,8 @@ class VenueControllerTest {
         entityManager.createNativeQuery("""
                 INSERT INTO events (event_id,event_name,purpose,start_datetime,end_datetime,
                     expected_attendance,venue_requirements,status)
-                VALUES (:id,'VS07 booking isolation test','Test',CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP + interval '1 hour',50,'Test','confirmed')
+                VALUES (:id,'VS07 booking isolation test','Test','2031-04-01T10:00:00+08:00',
+                    '2031-04-01T11:00:00+08:00',50,'Test','confirmed')
                 """).setParameter("id", eventId).executeUpdate();
         for (String bookingStatus : java.util.List.of("pending", "approved", "changed", "rejected", "cancelled")) {
             for (UUID bookedVenue : java.util.List.of(venueId, otherVenueId)) {
@@ -308,7 +308,7 @@ class VenueControllerTest {
                         .executeUpdate();
             }
         }
-        // This legacy fixture has no structured opening hours. Its approved booking
+        // The fixed Tuesday window is outside this fixture's Monday hours. Its approved booking
         // becomes attention; every other field and every other booking must survive.
         entityManager.flush();
         Object expected = entityManager.createNativeQuery("""

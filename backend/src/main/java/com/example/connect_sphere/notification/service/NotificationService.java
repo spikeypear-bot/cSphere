@@ -15,29 +15,12 @@ import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
 
-/**
- * Backs EO09 (status-change) and EO19 (coordinator-assignment) notifications.
- *
- * The two {@code create*} methods run in their own transaction ({@code
- * REQUIRES_NEW}) and never throw past their own boundary — every failure is
- * caught and logged instead. This is what EO09/EO19's "does not prevent a
- * valid decision from being saved solely because an external
- * notification-delivery attempt fails" actually means in a single-database
- * system with no external channel wired up yet (see decision-log.md): the
- * one way a notification "attempt" can fail here is the insert itself
- * (storage full, DB blip), and that must never take the calling service's
- * own status-change commit down with it. Callers (EventRequestService,
- * EventService) call these *after* saving the status change, not before, and
- * treat them as fire-and-forget.
- *
- * {@code REQUIRES_NEW} only works because callers invoke this class as a
- * separate injected Spring bean — {@code @Transactional} is proxy-based and
- * does nothing on a call a bean makes to itself, so don't "simplify" this by
- * inlining these methods into EventRequestService/EventService or by calling
- * one of them from the other.
- */
+/** Database notices join the triggering transaction through a durable outbox.
+ * Delivery retries after commit; transactional requirement and hold notices remain atomic. */
 @Service
 public class NotificationService {
+    @org.springframework.beans.factory.annotation.Autowired
+    private NotificationOutbox outbox;
 
     private static final Logger log = LoggerFactory.getLogger(NotificationService.class);
 
@@ -49,7 +32,7 @@ public class NotificationService {
 
     /** EO09. {@code recipientUserId} is always the request/event's creator —
      * callers resolve that, this method just records it. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createStatusChangeNotification(
             UUID recipientUserId, UUID eventRequestId, UUID eventId,
             String eventName, String newStatus, String reason) {
@@ -69,7 +52,7 @@ public class NotificationService {
     /** EO19. {@code isReassignment} distinguishes an initial assignment from
      * a reassignment per the story's own AC — callers compute it by checking
      * whether a coordinator was already assigned before this call. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createCoordinatorAssignmentNotification(
             UUID recipientUserId, UUID eventRequestId, UUID eventId, String eventName,
             String coordinatorName, String coordinatorEmail, boolean isReassignment) {
@@ -89,7 +72,7 @@ public class NotificationService {
 
     /** EC01: tell every Event Organiser of the owning organisation that
      * clarification is needed, with the coordinator's message. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createClarificationRequestedNotifications(
             List<UUID> recipientUserIds, UUID eventRequestId, String eventName, String message) {
         for (UUID recipient : recipientUserIds) {
@@ -101,7 +84,7 @@ public class NotificationService {
     }
 
     /** EO26: tell the assigned Event Coordinator the organiser has answered. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createClarificationRespondedNotification(
             UUID coordinatorUserId, UUID eventRequestId, String eventName, String response) {
         Notification notification = base(coordinatorUserId, NotificationType.clarification_responded, eventName);
@@ -111,7 +94,7 @@ public class NotificationService {
     }
 
     /** EC03: tell Venue Staff a booking request is waiting for their review. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createVenueBookingRequestedNotifications(
             List<UUID> recipientUserIds, UUID bookingId, UUID eventId, String eventName) {
         for (UUID recipient : recipientUserIds) {
@@ -122,8 +105,28 @@ public class NotificationService {
         }
     }
 
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createVenueBookingRejectedNotification(UUID coordinator, UUID bookingId, UUID eventId,
+            String eventName, String venue, String reason) {
+        if(coordinator==null) return;
+        Notification notification=base(coordinator,NotificationType.venue_booking_rejected,eventName);
+        notification.setEventId(eventId); notification.setVenueBookingId(bookingId);
+        notification.setReason(reason); notification.setMessage("Booking at " + venue + " was rejected: " + reason);
+        saveBestEffort(notification);
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createVenueBookingApprovedNotification(UUID coordinator, UUID bookingId, UUID eventId,
+            String eventName, String venue) {
+        if (coordinator==null) return;
+        Notification notification=base(coordinator,NotificationType.venue_booking_approved,eventName);
+        notification.setEventId(eventId); notification.setVenueBookingId(bookingId);
+        notification.setMessage("Booking " + bookingId + " for event " + eventId + " at " + venue + " was approved.");
+        saveBestEffort(notification);
+    }
+
     /** EC03: tell Venue Staff a pending request they may be reviewing was withdrawn. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createVenueBookingCancelledNotifications(
             List<UUID> recipientUserIds, UUID bookingId, UUID eventId, String eventName, String reason) {
         for (UUID recipient : recipientUserIds) {
@@ -136,7 +139,7 @@ public class NotificationService {
     }
 
     /** EC08: tell the staff involved in an event's arrangements it is confirmed. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createEventConfirmedNotifications(List<UUID> recipientUserIds, UUID eventId, String eventName,
             String message) {
         for (UUID recipient : recipientUserIds) {
@@ -148,7 +151,7 @@ public class NotificationService {
     }
 
     /** EC08/EC-NEW2: tell the coordinator their event went back to Planning. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createReturnedToPlanningNotification(UUID coordinatorId, UUID eventId, String eventName,
             String reason) {
         Notification notification = base(coordinatorId, NotificationType.event_returned_to_planning, eventName);
@@ -159,7 +162,7 @@ public class NotificationService {
     }
 
     /** EC08: the Safety Officer approved, so the coordinator can confirm the event. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createSafetyApprovedNotification(UUID coordinatorId, UUID eventId, String eventName) {
         Notification notification = base(coordinatorId, NotificationType.event_safety_approved, eventName);
         notification.setEventId(eventId);
@@ -197,7 +200,7 @@ public class NotificationService {
     }
 
     /** EC-C1: tell Event Coordinator Leads that an event is awaiting transfer review. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createEventReassignmentRequestedNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName, String reason) {
         createEventReassignmentNotifications(recipientUserIds, eventId, eventName,
@@ -205,7 +208,7 @@ public class NotificationService {
     }
 
     /** EC-C1: tell the previous or newly assigned coordinator the Lead's decision. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createEventReassignmentDecisionNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -214,7 +217,7 @@ public class NotificationService {
 
     /** EO07: tell the assigned coordinator the organiser cancelled a request
      * they were reviewing, and why. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createRequestCancelledNotification(UUID coordinatorId, UUID eventRequestId, String eventName,
             String reason) {
         Notification notification = base(coordinatorId, NotificationType.request_cancelled, eventName);
@@ -226,7 +229,7 @@ public class NotificationService {
 
     /** EO07: tell the assigned coordinator the organiser asked for the event
      * to be cancelled, with the reason, for them to decide. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createEventCancellationRequestedNotification(UUID coordinatorId, UUID eventId, String eventName,
             String reason) {
         Notification notification = base(coordinatorId, NotificationType.event_cancellation_requested, eventName);
@@ -239,7 +242,7 @@ public class NotificationService {
     /** EO07: tell the organiser the outcome of their cancellation request:
      * {@code event_cancellation_approved} or {@code event_cancellation_declined}
      * (the message then carries the coordinator's reason). */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createEventCancellationDecisionNotification(UUID organiserId, UUID eventId, String eventName,
             NotificationType type, String message) {
         Notification notification = base(organiserId, type, eventName);
@@ -249,7 +252,7 @@ public class NotificationService {
     }
 
     /** EO07: tell the staff with arrangements for an event that it is cancelled. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createEventCancelledNotifications(List<UUID> recipientUserIds, UUID eventId, String eventName,
             String message) {
         for (UUID recipient : recipientUserIds) {
@@ -272,7 +275,7 @@ public class NotificationService {
     }
 
     /** EO03/EC-NEW3: a change request was submitted, withdrawn or decided. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createChangeRequestNotifications(List<UUID> recipientUserIds, NotificationType type,
             UUID eventRequestId, UUID eventId, String eventName, String message) {
         for (UUID recipient : recipientUserIds) {
@@ -329,6 +332,10 @@ public class NotificationService {
     }
 
     private void saveBestEffort(Notification notification) {
+        if (outbox!=null) {
+            outbox.enqueue(notification);
+            return;
+        }
         try {
             repository.save(notification);
         } catch (RuntimeException ex) {
@@ -398,7 +405,7 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
-            case venue_suitability_changed, venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
+            case venue_booking_approved, venue_booking_rejected, venue_suitability_changed, venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested ->
                     "/coordinator/events/" + n.getEventId();
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";

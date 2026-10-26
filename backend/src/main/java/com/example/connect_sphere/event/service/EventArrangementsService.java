@@ -110,7 +110,9 @@ public class EventArrangementsService {
                     venue.getVenueCapacity(), copy(venue.getSupportedLayouts()), copy(venue.getVenueAccessibilities()),
                     copy(venue.getVenueFacilities()), schedule == null ? "Operating hours not configured" : schedule.summary(),
                     availability.affected(booking.getBookingId()), booking.getStatus()==VenueBookingStatus.attention,
-                    impact==null ? List.of() : impact.assessBooking(event,booking).stream().filter(c -> "attention".equals(c.status())).map(c -> c.detail()).toList(), schedule == null ? List.of() : schedule.hours()));
+                    impact==null ? List.of() : impact.assessBooking(event,booking).stream().filter(c -> "attention".equals(c.status())).map(c -> c.detail()).toList(), schedule == null ? List.of() : schedule.hours(),booking.getBookingId(),
+                    booking.getStartDatetime()==null?event.getStartDatetime():booking.getStartDatetime(),
+                    booking.getEndDatetime()==null?event.getEndDatetime():booking.getEndDatetime()));
         }
         return result;
     }

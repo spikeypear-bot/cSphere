@@ -193,13 +193,18 @@ class VenueBookingReadTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"EO", "EC", "TECHNICIAN", "ATTENDEE"})
-    void pendingQueueRejectsOtherRolesWithoutChangingSharedReadAccess(String role) throws Exception {
-        UUID bookingId = booking(venue(), event(), "pending");
+    @org.junit.jupiter.api.DisplayName("VS17 AU04 (negative): private booking lists and details reject unrelated roles")
+    void staffBookingReadsRejectOtherRoles(String role) throws Exception {
+        UUID venueId=venue();
+        UUID bookingId = booking(venueId, event(), "pending");
         var principal = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("other-role").roles(role);
         mvc.perform(get("/api/venue-staff/booking-requests").with(principal))
                 .andExpect(status().isForbidden());
         mvc.perform(get("/api/venue-bookings/" + bookingId).with(principal))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/api/venues/" + venueId + "/bookings").with(principal))
+                .andExpect(status().isForbidden());
+        assertThat(jdbc.queryForObject("SELECT status::text FROM venue_bookings WHERE booking_id=?",String.class,bookingId)).isEqualTo("pending");
     }
 
     @Test
