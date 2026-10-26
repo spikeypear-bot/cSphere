@@ -1,4 +1,4 @@
-// @stories EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 EC03 EC-C2  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -21,6 +21,8 @@ const history = [{ activityId: 'a1', type: 'approved', actorName: 'ec1', actorRo
   flaggedFields: [], fromStatus: 'pending', toStatus: 'approved', occurredAt: '2026-09-22T01:00:00Z' }]
 
 function renderEvent(base: string) {
+  const previousFetch = globalThis.fetch
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/venue-assessments') ? Promise.resolve(jsonResponse(200, [])) : previousFetch(input, init))
   return render(
     <MemoryRouter initialEntries={[`${base}/events/${EVENT}`]}>
       <SessionProvider>

@@ -92,6 +92,14 @@ public class ChangeRequestController {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
     }
 
+    /** VS17: approval and its review alerts roll back together; the coordinator can retry. */
+    @ExceptionHandler({org.springframework.dao.DataAccessException.class,
+            org.springframework.transaction.TransactionException.class})
+    public ResponseEntity<ApiError> persistenceFailure(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+                .body(ApiError.of("The change could not be saved. Refresh its details and try again."));
+    }
+
     public record ImpactChangedError(String message, List<ChangeRequestDto.ImpactItem> impact) {
     }
 

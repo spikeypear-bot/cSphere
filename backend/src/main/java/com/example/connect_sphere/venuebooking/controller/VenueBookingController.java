@@ -48,6 +48,9 @@ public class VenueBookingController {
         return ResponseEntity.status(503).body(ApiError.of("The booking could not be updated. Refresh its details and try again."));
     }
 
+    @GetMapping("/venue-bookings/{bookingId}/history")
+    public List<java.util.Map<String,Object>> history(@PathVariable UUID bookingId) { return service.history(bookingId); }
+
     @GetMapping("/venue-staff/booking-requests")
     public List<VenueBookingDto> pending() { return service.listPending(); }
 

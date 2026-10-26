@@ -1,10 +1,11 @@
 -- TS11: Technical Support are told when a coordinator submits an equipment
 -- request (AC1) and when an approved event change affects an event's
 -- equipment (AC4), and record a review of each such change (AC11-AC14).
--- Renumbered from V36 at the merge of main (V34-V36 there); V37-V40 are
--- TS09's (already merged). chk_notification_shape is recreated here from
--- V38's version (TS09's), keeping its equipment_damage_outcome branch and
--- adding TS11's two. Decision-log D34.
+-- Renumbered three times at merges of main: first for V34-V36 (D30/SO-C5/
+-- SO-C6) and TS09's V37-V40; then again for main's V41-V51 (VS17 and others,
+-- merged in after this branch). chk_notification_shape is extended from
+-- whatever it currently is, following the dynamic-rebuild pattern V45/V50/V51
+-- use, rather than re-enumerating every earlier branch by hand. Decision-log D34.
 
 -- One row per approved change that affected an event's equipment. The values
 -- are kept here, not read back from the event, so a later change does not
@@ -52,26 +53,14 @@ CREATE UNIQUE INDEX idx_one_equipment_review_notice
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'equipment_request_submitted';
 ALTER TYPE notification_type ADD VALUE IF NOT EXISTS 'equipment_change_review';
 
--- Recreated from V38's version (V34-V37, V39-V40 do not change it) with the TS11 branches added.
-ALTER TABLE notifications DROP CONSTRAINT chk_notification_shape;
-ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (
-    (type::text = 'status_change' AND new_status IS NOT NULL)
-    OR (type::text = 'coordinator_assignment' AND coordinator_name IS NOT NULL AND is_reassignment IS NOT NULL)
-    OR (type::text IN ('clarification_requested', 'clarification_responded') AND message IS NOT NULL)
-    OR (type::text IN ('venue_booking_requested', 'venue_booking_cancelled', 'venue_unavailable',
-        'venue_timing_changed', 'venue_timing_conflict', 'venue_hold_expired', 'venue_hold_expiring')
-        AND venue_booking_id IS NOT NULL)
-    OR (type::text IN ('event_confirmed', 'event_returned_to_planning', 'event_safety_approved') AND event_id IS NOT NULL)
-    OR (type::text IN ('event_reassignment_requested', 'event_reassignment_approved',
-        'event_reassignment_declined') AND event_id IS NOT NULL AND message IS NOT NULL)
-    OR (type::text IN ('event_cancellation_requested', 'event_cancellation_approved',
-        'event_cancellation_declined', 'event_cancelled') AND event_id IS NOT NULL AND message IS NOT NULL)
-    OR (type::text IN ('change_request_submitted', 'change_request_withdrawn', 'change_request_decided')
-        AND event_request_id IS NOT NULL AND message IS NOT NULL)
-    OR (type::text = 'request_cancelled' AND event_request_id IS NOT NULL AND message IS NOT NULL)
-    OR (type::text = 'equipment_damage_outcome' AND event_id IS NOT NULL AND message IS NOT NULL)
-    OR (type::text = 'equipment_request_submitted' AND event_id IS NOT NULL AND equipment_request_id IS NOT NULL
-        AND message IS NOT NULL)
-    OR (type::text = 'equipment_change_review' AND event_id IS NOT NULL AND equipment_review_id IS NOT NULL
-        AND message IS NOT NULL)
-);
+-- Extend the current constraint in place (V45/V50/V51's pattern) instead of
+-- re-listing every prior branch, so this never risks dropping one.
+DO $$ DECLARE previous text; BEGIN
+ SELECT pg_get_constraintdef(oid) INTO previous FROM pg_constraint
+ WHERE conrelid='notifications'::regclass AND conname='chk_notification_shape';
+ ALTER TABLE notifications DROP CONSTRAINT chk_notification_shape;
+ EXECUTE 'ALTER TABLE notifications ADD CONSTRAINT chk_notification_shape CHECK (' ||
+ substring(previous FROM 8 FOR length(previous)-8) ||
+ ' OR (type::text = ''equipment_request_submitted'' AND event_id IS NOT NULL AND equipment_request_id IS NOT NULL AND message IS NOT NULL)' ||
+ ' OR (type::text = ''equipment_change_review'' AND event_id IS NOT NULL AND equipment_review_id IS NOT NULL AND message IS NOT NULL))';
+END $$;

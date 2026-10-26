@@ -26,7 +26,7 @@ Cross-cutting: **Authenticated User** — the login/session/RBAC behaviour every
 
 The 20 core features (VERIFIED, Week 4 Project Instructions) are listed with priority in `AI_Context.md`. The backlog (`User Stories` sheet, 114 rows as of 2026-09-12) maps every candidate story from the wider Week 1 briefing against these 20 features, recording a `Within Scope, Included` / `Out of Scope` / `Added` call with a one-line rationale per row — that column is the MoSCoW-equivalent priority mechanism for this project and should be treated as authoritative over any restatement here.
 
-**Explicit deferrals** (Out of Scope in the current backlog): event programme/multi-session recording; supporting-document attachments; in-app comments/discussion; tentative venue holds; venue setup/turnaround-time as a distinct trackable feature; Event-Coordinator "portfolio" browsing; rejection appeals; user guides; generic role-based dashboards; most reporting/export; attendance-vs-registration distinction; waiting lists; on-site technical-staff assignment; recurring/similar-event reuse; event categories.
+**Explicit deferrals** (Out of Scope in the current backlog): event programme/multi-session recording; supporting-document attachments; in-app comments/discussion; Event-Coordinator "portfolio" browsing; rejection appeals; user guides; generic role-based dashboards; most reporting/export; attendance-vs-registration distinction; waiting lists; on-site technical-staff assignment; recurring/similar-event reuse; event categories.
 
 **Implementation scope extension (user-authorised; backlog sync outstanding):** the supplied SO-C1–SO-C4 stories are implemented as an explicit exception to the generic role-dashboard/checklist deferral. The canonical live backlog could not be accessed during implementation; this note records the supplied scope without claiming team-wide backlog ratification.
 
@@ -43,7 +43,7 @@ The 20 core features (VERIFIED, Week 4 Project Instructions) are listed with pri
 9. **Event changes & cancellation** — the Organiser can request a change to date/attendance/venue/equipment requirements (EO03) or request cancellation (EO07); the Coordinator reviews the change's impact on existing arrangements (EC-NEW3).
 *(Current implementation: users authenticate with seeded development accounts; role- and organisation-scoped API access is enforced server-side. See `AI_Context.md` for the dev accounts and `docs/decision-log.md` for the settled access rules.)*
 
-10. **Status, conflict resolution, audit, notifications** — the event's status is a single, consistently-derived value visible to all relevant users (EC-NEW2); RBAC/data-scoping (AU04) ensures each role sees only what it's entitled to; a notification system informs users of assignment, approval/rejection, booking decisions, changes, and cancellation (EO09, EC-NEW4, VS17, TS11, second AT05); an internal audit log (DEV07, PROPOSED — not yet implemented, no schema support beyond `created_by`) is intended to record who changed what and when.
+10. **Status, conflict resolution, audit, notifications** — the event's status is a single, consistently-derived value visible to all relevant users (EC-NEW2); RBAC/data-scoping (AU04) ensures each role sees only what it's entitled to; a notification system informs users of assignment, approval/rejection, booking decisions, changes, and cancellation (EO09, EC-NEW4, VS17, TS11, second AT05); workflow activity, booking requirement reviews, hold histories and assessment snapshots record who changed what and when; a universal audit log remains separate.
 
 ### Safety Officer flow (SO-C1–SO-C4; implementation extension)
 
@@ -137,7 +137,7 @@ The full, current set of 114 stories (with IDs, roles, epics, scope calls, prior
 **Dependencies:** none; almost everything else depends on it.
 **Priority / Points / Sprint:** High / 8 / Sprint 1.
 **Source:** Grading rubric — "System design"; Week 4 Lab (C4/architecture).
-**Status:** VERIFIED — **repository-confirmed as largely satisfied**: `V2__init_tables.sql` + `SCHEMA.md` exist, define PKs/FKs/enums/indexes, and document known gaps. Backlog marks this **Done**; treat the "Done" status as accurate for the schema-design AC, but note the acknowledged gaps (no booking-overlap constraint, no audit table) are tracked separately, not silently closed.
+**Status:** VERIFIED — **repository-confirmed as largely satisfied**: `V2__init_tables.sql` + `SCHEMA.md` exist, define PKs/FKs/enums/indexes, and document known gaps. Backlog marks this **Done**; treat the "Done" status as accurate for the schema-design AC, but note the acknowledged gaps (no database booking-overlap constraint, workflow-specific audit histories rather than a universal audit table) are tracked separately, not silently closed.
 
 ---
 
@@ -169,11 +169,11 @@ See `AI_Context.md` for the consolidated, source-labelled list. All numeric targ
 
 ## 9. API / Page / Component Recommendations
 
-**REPOSITORY NOT YET INSPECTED FOR THIS** beyond confirming no real controllers/screens exist yet. Recommendations should follow the existing `mock` package's layering (Controller → Service → Repository → DTO/Mapper → Entity) once real domain work starts, and the frontend should follow whatever app-shell structure DEV11 establishes (routing, layout, auth-aware nav, API client) — verify DEV11's actual repository state first per the open question above.
+Domain controllers, services, repositories and role-specific screens are implemented. Follow the existing feature layering and app shell, and inspect current code/API guides before extending a workflow. The `mock` package remains scaffolding, not the domain template.
 
 ## 10. Test Strategy & Traceability
 
-Per Week 4 material: derive test cases from each story's acceptance criteria using the 5-step approach (visualise workflow → happy path → cross-cutting quality expectations → negative testing → boundary testing). The chain the course grades is **user story → acceptance criteria → test case → test class → code**; be ready to walk that chain for any story picked at random in the Week 13 Q&A. `DEV03` (backlog, High/8/Sprint 3) is the story that establishes this — "unit and integration tests that trace to each core feature's acceptance criteria." No test files exist in the repository yet beyond the default Spring Boot smoke test (`ConnectSphereApplicationTests`) and no frontend test framework is installed — a traceability matrix (story ID → AC → test file/case) should be built incrementally as stories are implemented, not retrofitted at the end.
+Per Week 4 material: derive test cases from each story's acceptance criteria using the 5-step approach (visualise workflow → happy path → cross-cutting quality expectations → negative testing → boundary testing). The chain the course grades is **user story → acceptance criteria → test case → test class → code**; be ready to walk that chain for any story picked at random in the Week 13 Q&A. `DEV03` (backlog, High/8/Sprint 3) is the story that establishes this — "unit and integration tests that trace to each core feature's acceptance criteria." JUnit/PostgreSQL integration tests, Vitest/React Testing Library tests and Playwright journeys are implemented. The generated `docs/test-traceability.md` maps story IDs and tests; `.github/scripts/traceability.py --check` enforces attribution.
 
 ## 11. Risks, Technical Debt, Assumptions, Open Questions
 
@@ -181,5 +181,10 @@ Per Week 4 material: derive test cases from each story's acceptance criteria usi
 - **OPEN QUESTION**: several backlog rows show `Out of Scope` with a stale Priority/Points/Sprint value left over (VS06, VS09, VS13, first AT05, AT06, AU01A/B/C, AU03, AU05) — harmless to the live formulas but worth a cleanup pass.
 - **OPEN QUESTION**: `AT05` and `AT08` each appear as two different rows sharing one ID — resolve before these IDs are used in test-case or C4-diagram traceability.
 - **RESOLVED (2026-09-12)**: `DEV11` (frontend app shell) is now implemented in the repository (see §5 DEV11 above and `frontend/README.md`) — update the backlog's status to match before Sprint 1 review.
-- **Technical debt (acknowledged in `SCHEMA.md` itself)**: no DB-level venue-booking overlap protection yet (frontend-only prevention is not sufficient per DEV06/the briefing); no audit-trail table beyond `created_by`; no equipment check-in/return flag; `event_requests` nullable start/end vs. `events` non-null start/end needs an explicit approval-path rule.
+- **Technical debt (acknowledged in `SCHEMA.md` itself)**: no DB-level venue-booking overlap protection yet (frontend-only prevention is not sufficient per DEV06/the briefing); workflow-specific histories now exist; a universal audit log and equipment check-in remain separate; no equipment check-in/return flag; `event_requests` nullable start/end vs. `events` non-null start/end needs an explicit approval-path rule.
 - **Assumption to confirm**: no numeric performance/scalability targets were given by the customer — any SLA-like number used in tests or NFR docs must be labelled PROPOSED, not customer-verified.
+
+
+### Current venue workflow rules — 25 October 2026
+
+Week 7 venue buffers and expiring holds are implemented and supersede the earlier deferral list. The user-authorised [workflow repairs](venue-workflow-repair.md) add private-read restrictions, operational-impact safety checks, live availability impact, different-venue replacement enforcement, period release and durable recovery. Shared VS access is explicitly retained. Accessibility shortfalls require justification and staff review; capacity and facilities remain strict blockers. Backlog updates remain a team action.

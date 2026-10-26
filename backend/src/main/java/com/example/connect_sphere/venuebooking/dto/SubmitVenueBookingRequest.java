@@ -8,7 +8,12 @@ import java.util.List;
 /** Each booking has its own requested window and captured occupancy durations. */
 public record SubmitVenueBookingRequest(UUID venueId, String bookingNotes, String suitabilityNote, UUID replacesBookingId,
         OffsetDateTime startDatetime, OffsetDateTime endDatetime,
-        BigDecimal setupDurationMinutes, BigDecimal turnaroundDurationMinutes, String timingNote) {
+        BigDecimal setupDurationMinutes, BigDecimal turnaroundDurationMinutes, String timingNote, BookingRequirements requirements) {
+    public SubmitVenueBookingRequest(UUID venueId, String bookingNotes, String suitabilityNote, UUID replacesBookingId,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, BigDecimal setupDurationMinutes,
+            BigDecimal turnaroundDurationMinutes, String timingNote) {
+        this(venueId,bookingNotes,suitabilityNote,replacesBookingId,startDatetime,endDatetime,setupDurationMinutes,turnaroundDurationMinutes,timingNote,null);
+    }
     public SubmitVenueBookingRequest(UUID venueId, String bookingNotes, String suitabilityNote) {
         this(venueId, bookingNotes, suitabilityNote, null);
     }
@@ -21,7 +26,7 @@ public record SubmitVenueBookingRequest(UUID venueId, String bookingNotes, Strin
     }
     public SubmitVenueBookingRequest(UUID venueId, String bookingNotes, String suitabilityNote, UUID replacesBookingId,
             BigDecimal setupDurationMinutes, BigDecimal turnaroundDurationMinutes, String timingNote) {
-        this(venueId, bookingNotes, suitabilityNote, replacesBookingId, null, null, setupDurationMinutes, turnaroundDurationMinutes, timingNote);
+        this(venueId,bookingNotes,suitabilityNote,replacesBookingId,null,null,setupDurationMinutes,turnaroundDurationMinutes,timingNote,null);
     }
     public record Batch(List<SubmitVenueBookingRequest> bookings) {}
 }

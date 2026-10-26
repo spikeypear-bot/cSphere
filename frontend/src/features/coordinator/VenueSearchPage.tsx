@@ -1,4 +1,6 @@
-import { useState, type FormEvent } from 'react'
+import { OperatingHours } from '../../components/OperatingHours'
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
+import { useEffect, useState, type FormEvent } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -24,6 +26,8 @@ function parseLocalDateTime(value: string): Date | null {
 }
 
 export function VenueSearchPage() {
+  const [searchQuery, setSearchQuery] = useState<string | null>(null)
+  const liveRevision = useLiveRefresh(!!searchQuery)
   const [startDatetime, setStartDatetime] = useState('')
   const [endDatetime, setEndDatetime] = useState('')
   const [capacity, setCapacity] = useState('')
@@ -33,7 +37,15 @@ export function VenueSearchPage() {
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
 
+  useEffect(() => {
+    if (!searchQuery || liveRevision === 0) return
+    let active = true
+    apiClient.get<VenueDto[]>(`/venues/search?${searchQuery}`).then(values => { if (active) { setVenues(values); setSearchError(null) } }).catch(() => { if (active) setSearchError('Could not refresh venues. Search again to retry.') })
+    return () => { active = false }
+  }, [searchQuery, liveRevision])
+
   function clearSearch() {
+    setSearchQuery(null)
     setVenues(null)
     setValidationError(null)
     setSearchError(null)
@@ -75,6 +87,7 @@ export function VenueSearchPage() {
     setSearching(true)
     try {
       setVenues(await apiClient.get<VenueDto[]>(`/venues/search?${params.toString()}`))
+      setSearchQuery(params.toString())
     } catch (error) {
       setSearchError(error instanceof ApiClientError
         ? error.message
@@ -168,7 +181,7 @@ export function VenueSearchPage() {
                     <p>{venue.venueFacilities.length > 0
                       ? venue.venueFacilities.map(facility => venueFacilityLabels[facility]).join(', ')
                       : 'No facilities listed'}</p>
-                    <p>{venue.operatingInformation}</p>
+                    <OperatingHours hours={venue.operatingHours} />
                     {startDatetime && endDatetime && <BookingTimingSummary timing={{
                       setupDurationMinutes: venue.setupMinutes ?? 0, turnaroundDurationMinutes: venue.turnaroundMinutes ?? 0,
                       startDatetime: parseLocalDateTime(startDatetime)!.toISOString(), endDatetime: parseLocalDateTime(endDatetime)!.toISOString(),

@@ -1,3 +1,4 @@
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
@@ -28,6 +29,7 @@ function changeable(request: EventRequestDto): boolean {
 }
 
 export function OrganiserHomePage() {
+  const liveRevision = useLiveRefresh()
   const { organisation } = useSession()
   const [requests, setRequests] = useState<EventRequestDto[] | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -63,7 +65,7 @@ export function OrganiserHomePage() {
     apiClient
       .get<EventRequestDto[]>('/event-requests')
       .then((results) => {
-        if (!cancelled) setRequests(results)
+        if (!cancelled) { setRequests(results); setError(null) }
       })
       .catch((err: unknown) => {
         if (cancelled) return
@@ -74,7 +76,7 @@ export function OrganiserHomePage() {
     }
     // The route guard guarantees a signed-in Organiser here, and the scope is
     // the token's, so there is nothing for this to depend on.
-  }, [])
+  }, [liveRevision])
 
   return (
     <div className="page">

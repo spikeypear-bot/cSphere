@@ -1,4 +1,4 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5
+// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5 VS17 EC-C2
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
 
@@ -8,11 +8,14 @@ import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, subm
 // acceptance criteria it checks; expected values come from those ACs, not
 // from what the page happened to show when it was recorded.
 
-test('golden path: a request becomes a confirmed event the organiser can rely on', async ({ browser, request }) => {
+test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every booking safety check', async ({ browser, request }) => {
   test.setTimeout(180_000)
   const eventName = uniqueName('E2E Town Hall')
   const venueName = uniqueName('E2E Marina Hall')
   await createVenue(request, venueName)
+  const breakoutName = uniqueName('E2E Breakout Room')
+  await createVenue(request, breakoutName)
+  let bookingIds: string[] = []
 
   const organiser = await signedIn(browser, 'eo1')
   await test.step('EO01/EO02: the organiser submits a complete request', async () => {
@@ -47,13 +50,18 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
     await coordinator.getByRole('button', { name: new RegExp(venueName) }).first().click()
     await coordinator.getByRole('button', { name: `Request ${venueName}` }).click()
     await expect(coordinator.getByText(`Booking request for ${venueName} sent to Venue Staff`)).toBeVisible()
+    await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
+    await coordinator.getByPlaceholder('Search by address or details').fill(breakoutName)
+    await coordinator.getByRole('button', { name: new RegExp(breakoutName) }).first().click()
+    await coordinator.getByRole('button', { name: `Request ${breakoutName}` }).click()
+    await expect(coordinator.getByText(`Booking request for ${breakoutName} sent to Venue Staff`)).toBeVisible()
   })
 
   await test.step('EC08 AC8, AC15: a pending booking keeps the event from being sent', async () => {
     const panel = coordinator.getByRole('region', { name: 'Ready for confirmation?' })
     // Shown twice on purpose: as the venue item's detail (AC3) and in the
     // "Not ready yet" list of every blocker (AC15).
-    await expect(panel.getByText('1 booking is still waiting for Venue Staff.')).toHaveCount(2)
+    await expect(panel.getByText('2 bookings are still waiting for Venue Staff.')).toHaveCount(2)
     await expect(panel.getByText('Not ready yet')).toBeVisible()
     await expect(panel.getByRole('button', { name: 'Send for safety review' })).toHaveCount(0)
   })
@@ -62,13 +70,21 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
   await test.step('VS02/VS03: Venue Staff approve the booking', async () => {
     const token = await apiToken(request, 'ec1')
     const bookings = await apiGet<{ bookingId: string }[]>(request, token, `/api/events/${eventId}/venue-bookings`)
-    await venueStaff.goto(`/venue-staff/bookings/${bookings[0].bookingId}`)
+    expect(bookings).toHaveLength(2)
+    bookingIds = bookings.map(b => b.bookingId)
+    for (const [index, booking] of bookings.entries()) {
+    await venueStaff.goto(`/venue-staff/bookings/${booking.bookingId}`)
     await venueStaff.getByRole('button', { name: 'Approve Booking' }).click()
     await venueStaff.getByRole('button', { name: 'Confirm approval' }).click()
     // Wait until the approval is saved before the coordinator acts on it.
     await expect(venueStaff.getByRole('button', { name: 'Confirm approval' })).toHaveCount(0)
     await expect.poll(async () => (await apiGet<{ status: string }[]>(request, token,
-      `/api/events/${eventId}/venue-bookings`))[0].status).toBe('approved')
+      `/api/events/${eventId}/venue-bookings`)).find(b => (b as { bookingId?: string }).bookingId === booking.bookingId)?.status).toBe('approved')
+    if (index === 0) {
+      const states = await apiGet<{ bookingId: string; status: string }[]>(request, token, `/api/events/${eventId}/venue-bookings`)
+      expect(states.find(b => b.bookingId !== booking.bookingId)?.status).toBe('pending')
+    }
+    }
   })
 
   await test.step('EC08 AC7, AC16: with the venue approved the coordinator sends the event for its safety check', async () => {
@@ -88,13 +104,22 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
   await test.step('SO-C3/SO-C4: the Safety Officer completes the checklist and approves', async () => {
     await officer.goto(`/safety-officer/events/${eventId}`)
     const boxes = officer.getByRole('list', { name: 'Readiness checklist' }).getByRole('checkbox')
-    await expect(boxes).toHaveCount(6)
-    for (let i = 0; i < 6; i++) {
+    const token = await apiToken(request, 'so1')
+    const readiness = await apiGet<{ items: { itemKey: string; label: string }[] }>(request, token, `/api/safety/events/${eventId}/readiness`)
+    expect(readiness.items.filter(i => i.itemKey.startsWith('venue_safety_')).map(i => i.itemKey).sort())
+      .toEqual(bookingIds.map(id => `venue_safety_${id}`).sort())
+    expect(readiness.items.filter(i => !i.itemKey.startsWith('venue_safety_'))).toHaveLength(6)
+    const total = readiness.items.length
+    await expect(boxes).toHaveCount(total)
+    await expect(officer.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled()
+    for (const [i, item] of readiness.items.entries()) {
       // The box shows the saved state, so it ticks once the server has stored
       // it: click, then wait for that (Week 9: wait for a condition).
-      await boxes.nth(i).click()
-      await expect(boxes.nth(i)).toBeChecked()
-      await expect(officer.getByText(`${i + 1} of 6 items complete`)).toBeVisible()
+      const box = officer.getByRole('checkbox', { name: item.label, exact: true })
+      await box.click()
+      await expect(box).toBeChecked()
+      await expect(officer.getByText(`${i + 1} of ${total} items complete`)).toBeVisible()
+      if (i + 1 < total) await expect(officer.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled()
     }
     await officer.getByRole('button', { name: 'Approve' }).click()
     await expect(officer.locator('.safety-decision').getByText('Approved', { exact: true })).toBeVisible()
@@ -127,6 +152,7 @@ test('golden path: a request becomes a confirmed event the organiser can rely on
   await test.step('EO04 AC9, AC10, AC12, AC16, AC17: the organiser sees the confirmed arrangements', async () => {
     const card = organiser.getByRole('region', { name: 'Confirmed arrangements' })
     await expect(card.getByText(venueName)).toBeVisible()
+    await expect(card.getByText(breakoutName)).toBeVisible()
     await expect(card).toContainText('(Singapore time)')
     await expect(card).toContainText('150 expected')
     await expect(card.getByText('Safety check approved')).toBeVisible()

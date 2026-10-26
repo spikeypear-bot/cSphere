@@ -69,9 +69,10 @@ final class ClassDiagrams {
             NOT_DESIGN,
             ".*\\$.*",
             ".*\\.(mock|config|common\\.web|controller|service|repository|dto|mapper)\\..*",
-            ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job)",
+            ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job|VenueSafetyChecklist)",
             ".*\\.(Add|Create|Reserve|Submit|Update|SafetyApproval)\\w*",
-            ".*\\.(JourneyStatusResolver|ExistingTimingConflictScan|AvailabilityModels|StatusView|OperatingHours)");
+            // VS17: retry orchestration is application plumbing, not a domain object.
+            ".*\\.(JourneyStatusResolver|ExistingTimingConflictScan|AvailabilityModels|StatusView|OperatingHours|VenueReplanQueue|VenueReplanWorker)");
 
     // Full level: everything except the mock scaffolding and MapStruct's
     // generated *MapperImpl classes (the hand-written mapper interfaces stay).
@@ -177,7 +178,12 @@ final class ClassDiagrams {
         // "\n" on every OS, so CI's up-to-date check compares like with like.
         String diagram = String.join("\n", lines);
         Files.createDirectories(OUTPUT_DIR);
-        Files.writeString(OUTPUT_DIR.resolve(level + ".generated.puml"), diagram, StandardCharsets.UTF_8);
+        Path output = OUTPUT_DIR.resolve(level + ".generated.puml");
+        // Several tests generate the same diagram. Leave identical output alone
+        // so Windows readers/indexers cannot block a redundant overwrite.
+        if (!Files.exists(output) || !Files.readString(output, StandardCharsets.UTF_8).equals(diagram)) {
+            Files.writeString(output, diagram, StandardCharsets.UTF_8);
+        }
         return diagram;
     }
 

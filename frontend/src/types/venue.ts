@@ -6,12 +6,12 @@ export const venueLayoutLabels: Record<VenueLayout, string> = {
   classroom: 'Classroom', theatre: 'Theatre', boardroom: 'Boardroom', banquet: 'Banquet', exhibition: 'Exhibition',
 }
 export interface CreateVenueDto {
+  venueName?: string
   venueAddress: string
   venueCapacity: number | null
   supportedLayouts: VenueLayout[]
   venueAccessibilities: AccessibilityFeature[]
   venueFacilities: Facility[]
-  operatingInformation: string
   additionalInformation: string | null
   operatingHours?: VenueOperatingHour[]
   setupMinutes?: number | null
@@ -19,7 +19,11 @@ export interface CreateVenueDto {
 }
 export interface VenueOperatingHour { dayOfWeek: number; openTime: string; closeTime: string }
 /** One independently bookable room or space; venueAddress is its displayed identity and location. */
-export interface VenueDto extends CreateVenueDto { venueId: string }
+export interface VenueDto extends CreateVenueDto {
+  venueId: string
+  /** Derived compatibility summary only; every display uses operatingHours. */
+  operatingInformation: string
+}
 
 
 export const venueAccessibilities = ['accessible_parking', 'drop_off_zone', 'public_transport',

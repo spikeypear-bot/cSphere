@@ -20,6 +20,9 @@ function timeAgo(iso: string): string {
 }
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'venue_suitability_changed' || n.type === 'venue_arrangements_changed') return `Venue arrangement updated for "${n.eventName}"`
+  if (n.type === 'venue_requirement_reviewed') return `Venue requirement review recorded for "${n.eventName}"`
+  if (n.type === 'venue_requirement_changed') return `Venue requirement review required for "${n.eventName}"`
   if (n.type === 'venue_hold_expired') return `Tentative venue hold expired for "${n.eventName}"`
   if (n.type === 'venue_hold_expiring') return `Tentative venue hold expiring soon for "${n.eventName}"`
   if (n.type === 'event_reassignment_requested') return `Reassignment requested for "${n.eventName}"`
@@ -37,6 +40,7 @@ function describe(n: NotificationDto): string {
   if (n.type === 'event_cancellation_approved') return `"${n.eventName}" has been cancelled`
   if (n.type === 'event_cancellation_declined') return `Cancellation of "${n.eventName}" was declined`
   if (n.type === 'event_cancelled') return `"${n.eventName}" has been cancelled`
+  if (n.type === 'attendee_registration_confirmed') return `Your registration for "${n.eventName}" is confirmed`
   // TS09: the outcome itself is the message, shown under the title.
   if (n.type === 'equipment_damage_outcome') return `Damaged equipment affects "${n.eventName}"`
   if (n.type === 'equipment_request_submitted') return `New equipment request for "${n.eventName}"`
@@ -49,6 +53,8 @@ function describe(n: NotificationDto): string {
   if (n.type === 'event_safety_approved') return `"${n.eventName}" passed its safety check and is ready to confirm`
   if (n.type === 'clarification_requested') return `Clarification needed on "${n.eventName}"`
   if (n.type === 'clarification_responded') return `"${n.eventName}" was updated and resubmitted`
+  if (n.type === 'venue_booking_rejected') return n.message ?? `Venue booking for "${n.eventName}" was rejected`
+  if (n.type === 'venue_booking_approved') return n.message ?? `Venue booking for "${n.eventName}" was approved`
   if (n.type === 'venue_booking_requested') return `New venue booking request for "${n.eventName}"`
   if (n.type === 'venue_booking_cancelled') return `Venue booking request for "${n.eventName}" was cancelled`
   if (n.type === 'coordinator_assignment') {
@@ -144,7 +150,7 @@ export function NotificationBell() {
                       {!compact && n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {!compact && n.message ? PLAIN_MESSAGE_TYPES.has(n.type) ? (
+                      {!compact && n.message && n.type !== 'venue_requirement_changed' && n.type !== 'venue_requirement_reviewed' && n.type !== 'venue_suitability_changed' && n.type !== 'venue_arrangements_changed' ? PLAIN_MESSAGE_TYPES.has(n.type) ? (
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>

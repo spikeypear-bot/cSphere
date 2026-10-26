@@ -25,7 +25,11 @@ BEGIN
         VALUES (v,'[DEMO VS16] Seminar Room - local development only',200,
             ARRAY['classroom','theatre'],ARRAY['step_free_access','elevators']::accessibilities[],
             ARRAY['projection','audio_visual_equipment']::facilities[],
-            'Mon-Fri 09:00-18:00','Demo venue: use the Level 2 entrance.');
+            'Monday 09:00-18:00; Tuesday 09:00-18:00; Wednesday 09:00-18:00; Thursday 09:00-18:00; Friday 09:00-18:00','Demo venue: use the Level 2 entrance.');
+        INSERT INTO venue_operating_hours (operating_hour_id,venue_id,day_of_week,open_time,close_time)
+        SELECT gen_random_uuid(),v,day,'09:00'::time,'18:00'::time
+        FROM generate_series(1,5) day;
+        -- Existing fixture venues and their edited schedules are preserved on reruns.
     ELSIF NOT EXISTS (SELECT 1 FROM venues WHERE venue_id=v
         AND venue_address='[DEMO VS16] Seminar Room - local development only') THEN
         RAISE EXCEPTION 'VS16 venue ID collision; refusing to change records.';

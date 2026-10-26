@@ -20,6 +20,12 @@ export interface VenueUnavailabilityConflict {
 }
 
 export interface VenueBookingDto {
+  currentCoordinatorName?: string | null
+  currentCoordinatorEmail?: string | null
+  effectiveRequirements?: import('./venueBookingRequest').BookingRequirements
+  relatedBookings?: { bookingId: string; venueId: string; venueAddress: string; status: VenueBookingStatus;
+    startDatetime: string; endDatetime: string; effectiveStart: string; effectiveEnd: string }[]
+  requirements?: import('./venueBookingRequest').BookingRequirements | null
   holds?: import('./venueHold').VenueHold[]
   timing?: import('./bookingTiming').BookingTiming
   bookingId: string

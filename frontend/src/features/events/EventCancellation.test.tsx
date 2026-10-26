@@ -1,4 +1,4 @@
-// @stories EO07
+// @stories VS17 EO07
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -200,6 +200,7 @@ function staffPage(apiStatus: () => string, requests: () => EventCancellationReq
       eventId: EVENT, approvalStatus: 'not_reviewed', items: [], completedItems: 0, totalItems: 0,
       approvalNote: null, reviewedBy: null, reviewedAt: null,
     }),
+    [`GET /api/events/${EVENT}/venue-assessments`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}/cancellation-requests`]: () => jsonResponse(200, requests()),

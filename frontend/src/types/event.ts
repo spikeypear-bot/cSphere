@@ -74,7 +74,7 @@ export interface OrganiserArrangementsDto {
   coordinatorName: string | null
   coordinatorEmail: string | null
   accessibilityNeeds: string[]
-  venues: { venueId: string; name: string; capacity: number | null; layouts: string[]; accessibilities: string[]; facilities: string[]; operatingInformation: string | null; noLongerAvailable: boolean }[]
+  venues: { bookingId?: string; startDatetime?: string; endDatetime?: string; venueId: string; name: string; capacity: number | null; layouts: string[]; accessibilities: string[]; facilities: string[]; operatingInformation: string | null; operatingHours?: import('./venue').VenueOperatingHour[]; requiresAttention?: boolean; suitabilityIssues?: string[]; noLongerAvailable: boolean }[]
   equipment: { name: string; quantity: number }[]
   safetyApprovedAt: string | null
   firstConfirmedAt: string | null

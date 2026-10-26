@@ -12,7 +12,7 @@ import './VenueCataloguePage.css'
 export function VenueCataloguePage() {
   const location = useLocation()
   const navigate = useNavigate()
-  const { data: venues, error, retry, loading } = useVenueRead<VenueDto[]>('/venues')
+  const { data: venues, error, retry, loading } = useVenueRead<VenueDto[]>('/venues', false, 5000, true)
   return <div className="feature-skeleton">
     <PageHeader
       title="Venue Catalogue"

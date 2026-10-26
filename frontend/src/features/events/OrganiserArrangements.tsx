@@ -1,3 +1,5 @@
+import { OperatingHours } from '../../components/OperatingHours'
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import { useEffect, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -24,6 +26,7 @@ function formatDate(value: string) {
  * after a change it flags what to re-check. Printable as a one-page summary.
  */
 export function OrganiserArrangements({ eventId }: { eventId: string }) {
+  const liveRevision = useLiveRefresh()
   const [data, setData] = useState<OrganiserArrangementsDto | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
@@ -33,7 +36,7 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
     apiClient.get<OrganiserArrangementsDto>(`/events/${eventId}/arrangements`)
       .then((value) => {
         if (cancelled) return
-        if (value && typeof value.view === 'string') setData(value)
+        if (value && typeof value.view === 'string') { setData(value); setFailed(false) }
         else setFailed(true)
       })
       .catch(() => {
@@ -42,7 +45,7 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
     return () => {
       cancelled = true
     }
-  }, [eventId, attempt])
+  }, [eventId, attempt, liveRevision])
 
   if (failed) {
     return (
@@ -109,11 +112,17 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
           {data.venues.map((venue) => {
             const missing = needs.filter((n) => !venue.accessibilities.includes(n))
             return (
-              <li key={venue.venueId} className="arrangements__venue" data-unavailable={venue.noLongerAvailable || undefined}>
+              <li key={venue.bookingId ?? venue.venueId} className="arrangements__venue" data-unavailable={venue.noLongerAvailable || undefined}>
                 <div className="arrangements__venue-title">
                   <strong>{venue.name}</strong>
+                  {venue.startDatetime && venue.endDatetime && <span>{formatDate(venue.startDatetime)} to {formatDate(venue.endDatetime)}</span>}
+                  {venue.requiresAttention && <span className="journey-badge journey-badge--danger journey-badge--small">Requires attention</span>}
                   {venue.noLongerAvailable ? <span className="journey-badge journey-badge--danger journey-badge--small">No longer available</span> : null}
                 </div>
+                {venue.requiresAttention && <div role="status">
+                  <p>This venue arrangement needs to be reassessed by your coordinator and Venue Staff.</p>
+                  {venue.suitabilityIssues?.length ? <ul>{venue.suitabilityIssues.map(issue => <li key={issue}>{issue}</li>)}</ul> : null}
+                </div>}
                 <dl className="arrangements__facts">
                   {venue.capacity ? <div><dt>Capacity</dt><dd>{venue.capacity}</dd></div> : null}
                   {venue.layouts.length > 0 ? <div><dt>Room layout</dt><dd>{venue.layouts.map(layoutLabel).join(', ')}</dd></div> : null}
@@ -124,7 +133,7 @@ export function OrganiserArrangements({ eventId }: { eventId: string }) {
                       ? venue.accessibilities.map(accessibilityLabel).join(', ')
                       : 'None listed. Ask your coordinator if you need any.'}</dd>
                   </div>
-                  {venue.operatingInformation ? <div><dt>Good to know</dt><dd>{venue.operatingInformation}</dd></div> : null}
+                  <div><dt>Operating hours</dt><dd><OperatingHours hours={venue.operatingHours} /></dd></div>
                 </dl>
                 {needs.length > 0 ? (
                   <div className="arrangements__access">

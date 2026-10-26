@@ -24,6 +24,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 
 @Tag("unit")
 @Tag("VS13")
+@Tag("VS17")
 class VenueOperationalIssueServiceTest {
 
     @Mock private VenueOperationalIssueRepository issues;
@@ -38,6 +39,7 @@ class VenueOperationalIssueServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueOperationalIssueService(issues, venues, bookings);
+        when(venues.findForUpdate(venueId)).thenReturn(java.util.Optional.of(new com.example.connect_sphere.venue.entity.Venue()));
         when(issues.saveAndFlush(any(VenueOperationalIssue.class)))
                 .thenAnswer(invocation -> invocation.getArgument(0));
     }

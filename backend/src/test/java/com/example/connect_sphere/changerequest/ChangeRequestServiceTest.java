@@ -56,6 +56,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * rolled-back integration tests cannot show. "Now" is a fixed clock.
  */
 @Tag("unit")
+@Tag("VS17")
 @Tag("EO03")
 @Tag("EC-NEW3")
 class ChangeRequestServiceTest {
@@ -77,7 +78,7 @@ class ChangeRequestServiceTest {
     private final NotificationService notifications = mock(NotificationService.class);
     private final UserRepository users = mock(UserRepository.class);
     private final ChangeRequestService service = new ChangeRequestService(changeRequests, requests, events, rules,
-            lifecycle, impact, activity, notifications, users, Clock.fixed(NOW, ZoneOffset.UTC));
+            lifecycle, impact, activity, notifications, users, Clock.fixed(NOW, ZoneOffset.UTC), mock(VenueRequirementChangeService.class));
 
     private final Caller organiser = new Caller(UserRole.eo, ORGANISER, ORG);
     private final Caller coordinator = new Caller(UserRole.ec, COORDINATOR, "ConnectSphere");

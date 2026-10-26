@@ -14,7 +14,7 @@ public class AvailabilityRepository {
     public AvailabilityRepository(JdbcTemplate jdbc) { this.jdbc = jdbc; }
 
     public List<Period> periods(UUID venueId) {
-        return jdbc.query("SELECT * FROM venue_unavailability WHERE venue_id=? ORDER BY start_datetime, unavailability_id",
+        return jdbc.query("SELECT * FROM venue_unavailability WHERE venue_id=? AND released_at IS NULL ORDER BY start_datetime, unavailability_id",
                 (r, n) -> new Period(r.getObject("unavailability_id", UUID.class), venueId,
                         r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
                         r.getString("reason"), r.getObject("created_at", OffsetDateTime.class)), venueId);
@@ -37,6 +37,14 @@ public class AvailabilityRepository {
                 WHERE venue_id=? AND affected_from < ? AND affected_until > ?)
                 """, Boolean.class, venueId, period.end(), period.start()));
     }
+    public List<OperationalIssue> operationalIssues(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
+        return jdbc.query("""
+            SELECT issue_id,description,affected_from,affected_until FROM venue_operational_issues
+            WHERE venue_id=? AND affected_from IS NOT NULL AND affected_until IS NOT NULL
+              AND (?::timestamptz IS NULL OR affected_from<?::timestamptz AND affected_until>?::timestamptz)
+            ORDER BY affected_from,issue_id
+            """, (r,n) -> new OperationalIssue(r.getObject(1,UUID.class),r.getString(2),r.getObject(3,OffsetDateTime.class),r.getObject(4,OffsetDateTime.class)),venueId,start,end,start);
+    }
 
     public void settings(UUID venueId, Settings s) {
         jdbc.update("UPDATE venues SET setup_minutes=?, turnaround_minutes=? WHERE venue_id=?",
@@ -57,7 +65,7 @@ public class AvailabilityRepository {
                     COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' AS effective_start,
                     COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' AS effective_end
                 FROM venue_bookings b JOIN events e USING(event_id)
-                WHERE b.venue_id=? AND b.status='approved' AND e.status NOT IN ('cancelled','completed')
+                WHERE b.venue_id=? AND b.status IN ('approved','attention') AND e.status NOT IN ('cancelled','completed')
                 UNION ALL
                 SELECT b.booking_id, e.event_id, e.coordinator_id, 'Tentative hold: ' || e.event_name, 'hold',
                     h.reserved_start, h.reserved_end, h.reserved_start, h.reserved_end
@@ -83,7 +91,7 @@ public class AvailabilityRepository {
                        COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute' AS effective_start,
                        COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute' AS effective_end
                 FROM venue_bookings b JOIN events e ON e.event_id=b.event_id JOIN venues v ON v.venue_id=b.venue_id
-                WHERE b.venue_id=? AND b.status IN ('pending','approved')
+                WHERE b.venue_id=? AND b.status IN ('pending','approved','attention')
                 """ + filter + " ORDER BY COALESCE(b.start_datetime,e.start_datetime), b.booking_id", (r, n) -> new Booking(r.getObject("booking_id", UUID.class), r.getObject("event_id", UUID.class),
                         r.getObject("coordinator_id", UUID.class), r.getString("event_name"), r.getString("status"),
                         r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
@@ -94,7 +102,7 @@ public class AvailabilityRepository {
     }
 
     public List<Period> periods(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
-        return jdbc.query("SELECT * FROM venue_unavailability WHERE venue_id=? AND start_datetime < ? AND end_datetime > ? ORDER BY start_datetime, unavailability_id",
+        return jdbc.query("SELECT * FROM venue_unavailability WHERE venue_id=? AND released_at IS NULL AND start_datetime < ? AND end_datetime > ? ORDER BY start_datetime, unavailability_id",
                 (r, n) -> new Period(r.getObject("unavailability_id", UUID.class), venueId,
                         r.getObject("start_datetime", OffsetDateTime.class), r.getObject("end_datetime", OffsetDateTime.class),
                         r.getString("reason"), r.getObject("created_at", OffsetDateTime.class)), venueId, end, start);
@@ -125,10 +133,43 @@ public class AvailabilityRepository {
         }
     }
 
+    public void notifyOperationalIssue(UUID venueId, List<Booking> affected, String reason) {
+        String venue=jdbc.queryForObject("SELECT venue_address FROM venues WHERE venue_id=?",String.class,venueId);
+        for (var b:affected) if (b.coordinatorId()!=null) jdbc.update("""
+            INSERT INTO notifications(notification_id,recipient_user_id,event_id,type,event_name,reason,message,venue_booking_id)
+            VALUES (?,?,?,'venue_unavailable',?,?,?,?)
+            """,UUID.randomUUID(),b.coordinatorId(),b.eventId(),b.eventName(),reason,
+            "Operational issue at "+venue+" affects this booking. Review or request a replacement. Booking and reservation remain intact.",b.bookingId());
+    }
+
     public boolean affected(UUID bookingId) {
         return Boolean.TRUE.equals(jdbc.queryForObject("""
-                SELECT EXISTS(SELECT 1 FROM venue_unavailability_bookings i JOIN venue_bookings b USING(booking_id)
-                WHERE i.booking_id=? AND b.status IN ('pending','approved'))
+                SELECT EXISTS(SELECT 1 FROM venue_bookings b JOIN events e USING(event_id)
+                WHERE b.booking_id=? AND b.status IN ('pending','approved','attention')
+                  AND e.status NOT IN ('cancelled','completed') AND (
+                    EXISTS(SELECT 1 FROM venue_unavailability u WHERE u.venue_id=b.venue_id AND u.released_at IS NULL
+                      AND u.start_datetime < COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute'
+                      AND u.end_datetime > COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute')
+                    OR EXISTS(SELECT 1 FROM venue_operational_issues i WHERE i.venue_id=b.venue_id
+                      AND i.affected_from < COALESCE(b.end_datetime,e.end_datetime) + b.turnaround_duration_minutes * interval '1 minute'
+                      AND i.affected_until > COALESCE(b.start_datetime,e.start_datetime) - b.setup_duration_minutes * interval '1 minute')))
                 """, Boolean.class, bookingId));
+    }
+
+    public List<Period> history(UUID venueId) {
+        return jdbc.query("SELECT * FROM venue_unavailability WHERE venue_id=? ORDER BY created_at DESC,unavailability_id",
+                (r,n) -> new Period(r.getObject("unavailability_id",UUID.class),venueId,
+                    r.getObject("start_datetime",OffsetDateTime.class),r.getObject("end_datetime",OffsetDateTime.class),
+                    r.getString("reason"),r.getObject("created_at",OffsetDateTime.class),
+                    r.getObject("released_at",OffsetDateTime.class),r.getString("release_reason")),venueId);
+    }
+
+    public Period release(UUID venueId, UUID id, UUID actor, String reason) {
+        if (history(venueId).stream().noneMatch(p -> p.unavailabilityId().equals(id)))
+            throw new org.springframework.web.server.ResponseStatusException(org.springframework.http.HttpStatus.NOT_FOUND,"Unavailable period not found for this venue.");
+        if (jdbc.update("UPDATE venue_unavailability SET released_at=clock_timestamp(),released_by=?,release_reason=? WHERE venue_id=? AND unavailability_id=? AND released_at IS NULL",
+                actor,reason,venueId,id)!=1)
+            throw new com.example.connect_sphere.venuebooking.service.VenueBookingStateException("This unavailable period has already been released. Refresh the venue.");
+        return history(venueId).stream().filter(p -> p.unavailabilityId().equals(id)).findFirst().orElseThrow();
     }
 }

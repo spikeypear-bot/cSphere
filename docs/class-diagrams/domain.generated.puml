@@ -7,6 +7,7 @@ legend top left
 + field: has a getter and a setter (every field is private in the code)
 Multiplicities come from the database foreign keys
 Lines labelled with a UUID field: foreign keys the entity stores as an id
+AttendeeRegistration, EventRegistration both map table event_registrations
 Event, VenueEvent both map table events
 VenueBooking, VenueBookingRecord both map table venue_bookings
 endlegend
@@ -55,6 +56,8 @@ enum ActivityType {
 	{field} +venue_hold_created
 	{field} +venue_hold_expired
 	{field} +venue_hold_released
+	{field} +venue_requirements_reviewed
+	{field} +venue_suitability_changed
 	{field} +venue_unavailable
 }
 
@@ -74,6 +77,28 @@ class RequestActivity <<Entity>>  {
 	{field} +occurredAt : OffsetDateTime
 	{field} +requestId : UUID
 	{field} +toStatus : String
+}
+
+
+class AttendeeRegistration <<Entity>>  {
+	{field} +attendeeEmail : String
+	{field} +attendeeId : UUID
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +registrationReference : String
+	{field} +status : String
+}
+
+
+class ChangeApproved {
+	{field} -approvedAt : OffsetDateTime
+	{field} -changeRequestId : UUID
+	{field} -changedFields : Set<String>
+	{field} -eventId : UUID
+	{field} -previousValues : Map<String, Object>
+	{field} -updatedValues : Map<String, Object>
 }
 
 
@@ -98,6 +123,34 @@ enum ChangeRequestStatus {
 	{field} +pending
 	{field} +rejected
 	{field} +withdrawn
+}
+
+
+class VenueRequirementReview <<Entity>>  {
+	{field} +approvedAt : OffsetDateTime
+	{field} +approvedBy : UUID
+	{field} +bookingId : UUID
+	{field} +changeRequestId : UUID
+	{field} +coordinatorEmail : String
+	{field} +coordinatorId : UUID
+	{field} +coordinatorName : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +newRequirements : Map<String, Object>
+	{field} +previousRequirements : Map<String, Object>
+	{field} +reservedEnd : OffsetDateTime
+	{field} +reservedStart : OffsetDateTime
+	{field} +reviewId : UUID {id}
+	{field} +reviewNote : String
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +reviewedChecks : List<Map<String, String>>
+	{field} +reviewerName : String
+	{field} +setupDurationMinutes : int
+	{field} +status : String
+	{field} +turnaroundDurationMinutes : int
+	{field} +venueAddress : String
+	{field} +venueId : UUID
 }
 
 
@@ -275,9 +328,39 @@ enum EquipmentRequestStatus {
 }
 
 
+class EquipmentRequestSubmitted {
+	{field} -eventId : UUID
+	{field} -requestId : UUID
+}
+
+
+class EquipmentChangeReview <<Entity>>  {
+	{field} +affectedReservations : List<Map<String, Object>>
+	{field} +changeRequestId : UUID
+	{field} +changedAt : OffsetDateTime
+	{field} +coordinatorId : UUID
+	{field} +eventId : UUID
+	{field} +outcomeNote : String
+	{field} +previousValues : Map<String, Object>
+	{field} +requirementsChanged : boolean
+	{field} +reviewId : UUID {id}
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +updatedValues : Map<String, Object>
+	{method} +needsReview () : boolean
+}
+
+
+enum ReviewOutcome {
+	{field} +needs_coordinator_action
+	{field} +still_suitable
+}
+
+
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
+	{field} +attendeeInstructions : String
 	{field} +confirmedAt : OffsetDateTime
 	{field} +confirmedBy : UUID
 	{field} +coordinatorId : UUID
@@ -361,6 +444,7 @@ enum EventStatus {
 
 
 class EventRequest <<Entity>>  {
+	{field} +attendeeInstructions : String
 	{field} +coordinatorId : UUID
 	{field} +createdAt : OffsetDateTime
 	{field} +createdBy : UUID
@@ -372,7 +456,9 @@ class EventRequest <<Entity>>  {
 	{field} +expectedAttendance : Integer
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +rejectionReason : String
 	{field} +requestId : UUID {id}
 	{field} +requestType : Character
@@ -396,6 +482,8 @@ enum EventRequestStatus {
 class Notification <<Entity>>  {
 	{field} +coordinatorEmail : String
 	{field} +coordinatorName : String
+	{field} +equipmentRequestId : UUID
+	{field} +equipmentReviewId : UUID
 	{field} +eventId : UUID
 	{field} +eventName : String
 	{field} +eventRequestId : UUID
@@ -407,18 +495,22 @@ class Notification <<Entity>>  {
 	{field} +readAt : OffsetDateTime
 	{field} +reason : String
 	{field} +recipientUserId : UUID
+	{field} +requirementReviewId : UUID
 	{field} +venueBookingId : UUID
 }
 
 
 enum NotificationType {
+	{field} +attendee_registration_confirmed
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +equipment_change_review
 	{field} +equipment_damage_outcome
+	{field} +equipment_request_submitted
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -431,10 +523,16 @@ enum NotificationType {
 	{field} +event_safety_approved
 	{field} +request_cancelled
 	{field} +status_change
+	{field} +venue_arrangements_changed
+	{field} +venue_booking_approved
 	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
 	{field} +venue_booking_requested
 	{field} +venue_hold_expired
 	{field} +venue_hold_expiring
+	{field} +venue_requirement_changed
+	{field} +venue_requirement_reviewed
+	{field} +venue_suitability_changed
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -453,6 +551,7 @@ class EventSafetyReview <<Entity>>  {
 
 
 class ReadinessItemState <<Entity>>  {
+	{field} +arrangementFingerprint : String
 	{field} -checked : boolean
 	{field} -checkedAt : OffsetDateTime
 	{field} -checkedBy : UUID
@@ -508,6 +607,7 @@ class Venue <<Entity>>  {
 	{field} +venueCapacity : Integer
 	{field} +venueFacilities : List<String>
 	{field} +venueId : UUID {id}
+	{field} +venueName : String
 }
 
 
@@ -553,6 +653,8 @@ class VenueBooking <<Entity>>  {
 	{field} -endDatetime : OffsetDateTime
 	{field} -rejectReason : String
 	{field} -replacesBookingId : UUID
+	{field} -requirementId : UUID
+	{field} -requirements : BookingRequirements
 	{field} -setupDurationMinutes : int
 	{field} -startDatetime : OffsetDateTime
 	{field} -submittedAt : OffsetDateTime
@@ -571,6 +673,8 @@ class VenueBookingRecord <<Entity>>  {
 	{field} +eventId : UUID
 	{field} +rejectReason : String
 	{field} +replacesBookingId : UUID
+	{field} +requirementId : UUID
+	{field} +requirements : BookingRequirements
 	{field} +setupDurationMinutes : int
 	{field} +startDatetime : OffsetDateTime
 	{field} +submittedAt : OffsetDateTime
@@ -586,6 +690,7 @@ class VenueBookingRecord <<Entity>>  {
 
 enum VenueBookingStatus {
 	{field} +approved
+	{field} +attention
 	{field} +cancelled
 	{field} +changed
 	{field} +pending
@@ -600,6 +705,7 @@ class VenueEvent <<Entity>>  {
 	{field} -eventId : UUID {id}
 	{field} -eventName : String
 	{field} -expectedAttendance : Integer
+	{field} -requiredFacilities : List<String>
 	{field} -startDatetime : OffsetDateTime
 	{field} -venueRequirements : String
 }
@@ -649,6 +755,7 @@ EquipmentDamageReport --> "1" DamageReportStatus : status
 EquipmentRequest --> "1" EquipmentRequestStatus : status
 EquipmentRequestLine "0..*" --> "1" Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
+EquipmentChangeReview --> "0..1" ReviewOutcome : outcome
 Event --> "1" EventStatus : status
 EventCancellationRequest --> "1" EventCancellationStatus : status
 EventReassignmentRequest --> "1" EventReassignmentStatus : status
@@ -665,6 +772,10 @@ VenueBookingRecord --> "1" VenueBookingStatus : status
 VenueEvent --> "1" EventStatus : status
 
 
+EquipmentChangeReview "0..*" --> "1" ChangeRequest : changeRequestId
+EquipmentChangeReview "0..*" --> "0..1" User : coordinatorId
+EquipmentChangeReview "0..*" --> "1" Event : eventId
+EquipmentChangeReview "0..*" --> "0..1" User : reviewedBy
 EquipmentDamageOutcome "0..*" --> "0..1" EquipmentRequest : additionalRequestId
 EquipmentDamageOutcome "0..*" --> "0..1" User : decidedBy
 EquipmentDamageOutcome "0..*" --> "1" Event : eventId
@@ -691,6 +802,8 @@ ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy
 EventReassignmentRequest "0..*" --> "1" Event : eventId
 EventReassignmentRequest "0..*" --> "1" User : requesterUserId
+AttendeeRegistration "0..*" --> "0..1" User : attendeeId
+AttendeeRegistration "0..*" --> "1" Event : eventId
 EventRegistration "0..*" --> "1" Event : eventId
 RequestActivity "0..*" --> "1" User : actorUserId
 RequestActivity "0..*" --> "0..1" Event : eventId
@@ -703,9 +816,12 @@ EventSafetyReview "0..*" --> "1" User : reviewedBy
 Event "0..*" --> "0..1" User : confirmedBy
 Event "0..*" --> "0..1" User : coordinatorId
 Event "0..*" --> "0..1" Venue : venueId
+Notification "0..*" --> "0..1" EquipmentRequest : equipmentRequestId
+Notification "0..*" --> "0..1" EquipmentChangeReview : equipmentReviewId
 Notification "0..*" --> "0..1" Event : eventId
 Notification "0..*" --> "0..1" EventRequest : eventRequestId
 Notification "0..*" --> "1" User : recipientUserId
+Notification "0..*" --> "0..1" VenueRequirementReview : requirementReviewId
 VenueBookingRecord "0..*" --> "0..1" Venue : alternativeVenueId
 VenueBookingRecord "0..*" --> "1" Event : eventId
 VenueBooking "0..*" --> "0..1" VenueBooking : replacesBookingId
@@ -716,5 +832,12 @@ VenueBookingRecord "0..*" --> "1" Venue : venueId
 VenueOperatingHour "0..*" --> "1" Venue : venueId
 VenueOperationalIssue "0..*" --> "1" User : createdBy
 VenueOperationalIssue "0..*" --> "1" Venue : venueId
+VenueRequirementReview "0..*" --> "1" User : approvedBy
+VenueRequirementReview "0..*" --> "1" VenueBooking : bookingId
+VenueRequirementReview "0..*" --> "1" ChangeRequest : changeRequestId
+VenueRequirementReview "0..*" --> "0..1" User : coordinatorId
+VenueRequirementReview "0..*" --> "1" Event : eventId
+VenueRequirementReview "0..*" --> "0..1" User : reviewedBy
+VenueRequirementReview "0..*" --> "1" Venue : venueId
 
 @enduml

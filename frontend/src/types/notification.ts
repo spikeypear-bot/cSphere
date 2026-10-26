@@ -1,11 +1,17 @@
 // Mirrors backend/src/main/java/com/example/connect_sphere/notification/dto/NotificationDto.java
 
 export type NotificationTypeName =
+  | 'venue_suitability_changed'
+  | 'venue_arrangements_changed'
   | 'status_change'
   | 'coordinator_assignment'
   | 'clarification_requested'
   | 'clarification_responded'
+  | 'venue_requirement_reviewed'
+  | 'venue_requirement_changed'
   | 'venue_booking_requested'
+  | 'venue_booking_rejected'
+  | 'venue_booking_approved'
   | 'venue_booking_cancelled'
   | 'venue_unavailable'
   | 'event_confirmed'
@@ -27,6 +33,7 @@ export type NotificationTypeName =
   | 'event_cancellation_approved'
   | 'event_cancellation_declined'
   | 'event_cancelled'
+  | 'attendee_registration_confirmed'
   // TS09
   | 'equipment_damage_outcome'
   // TS11

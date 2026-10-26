@@ -35,6 +35,9 @@ public class VenueEvent {
     @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "accessibility_needs", columnDefinition = "accessibilities[]")
     private List<String> accessibilityNeeds;
+    @JdbcTypeCode(SqlTypes.ARRAY)
+    @Column(name = "required_facilities", columnDefinition = "facilities[]")
+    private List<String> requiredFacilities;
     @Column(name = "equipment_requirements", columnDefinition = "text")
     private String equipmentRequirements;
 }

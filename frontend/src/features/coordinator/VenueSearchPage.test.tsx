@@ -1,3 +1,4 @@
+// @stories EC04 VS17
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -17,7 +18,8 @@ const match: VenueDto = {
   supportedLayouts: ['theatre'],
   venueAccessibilities: [],
   venueFacilities: ['stage', 'projection'],
-  operatingInformation: 'Daily 08:00-22:00',
+  operatingInformation: 'Legacy text must never be advertised',
+  operatingHours: [{dayOfWeek:3,openTime:'10:30',closeTime:'23:30'}],
   additionalInformation: null,
 }
 
@@ -47,7 +49,7 @@ function enterPeriod() {
   fireEvent.change(screen.getByLabelText('Event ends'), { target: { value: end } })
 }
 
-describe('VenueSearchPage (EC04)', () => {
+describe('EC04 VenueSearchPage', () => {
   beforeEach(() => seedSession('coordinator'))
   afterEach(() => {
     cleanup()
@@ -67,6 +69,9 @@ describe('VenueSearchPage (EC04)', () => {
 
     expect(await screen.findByText('1 Harbour Road')).toBeInTheDocument()
     expect(screen.getByText('100 people capacity')).toBeInTheDocument()
+    expect(screen.getByText('Wednesday')).toBeInTheDocument()
+    expect(screen.getByText('10:30am \u2013 11:30pm')).toBeInTheDocument()
+    expect(screen.queryByText('Legacy text must never be advertised')).not.toBeInTheDocument()
     const url = new URL(calls[0].url, 'http://localhost')
     expect(url.searchParams.get('startDatetime')).toBe(new Date(start).toISOString())
     expect(url.searchParams.get('endDatetime')).toBe(new Date(end).toISOString())

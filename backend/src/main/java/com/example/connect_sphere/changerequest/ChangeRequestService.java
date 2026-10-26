@@ -73,20 +73,21 @@ public class ChangeRequestService {
     private final NotificationService notifications;
     private final UserRepository users;
     private final Clock clock;
+    private final VenueRequirementChangeService venueRequirements;
 
     @Autowired
     public ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
             EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
             ChangeImpactService impact, ActivityService activity, NotificationService notifications,
-            UserRepository users) {
+            UserRepository users, VenueRequirementChangeService venueRequirements) {
         this(changeRequests, requests, events, requestRules, lifecycle, impact, activity, notifications, users,
-                Clock.systemUTC());
+                Clock.systemUTC(), venueRequirements);
     }
 
     ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
             EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
             ChangeImpactService impact, ActivityService activity, NotificationService notifications,
-            UserRepository users, Clock clock) {
+            UserRepository users, Clock clock, VenueRequirementChangeService venueRequirements) {
         this.changeRequests = changeRequests;
         this.requests = requests;
         this.events = events;
@@ -97,6 +98,7 @@ public class ChangeRequestService {
         this.notifications = notifications;
         this.users = users;
         this.clock = clock;
+        this.venueRequirements = venueRequirements;
     }
 
     /** TS11: announces approved changes (ChangeApproved) to listeners that tell
@@ -165,9 +167,9 @@ public class ChangeRequestService {
         List<UUID> recipients = coordinator != null ? List.of(coordinator)
                 : users.findByRole(UserRole.ecl).stream().map(User::getUserId).toList();
         String name = nameOf(origin, event);
-        afterCommit(() -> notifications.createChangeRequestNotifications(recipients,
+        notifications.createChangeRequestNotifications(recipients,
                 NotificationType.change_request_submitted, requestId, origin.getEventId(), name,
-                "Change requested: " + ChangeFields.describe(changes) + ". Reason: " + reason));
+                "Change requested: " + ChangeFields.describe(changes) + ". Reason: " + reason);
         return view(saved, organiser, origin, event);
     }
 
@@ -192,9 +194,9 @@ public class ChangeRequestService {
         UUID coordinator = coordinatorOf(origin, event);
         if (coordinator != null) {
             String name = nameOf(origin, event);
-            afterCommit(() -> notifications.createChangeRequestNotifications(List.of(coordinator),
+            notifications.createChangeRequestNotifications(List.of(coordinator),
                     NotificationType.change_request_withdrawn, origin.getRequestId(), origin.getEventId(), name,
-                    "The organiser withdrew their change request."));
+                    "The organiser withdrew their change request.");
         }
         return view(saved, organiser, origin, event);
     }
@@ -235,6 +237,8 @@ public class ChangeRequestService {
 
         boolean replan = event != null && EventStatus.IN_OR_PAST_SAFETY_CHECK.contains(event.getStatus())
                 && changed.stream().anyMatch(ChangeFields.AFFECTS_ARRANGEMENTS::contains);
+        OffsetDateTime oldStart = event == null ? null : event.getStartDatetime();
+        OffsetDateTime oldEnd = event == null ? null : event.getEndDatetime();
         requestRules.applyApprovedDetails(origin, event, proposed);
         change.setStatus(ChangeRequestStatus.approved);
         change.setDecidedBy(coordinator.userId());
@@ -247,6 +251,7 @@ public class ChangeRequestService {
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
                 ActivityType.change_approved, coordinator.userId(), fitActivityMessage("Approved: " + summary), null, null, null, null,
                 ChangeFields.changedValues(changes)));
+        venueRequirements.approved(saved, event, oldStart, oldEnd);
         if (replan) {
             lifecycle.returnToPlanning(event.getEventId(), coordinator.userId(),
                     fitActivityMessage("An approved change affects the event's arrangements: " + summary));
@@ -259,10 +264,10 @@ public class ChangeRequestService {
         }
 
         String name = nameOf(origin, event);
-        afterCommit(() -> notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
+        notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
                 NotificationType.change_request_decided, origin.getRequestId(), origin.getEventId(), name,
                 "Your change request was approved: " + summary
-                        + (replan ? ". The arrangements will be re-confirmed." : ".")));
+                        + (replan ? ". The arrangements will be re-confirmed." : "."));
         return view(saved, coordinator, origin, eventOf(origin));
     }
 
@@ -284,9 +289,9 @@ public class ChangeRequestService {
         activity.record(new ActivityService.Entry(origin.getRequestId(), origin.getEventId(),
                 ActivityType.change_rejected, coordinator.userId(), fitActivityMessage("Rejected: " + reason), null, null, null));
         String name = nameOf(origin, event);
-        afterCommit(() -> notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
+        notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
                 NotificationType.change_request_decided, origin.getRequestId(), origin.getEventId(), name,
-                "Your change request was rejected: " + reason));
+                "Your change request was rejected: " + reason);
         return view(saved, coordinator, origin, event);
     }
 

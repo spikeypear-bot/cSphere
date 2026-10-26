@@ -1,3 +1,7 @@
+import { OperatingHours } from '../../components/OperatingHours'
+import { BookingAssessment } from '../venueStaff/BookingAssessment'
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
+import { VenueRequirementReviews } from '../venueStaff/VenueRequirementReviews'
 import { HoldStatus } from '../venueStaff/HoldStatus'
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
@@ -13,6 +17,7 @@ import { venueFacilityLabels, venueLayoutLabels, type Facility, type VenueLayout
 import {
   BOOKING_STATUS_LABELS,
   type EventVenueBookingDto,
+  type BookingRequirements,
   type VenueOptionDto,
   type VenueVerdict,
 } from '../../types/venueBookingRequest'
@@ -21,7 +26,7 @@ import './VenueBookingRequestPage.css'
 import { validMinutes, occupiedPeriod } from '../../lib/bookingTiming'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 
-type BookingInput = { start: string; end: string; setup: string; turnaround: string; reason: string }
+type BookingInput = { start: string; end: string; setup: string; turnaround: string; reason: string; requirements?: BookingRequirements }
 type TimingReview = { key: string; option?: VenueOptionDto; error?: string }
 function singaporeInput(value: string) {
   return new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Singapore', year: 'numeric', month: '2-digit',
@@ -29,13 +34,13 @@ function singaporeInput(value: string) {
 }
 function instant(value: string) { return new Date(value + '+08:00').toISOString() }
 function validInput(input: BookingInput | undefined): input is BookingInput {
-  return !!input && validMinutes(input.setup) && validMinutes(input.turnaround)
+  return !!input && (input.requirements?.expectedAttendance == null || (Number.isInteger(input.requirements.expectedAttendance) && input.requirements.expectedAttendance > 0)) && validMinutes(input.setup) && validMinutes(input.turnaround)
     && Number.isFinite(Date.parse(input.start + '+08:00'))
     && Date.parse(input.end + '+08:00') > Date.parse(input.start + '+08:00')
 }
-function timingKey(input: BookingInput) { return [input.start, input.end, input.setup, input.turnaround].join('|') }
+function timingKey(input: BookingInput) { return [input.start, input.end, input.setup, input.turnaround, JSON.stringify(input.requirements)].join('|') }
 function changedTiming(input: BookingInput, option: VenueOptionDto, event: EventDto) {
-  return input.start !== singaporeInput(event.startDatetime) || input.end !== singaporeInput(event.endDatetime)
+  return !!input.requirements || input.start !== singaporeInput(event.startDatetime) || input.end !== singaporeInput(event.endDatetime)
     || Number(input.setup) !== (option.venue.setupMinutes ?? 0) || Number(input.turnaround) !== (option.venue.turnaroundMinutes ?? 0)
 }
 
@@ -71,6 +76,7 @@ function unavailablePeriodLabel(period: NonNullable<VenueOptionDto['unavailableP
  * Submitting creates a *pending* request for Venue Staff; nothing is reserved.
  */
 export function VenueBookingRequestPage() {
+  const liveRevision = useLiveRefresh()
   const { eventId } = useParams<{ eventId: string }>()
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
@@ -89,6 +95,7 @@ export function VenueBookingRequestPage() {
   const [submitError, setSubmitError] = useState<string | null>(null)
   const [timingReviews, setTimingReviews] = useState<Record<string, TimingReview>>({})
   const [retry, setRetry] = useState(0)
+  const [withdrawReasons, setWithdrawReasons] = useState<Record<string,string>>({})
 
   useEffect(() => {
     if (!eventId || !event || !options) return
@@ -101,6 +108,9 @@ export function VenueBookingRequestPage() {
         const key = timingKey(input)
         const params = new URLSearchParams({ setupDurationMinutes: input.setup, turnaroundDurationMinutes: input.turnaround,
           startDatetime: instant(input.start), endDatetime: instant(input.end) })
+        if(input.requirements?.expectedAttendance != null) params.set('expectedAttendance', String(input.requirements.expectedAttendance))
+        if(input.requirements?.requiredFacilities != null) params.set('requiredFacilities', input.requirements.requiredFacilities.join(','))
+        if(input.requirements?.accessibilityNeeds != null) params.set('accessibilityNeeds', input.requirements.accessibilityNeeds.join(','))
         apiClient.get<VenueOptionDto[]>('/events/' + eventId + '/venue-options?' + params).then(values => {
           if (active) setTimingReviews(current => ({ ...current, [id]: { key, option: values.find(o => o.venue.venueId === id) } }))
         }).catch((error: unknown) => {
@@ -120,6 +130,7 @@ export function VenueBookingRequestPage() {
       apiClient.get<EventVenueBookingDto[]>(`/events/${eventId}/venue-bookings`),
     ]).then(([e, o, b]) => {
       if (cancelled) return
+      setLoadError(null)
       setEvent(e)
       setOptions(o)
       setBookings(b)
@@ -133,9 +144,9 @@ export function VenueBookingRequestPage() {
     return () => {
       cancelled = true
     }
-  }, [eventId])
+  }, [eventId, liveRevision])
 
-  const activeBookings = (bookings ?? []).filter(b => b.status === 'pending' || b.status === 'approved')
+  const activeBookings = (bookings ?? []).filter(b => b.status === 'pending' || b.status === 'approved' || b.status === 'attention')
   const requestedSourceId = searchParams.get('replacesBookingId')
   const unavailableSources = activeBookings.filter(booking => booking.requiresAlternative)
   const implicitUnavailableSource = unavailableSources.length === 1 ? unavailableSources[0] : null
@@ -145,9 +156,9 @@ export function VenueBookingRequestPage() {
   const replacementPending = !!replacementSource && (bookings ?? []).some(booking =>
     booking.replacesBookingId === replacementSource.bookingId && booking.status === 'pending')
   const replacementApproved = !!replacementSource && (bookings ?? []).some(booking =>
-    booking.replacesBookingId === replacementSource.bookingId && booking.status === 'approved')
+    booking.replacesBookingId === replacementSource.bookingId && (booking.status === 'approved' || booking.status === 'attention'))
   const sourceCanBeReplaced = !!replacementSource && (
-    ((replacementSource.status === 'pending' || replacementSource.status === 'approved') && replacementSource.requiresAlternative)
+    replacementSource.status === 'approved' || replacementSource.status === 'attention' || (replacementSource.status === 'pending' && replacementSource.requiresAlternative)
     || replacementSource.status === 'rejected' || replacementSource.status === 'cancelled'
   ) && !replacementApproved
   const replacing = sourceCanBeReplaced ? replacementSource : null
@@ -155,17 +166,16 @@ export function VenueBookingRequestPage() {
   const requestableOptions = useMemo(() => {
     if (!replacing) return options ?? []
     const unavailableVenueIds = new Set((bookings ?? [])
-      .filter(booking => (booking.status === 'pending' || booking.status === 'approved')
+      .filter(booking => (booking.status === 'pending' || booking.status === 'approved' || booking.status === 'attention')
         && booking.bookingId !== replacing.bookingId)
       .map(booking => booking.venueId))
-    unavailableVenueIds.add(replacing.venueId)
     return (options ?? []).filter(option => !unavailableVenueIds.has(option.venue.venueId))
   }, [options, bookings, replacing])
 
   const visible = useMemo(() => {
     const term = search.trim().toLowerCase()
     return requestableOptions.filter((o) => (showBlocked || o.verdict !== 'blocked')
-      && (!term || `${o.venue.venueAddress} ${o.venue.operatingInformation} ${o.venue.additionalInformation ?? ''}`
+      && (!term || `${o.venue.venueAddress} ${o.venue.additionalInformation ?? ''}`
         .toLowerCase().includes(term)))
   }, [requestableOptions, search, showBlocked])
 
@@ -176,7 +186,7 @@ export function VenueBookingRequestPage() {
   }, [requestableOptions])
 
   if (notAssigned) return <NotAssignedNotice what="event" />
-  if (loadError) {
+  if (loadError && !event) {
     return (
       <div className="page page--compact venue-request">
         <Link to={eventId ? `/coordinator/events/${eventId}` : '/coordinator'}>Back to event</Link>
@@ -212,6 +222,7 @@ export function VenueBookingRequestPage() {
     try {
       const requests = selected.map((option, index) => ({
           venueId: option.venue.venueId,
+          requirements: bookingTimes[option.venue.venueId].requirements,
           bookingNotes: notes.trim() || null,
           suitabilityNote: reviewed(option)?.verdict === 'needs_justification' ? justification.trim() : null,
           startDatetime: instant(bookingTimes[option.venue.venueId].start),
@@ -236,16 +247,17 @@ export function VenueBookingRequestPage() {
     }
   }
 
-  const blockedReason = requestedSourceId && !sourceCanBeReplaced
+  const blockedReason = loadError ? 'Could not refresh current venue details. Waiting for a successful refresh before submission.' : requestedSourceId && !sourceCanBeReplaced
     ? 'This booking is no longer eligible for a replacement. Refresh the event details.'
     : replacementPending
       ? 'This booking already has a replacement request pending. Wait for Venue Staff to review it.'
-      : !isPlanningEditable(event.status) && !(event.status === 'confirmed' && replacing)
+      : !isPlanningEditable(event.status) && !(['confirmed', 'safety_approved', 'awaiting_safety_review'].includes(event.status) && replacing)
         ? 'Venue booking requests can only be made while the event is in Planning, except for an eligible replacement.'
         : null
 
   return (
     <div className="page page--compact venue-request">
+      {loadError && <p role="alert">Could not refresh venue details. {loadError}</p>}
       <Link to={`/coordinator/events/${event.eventId}`}>Back to event</Link>
       <PageHeader title={replacing ? 'Find a replacement venue' : 'Request a venue'}
         description={<p className="field-hint">for <strong>{event.eventName}</strong></p>} />
@@ -327,7 +339,7 @@ export function VenueBookingRequestPage() {
                             [option.venue.venueId]: {
                               start: singaporeInput(event.startDatetime),
                               end: singaporeInput(event.endDatetime),
-                              setup: String(option.venue.setupMinutes ?? 0), turnaround: String(option.venue.turnaroundMinutes ?? 0), reason: '',
+                              setup: String(option.venue.setupMinutes ?? 0), turnaround: String(option.venue.turnaroundMinutes ?? 0), reason: '', requirements: replacing?.requirements ?? undefined,
                             },
                           })
                           setSubmitError(null)
@@ -348,6 +360,8 @@ export function VenueBookingRequestPage() {
                         <strong>{option.venue.venueAddress}</strong>
                         <BookingTimingInputs option={option} input={bookingTimes[option.venue.venueId]} disabled={submitting}
                           onChange={input => setBookingTimes(current => ({ ...current, [option.venue.venueId]: input }))} />
+                        <RoomRequirements input={bookingTimes[option.venue.venueId]} event={event}
+                          onChange={requirements => setBookingTimes(current => ({...current,[option.venue.venueId]:{...current[option.venue.venueId],requirements}}))} />
                         {changedTiming(bookingTimes[option.venue.venueId], option, event) && validInput(bookingTimes[option.venue.venueId]) && !reviewed(option) && (
                           timingReviews[option.venue.venueId]?.key === timingKey(bookingTimes[option.venue.venueId])
                             ? <p role="alert">{timingReviews[option.venue.venueId]?.error ?? 'Could not check this venue.'} <Button onClick={() => setRetry(n => n + 1)}>Retry timing check</Button></p>
@@ -400,6 +414,8 @@ export function VenueBookingRequestPage() {
             </>
           )}
 
+          <BookingAssessment eventId={eventId} />
+      <VenueRequirementReviews key={event.eventId} eventId={event.eventId} />
           {bookings.length > 0 ? (
             <Card className="venue-request__history">
             <div className="venue-request__history-heading">
@@ -409,6 +425,7 @@ export function VenueBookingRequestPage() {
               </div>
               <span className="venue-request__result-count">{bookings.length} {bookings.length === 1 ? 'request' : 'requests'}</span>
             </div>
+            {submitError && <p role="alert">{submitError}</p>}
             <ul className="venue-request__history-list">
               {bookings.map((b) => (
                 <li className="venue-request__history-item" key={b.bookingId}>
@@ -427,9 +444,25 @@ export function VenueBookingRequestPage() {
                       .filter(replacement => replacement.replacesBookingId === b.bookingId)
                       .map(replacement => BOOKING_STATUS_LABELS[replacement.status]).join(', ')}</p>
                   )}
+                  {(b.status === 'approved' || b.status === 'attention' || b.status === 'rejected' || b.requiresAlternative) &&
+                    <Link to={`/coordinator/events/${eventId}/venue-booking?replacesBookingId=${b.bookingId}`}>Replace or reschedule this booking</Link>}
+                  {b.requirementOutstanding && (b.status === 'rejected' || b.status === 'cancelled') && <div>
+                    <p>This venue requirement still blocks event readiness.</p>
+                    <label>Reason this venue is no longer required<input value={withdrawReasons[b.bookingId] ?? ''}
+                      onChange={e => setWithdrawReasons(current => ({...current,[b.bookingId]:e.target.value}))} /></label>
+                    <Button disabled={!withdrawReasons[b.bookingId]?.trim() || submitting} onClick={async () => {
+                      setSubmitting(true);setSubmitError(null)
+                      try {
+                        const updated=await apiClient.post<EventVenueBookingDto>(`/events/${eventId}/venue-bookings/${b.bookingId}/withdraw-requirement`,{reason:withdrawReasons[b.bookingId]})
+                        setBookings(current => current?.map(item => item.bookingId===updated.bookingId?updated:item) ?? null)
+                      } catch(error) { setSubmitError(error instanceof Error?error.message:'Could not withdraw this requirement.') }
+                      finally { setSubmitting(false) }
+                    }}>Withdraw venue requirement</Button>
+                  </div>}
                   {b.rejectReason ? <p className="venue-request__history-note"><strong>Reason:</strong> {b.rejectReason}</p> : null}
                   {b.alternativeVenueAddress ? <p className="venue-request__history-note"><strong>Suggested venue:</strong> {b.alternativeVenueAddress}</p> : null}
                   {b.alternativeArrangement ? <p className="venue-request__history-note"><strong>Alternative arrangement:</strong> {b.alternativeArrangement}</p> : null}
+                  <div className="venue-request__history-note"><strong>Operating hours</strong><OperatingHours hours={b.operatingHours} /></div>
                   <BookingTimingSummary timing={b.timing} />
                   <HoldStatus holds={b.holds} />
 
@@ -442,6 +475,26 @@ export function VenueBookingRequestPage() {
       </div>
     </div>
   )
+}
+
+function RoomRequirements({input,event,onChange}:{input:BookingInput;event:EventDto;onChange:(value:BookingRequirements|undefined)=>void}) {
+  const req=input.requirements
+  return <fieldset className="venue-request__timings"><legend>Requirements for this room</legend>
+    <label>Expected attendees (leave blank to use event attendance: {event.expectedAttendance})
+      <input type="number" min="1" step="1" value={req?.expectedAttendance ?? ''}
+        onChange={e => onChange({...req,expectedAttendance:e.target.value===''?null:Number(e.target.value)})} /></label>
+    <label><input type="checkbox" checked={req?.requiredFacilities != null}
+      onChange={e => onChange({...req,requiredFacilities:e.target.checked?[]:null})} />Choose room-specific facilities</label>
+    {req?.requiredFacilities != null && <div>{Object.entries(venueFacilityLabels).map(([key,label]) => <label key={key}>
+      <input type="checkbox" checked={req.requiredFacilities!.includes(key)} onChange={e => onChange({...req,requiredFacilities:e.target.checked?[...req.requiredFacilities!,key]:req.requiredFacilities!.filter(v=>v!==key)})} />{label}</label>)}</div>}
+    <label><input type="checkbox" checked={req?.accessibilityNeeds != null}
+      onChange={e => onChange({...req,accessibilityNeeds:e.target.checked?[]:null})} />Choose room-specific accessibility needs</label>
+    {req?.accessibilityNeeds != null && <div>{Object.entries(ACCESSIBILITY_LABELS).filter(([key])=>key!=='none').map(([key,label]) => <label key={key}>
+      <input type="checkbox" checked={req.accessibilityNeeds!.includes(key)} onChange={e => onChange({...req,accessibilityNeeds:e.target.checked?[...req.accessibilityNeeds!,key]:req.accessibilityNeeds!.filter(v=>v!==key)})} />{label}</label>)}</div>}
+    <label>Room requirements (optional)<textarea maxLength={MAX_TEXT} value={req?.venueRequirements ?? ''}
+      onChange={e => onChange({...req,venueRequirements:e.target.value || null})} /></label>
+    {req && <Button variant="secondary" onClick={()=>onChange(undefined)}>Use event requirements</Button>}
+  </fieldset>
 }
 
 function BookingTimingInputs({ option, input, disabled, onChange }: {
@@ -487,8 +540,6 @@ function BookingTimingInputs({ option, input, disabled, onChange }: {
 }
 
 function VenueDetails({ venue }: { venue: VenueOptionDto['venue'] }) {
-  const hours = venue.operatingHours ?? []
-  const dayNames = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
   return (
     <section className="venue-request__venue-details" aria-labelledby="venue-details-heading">
       <h3 id="venue-details-heading">Selected venue details</h3>
@@ -498,11 +549,7 @@ function VenueDetails({ venue }: { venue: VenueOptionDto['venue'] }) {
         <div><dt>Supported layouts</dt><dd>{venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ') || 'None recorded'}</dd></div>
         <div><dt>Facilities</dt><dd>{venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None recorded'}</dd></div>
         <div><dt>Accessibility</dt><dd>{venue.venueAccessibilities.map(accessibilityLabel).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Operating information</dt><dd>{venue.operatingInformation || 'Not recorded'}</dd></div>
-        {hours.length > 0 ? (
-          <div><dt>Structured weekly hours</dt><dd>{hours.map((hour) =>
-            `${dayNames[hour.dayOfWeek - 1] ?? `Day ${hour.dayOfWeek}`} ${hour.openTime}–${hour.closeTime}`).join(' · ')}</dd></div>
-        ) : null}
+        <div><dt>Operating hours</dt><dd><OperatingHours hours={venue.operatingHours} /></dd></div>
         {venue.additionalInformation ? <div><dt>Additional information</dt><dd>{venue.additionalInformation}</dd></div> : null}
       </dl>
     </section>
@@ -587,7 +634,7 @@ function SuitabilitySummary({ option }: { option: VenueOptionDto }) {
 function Comparison({ event, option, input }: { event: EventDto; option: VenueOptionDto; input: BookingInput }) {
   const period = validInput(input) ? occupiedPeriod(instant(input.start), instant(input.end), Number(input.setup), Number(input.turnaround)) : null
   const { venue } = option
-  const needs = event.accessibilityNeeds.filter((n) => n !== 'none')
+  const needs = (input.requirements?.accessibilityNeeds ?? event.accessibilityNeeds).filter((n) => n !== 'none')
   return (
     <table className="venue-request__compare">
       <thead>
@@ -596,7 +643,7 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
       <tbody>
         <tr data-ok={option.capacityOk}>
           <th scope="row">Capacity</th>
-          <td>{event.expectedAttendance.toLocaleString()} people</td>
+          <td>{(input.requirements?.expectedAttendance ?? event.expectedAttendance).toLocaleString()} people</td>
           <td>{(venue.venueCapacity ?? 0).toLocaleString()} {option.capacityOk ? '✓' : '✗'}</td>
         </tr>
         <tr data-ok={(option.unavailablePeriods ?? []).length === 0 && option.conflicts.length === 0}>
@@ -610,8 +657,8 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
         </tr>
         <tr data-ok={(option.missingFacilities ?? []).length === 0}>
           <th scope="row">Required facilities</th>
-          <td>{(event.requiredFacilities ?? []).length
-            ? (event.requiredFacilities ?? []).map((f) => venueFacilityLabels[f]).join(', ')
+          <td>{(input.requirements?.requiredFacilities ?? event.requiredFacilities ?? []).length
+            ? (input.requirements?.requiredFacilities ?? event.requiredFacilities ?? []).map((f) => venueFacilityLabels[f as Facility]).join(', ')
             : 'None specified'}</td>
           <td>{(option.missingFacilities ?? []).length
             ? `Missing: ${(option.missingFacilities ?? []).map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ')} ✗`
@@ -632,7 +679,7 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
         })}
         <tr>
           <th scope="row">Layout &amp; facilities</th>
-          <td>{event.venueRequirements}</td>
+          <td>{input.requirements?.venueRequirements ?? event.venueRequirements}</td>
           <td>
             {venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ')}
             {venue.venueFacilities.length ? <> · {venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ')}</> : null}
@@ -641,7 +688,7 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
         <tr>
           <th scope="row">Opening hours</th>
           <td>{period ? timeRange(period.effectiveStart, period.effectiveEnd) : 'Enter valid booking times'}</td>
-          <td>{venue.operatingInformation}</td>
+          <td><OperatingHours hours={venue.operatingHours} /></td>
         </tr>
       </tbody>
     </table>

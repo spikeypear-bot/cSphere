@@ -87,13 +87,17 @@ public class Notification {
     @Column(name = "venue_booking_id")
     private UUID venueBookingId;
 
-    /** V41 (TS11): the equipment request an equipment_request_submitted notice is about. */
+    /** V52 (TS11): the equipment request an equipment_request_submitted notice is about. */
     @Column(name = "equipment_request_id")
     private UUID equipmentRequestId;
 
-    /** V41 (TS11): the review an equipment_change_review notice asks for. */
+    /** V52 (TS11): the review an equipment_change_review notice asks for. */
     @Column(name = "equipment_review_id")
     private UUID equipmentReviewId;
+
+    /** VS17: deduplication and historical review reference. */
+    @Column(name = "requirement_review_id")
+    private UUID requirementReviewId;
 
     public Notification() {
     }

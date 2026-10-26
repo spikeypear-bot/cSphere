@@ -1,4 +1,4 @@
-// @stories VS16 VS18  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS16 VS18 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -10,6 +10,7 @@ import type { VenueDto } from '../../types/venue'
 const venue: VenueDto = {
   venueId: 'room-1', venueAddress: 'School A - Classroom 1, Level 2', venueCapacity: 40,
   supportedLayouts: ['classroom', 'boardroom'], venueAccessibilities: [], venueFacilities: [],
+  operatingHours: [{ dayOfWeek: 1, openTime: '09:00', closeTime: '18:00' }],
   operatingInformation: 'Weekdays 09:00–18:00', additionalInformation: null,
 }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status,
@@ -64,17 +65,18 @@ it('reads full characteristics and latest values on refresh and reopening withou
   await screen.findByText('No associated bookings.')
   expect(screen.getAllByText('Not recorded')).toHaveLength(2)
   expect(screen.getByText('No Additional Information')).toBeInTheDocument()
-  expect(screen.getByText(venue.operatingInformation)).toBeInTheDocument()
+  expect(screen.getByText('9am – 6pm')).toBeInTheDocument()
   expect(screen.getByText('Classroom')).toBeInTheDocument()
   expect(screen.getByText('Boardroom')).toBeInTheDocument()
   saved = { ...venue, venueCapacity: 75, supportedLayouts: ['theatre'],
     venueAccessibilities: ['none'], venueFacilities: ['projection'],
-    operatingInformation: 'Daily', additionalInformation: 'Collect the key at reception.' }
+    operatingInformation: 'Daily', operatingHours: [{ dayOfWeek: 2, openTime: '10:30', closeTime: '23:30' }], additionalInformation: 'Collect the key at reception.' }
   await user.click(screen.getByRole('button', { name: 'Refresh venue' }))
   expect(await screen.findByText('75 people')).toBeInTheDocument()
   expect(screen.getByText('No accessibility provisions')).toBeInTheDocument()
   expect(screen.getByText('Projection')).toBeInTheDocument()
-  expect(screen.getByText('Daily')).toBeInTheDocument()
+  expect(screen.getByText('10:30am – 11:30pm')).toBeInTheDocument()
+  expect(screen.queryByText('Daily')).not.toBeInTheDocument()
   expect(screen.getByText('Theatre')).toBeInTheDocument()
   expect(screen.getByText(saved.additionalInformation!)).toBeInTheDocument()
   await user.click(screen.getByRole('link', { name: 'Back to venue catalogue' }))
@@ -95,7 +97,6 @@ it('validates an operational issue before posting', async () => {
   vi.stubGlobal('fetch', fetch)
   page('/venue-staff/catalogue/room-1')
   const user = userEvent.setup()
-
   await screen.findByRole('heading', { name: 'Operational issues' })
   await user.click(screen.getByRole('button', { name: 'Report issue' }))
   expect(screen.getByRole('alert')).toHaveTextContent('Issue description is required.')

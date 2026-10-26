@@ -77,7 +77,13 @@ public class SecurityConfig{
 		    // product endpoint (D20 open question 4). denyAll rather than
 		    // deleting the package, which is a separate call.
 		    .requestMatchers("/api/mock", "/api/mock/**").denyAll()
+                .requestMatchers("/api/venue-bookings/*/history").hasRole("VS")
+                .requestMatchers("/api/venue-bookings/*/assessment", "/api/venue-bookings/*/reassess").hasRole("VS")
+                .requestMatchers(HttpMethod.GET, "/api/events/*/venue-assessments").hasRole("EC")
+                .requestMatchers("/api/venue-bookings/*/requirement-reviews", "/api/venue-bookings/*/requirement-reviews/**").hasRole("VS")
+                .requestMatchers(HttpMethod.GET, "/api/events/*/venue-reviews").hasRole("EC")
                 .requestMatchers("/api/venue-bookings/*/holds", "/api/venue-holds/**").hasRole("VS")
+                .requestMatchers(HttpMethod.GET, "/api/venue-bookings/*", "/api/venues/*/bookings").hasRole("VS")
                 .requestMatchers(HttpMethod.PATCH, "/api/venue-bookings/*/approve", "/api/venue-bookings/*/reject").hasRole("VS")
                 .requestMatchers(HttpMethod.PUT, "/api/venue-bookings/*/timing").hasRole("VS")
                 .requestMatchers("/api/venues/*/timing-conflicts", "/api/venues/*/timing-conflicts/scan").hasRole("VS")
@@ -204,6 +210,8 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.POST, "/api/safety/events/*/approval").hasRole("SAFETY_OFFICER")
 		    .requestMatchers(HttpMethod.PATCH, "/api/safety/events/*/readiness/items/*").hasRole("SAFETY_OFFICER")
 		    .requestMatchers("/api/safety/events/**").hasRole("SAFETY_OFFICER")
+	    // AT02: the attendee-safe public event projection is attendee-only.
+	    .requestMatchers("/api/attendee/**").hasRole("ATTENDEE")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/readiness").hasAnyRole("EC", "SAFETY_OFFICER")
 		    // EC08: the assigned Coordinator confirms, only after the Safety
 		    // Officer approves (enforced in EventLifecycleService.confirm).

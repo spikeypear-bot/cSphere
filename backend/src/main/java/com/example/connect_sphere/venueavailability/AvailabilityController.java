@@ -19,6 +19,11 @@ public class AvailabilityController {
     private final AvailabilityService service;
     public AvailabilityController(AvailabilityService service) { this.service = service; }
     @GetMapping("/unavailability") public List<Period> list(@PathVariable UUID venueId) { return service.list(venueId); }
+    @GetMapping("/unavailability/history") public List<Period> history(@PathVariable UUID venueId) { return service.history(venueId); }
+    @PatchMapping("/unavailability/{periodId}/release") public Period release(@PathVariable UUID venueId,
+            @PathVariable UUID periodId, @AuthenticationPrincipal Jwt jwt, @RequestBody Release request) {
+        return service.release(venueId,periodId,UUID.fromString(jwt.getSubject()),request);
+    }
     @PostMapping("/unavailability/preview") public Preview preview(@PathVariable UUID venueId, @RequestBody Request request) {
         return service.preview(venueId, request);
     }

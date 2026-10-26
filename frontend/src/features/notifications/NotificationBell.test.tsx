@@ -1,4 +1,4 @@
-// @stories EO09 EO19 EC-C3 EO07
+// @stories EO09 EO19 EC-C3 EO07 AT01
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -249,6 +249,15 @@ describe('EO07 NotificationBell — cancellation notifications', () => {
   }
 
   const base = { ...STATUS_CHANGE_NOTIFICATION, eventName: 'Town Hall', newStatus: null }
+
+  it('AT01 AC9 (happy): the attendee receives a notification with the registration reference and event link', async () => {
+    stubList([{ ...base, notificationId: 'at1', type: 'attendee_registration_confirmed', message: 'Your registration is confirmed. Reference: CS-123456789ABC', linkPath: '/attendee/events/event-1' }])
+    const user = userEvent.setup()
+    renderBell()
+    await user.click(await screen.findByLabelText(/Notifications/))
+    expect(await screen.findByText('Your registration for "Town Hall" is confirmed')).toBeInTheDocument()
+    expect(screen.getByText('“Your registration is confirmed. Reference: CS-123456789ABC”')).toBeInTheDocument()
+  })
 
   it('EO07 AC2, AC7 (happy): the coordinator sees a cancelled request and a cancellation request, each with the organiser\'s reason', async () => {
     stubList([

@@ -22,6 +22,8 @@ const FIELD_IS_MISSING: Record<string, (fields: DraftFields) => boolean> = {
   expectedAttendance: (f) => f.expectedAttendance == null,
   venueRequirements: (f) => isBlank(f.venueRequirements),
   accessibilityNeeds: (f) => f.accessibilityNeeds.length === 0,
+  registrationCapacity: (f) => Boolean(f.registrationNeeds) && f.registrationCapacity == null,
+  registrationOpensAt: (f) => Boolean(f.registrationNeeds) && isBlank(f.registrationOpensAt),
 }
 
 export function getMissingRequiredFields(fields: DraftFields): string[] {
@@ -31,7 +33,15 @@ export function getMissingRequiredFields(fields: DraftFields): string[] {
 /** Rounded 0-100. Used for both the wizard's live tracker and the draft
  * list's completion ring — one calculation, one source of truth. */
 export function getCompletionPercent(fields: DraftFields): number {
-  const missing = getMissingRequiredFields(fields).length
-  const total = REQUIRED_FIELD_KEYS.length
+  // Registration details become required only when the organiser opts into
+  // attendee registration. Excluding inactive conditional fields from both
+  // the missing count and denominator prevents them making a blank draft
+  // appear partially complete.
+  const requiredKeys = REQUIRED_FIELD_KEYS.filter((key) =>
+    !['registrationCapacity', 'registrationOpensAt'].includes(key)
+      || fields.registrationNeeds === true,
+  )
+  const missing = requiredKeys.filter((key) => FIELD_IS_MISSING[key]?.(fields)).length
+  const total = requiredKeys.length
   return Math.round(((total - missing) / total) * 100)
 }

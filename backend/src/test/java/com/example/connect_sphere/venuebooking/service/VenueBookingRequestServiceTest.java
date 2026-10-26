@@ -44,7 +44,7 @@ import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
  * EC03 rules that the rolled-back flow test cannot observe (notifications are
  * sent after commit), plus the suitability boundaries in isolation.
  */
-@Tag("unit")
+@Tag("unit") @Tag("VS17") @Tag("EC-C2")
 @Tag("EC03")
 class VenueBookingRequestServiceTest {
 
@@ -71,6 +71,7 @@ class VenueBookingRequestServiceTest {
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
                 activityService, notificationService, operationalIssues, null, availability,
                 org.mockito.Mockito.mock(com.example.connect_sphere.event.service.EventLifecycleService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"plan",org.mockito.Mockito.mock(BookingPlanService.class));
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(availability.settings(any())).thenReturn(new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0, 0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());

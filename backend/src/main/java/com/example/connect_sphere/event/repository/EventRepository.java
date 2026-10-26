@@ -19,12 +19,7 @@ import jakarta.persistence.LockModeType;
 @Repository
 public interface EventRepository extends JpaRepository<Event, UUID> {
 
-    /** EC03 takes this lock before checking "one active booking request per
-     * event" and inserting one. Two coordinators (or one double-click)
-     * submitting for the same event are serialised on the event row, so the
-     * second sees the first's booking and is refused. That makes the rule
-     * race-safe without a unique index, which VS02's own fixtures (several
-     * bookings per event) would violate. */
+    /** Serialises booking and lifecycle mutations for the same event. */
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT e FROM Event e WHERE e.eventId = :id")
     Optional<Event> findForUpdate(@Param("id") UUID id);
@@ -38,4 +33,7 @@ public interface EventRepository extends JpaRepository<Event, UUID> {
 
     /** SO-C1 + EC08: every event not yet confirmed, soonest first. */
     List<Event> findByStatusInOrderByStartDatetimeAsc(Collection<EventStatus> statuses);
+
+    /** AT02: attendee catalogue is limited to events that have been confirmed at least once. */
+    List<Event> findByFirstConfirmedAtIsNotNullOrderByStartDatetimeAsc();
 }

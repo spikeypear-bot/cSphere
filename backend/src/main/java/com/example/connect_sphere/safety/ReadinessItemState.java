@@ -22,6 +22,11 @@ public class ReadinessItemState {
     @Column(name = "item_key", nullable = false)
     private String itemKey;
 
+    @Column(name="arrangement_fingerprint")
+    private String arrangementFingerprint;
+    public String getArrangementFingerprint() { return arrangementFingerprint; }
+    public void setArrangementFingerprint(String value) { arrangementFingerprint=value; }
+
     @Column(nullable = false)
     private boolean checked;
 

@@ -1,6 +1,6 @@
-// @stories VS-C4
+// @stories VS-C4 VS17
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { TimingConflictReview } from './TimingConflictReview'
 import { apiClient } from '../../lib/apiClient'
@@ -38,7 +38,8 @@ it('VS-C4 AC10, AC11 (failure): removes stale conflicts and shows errors instead
   expect(screen.queryByRole('link', { name: 'First event' })).not.toBeInTheDocument()
   expect(screen.queryByText(/No booking conflicts/)).not.toBeInTheDocument()
   fireEvent.click(screen.getByRole('button', { name: 'Retry conflicts' }))
-  await screen.findByText(/No booking conflicts detected/)
+  await waitFor(() => expect(screen.queryByRole('region', { name: 'Existing timing conflicts' })).not.toBeInTheDocument())
+  expect(screen.queryByRole('region', { name: 'Booking Conflicts' })).not.toBeInTheDocument()
 })
 it('VS-C4 AC9 (happy): booking timing summary links the conflicting booking on the staff details route', () => {
   render(<MemoryRouter><BookingTimingSummary bookingLinks timing={{ startDatetime: first.startDateTime, endDatetime: first.endDateTime,
@@ -54,4 +55,12 @@ it('VS-C4 AC9 (scope): conflict links remain opt-in for shared summaries outside
       endDatetime: second.endDateTime, effectiveStart: second.effectiveStart, effectiveEnd: second.effectiveEnd }] }} />)
   expect(screen.getByText(/Second event/)).toBeInTheDocument()
   expect(screen.queryByRole('link')).not.toBeInTheDocument()
+})
+
+it('VS17 (boundary): hides conflict sections and actions when no timing conflicts exist', async () => {
+  vi.mocked(apiClient.get).mockResolvedValue([])
+  render(<MemoryRouter><TimingConflictReview venueId="v" /></MemoryRouter>)
+  await waitFor(() => expect(screen.queryByRole('region', { name: 'Existing timing conflicts' })).not.toBeInTheDocument())
+  expect(screen.queryByRole('region', { name: 'Booking Conflicts' })).not.toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Refresh conflicts' })).not.toBeInTheDocument()
 })

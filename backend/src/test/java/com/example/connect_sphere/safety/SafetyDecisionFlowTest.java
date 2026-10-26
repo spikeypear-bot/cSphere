@@ -46,6 +46,7 @@ import jakarta.persistence.EntityManager;
 @Tag("SO-C5")
 @Tag("SO-C6")
 @Tag("EC08")
+@Tag("VS17")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -165,7 +166,10 @@ class SafetyDecisionFlowTest {
     @DisplayName("SO-C5 AC1, AC6, AC7, AC10, AC11 (happy): a rejection with every item ticked returns the event to the coordinator with its reason and items")
     void aRejectionWithEveryItemTickedReturnsTheEventToTheCoordinator() throws Exception {
         UUID eventId = eventAwaitingReview();
-        for (String item : ALL_ITEMS) {
+        List<String> items = new java.util.ArrayList<>(ALL_ITEMS);
+        items.add("venue_safety_" + jdbc.queryForObject(
+                "SELECT booking_id FROM venue_bookings WHERE event_id = ?", UUID.class, eventId));
+        for (String item : items) {
             mvc.perform(patch("/api/safety/events/" + eventId + "/readiness/items/" + item).with(flow.as("so1"))
                     .contentType(MediaType.APPLICATION_JSON).content("{\"checked\":true,\"note\":\"\"}"))
                     .andExpect(status().isOk());
@@ -174,7 +178,7 @@ class SafetyDecisionFlowTest {
         decide("so1", eventId, "reject", "The stage blocks both exits", List.of("capacity_facilities"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.approvalStatus").value("rejected"))
-                .andExpect(jsonPath("$.completedItems").value(6));
+                .andExpect(jsonPath("$.completedItems").value(7));
 
         assertThat(eventStatus(eventId)).isEqualTo("safety_changes_requested");
         assertThat(jdbc.queryForObject("SELECT safety_feedback FROM events WHERE event_id = ?", String.class, eventId))
@@ -184,6 +188,25 @@ class SafetyDecisionFlowTest {
                 .andExpect(jsonPath("$.approvalStatus").value("rejected"))
                 .andExpect(jsonPath("$.approvalNote").value("The stage blocks both exits"))
                 .andExpect(jsonPath("$.flaggedItems[0]").value("capacity_facilities"));
+    }
+
+    @Test
+    @DisplayName("VS17 SO-C6 (cross-cutting): safety feedback accepts this event's venue item and rejects another booking without saving")
+    void venueFeedbackIsScopedToTheEventsChecklist() throws Exception {
+        UUID eventId = eventAwaitingReview();
+        String key = "venue_safety_" + jdbc.queryForObject(
+                "SELECT booking_id FROM venue_bookings WHERE event_id = ?", UUID.class, eventId);
+        decide("so1", eventId, "request_changes", "Check the venue exits", List.of("venue_safety_" + UUID.randomUUID()))
+                .andExpect(status().isUnprocessableEntity());
+        assertThat(eventStatus(eventId)).isEqualTo("awaiting_safety_review");
+        assertThat(reviews(eventId)).isZero();
+        assertThat(safetyDecisionEntries(eventId)).isZero();
+        decide("so1", eventId, "request_changes", "Check the venue exits", List.of("equipment", key))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flaggedItems[0]").value("equipment"))
+                .andExpect(jsonPath("$.flaggedItems[1]").value(key));
+        assertThat(eventStatus(eventId)).isEqualTo("safety_changes_requested");
+        assertThat(timelineItems(eventId, "safety_changes_requested")).containsExactly("equipment", key);
     }
 
     @Test

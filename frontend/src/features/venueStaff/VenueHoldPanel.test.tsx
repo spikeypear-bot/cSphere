@@ -1,4 +1,4 @@
-// @stories VS-C3 VS03 VS15
+// @stories VS-C3 VS03 VS15 VS17
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
@@ -101,4 +101,22 @@ it('calendar distinguishes a real hold from pending requests and applies its occ
   expect(entries.filter(e => e.type === 'pending')).toHaveLength(3)
   expect(calendarEntries(schedule, new Set(['h1'])).some(e => e.type === 'tentative')).toBe(false)
   expect(calendarEntries({ ...schedule, holds: [{ ...hold, status: 'released' }] }).some(e => e.type === 'tentative')).toBe(false)
+})
+
+it.each(['converted','released','expired'] as const)('VS-C3 (cross-cutting): %s history uses the preview card and labelled facts without decision controls',status=>{
+ render(<VenueHoldPanel bookingId="b1" pending={false} initialHolds={[{...hold,status}]} onChanged={vi.fn()}/>)
+ const history=screen.getByRole('list',{name:'Hold history'})
+ const entry=within(history).getByRole('listitem')
+ const card=entry.querySelector('.card')!
+ expect(card).toHaveClass('venue-card-preview','venue-hold-panel__history-card')
+ expect(card.querySelector('dl')).toHaveClass('venue-card-preview__information')
+ expect(within(history).getByText('Occupied period (SGT)')).toBeInTheDocument()
+ expect(within(history).getByText('Expires (SGT)')).toBeInTheDocument()
+ expect(within(history).getByText('Created (SGT)')).toBeInTheDocument()
+ const badge=within(history).getByText(status[0].toUpperCase()+status.slice(1))
+ if(status==='converted') expect(badge).toHaveAttribute('data-booking-status','approved')
+ else expect(badge).not.toHaveAttribute('data-booking-status')
+ expect(screen.queryByRole('button',{name:'Release Hold'})).not.toBeInTheDocument()
+ expect(screen.queryByRole('button',{name:'Convert Hold to Approved Booking'})).not.toBeInTheDocument()
+ expect(apiClient.patch).not.toHaveBeenCalled()
 })

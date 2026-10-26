@@ -17,8 +17,21 @@ import com.example.connect_sphere.venue.entity.VenueLayout;
 
 @Tag("unit")
 @Tag("VS07")
+@Tag("VS17")
 class VenueMapperTest {
     private final VenueMapper mapper = Mappers.getMapper(VenueMapper.class);
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("VS17 (cross-cutting): deriving operating hours retains the public venue name")
+    void preservesPublicNameWhenDerivingHours() {
+        Venue venue = new Venue();
+        venue.setVenueName("Public Hall");
+        venue.setVenueAddress("10 Example Road");
+        var dto = mapper.toDto(venue);
+        assertEquals("Public Hall", dto.venueName());
+        assertEquals("10 Example Road", dto.venueAddress());
+        assertEquals("Operating hours not configured", dto.operatingInformation());
+    }
 
     @Test
     void mapsEmptySelectionsToEmptyResponseLists() {
@@ -54,7 +67,8 @@ class VenueMapperTest {
         assertEquals(venue.getVenueAddress(), dto.venueAddress());
         assertEquals(50000, dto.venueCapacity());
         assertEquals(List.of(VenueLayout.theatre, VenueLayout.classroom), dto.supportedLayouts());
-        assertEquals(venue.getOperatingInformation(), dto.operatingInformation());
+        assertEquals("Operating hours not configured", dto.operatingInformation());
+        assertEquals(List.of(), dto.operatingHours());
         assertNull(dto.additionalInformation());
         assertEquals(List.of(AccessibilityFeature.step_free_access, AccessibilityFeature.elevators), dto.venueAccessibilities());
         assertEquals(List.of(Facility.projection, Facility.stage), dto.venueFacilities());

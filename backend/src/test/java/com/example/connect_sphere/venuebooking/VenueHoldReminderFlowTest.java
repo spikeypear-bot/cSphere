@@ -35,6 +35,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 
 /** EC-C3: the coordinator is reminded before a tentative venue hold expires (default lead 24 hours). */
 @Tag("integration") @Tag("EC-C3")
+@Tag("VS17")
 @SpringBootTest(properties="venue.holds.expiry-delay-ms=86400000")
 @AutoConfigureMockMvc
 @Import(VenueHoldReminderFlowTest.TimeConfig.class)
@@ -87,9 +88,8 @@ class VenueHoldReminderFlowTest {
     String venueName;
     UUID venue(){
         venueName="EC-C3 Hall "+UUID.randomUUID();
-        UUID id=venues.createVenue(new CreateVenueDto(venueName,200,List.of(VenueLayout.classroom),"Daily",null,null,null)).venueId();
+        UUID id=venues.createVenue(new CreateVenueDto(venueName,200,List.of(VenueLayout.classroom),"Daily",null,null,null, com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek())).venueId();
         venueIds.add(id);
-        jdbc.update("INSERT INTO venue_operating_hours(operating_hour_id,venue_id,day_of_week,open_time,close_time) SELECT gen_random_uuid(),?,day,'00:00'::time,'23:59'::time FROM generate_series(1,7) day",id);
         return id;
     }
     /** A pending booking for a Planning event coordinated by ec1. */

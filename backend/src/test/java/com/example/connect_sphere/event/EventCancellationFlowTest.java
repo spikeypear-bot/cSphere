@@ -46,7 +46,7 @@ import jakarta.persistence.EntityManager;
  * it. Every test rolls back, so notifications (sent after commit) are not
  * written here; EventCancellationServiceTest checks those.
  */
-@Tag("integration")
+@Tag("integration") @Tag("VS17") @Tag("SO-C2")
 @Tag("EO07")
 @Tag("ECL-C1")
 @Tag("EC02")
@@ -56,6 +56,11 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc
 @Transactional
 class EventCancellationFlowTest {
+    @Autowired com.example.connect_sphere.safety.ReadinessService venueReadiness;
+    private void attestVenues(UUID eventId) {
+        for(var item:venueReadiness.forSafetyOfficer(eventId).items())
+            venueReadiness.updateItem(flow.idOf("so1"),eventId,item.itemKey(),new com.example.connect_sphere.safety.UpdateReadinessItemRequest(true,"Verified"));
+    }
 
     private static final String REASON_BODY = "{\"reason\":\"The client has called the event off.\"}";
     private static final List<VenueOperatingHourDto> ALL_WEEK = IntStream.rangeClosed(1, 7)
@@ -108,6 +113,7 @@ class EventCancellationFlowTest {
         Planned planned = plannedEvent(name);
         mvc.perform(post("/api/events/" + planned.eventId() + "/safety-review").with(flow.as("ec1")))
                 .andExpect(status().isOk());
+        attestVenues(planned.eventId());
         lifecycle.recordSafetyDecision(flow.idOf("so1"), planned.eventId(), SafetyDecision.APPROVE, null);
         mvc.perform(post("/api/events/" + planned.eventId() + "/confirm").with(flow.as("ec1")))
                 .andExpect(status().isOk());

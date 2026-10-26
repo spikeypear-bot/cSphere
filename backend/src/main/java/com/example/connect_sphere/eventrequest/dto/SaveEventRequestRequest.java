@@ -23,13 +23,32 @@ public record SaveEventRequestRequest(
         String equipmentRequirements,
         List<AccessibilityFeature> accessibilityNeeds,
         List<Facility> requiredFacilities,
-        Boolean registrationNeeds) {
+        Boolean registrationNeeds,
+        Integer registrationCapacity,
+        OffsetDateTime registrationOpensAt,
+        OffsetDateTime registrationClosesAt,
+        String attendeeInstructions) {
+
+    // Compatibility for clients that still send a closing time: V36 defines
+    // the closing time as event start, so a separate value is never persisted.
+    public SaveEventRequestRequest {
+        registrationClosesAt = startDatetime;
+    }
+
+    public SaveEventRequestRequest(String eventName, String purpose, String description,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
+            String venueRequirements, String equipmentRequirements, List<AccessibilityFeature> accessibilityNeeds,
+            List<Facility> requiredFacilities, Boolean registrationNeeds) {
+        this(eventName, purpose, description, startDatetime, endDatetime, expectedAttendance, venueRequirements,
+                equipmentRequirements, accessibilityNeeds, requiredFacilities, registrationNeeds, null, null, null, null);
+    }
 
     public SaveEventRequestRequest(String eventName, String purpose, String description,
             OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
             String venueRequirements, String equipmentRequirements,
             List<AccessibilityFeature> accessibilityNeeds, Boolean registrationNeeds) {
         this(eventName, purpose, description, startDatetime, endDatetime, expectedAttendance,
-                venueRequirements, equipmentRequirements, accessibilityNeeds, List.of(), registrationNeeds);
+                venueRequirements, equipmentRequirements, accessibilityNeeds, List.of(), registrationNeeds,
+                null, null, null, null);
     }
 }

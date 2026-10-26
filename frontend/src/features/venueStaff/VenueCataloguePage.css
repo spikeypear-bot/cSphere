@@ -94,3 +94,5 @@
   flex-shrink: 0;
   margin-left: auto;
 }
+
+[data-booking-status='attention'] { background: var(--danger-soft); color: var(--danger); }

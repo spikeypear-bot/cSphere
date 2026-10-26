@@ -1,8 +1,6 @@
 import type { SkeletonFeature } from '../../types/skeletonFeature'
 
-// Story IDs per docs/product-context.md § End-to-End Workflows (step 4, 5)
-// and § Detailed User Stories (VS06A/VS06B) — re-check against the live
-// backlog sheet before building any of these for real.
+// Navigation to implemented Venue Staff workflows. Story metadata stays in code.
 export const venueStaffFeatures: SkeletonFeature[] = [
   {
     path: 'catalogue',
@@ -30,7 +28,7 @@ export const venueStaffFeatures: SkeletonFeature[] = [
     pageTitle: 'Venue Booking Approval',
     storyIds: ['VS02', 'VS03', 'VS04'],
     featureArea: 'Venue Booking Approval / Booking Conflict Detection',
-    summary: 'Approve or reject a venue booking request, with conflict detection against existing bookings.',
+    summary: 'Review booking requests, manage tentative holds and reassess bookings that need attention.',
     layout: 'list',
     suggestedBackendPackage: 'com.example.connect_sphere.venuebooking',
   },
@@ -38,7 +36,7 @@ export const venueStaffFeatures: SkeletonFeature[] = [
     path: 'availability-calendar',
     navLabel: 'Availability calendar',
     pageTitle: 'Venue Availability Calendar',
-    storyIds: [],
+    storyIds: ['VS15'],
     featureArea: 'Venue Availability Calendar',
     summary: 'See a calendar view of when each venue is booked or free.',
     layout: 'calendar',

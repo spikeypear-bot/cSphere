@@ -82,6 +82,9 @@ public class Event {
     @Column(name = "registration_opens_at")
     private OffsetDateTime registrationOpensAt;
 
+    @Column(name = "attendee_instructions")
+    private String attendeeInstructions;
+
     private String organisation;
 
     @Column(name = "actual_attendance")

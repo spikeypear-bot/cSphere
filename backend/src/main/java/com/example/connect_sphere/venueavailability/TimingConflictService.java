@@ -39,7 +39,7 @@ public class TimingConflictService {
 
     /** Reused by schedule reads so off-screen partners still mark visible bookings. */
     static List<Overlap> overlaps(List<Booking> bookings) {
-        var approved = bookings.stream().filter(b -> b.status().equals("approved"))
+        var approved = bookings.stream().filter(b -> (b.status().equals("approved") || b.status().equals("attention")))
                 .sorted(java.util.Comparator.comparing(b -> b.bookingId().toString())).toList();
         List<Overlap> result = new ArrayList<>();
         for (int i = 0; i < approved.size(); i++) {

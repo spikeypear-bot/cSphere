@@ -34,6 +34,9 @@ import com.example.connect_sphere.venuebooking.service.*;
 @AutoConfigureMockMvc
 @Tag("VS01")
 @Tag("VS-C1")
+@Tag("VS17")
+@org.junit.jupiter.api.Tag("EC-C2")
+@org.junit.jupiter.api.Tag("EC10")
 class VenueUnavailabilityTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;
@@ -123,21 +126,23 @@ class VenueUnavailabilityTest {
         assertThat(availability.list(v)).containsExactly(maintenance);
     }
 
-    @Test void sameVenueReplacementExcludesOnlyOriginalAndReleasesItsOldPeriod() {
-        UUID v = venue(), original = booking(v, "approved");
+    @Test @org.junit.jupiter.api.DisplayName("VS01 VS17 (conflict): replacement releases only its source and rechecks target conflicts")
+    void differentVenueReplacementReleasesOnlyItsOriginalPeriod() {
+        UUID v = venue(), target=venue(), original = booking(v, "approved");
         record(v, period("10:00", "10:30"));
         var window = period("11:00", "13:00");
         UUID replacement = requests.submit(coordinator, event(original), new SubmitVenueBookingRequest(
-                v, null, null, original, window.startDateTime(), window.endDateTime())).bookingId();
+                target, null, null, original, window.startDateTime(), window.endDateTime())).bookingId();
         assertThat(statusOf(original)).isEqualTo("approved");
-        UUID other = booking(v, "approved");
+        UUID other = booking(target, "approved");
         assertThatThrownBy(() -> bookings.approve(replacement)).isInstanceOf(VenueBookingConflictException.class);
         assertThat(statusOf(original)).isEqualTo("approved");
         requests.cancel(coordinator, event(other), other, null);
         bookings.approve(replacement);
         assertThat(statusOf(original)).isEqualTo("changed");
         assertThat(statusOf(replacement)).isEqualTo("approved");
-        assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(replacement);
+        assertThat(availability.schedule(v).bookings()).isEmpty();
+        assertThat(availability.schedule(target).bookings()).extracting(Booking::bookingId).containsExactly(replacement);
     }
 
     @Test void failedReplacementApprovalRollsBackOriginalRelease() {
@@ -436,7 +441,7 @@ class VenueUnavailabilityTest {
         assertThatThrownBy(() -> requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b))).isInstanceOf(VenueBookingStateException.class);
         bookings.approve(replacement.bookingId());
         assertThat(statusOf(b)).isEqualTo("changed"); assertThat(statusOf(replacement.bookingId())).isEqualTo("approved");
-        assertThat(jdbc.queryForObject("SELECT venue_id FROM events WHERE event_id=?",UUID.class,event(b))).isEqualTo(next);
+        assertThat(jdbc.queryForObject("SELECT venue_id FROM events WHERE event_id=?",UUID.class,event(b))).isNull();
         assertThat(availability.affected(b)).isFalse();
         assertThat(jdbc.queryForObject("SELECT booking_notes FROM venue_bookings WHERE booking_id=?",String.class,b)).isEqualTo("Preserve me");
     }
@@ -462,20 +467,19 @@ class VenueUnavailabilityTest {
             assertThat(statusOf(original)).isEqualTo(originalStatus);
             assertThat(statusOf(unaffected)).isEqualTo("approved");
             assertThat(statusOf(replacement.bookingId())).isEqualTo("approved");
-            assertThat(jdbc.queryForObject("SELECT venue_id FROM events WHERE event_id=?",UUID.class,eventId)).isEqualTo(targetVenue);
+            assertThat(jdbc.queryForObject("SELECT venue_id FROM events WHERE event_id=?",UUID.class,eventId)).isNull();
             assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_bookings WHERE event_id=?",Integer.class,eventId)).isEqualTo(3);
         }
     }
-    @Test void replacementMustUseAnotherVenueAndCannotReplaceUnaffectedActiveBooking() {
-        UUID old=venue(), next=venue(), unaffected=booking(old,"approved");
-        assertThatThrownBy(() -> requests.submit(coordinator,event(unaffected),
-                new SubmitVenueBookingRequest(next,null,null,unaffected)))
-                .isInstanceOf(VenueBookingStateException.class);
-
-        UUID rejected=booking(old,"rejected");
-        assertThatThrownBy(() -> requests.submit(coordinator,event(rejected),
-                new SubmitVenueBookingRequest(old,null,null,rejected)))
-                .isInstanceOf(InvalidVenueBookingException.class);
+    @Test @org.junit.jupiter.api.DisplayName("EC10 (happy): a healthy booking can be replaced without releasing it early")
+    void healthyApprovedBookingCanBeReplaced() {
+        UUID old=venue(), next=venue(), original=booking(old,"approved");
+        var replacement=requests.submit(coordinator,event(original),new SubmitVenueBookingRequest(next,null,null,original));
+        assertThat(replacement.status().name()).isEqualTo("pending");
+        assertThat(statusOf(original)).isEqualTo("approved");
+        bookings.approve(replacement.bookingId());
+        assertThat(statusOf(original)).isEqualTo("changed");
+        assertThat(statusOf(replacement.bookingId())).isEqualTo("approved");
     }
     @Test void rejectedAndWithdrawnReplacementsKeepOriginalAndAllowRetry() {
         UUID old=venue(), next=venue(), b=booking(old,"pending"); record(old,period("10:00","11:00"));
