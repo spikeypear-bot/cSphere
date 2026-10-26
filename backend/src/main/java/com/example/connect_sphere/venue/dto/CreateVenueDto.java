@@ -21,18 +21,25 @@ public record CreateVenueDto(
         List<AccessibilityFeature> venueAccessibilities,
         List<Facility> venueFacilities,
         List<VenueOperatingHourDto> operatingHours,
-        java.math.BigDecimal setupMinutes, java.math.BigDecimal turnaroundMinutes) {
+        java.math.BigDecimal setupMinutes, java.math.BigDecimal turnaroundMinutes, String venueName) {
     public CreateVenueDto(String venueAddress, Integer venueCapacity, List<VenueLayout> supportedLayouts,
             String operatingInformation, String additionalInformation,
             List<AccessibilityFeature> venueAccessibilities, List<Facility> venueFacilities,
             List<VenueOperatingHourDto> operatingHours) {
         this(venueAddress, venueCapacity, supportedLayouts, operatingInformation, additionalInformation,
-                venueAccessibilities, venueFacilities, operatingHours, null, null);
+                venueAccessibilities, venueFacilities, operatingHours, null, null, null);
     }
     public CreateVenueDto(String venueAddress, Integer venueCapacity, List<VenueLayout> supportedLayouts,
             String operatingInformation, String additionalInformation,
             List<AccessibilityFeature> venueAccessibilities, List<Facility> venueFacilities) {
         this(venueAddress, venueCapacity, supportedLayouts, operatingInformation, additionalInformation,
-                venueAccessibilities, venueFacilities, List.of());
+                venueAccessibilities, venueFacilities, List.of(), null, null, null);
+    }
+    public CreateVenueDto(String venueAddress, Integer venueCapacity, List<VenueLayout> supportedLayouts,
+            String operatingInformation, String additionalInformation,
+            List<AccessibilityFeature> venueAccessibilities, List<Facility> venueFacilities,
+            List<VenueOperatingHourDto> operatingHours, java.math.BigDecimal setupMinutes, java.math.BigDecimal turnaroundMinutes) {
+        this(venueAddress, venueCapacity, supportedLayouts, operatingInformation, additionalInformation,
+                venueAccessibilities, venueFacilities, operatingHours, setupMinutes, turnaroundMinutes, null);
     }
 }

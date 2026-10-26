@@ -260,6 +260,17 @@ public class NotificationService {
         }
     }
 
+    /** AT01 AC9: confirm an attendee's registration after it has committed. */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createAttendeeRegistrationConfirmation(UUID recipientUserId, UUID eventId, String eventName,
+            String registrationReference) {
+        Notification notification = base(recipientUserId, NotificationType.attendee_registration_confirmed,
+                eventName);
+        notification.setEventId(eventId);
+        notification.setMessage("Your registration is confirmed. Reference: " + registrationReference);
+        saveBestEffort(notification);
+    }
+
     /** TS09 AC16: tell the assigned coordinator the outcome for their event. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createEquipmentDamageOutcomeNotification(UUID coordinatorId, UUID eventId, String eventName,
@@ -385,6 +396,7 @@ public class NotificationService {
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
             case event_confirmed, event_cancelled -> null;
+            case attendee_registration_confirmed -> "/attendee/events/" + n.getEventId();
             case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();
             // EO03/EC-NEW3: the coordinator, or the Lead while unassigned, gets the
             // same link; the page sends each reader to their own console.

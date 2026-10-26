@@ -6,6 +6,7 @@ export const venueLayoutLabels: Record<VenueLayout, string> = {
   classroom: 'Classroom', theatre: 'Theatre', boardroom: 'Boardroom', banquet: 'Banquet', exhibition: 'Exhibition',
 }
 export interface CreateVenueDto {
+  venueName?: string
   venueAddress: string
   venueCapacity: number | null
   supportedLayouts: VenueLayout[]

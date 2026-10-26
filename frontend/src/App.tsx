@@ -51,6 +51,8 @@ import { FaultyEquipmentPage } from './features/technicalSupport/faulty/FaultyEq
 import { ReportProblemPage } from './features/technicalSupport/faulty/ReportProblemPage'
 import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
+import { AttendeeEventDetailsPage } from './features/attendee/AttendeeEventDetailsPage'
+import { AttendeeEventsPage } from './features/attendee/AttendeeEventsPage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
 import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
@@ -209,7 +211,9 @@ function AttendeeRoutes() {
   return (
     <Routes>
       <Route index element={<AttendeeHomePage />} />
-      {skeletonRoutes(attendeeFeatures)}
+      <Route path="browse" element={<AttendeeEventsPage />} />
+      <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
+      {skeletonRoutes(attendeeFeatures.filter(feature => feature.path !== 'browse'))}
     </Routes>
   )
 }

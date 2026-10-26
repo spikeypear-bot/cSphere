@@ -54,7 +54,7 @@ public class EventRegistrationService {
         String state;
         if (opens != null && now.isBefore(opens)) {
             state = "not_yet_open";
-        } else if (closes != null && now.isAfter(closes)) {
+        } else if (closes != null && !now.isBefore(closes)) {
             state = "closed";
         } else if (remaining != null && remaining == 0) {
             state = "full";

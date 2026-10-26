@@ -18,7 +18,7 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
   const [errors, setErrors] = useState<Record<string, string>>({})
-  const [form, setForm] = useState<CreateVenueDto>(initialVenue ? { ...initialVenue, setupMinutes: initialVenue.setupMinutes ?? 0, turnaroundMinutes: initialVenue.turnaroundMinutes ?? 0 } : { venueAddress: '', venueCapacity: 50,
+  const [form, setForm] = useState<CreateVenueDto>(initialVenue ? { ...initialVenue, setupMinutes: initialVenue.setupMinutes ?? 0, turnaroundMinutes: initialVenue.turnaroundMinutes ?? 0 } : { venueName: '', venueAddress: '', venueCapacity: 50,
     supportedLayouts: [], venueAccessibilities: [], venueFacilities: [], operatingInformation: '', additionalInformation: '',
     operatingHours: [], setupMinutes: 0, turnaroundMinutes: 0 })
   function change<K extends keyof CreateVenueDto>(key: K, value: CreateVenueDto[K]) {
@@ -40,6 +40,8 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     if (!validMinutes(form.turnaroundMinutes)) next.turnaroundMinutes = 'Enter whole minutes from 0 to 10,080.'
     if (!form.venueAddress.trim()) next.venueAddress = 'Enter the venue address.'
     else if (form.venueAddress.trim().length > 500) next.venueAddress = 'Use 500 characters or fewer.'
+    if (!initialVenue && !form.venueName?.trim()) next.venueName = 'Enter the venue name.'
+    else if (form.venueName && form.venueName.trim().length > 200) next.venueName = 'Use 200 characters or fewer.'
     if (form.venueCapacity === null || !Number.isInteger(form.venueCapacity) || form.venueCapacity < 1 || form.venueCapacity > 50000)
       next.venueCapacity = 'Enter a whole number from 1 to 50,000.'
     if (!form.supportedLayouts.length) next.supportedLayouts = 'Select at least one layout.'
@@ -52,7 +54,7 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     try {
       if (initialVenue) {
         const changes: Partial<CreateVenueDto> = {}
-        const fields = ['venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation', 'operatingHours', 'setupMinutes', 'turnaroundMinutes'] as const
+        const fields = ['venueName', 'venueCapacity', 'supportedLayouts', 'venueAccessibilities', 'venueFacilities', 'operatingInformation', 'additionalInformation', 'operatingHours', 'setupMinutes', 'turnaroundMinutes'] as const
         for (const field of fields) {
           const original = field === 'setupMinutes' || field === 'turnaroundMinutes' ? initialVenue[field] ?? 0 : initialVenue[field]
           if (JSON.stringify(form[field]) !== JSON.stringify(original)) {
@@ -61,7 +63,7 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
         }
         await apiClient.put<VenueDto>(`/venues/${initialVenue.venueId}`, changes)
       } else {
-        await apiClient.post<VenueDto>('/venues', { ...form, venueAddress: form.venueAddress.trim(),
+        await apiClient.post<VenueDto>('/venues', { ...form, venueName: form.venueName?.trim(), venueAddress: form.venueAddress.trim(),
           operatingInformation: form.operatingInformation.trim(), additionalInformation: form.additionalInformation?.trim() || null })
       }
       navigate('/venue-staff/catalogue', { replace: true, state: { venueSaved: true, venueUpdated: !!initialVenue } })
@@ -74,7 +76,8 @@ export function VenueCreatePage({ initialVenue }: { initialVenue?: VenueDto }) {
     <PageHeader title={initialVenue ? 'Edit Venue' : 'Add Venue'}
       description="Record capacity, supported layouts, accessibility provisions, facilities and operating information. All fields are required unless marked optional." />
     <Card className="feature-skeleton__body"><form className="feature-skeleton__detail-preview" onSubmit={save} noValidate aria-busy={saving}>
-      {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. School A - Classroom 1, Level 2, 123 Example Road" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Create one venue per independently bookable room or space. Include its room identity and location; this is its displayed identifier. Maximum 500 characters." />}
+      <TextField id="venueName" label="Venue name" placeholder="e.g. Marina Bay Hall" value={form.venueName ?? ''} onChange={v => change('venueName', v)} error={errors.venueName} hint="Public display name shown to attendees. Maximum 200 characters." />
+      {initialVenue ? <div className="field"><strong>Venue address</strong><p>{form.venueAddress || 'Not recorded'}</p></div> : <TextField id="venueAddress" label="Venue address" placeholder="e.g. 10 Bay Road, Singapore" multiline value={form.venueAddress} onChange={v => change('venueAddress', v)} error={errors.venueAddress} hint="Full location/address for attendees. Maximum 500 characters." />}
       <NumberField id="venueCapacity" label="Overall capacity" value={form.venueCapacity} min={1} onChange={v => change('venueCapacity', v)} error={errors.venueCapacity} hint="1–50,000 people. One capacity applies to every selected layout." />
       <NumberField id="setupMinutes" label="Default setup (minutes)" value={form.setupMinutes ?? null} min={0} onChange={v => change('setupMinutes', v)} error={errors.setupMinutes} hint="Whole minutes, 0–10,080, before the event." />
       <NumberField id="turnaroundMinutes" label="Default turnaround (minutes)" value={form.turnaroundMinutes ?? null} min={0} onChange={v => change('turnaroundMinutes', v)} error={errors.turnaroundMinutes} hint="Whole minutes, 0–10,080, after the event. Defaults apply to new requests; existing booking timings are preserved." />

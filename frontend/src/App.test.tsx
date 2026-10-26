@@ -83,7 +83,7 @@ describe('App routing — role consoles', () => {
   it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
     signInAs('attendee', 'att1', 'Acme Pte Ltd')
     renderApp('/')
-    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
   })
 
   it('TS09 (happy): opens equipment requests from the Technical Support dashboard side navigation', async () => {
@@ -110,7 +110,7 @@ describe('App routing — role consoles', () => {
 
     // Their own console, not the login page: the session is valid, this just
     // isn't their area. The server rejects the API calls regardless (D20).
-    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
 
     // AU06 — a silent redirect reads as the app misbehaving. Originally
     // delivered on the role-select screen (PR #11); it moved to AppShell when
@@ -123,7 +123,7 @@ describe('App routing — role consoles', () => {
     signInAs('attendee', 'att1')
     renderApp('/attendee')
 
-    expect(await screen.findByRole('heading', { name: /Attendee console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -180,7 +180,7 @@ describe('App routing — role consoles', () => {
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
-    ['attendee', 'att1', /Attendee console/i],
+    ['attendee', 'att1', /^Welcome$/i],
   ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
@@ -190,7 +190,7 @@ describe('App routing — role consoles', () => {
     signInAs(role, username)
     renderApp('/coordinator-lead/assignments')
 
-    expect(await screen.findByRole('heading', { name: ownConsole })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: ownConsole })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Coordinator assignments' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/assignments')

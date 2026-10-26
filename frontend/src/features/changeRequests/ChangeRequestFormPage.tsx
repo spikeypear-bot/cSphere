@@ -183,6 +183,17 @@ export function ChangeRequestFormPage() {
           </fieldset>
           <CheckboxField id="cr-registration" label="Attendees need to register" checked={Boolean(details.registrationNeeds)}
             onChange={(checked) => set({ registrationNeeds: checked })} />
+          {details.registrationNeeds && <>
+            <NumberField id="cr-registrationCapacity" label="Registration capacity" min={1} wholeNumber
+              value={details.registrationCapacity ?? null} error={errorFor('registrationCapacity')}
+              onChange={(value) => set({ registrationCapacity: value })} />
+            <DateTimeField id="cr-registrationOpensAt" label="Registration opens"
+              value={details.registrationOpensAt ?? null} error={errorFor('registrationOpensAt')}
+              onChange={(value) => set({ registrationOpensAt: value })} />
+            <p className="field-hint">Registration closes when the event starts.</p>
+            <TextField id="cr-attendeeInstructions" label="Attendee instructions" multiline
+              value={details.attendeeInstructions ?? ''} onChange={(value) => set({ attendeeInstructions: value || null })} />
+          </>}
 
           <div className="change-request__actions">
             <Link className="button button--secondary" to={changesPath}>Cancel</Link>

@@ -28,6 +28,10 @@ public record EventRequestDto(
         List<AccessibilityFeature> accessibilityNeeds,
         List<String> requiredFacilities,
         Boolean registrationNeeds,
+        Integer registrationCapacity,
+        OffsetDateTime registrationOpensAt,
+        OffsetDateTime registrationClosesAt,
+        String attendeeInstructions,
         EventRequestStatus status,
         OffsetDateTime createdAt,
         OffsetDateTime updatedAt,
@@ -48,8 +52,21 @@ public record EventRequestDto(
             String organisation, UUID coordinatorId, String rejectionReason, String createdByName) {
         this(requestId, requestType, eventId, eventName, purpose, description, startDatetime, endDatetime,
                 expectedAttendance, venueRequirements, equipmentRequirements, accessibilityNeeds,
-                requiredFacilities, registrationNeeds, status, createdAt, updatedAt, organisation, coordinatorId,
+                requiredFacilities, registrationNeeds, null, null, null, null, status, createdAt, updatedAt, organisation, coordinatorId,
                 rejectionReason, createdByName, null);
+    }
+
+    public EventRequestDto(UUID requestId, Character requestType, UUID eventId, String eventName,
+            String purpose, String description, OffsetDateTime startDatetime, OffsetDateTime endDatetime,
+            Integer expectedAttendance, String venueRequirements, String equipmentRequirements,
+            List<AccessibilityFeature> accessibilityNeeds, List<String> requiredFacilities, Boolean registrationNeeds,
+            EventRequestStatus status, OffsetDateTime createdAt, OffsetDateTime updatedAt,
+            String organisation, UUID coordinatorId, String rejectionReason, String createdByName,
+            StatusView journeyStatus) {
+        this(requestId, requestType, eventId, eventName, purpose, description, startDatetime, endDatetime,
+                expectedAttendance, venueRequirements, equipmentRequirements, accessibilityNeeds, requiredFacilities,
+                registrationNeeds, null, null, null, null, status, createdAt, updatedAt, organisation, coordinatorId,
+                rejectionReason, createdByName, journeyStatus);
     }
 
     public EventRequestDto(UUID requestId, Character requestType, UUID eventId, String eventName,
@@ -60,7 +77,7 @@ public record EventRequestDto(
             String organisation, UUID coordinatorId, String rejectionReason, String createdByName) {
         this(requestId, requestType, eventId, eventName, purpose, description, startDatetime, endDatetime,
                 expectedAttendance, venueRequirements, equipmentRequirements, accessibilityNeeds,
-                List.of(), registrationNeeds, status, createdAt, updatedAt, organisation, coordinatorId,
-                rejectionReason, createdByName);
+                List.of(), registrationNeeds, null, null, null, null, status, createdAt, updatedAt, organisation, coordinatorId,
+                rejectionReason, createdByName, null);
     }
 }

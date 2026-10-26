@@ -149,6 +149,7 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 |---|---|---|---|---|
 | `venue_id` | `UUID` | no | PK | Identifier |
 | `venue_address` | `TEXT` | no | | Full address |
+| `venue_name` | `TEXT` | no | | Public display name (V35; legacy values start as the address) |
 | `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
 | `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
@@ -595,6 +596,30 @@ column to the six checklist keys, so a row written outside the service cannot
 hold an unknown item; adding a checklist item means updating that constraint. The decision's timeline entry
 (`event_request_activity.flagged_fields`) holds the same keys. See
 decision-log D30.
+
+## V35/V36 registration schema and V41 attendee extension (EO10, AT01, AT02)
+
+V35 creates `event_registrations` with the unique `reference` field and statuses
+`confirmed`, `withdrawn`, `event_cancelled`. V36 removes the separate event
+closing timestamp: registration closes exactly at `events.start_datetime`.
+
+V41 extends those tables without recreating them. Requests gain optional capacity,
+opening time and attendee instructions; events gain attendee instructions alongside
+their existing capacity/opening fields. Registration-required requests must supply
+a positive capacity and opening time before event start to submit or approve.
+Responses derive `registrationClosesAt` from event/request start; legacy input is
+normalised to start and never stored as a separate column.
+
+Registrations gain nullable `attendee_id` (users FK) and `attendee_email` so old
+EO10 rows remain intact without fabricated identities. AT01 supplies both fields
+for new registrations, using the existing `reference` column. A partial unique
+index allows only one confirmed row per identified attendee/event. All confirmed
+rows, including legacy rows, consume capacity. The event row is locked while
+checking capacity and inserting a registration.
+
+V41 adds `attendee_registration_confirmed` while retaining V38's full notification
+shape constraint, including `equipment_damage_outcome`; both require event and
+message. Venues gain a public display name, initialised from their saved address.
 
 ## V37 update — serial number length (TS09)
 

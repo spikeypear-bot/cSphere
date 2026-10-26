@@ -109,7 +109,8 @@ export function EventRequestWizardPage() {
   // EO-C2: date, time and attendance problems, checked as the organiser types,
   // plus any the server reported on submit (e.g. the start passed meanwhile).
   const problems = requestFieldProblems(fields)
-  const scheduleBlocked = hasProblems(problems)
+  const scheduleBlocked = Boolean(problems.startDatetime || problems.endDatetime || problems.expectedAttendance)
+  const registrationBlocked = Boolean(problems.registrationCapacity || problems.registrationOpensAt)
   // The server's messages are about the values it saw; one stops showing as
   // soon as the organiser changes that field.
   const [serverReport, setServerReport] = useState<{ values: Record<string, unknown>; errors: Record<string, string> } | null>(null)
@@ -170,7 +171,7 @@ export function EventRequestWizardPage() {
     // Leaving the schedule step needs a valid schedule; other steps never
     // trap the organiser away from the step where it can be fixed.
     if (nextIndex > stepIndex && stepIndex === 1 && scheduleBlocked) return
-    if (nextIndex > stepIndex && stepIndex === 3 && invalidEquipmentQuantity) return
+    if (nextIndex > stepIndex && stepIndex === 3 && (invalidEquipmentQuantity || registrationBlocked)) return
     await save()
     setStepIndex(nextIndex)
   }
@@ -234,6 +235,10 @@ export function EventRequestWizardPage() {
       setStepIndex(1)
       return
     }
+    if (registrationBlocked) {
+      setStepIndex(3)
+      return
+    }
     setSubmitError(undefined)
     setSubmitting(true)
     try {
@@ -247,7 +252,8 @@ export function EventRequestWizardPage() {
         setMissingFields(result.missingFields)
         setServerReport({ values: { ...fields }, errors: result.fieldErrors })
         // Take the organiser to the fields that need changing.
-        if (hasProblems(result.fieldErrors)) setStepIndex(1)
+        if (result.fieldErrors.registrationCapacity || result.fieldErrors.registrationOpensAt) setStepIndex(3)
+        else if (hasProblems(result.fieldErrors)) setStepIndex(1)
       }
     } catch (error) {
       setSubmitError(error instanceof Error ? error.message : 'Could not submit. Please try again.')
@@ -439,6 +445,35 @@ export function EventRequestWizardPage() {
               checked={Boolean(fields.registrationNeeds)}
               onChange={(checked) => setFields({ registrationNeeds: checked })}
             />
+            {fields.registrationNeeds ? <div className="wizard__registration-settings">
+              <p className="field-hint">Set a place limit and the Singapore-time window when attendees can register.</p>
+              <NumberField
+                id="registrationCapacity"
+                label="Registration capacity"
+                min={1}
+                wholeNumber
+                hint="Maximum number of confirmed attendee registrations."
+                value={fields.registrationCapacity ?? null}
+                onChange={(value) => setFields({ registrationCapacity: value })}
+                error={fieldError('registrationCapacity')}
+              />
+              <DateTimeField
+                id="registrationOpensAt"
+                label="Registration opens"
+                value={fields.registrationOpensAt ?? null}
+                onChange={(value) => setFields({ registrationOpensAt: value })}
+                error={fieldError('registrationOpensAt')}
+              />
+              <p className="field-hint">Registration closes when the event starts.</p>
+              <TextField
+                id="attendeeInstructions"
+                label="Attendee instructions"
+                hint="Optional information attendees should know before arriving."
+                value={fields.attendeeInstructions ?? ''}
+                onChange={(value) => setFields({ attendeeInstructions: value || null })}
+                multiline
+              />
+            </div> : null}
           </>
         )}
 
@@ -563,6 +598,12 @@ function ReviewStep({
           value={fields.registrationNeeds ? 'Attendees need to register' : 'No registration required'}
           onEdit={() => onEditStep(3)}
         />
+        {fields.registrationNeeds ? <>
+          <SummaryRow label="Registration capacity" value={fields.registrationCapacity?.toString() ?? null} onEdit={() => onEditStep(3)} />
+          <SummaryRow label="Registration opens" value={fields.registrationOpensAt && `${formatFieldValue('startDatetime', fields.registrationOpensAt)} (Singapore time)`} onEdit={() => onEditStep(3)} />
+          <SummaryRow label="Registration closes" value={fields.startDatetime && `${formatFieldValue('startDatetime', fields.startDatetime)} (Singapore time)`} onEdit={() => onEditStep(3)} />
+          <SummaryRow label="Attendee instructions" value={fields.attendeeInstructions} onEdit={() => onEditStep(3)} />
+        </> : null}
       </dl>
     </div>
   )
