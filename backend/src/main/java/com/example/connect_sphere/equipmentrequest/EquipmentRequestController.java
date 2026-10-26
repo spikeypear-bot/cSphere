@@ -79,6 +79,16 @@ public class EquipmentRequestController {
                 .body(service.submit(userIdOf(jwt), eventId, request));
     }
 
+    // EC-NEW3: the coordinator replaces the complete equipment request,
+    // releasing reservations and superseding what it replaces.
+    @PatchMapping("/events/{eventId}/equipment-request")
+    public EquipmentRequestDetailsResponse revise(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @RequestBody SubmitEquipmentRequest request) {
+        return service.revise(userIdOf(jwt), eventId, request);
+    }
+
     @PatchMapping("/equipment-requests/{requestId}/status")
     public EquipmentRequestDetailsResponse updateStatus(
             @PathVariable UUID requestId,

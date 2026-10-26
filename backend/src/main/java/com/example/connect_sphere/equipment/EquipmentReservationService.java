@@ -339,6 +339,16 @@ public class EquipmentReservationService {
         return toResponses(logRepository.findByEventId(eventId));
     }
 
+    /** EC-NEW3 (D36): a coordinator's complete revision of an event's
+     * equipment request releases every reservation the event holds, not one
+     * request's, since a reservation names only its event (TS02), never a
+     * request. Hard-deleted, as TS09's covered/short outcomes already do
+     * (D35) — the superseded request itself is kept for the audit trail. */
+    @Transactional
+    public void releaseAllForEvent(UUID eventId) {
+        logRepository.deleteAll(logRepository.findByEventId(eventId));
+    }
+
     /** D32: the by-equipment twin of {@link #reservationsForEvent}: every
      * reservation of one kind overlapping [from, to), for events that are not
      * cancelled or completed (the availability query, EO07), earliest first. */

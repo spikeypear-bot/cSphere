@@ -3,6 +3,7 @@ package com.example.connect_sphere.equipmentrequest;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -115,6 +116,41 @@ class EquipmentRequestFlowTest {
     private void moveTo(UUID eventId, String status) {
         sync();
         jdbc.update("UPDATE events SET status = ?::event_status WHERE event_id = ?", status, eventId);
+        sync();
+    }
+
+    private ResultActions revise(UUID eventId, String as, String body) throws Exception {
+        return mvc.perform(patch("/api/events/" + eventId + "/equipment-request").with(flow.as(as))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private String statusOf(UUID requestId) {
+        sync();
+        return jdbc.queryForObject(
+                "SELECT status::text FROM equipment_requests WHERE request_id = ?", String.class, requestId);
+    }
+
+    private int reservationsFor(UUID eventId) {
+        sync();
+        return jdbc.queryForObject(
+                "SELECT count(*) FROM equipment_logs WHERE event_id = ?", Integer.class, eventId);
+    }
+
+    private void reserve(UUID eventId, UUID equipmentId, int quantity) throws Exception {
+        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":%d,"
+                                .formatted(eventId, equipmentId, quantity)
+                                // The event is created at 09:00-12:00+08:00 (FlowSupport.requestBody), i.e. 01:00-04:00Z.
+                                + "\"start\":\"2027-03-10T01:00:00Z\",\"end\":\"2027-03-10T04:00:00Z\"}"))
+                .andExpect(status().isCreated());
+        sync();
+    }
+
+    private void approve(UUID requestId) throws Exception {
+        mvc.perform(patch("/api/equipment-requests/" + requestId + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"approved\"}"))
+                .andExpect(status().isOk());
         sync();
     }
 
@@ -362,5 +398,99 @@ class EquipmentRequestFlowTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body("Two screens on stage", item(projector, 2))))
                 .andExpect(status().isBadRequest());
+    }
+
+    // ---- EC-NEW3: the coordinator revises the equipment request --------------
+
+    @Test
+    @Tag("EC-NEW3")
+    void revisingAProcessingRequestSupersedesItAndCreatesANewOneWithTheNewItems() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID microphone = equipment("EC07 Microphone");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+
+        String response = revise(eventId, "ec1", body("Changed after the organiser's change", item(microphone, 5)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("processing"))
+                .andExpect(jsonPath("$.lines.length()").value(1))
+                .andExpect(jsonPath("$.lines[0].equipmentId").value(microphone.toString()))
+                .andExpect(jsonPath("$.lines[0].quantity").value(5))
+                .andReturn().getResponse().getContentAsString();
+        UUID revisedId = UUID.fromString(flow.read(response).get("requestId").asString());
+
+        assertThat(statusOf(requestId)).isEqualTo("superseded");
+        assertThat(statusOf(revisedId)).isEqualTo("processing");
+        assertThat(requestsFor(eventId)).isEqualTo(2);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void revisingAnApprovedRequestReleasesItsReservationsAndSupersedesIt() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+
+        UUID microphone = equipment("EC07 Microphone");
+        revise(eventId, "ec1", body("Fewer screens, more microphones now", item(microphone, 3)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.lines[0].quantity").value(3));
+
+        assertThat(reservationsFor(eventId)).isZero();
+        assertThat(statusOf(requestId)).isEqualTo("superseded");
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void revisingAnEventWithNoEquipmentRequestIsRefused() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+
+        revise(eventId, "ec1", body("First ever request", item(projector, 2)))
+                .andExpect(status().isConflict());
+        assertThat(requestsFor(eventId)).isZero();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void revisingAfterARejectionIsRefused() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+        mvc.perform(patch("/api/equipment-requests/" + requestId + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"rejected\",\"rejectReason\":\"Not available\"}"))
+                .andExpect(status().isOk());
+
+        revise(eventId, "ec1", body("Try again differently", item(equipment("EC07 Microphone"), 1)))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void aCoordinatorNotAssignedToTheEventCannotReviseAndNothingChanges() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+
+        revise(eventId, "ec2", body("Hijacked", item(equipment("EC07 Microphone"), 1)))
+                .andExpect(status().isForbidden());
+        assertThat(statusOf(requestId)).isEqualTo("processing");
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
+    @Tag("EC-NEW3")
+    void otherRolesCannotReviseAndNothingChanges(String username) throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+
+        revise(eventId, username, body("Hijacked", item(equipment("EC07 Microphone"), 1)))
+                .andExpect(status().isForbidden());
+        assertThat(statusOf(requestId)).isEqualTo("processing");
     }
 }

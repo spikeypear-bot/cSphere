@@ -51,4 +51,10 @@ public class EquipmentRequest {
         this.status = status;
         this.rejectReason = rejectReason;
     }
+
+    /** EC-NEW3 (D36): a revision replaces this request with a new one; kept,
+     * not deleted, as the before the audit needs. */
+    public void supersede() {
+        this.status = EquipmentRequestStatus.superseded;
+    }
 }

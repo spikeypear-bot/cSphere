@@ -84,6 +84,9 @@ public enum ActivityType {
     equipment_damage_outcome(Set.of(UserRole.ec), true),
     /** TS09 AC20: the coordinator accepted an equipment shortfall, with a note. */
     equipment_shortfall_resolved(Set.of(UserRole.ec)),
+    /** EC-NEW3: the coordinator replaced the equipment request with a
+     * complete revision; the previous reservations were released. */
+    equipment_revised(Set.of(UserRole.ec)),
     /** EC08: arrangements complete; handed to the Safety Officer. Internal. */
     sent_for_safety_review(Set.of(UserRole.ec)),
     /** EC08: the coordinator took the event back before a safety decision. */
