@@ -135,6 +135,97 @@ class EventChange {
 }
 
 
+class AttendeeEventDetailsController {
+	{method} +get ( eventId : UUID , authentication : Authentication ) : AttendeeEventDetailsDto
+	{method} +list () : List
+	{method} +register ( eventId : UUID , authentication : Authentication ) : AttendeeRegistrationDto
+}
+
+
+class AttendeeEventDetailsDto {
+	{field} -accessibilityInformation : List<String>
+	{field} -attendeeInstructions : String
+	{field} -availablePlaces : Integer
+	{field} -description : String
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -registeredAt : OffsetDateTime
+	{field} -registrationCapacity : Integer
+	{field} -registrationClosesAt : OffsetDateTime
+	{field} -registrationOpensAt : OffsetDateTime
+	{field} -registrationReference : String
+	{field} -registrationRequired : Boolean
+	{field} -startDatetime : OffsetDateTime
+	{field} -status : String
+	{field} -updatedAt : OffsetDateTime
+}
+
+
+class AttendeeEventDetailsDto.AttendeeVenue {
+	{field} -address : String
+	{field} -name : String
+	{field} -unavailable : boolean
+	{field} -venueId : UUID
+}
+
+
+class AttendeeEventDetailsService {
+	{method} +get ( eventId : UUID ) : AttendeeEventDetailsDto
+	{method} +get ( eventId : UUID , attendeeId : UUID ) : AttendeeEventDetailsDto
+	{method} +list () : List
+}
+
+
+class AttendeeEventListItemDto {
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -registrationRequired : Boolean
+	{field} -startDatetime : OffsetDateTime
+	{field} -status : String
+}
+
+
+class AttendeeRegistration <<Entity>>  {
+	{field} +attendeeEmail : String
+	{field} +attendeeId : UUID
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +registrationReference : String
+	{field} +status : String
+}
+
+
+class AttendeeRegistrationDto {
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -reference : String
+	{field} -registeredAt : OffsetDateTime
+	{field} -registrationId : UUID
+	{field} -status : String
+}
+
+
+class AttendeeRegistrationException {
+	{field} -status : int
+}
+
+
+interface AttendeeRegistrationRepository {
+	{method}  {abstract} +countByEventIdAndStatus ( eventId : UUID , status : String ) : long
+	{method}  {abstract} +findByEventIdAndAttendeeIdAndStatus ( eventId : UUID , attendeeId : UUID , status : String ) : Optional
+}
+
+
+class AttendeeRegistrationService {
+	{field} -clock : Clock
+	{method} +register ( eventId : UUID , attendeeId : UUID ) : AttendeeRegistrationDto
+}
+
+
 class ChangeImpactService {
 	{field} {static} ~ATTENTION : String
 	{field} {static} ~OK : String
@@ -366,6 +457,7 @@ class ApiError {
 
 class ApiExceptionHandler {
 	{method} +handleAccessDenied ( ex : AccessDeniedException ) : ResponseEntity
+	{method} +handleAttendeeRegistration ( ex : AttendeeRegistrationException ) : ResponseEntity
 	{method} +handleAuthenticationFailure ( ex : AuthenticationException ) : ResponseEntity
 	{method} +handleEquipmentRequestState ( ex : EquipmentRequestStateException ) : ResponseEntity
 	{method} +handleEventCancellationNotFound ( ex : EventCancellationNotFoundException ) : ResponseEntity
@@ -1287,6 +1379,7 @@ class RegistrationInfoDto.Attendee {
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
+	{field} +attendeeInstructions : String
 	{field} +confirmedAt : OffsetDateTime
 	{field} +confirmedBy : UUID
 	{field} +coordinatorId : UUID
@@ -1392,6 +1485,7 @@ interface EventRegistrationRepository {
 
 interface EventRepository {
 	{method}  {abstract} +findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc ( coordinatorId : UUID , statuses : Collection ) : List
+	{method}  {abstract} +findByFirstConfirmedAtIsNotNullOrderByStartDatetimeAsc () : List
 	{method}  {abstract} +findByStatusInOrderByStartDatetimeAsc ( statuses : Collection ) : List
 	{method}  {abstract} +findByStatusOrderByStartDatetimeAsc ( status : EventStatus ) : List
 	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
@@ -1552,6 +1646,7 @@ class CoordinatorDto {
 
 
 class EventRequestDto {
+	{field} -attendeeInstructions : String
 	{field} -coordinatorId : UUID
 	{field} -createdAt : OffsetDateTime
 	{field} -createdByName : String
@@ -1563,7 +1658,10 @@ class EventRequestDto {
 	{field} -expectedAttendance : Integer
 	{field} -organisation : String
 	{field} -purpose : String
+	{field} -registrationCapacity : Integer
+	{field} -registrationClosesAt : OffsetDateTime
 	{field} -registrationNeeds : Boolean
+	{field} -registrationOpensAt : OffsetDateTime
 	{field} -rejectionReason : String
 	{field} -requestId : UUID
 	{field} -requestType : Character
@@ -1603,19 +1701,24 @@ class ReviewQueueDto {
 
 
 class SaveEventRequestRequest {
+	{field} -attendeeInstructions : String
 	{field} -description : String
 	{field} -endDatetime : OffsetDateTime
 	{field} -equipmentRequirements : String
 	{field} -eventName : String
 	{field} -expectedAttendance : Integer
 	{field} -purpose : String
+	{field} -registrationCapacity : Integer
+	{field} -registrationClosesAt : OffsetDateTime
 	{field} -registrationNeeds : Boolean
+	{field} -registrationOpensAt : OffsetDateTime
 	{field} -startDatetime : OffsetDateTime
 	{field} -venueRequirements : String
 }
 
 
 class EventRequest <<Entity>>  {
+	{field} +attendeeInstructions : String
 	{field} +coordinatorId : UUID
 	{field} +createdAt : OffsetDateTime
 	{field} +createdBy : UUID
@@ -1627,7 +1730,9 @@ class EventRequest <<Entity>>  {
 	{field} +expectedAttendance : Integer
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +rejectionReason : String
 	{field} +requestId : UUID {id}
 	{field} +requestType : Character
@@ -1792,6 +1897,7 @@ class Notification <<Entity>>  {
 
 
 enum NotificationType {
+	{field} +attendee_registration_confirmed
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn
@@ -1834,6 +1940,7 @@ class NotificationNotFoundException {
 class NotificationService {
 	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
 	{field} {static} -log : Logger
+	{method} +createAttendeeRegistrationConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String ) : void
 	{method} +createChangeRequestNotifications ( recipientUserIds : List , type : NotificationType , eventRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
@@ -2122,6 +2229,7 @@ class CreateVenueDto {
 	{field} -turnaroundMinutes : BigDecimal
 	{field} -venueAddress : String
 	{field} -venueCapacity : Integer
+	{field} -venueName : String
 }
 
 
@@ -2131,6 +2239,7 @@ class UpdateVenueDto {
 	{field} +setupMinutes : BigDecimal
 	{field} +turnaroundMinutes : BigDecimal
 	{field} +venueCapacity : Integer
+	{field} +venueName : String
 }
 
 
@@ -2142,6 +2251,7 @@ class VenueDto {
 	{field} -venueAddress : String
 	{field} -venueCapacity : Integer
 	{field} -venueId : UUID
+	{field} -venueName : String
 }
 
 
@@ -2163,6 +2273,7 @@ class Venue <<Entity>>  {
 	{field} +venueCapacity : Integer
 	{field} +venueFacilities : List<String>
 	{field} +venueId : UUID {id}
+	{field} +venueName : String
 }
 
 
@@ -2873,6 +2984,20 @@ ActivityService.Entry --> ActivityType : type
 ChangeLogRecorder --> ActivityService : activity
 ChangeLogRecorder --> EventRequestRepository : eventRequests
 EventChange --> ActivityType : type
+AttendeeEventDetailsController --> AttendeeEventDetailsService : service
+AttendeeEventDetailsController --> AttendeeRegistrationService : registrations
+AttendeeEventDetailsDto --> "0..*" AttendeeEventDetailsDto.AttendeeVenue : venues
+AttendeeEventDetailsService --> AttendeeRegistrationRepository : registrations
+AttendeeEventDetailsService --> JourneyStatusResolver : statuses
+AttendeeEventDetailsService --> EventRepository : events
+AttendeeEventDetailsService --> VenueRepository : venues
+AttendeeEventDetailsService --> AvailabilityService : availability
+AttendeeEventDetailsService --> VenueBookingRecordRepository : bookings
+AttendeeRegistrationService --> AttendeeRegistrationRepository : registrations
+AttendeeRegistrationService --> JourneyStatusResolver : statuses
+AttendeeRegistrationService --> EventRepository : events
+AttendeeRegistrationService --> NotificationService : notifications
+AttendeeRegistrationService --> UserRepository : users
 ChangeImpactService --> "0..*" VenueBookingStatus : ACTIVE_BOOKINGS
 ChangeImpactService --> EquipmentReservationService : equipment
 ChangeImpactService --> VenueRepository : venues

@@ -7,6 +7,7 @@ legend top left
 + field: has a getter and a setter (every field is private in the code)
 Multiplicities come from the database foreign keys
 Lines labelled with a UUID field: foreign keys the entity stores as an id
+AttendeeRegistration, EventRegistration both map table event_registrations
 Event, VenueEvent both map table events
 VenueBooking, VenueBookingRecord both map table venue_bookings
 endlegend
@@ -74,6 +75,18 @@ class RequestActivity <<Entity>>  {
 	{field} +occurredAt : OffsetDateTime
 	{field} +requestId : UUID
 	{field} +toStatus : String
+}
+
+
+class AttendeeRegistration <<Entity>>  {
+	{field} +attendeeEmail : String
+	{field} +attendeeId : UUID
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +registrationReference : String
+	{field} +status : String
 }
 
 
@@ -278,6 +291,7 @@ enum EquipmentRequestStatus {
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
+	{field} +attendeeInstructions : String
 	{field} +confirmedAt : OffsetDateTime
 	{field} +confirmedBy : UUID
 	{field} +coordinatorId : UUID
@@ -361,6 +375,7 @@ enum EventStatus {
 
 
 class EventRequest <<Entity>>  {
+	{field} +attendeeInstructions : String
 	{field} +coordinatorId : UUID
 	{field} +createdAt : OffsetDateTime
 	{field} +createdBy : UUID
@@ -372,7 +387,9 @@ class EventRequest <<Entity>>  {
 	{field} +expectedAttendance : Integer
 	{field} +organisation : String
 	{field} +purpose : String
+	{field} +registrationCapacity : Integer
 	{field} +registrationNeeds : Boolean
+	{field} +registrationOpensAt : OffsetDateTime
 	{field} +rejectionReason : String
 	{field} +requestId : UUID {id}
 	{field} +requestType : Character
@@ -412,6 +429,7 @@ class Notification <<Entity>>  {
 
 
 enum NotificationType {
+	{field} +attendee_registration_confirmed
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn
@@ -508,6 +526,7 @@ class Venue <<Entity>>  {
 	{field} +venueCapacity : Integer
 	{field} +venueFacilities : List<String>
 	{field} +venueId : UUID {id}
+	{field} +venueName : String
 }
 
 
@@ -691,6 +710,8 @@ ReadinessItemState "0..*" --> "1" Event : eventId
 ReadinessItemState "0..*" --> "0..1" User : updatedBy
 EventReassignmentRequest "0..*" --> "1" Event : eventId
 EventReassignmentRequest "0..*" --> "1" User : requesterUserId
+AttendeeRegistration "0..*" --> "0..1" User : attendeeId
+AttendeeRegistration "0..*" --> "1" Event : eventId
 EventRegistration "0..*" --> "1" Event : eventId
 RequestActivity "0..*" --> "1" User : actorUserId
 RequestActivity "0..*" --> "0..1" Event : eventId

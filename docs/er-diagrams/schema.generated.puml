@@ -155,6 +155,8 @@ entity event_registrations {
 	* reference : text
 	* registered_at : timestamp with time zone
 	* status : text
+	attendee_id : uuid <<FK>>
+	attendee_email : text
 }
 
 entity event_request_activity {
@@ -199,6 +201,9 @@ entity event_requests {
 	coordinator_id : uuid <<FK>>
 	rejection_reason : text
 	* required_facilities : facilities[]
+	registration_capacity : integer
+	registration_opens_at : timestamp with time zone
+	attendee_instructions : text
 }
 
 entity event_safety_reviews {
@@ -237,6 +242,7 @@ entity events {
 	confirmed_by : uuid <<FK>>
 	registration_capacity : integer
 	registration_opens_at : timestamp with time zone
+	attendee_instructions : text
 }
 
 entity notifications {
@@ -380,6 +386,7 @@ entity venues {
 	additional_information : text
 	* setup_minutes : integer
 	* turnaround_minutes : integer
+	* venue_name : text
 }
 
 enum accessibilities {
@@ -461,6 +468,7 @@ enum notification_type {
 	event_cancelled
 	request_cancelled
 	equipment_damage_outcome
+	attendee_registration_confirmed
 }
 
 enum user_role {
@@ -508,6 +516,7 @@ event_readiness_items }o--|| events : event_id
 event_readiness_items }o--o| users : updated_by
 event_reassignment_requests }o--|| events : event_id
 event_reassignment_requests }o--|| users : requester_user_id
+event_registrations }o--o| users : attendee_id
 event_registrations }o--|| events : event_id
 event_request_activity }o--|| users : actor_user_id
 event_request_activity }o--o| events : event_id
