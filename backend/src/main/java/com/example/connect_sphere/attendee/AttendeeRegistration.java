@@ -18,7 +18,7 @@ public class AttendeeRegistration {
     @Id
     @Column(name = "registration_id")
     private UUID registrationId;
-    @Column(name = "registration_reference")
+    @Column(name = "reference")
     private String registrationReference;
     @Column(name = "event_id")
     private UUID eventId;

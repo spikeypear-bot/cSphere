@@ -110,7 +110,7 @@ export function EventRequestWizardPage() {
   // plus any the server reported on submit (e.g. the start passed meanwhile).
   const problems = requestFieldProblems(fields)
   const scheduleBlocked = Boolean(problems.startDatetime || problems.endDatetime || problems.expectedAttendance)
-  const registrationBlocked = Boolean(problems.registrationCapacity || problems.registrationOpensAt || problems.registrationClosesAt)
+  const registrationBlocked = Boolean(problems.registrationCapacity || problems.registrationOpensAt)
   // The server's messages are about the values it saw; one stops showing as
   // soon as the organiser changes that field.
   const [serverReport, setServerReport] = useState<{ values: Record<string, unknown>; errors: Record<string, string> } | null>(null)
@@ -252,8 +252,7 @@ export function EventRequestWizardPage() {
         setMissingFields(result.missingFields)
         setServerReport({ values: { ...fields }, errors: result.fieldErrors })
         // Take the organiser to the fields that need changing.
-        if (result.fieldErrors.registrationCapacity || result.fieldErrors.registrationOpensAt
-          || result.fieldErrors.registrationClosesAt) setStepIndex(3)
+        if (result.fieldErrors.registrationCapacity || result.fieldErrors.registrationOpensAt) setStepIndex(3)
         else if (hasProblems(result.fieldErrors)) setStepIndex(1)
       }
     } catch (error) {
@@ -465,14 +464,7 @@ export function EventRequestWizardPage() {
                 onChange={(value) => setFields({ registrationOpensAt: value })}
                 error={fieldError('registrationOpensAt')}
               />
-              <DateTimeField
-                id="registrationClosesAt"
-                label="Registration closes"
-                max={fields.startDatetime ?? undefined}
-                value={fields.registrationClosesAt ?? null}
-                onChange={(value) => setFields({ registrationClosesAt: value })}
-                error={fieldError('registrationClosesAt')}
-              />
+              <p className="field-hint">Registration closes when the event starts.</p>
               <TextField
                 id="attendeeInstructions"
                 label="Attendee instructions"
@@ -609,7 +601,7 @@ function ReviewStep({
         {fields.registrationNeeds ? <>
           <SummaryRow label="Registration capacity" value={fields.registrationCapacity?.toString() ?? null} onEdit={() => onEditStep(3)} />
           <SummaryRow label="Registration opens" value={fields.registrationOpensAt && `${formatFieldValue('startDatetime', fields.registrationOpensAt)} (Singapore time)`} onEdit={() => onEditStep(3)} />
-          <SummaryRow label="Registration closes" value={fields.registrationClosesAt && `${formatFieldValue('endDatetime', fields.registrationClosesAt)} (Singapore time)`} onEdit={() => onEditStep(3)} />
+          <SummaryRow label="Registration closes" value={fields.startDatetime && `${formatFieldValue('startDatetime', fields.startDatetime)} (Singapore time)`} onEdit={() => onEditStep(3)} />
           <SummaryRow label="Attendee instructions" value={fields.attendeeInstructions} onEdit={() => onEditStep(3)} />
         </> : null}
       </dl>

@@ -74,7 +74,7 @@ public class AttendeeEventDetailsService {
         return new AttendeeEventDetailsDto(event.getEventId(), event.getEventName(), event.getDescription(),
                 event.getStartDatetime(), event.getEndDatetime(), view, event.getConfirmedAt(),
                 event.getAccessibilityNeeds() == null ? List.of() : List.copyOf(event.getAccessibilityNeeds()),
-                event.getRegistrationNeeds(), event.getRegistrationOpensAt(), event.getRegistrationClosesAt(),
+                event.getRegistrationNeeds(), event.getRegistrationOpensAt(), event.getStartDatetime(),
                 event.getRegistrationCapacity(), event.getRegistrationCapacity() == null ? null
                         : Math.max(0, event.getRegistrationCapacity() - (int) registrations.countByEventIdAndStatus(eventId, "confirmed")),
                 event.getAttendeeInstructions(), myRegistration == null ? null : myRegistration.getRegistrationReference(),

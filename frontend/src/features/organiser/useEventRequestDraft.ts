@@ -28,7 +28,6 @@ export interface DraftFields {
   registrationNeeds: boolean | null
   registrationCapacity?: number | null
   registrationOpensAt?: string | null
-  registrationClosesAt?: string | null
   attendeeInstructions?: string | null
 }
 
@@ -46,7 +45,6 @@ const BLANK_DRAFT: DraftFields = {
   registrationNeeds: null,
   registrationCapacity: null,
   registrationOpensAt: null,
-  registrationClosesAt: null,
   attendeeInstructions: null,
 }
 
@@ -113,7 +111,6 @@ function toDraftFields(dto: EventRequestDto): DraftFields {
     registrationNeeds: dto.registrationNeeds,
     registrationCapacity: dto.registrationCapacity ?? null,
     registrationOpensAt: dto.registrationOpensAt ?? null,
-    registrationClosesAt: dto.registrationClosesAt ?? null,
     attendeeInstructions: dto.attendeeInstructions ?? null,
   }
 }

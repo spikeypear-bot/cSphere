@@ -8,7 +8,7 @@ export interface FieldChange {
   after: string
 }
 
-const DATE_FIELDS = new Set(['startDatetime', 'endDatetime'])
+const DATE_FIELDS = new Set(['startDatetime', 'endDatetime', 'registrationOpensAt'])
 
 /** A captured field value as a person reads it. */
 export function formatFieldValue(field: string, value: unknown): string {

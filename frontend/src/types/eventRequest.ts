@@ -52,7 +52,6 @@ export const FIELD_LABELS: Record<string, string> = {
   registrationNeeds: 'Registration',
   registrationCapacity: 'Registration capacity',
   registrationOpensAt: 'Registration opens',
-  registrationClosesAt: 'Registration closes',
   attendeeInstructions: 'Attendee instructions',
 }
 
@@ -110,7 +109,6 @@ export interface SaveEventRequestRequest {
   registrationNeeds?: boolean | null
   registrationCapacity?: number | null
   registrationOpensAt?: string | null
-  registrationClosesAt?: string | null
   attendeeInstructions?: string | null
 }
 
@@ -127,7 +125,6 @@ export const REQUIRED_FIELD_LABELS: Record<string, string> = {
   accessibilityNeeds: 'Accessibility requirements',
   registrationCapacity: 'Registration capacity',
   registrationOpensAt: 'Registration opens',
-  registrationClosesAt: 'Registration closes',
 }
 
 /** Same fields, in wizard-step order — the single list every "how complete is

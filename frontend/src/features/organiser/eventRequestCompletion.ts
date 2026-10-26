@@ -24,7 +24,6 @@ const FIELD_IS_MISSING: Record<string, (fields: DraftFields) => boolean> = {
   accessibilityNeeds: (f) => f.accessibilityNeeds.length === 0,
   registrationCapacity: (f) => Boolean(f.registrationNeeds) && f.registrationCapacity == null,
   registrationOpensAt: (f) => Boolean(f.registrationNeeds) && isBlank(f.registrationOpensAt),
-  registrationClosesAt: (f) => Boolean(f.registrationNeeds) && isBlank(f.registrationClosesAt),
 }
 
 export function getMissingRequiredFields(fields: DraftFields): string[] {
@@ -39,7 +38,7 @@ export function getCompletionPercent(fields: DraftFields): number {
   // the missing count and denominator prevents them making a blank draft
   // appear partially complete.
   const requiredKeys = REQUIRED_FIELD_KEYS.filter((key) =>
-    !['registrationCapacity', 'registrationOpensAt', 'registrationClosesAt'].includes(key)
+    !['registrationCapacity', 'registrationOpensAt'].includes(key)
       || fields.registrationNeeds === true,
   )
   const missing = requiredKeys.filter((key) => FIELD_IS_MISSING[key]?.(fields)).length

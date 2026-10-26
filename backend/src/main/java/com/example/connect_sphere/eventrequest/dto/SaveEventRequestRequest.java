@@ -29,6 +29,12 @@ public record SaveEventRequestRequest(
         OffsetDateTime registrationClosesAt,
         String attendeeInstructions) {
 
+    // Compatibility for clients that still send a closing time: V36 defines
+    // the closing time as event start, so a separate value is never persisted.
+    public SaveEventRequestRequest {
+        registrationClosesAt = startDatetime;
+    }
+
     public SaveEventRequestRequest(String eventName, String purpose, String description,
             OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
             String venueRequirements, String equipmentRequirements, List<AccessibilityFeature> accessibilityNeeds,

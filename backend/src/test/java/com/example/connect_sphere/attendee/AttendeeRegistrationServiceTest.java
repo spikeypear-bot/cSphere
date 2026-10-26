@@ -138,6 +138,56 @@ class AttendeeRegistrationServiceTest {
         when(registrations.countByEventIdAndStatus(EVENT_ID, "confirmed")).thenReturn(0L);
     }
 
+    @Test
+    @DisplayName("AT01 (boundary): registration closes exactly when the event starts")
+    void refusesAtEventStart() {
+        Event event = event();
+        event.setStartDatetime(NOW);
+        prepare(event);
+        assertThatThrownBy(() -> service.register(EVENT_ID, USER_ID))
+                .isInstanceOf(AttendeeRegistrationException.class).hasMessage("Registration is closed.");
+        verify(registrations, never()).saveAndFlush(any());
+        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("AT01 (boundary): registration is accepted at its opening instant")
+    void acceptsAtOpening() {
+        Event event = event();
+        event.setRegistrationOpensAt(NOW);
+        prepare(event);
+        when(registrations.saveAndFlush(any())).thenAnswer(call -> call.getArgument(0));
+        assertThat(service.register(EVENT_ID, USER_ID).status()).isEqualTo("confirmed");
+        verify(registrations).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("AT01 (negative): an opening at event start is invalid and saves nothing")
+    void refusesInvalidWindow() {
+        Event event = event();
+        event.setRegistrationOpensAt(event.getStartDatetime());
+        prepare(event);
+        assertThatThrownBy(() -> service.register(EVENT_ID, USER_ID))
+                .isInstanceOf(AttendeeRegistrationException.class).hasMessageContaining("settings are incomplete or invalid");
+        verify(registrations, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("AT01 (cross-cutting): a repeated registration for a cancelled event uses EO10's event_cancelled status")
+    void existingRegistrationReflectsCancellation() {
+        Event event = event();
+        event.setStatus(EventStatus.cancelled);
+        prepare(event);
+        AttendeeRegistration existing = new AttendeeRegistration();
+        existing.setStatus("confirmed");
+        existing.setRegistrationReference("CS-CANCELLED");
+        when(registrations.findByEventIdAndAttendeeIdAndStatus(EVENT_ID, USER_ID, "confirmed"))
+                .thenReturn(Optional.of(existing));
+        assertThat(service.register(EVENT_ID, USER_ID).status()).isEqualTo("event_cancelled");
+        verify(registrations, never()).saveAndFlush(any());
+        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any());
+    }
+
     private static User user() {
         User user = new User();
         user.setUserId(USER_ID);
@@ -158,7 +208,6 @@ class AttendeeRegistrationServiceTest {
         event.setRegistrationNeeds(true);
         event.setRegistrationCapacity(1);
         event.setRegistrationOpensAt(NOW.minusDays(1));
-        event.setRegistrationClosesAt(NOW.plusDays(1));
         return event;
     }
 }

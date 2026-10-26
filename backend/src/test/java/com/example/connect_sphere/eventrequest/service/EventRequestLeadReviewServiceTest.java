@@ -727,7 +727,6 @@ class EventRequestLeadReviewServiceTest {
         entity.setRegistrationNeeds(true);
         entity.setRegistrationCapacity(150);
         entity.setRegistrationOpensAt(STARTS.minusDays(30));
-        entity.setRegistrationClosesAt(STARTS.minusDays(1));
         OffsetDateTime submitted = OffsetDateTime.now().minusDays(1);
         entity.setCreatedAt(submitted);
         entity.setUpdatedAt(submitted);

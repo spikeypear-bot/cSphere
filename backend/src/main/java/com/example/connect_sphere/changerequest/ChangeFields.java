@@ -51,6 +51,9 @@ final class ChangeFields {
         labels.put("accessibilityNeeds", "Accessibility needs");
         labels.put("requiredFacilities", "Required facilities");
         labels.put("registrationNeeds", "Registration");
+        labels.put("registrationCapacity", "Registration capacity");
+        labels.put("registrationOpensAt", "Registration opens");
+        labels.put("attendeeInstructions", "Attendee instructions");
         return labels;
     }
 
@@ -71,6 +74,9 @@ final class ChangeFields {
         v.put("requiredFacilities", d.requiredFacilities() == null ? List.of()
                 : d.requiredFacilities().stream().map(Enum::name).toList());
         v.put("registrationNeeds", d.registrationNeeds());
+        v.put("registrationCapacity", d.registrationCapacity());
+        v.put("registrationOpensAt", d.registrationOpensAt() == null ? null : d.registrationOpensAt().toString());
+        v.put("attendeeInstructions", text(d.attendeeInstructions()));
         return v;
     }
 
@@ -83,7 +89,9 @@ final class ChangeFields {
                 (String) v.get("venueRequirements"), (String) v.get("equipmentRequirements"),
                 names(v.get("accessibilityNeeds")).stream().map(AccessibilityFeature::valueOf).toList(),
                 names(v.get("requiredFacilities")).stream().map(Facility::valueOf).toList(),
-                (Boolean) v.get("registrationNeeds"));
+                (Boolean) v.get("registrationNeeds"),
+                v.get("registrationCapacity") == null ? null : ((Number) v.get("registrationCapacity")).intValue(),
+                time(v.get("registrationOpensAt")), null, (String) v.get("attendeeInstructions"));
     }
 
     /** The fields whose meaning differs, in the form's order. */
@@ -116,7 +124,7 @@ final class ChangeFields {
                 || value instanceof Collection<?> c && c.isEmpty()) {
             return "—";
         }
-        if (field.endsWith("Datetime")) {
+        if (field.endsWith("Datetime") || field.equals("registrationOpensAt")) {
             return SINGAPORE.format(OffsetDateTime.parse((String) value));
         }
         if (field.equals("accessibilityNeeds")) {

@@ -70,9 +70,8 @@ public class AttendeeRegistrationService {
         }
         if (!Boolean.TRUE.equals(event.getRegistrationNeeds())) refuse("This event does not require registration.");
         if (event.getRegistrationCapacity() == null || event.getRegistrationCapacity() < 1
-                || event.getRegistrationOpensAt() == null || event.getRegistrationClosesAt() == null
-                || !event.getRegistrationClosesAt().isAfter(event.getRegistrationOpensAt())
-                || event.getStartDatetime() == null || event.getRegistrationClosesAt().isAfter(event.getStartDatetime())) {
+                || event.getRegistrationOpensAt() == null || event.getStartDatetime() == null
+                || !event.getStartDatetime().isAfter(event.getRegistrationOpensAt())) {
             throw new AttendeeRegistrationException(422, "Registration settings are incomplete or invalid. Please contact the event organiser.");
         }
         if (attendee.getUsername() == null || attendee.getUsername().isBlank()
@@ -81,7 +80,7 @@ public class AttendeeRegistrationService {
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
-        if (!now.isBefore(event.getRegistrationClosesAt())) refuse("Registration is closed.");
+        if (!now.isBefore(event.getStartDatetime())) refuse("Registration is closed.");
         if (now.isBefore(event.getRegistrationOpensAt())) refuse("Registration has not opened yet.");
         if (registrations.countByEventIdAndStatus(eventId, "confirmed") >= event.getRegistrationCapacity()) {
             refuse("This event is full.");
@@ -116,7 +115,9 @@ public class AttendeeRegistrationService {
     private static void refuse(String message) { throw new AttendeeRegistrationException(409, message); }
 
     private static AttendeeRegistrationDto dto(AttendeeRegistration registration, Event event) {
+        String status = event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.cancelled
+                && "confirmed".equals(registration.getStatus()) ? "event_cancelled" : registration.getStatus();
         return new AttendeeRegistrationDto(registration.getRegistrationId(), registration.getRegistrationReference(),
-                event.getEventId(), event.getEventName(), registration.getStatus(), registration.getRegisteredAt());
+                event.getEventId(), event.getEventName(), status, registration.getRegisteredAt());
     }
 }

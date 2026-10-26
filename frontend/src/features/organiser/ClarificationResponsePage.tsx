@@ -26,6 +26,7 @@ const FIELD_ORDER = [
   'eventName', 'purpose', 'description', 'startDatetime', 'endDatetime', 'expectedAttendance',
   'venueRequirements', 'accessibilityNeeds', 'equipmentRequirements', 'registrationNeeds',
   'requiredFacilities',
+  'registrationCapacity', 'registrationOpensAt', 'attendeeInstructions',
 ] as const
 
 type Fields = Required<SaveEventRequestRequest>
@@ -45,7 +46,6 @@ function fieldsFrom(request: EventRequestDto): Fields {
     registrationNeeds: request.registrationNeeds,
     registrationCapacity: request.registrationCapacity ?? null,
     registrationOpensAt: request.registrationOpensAt ?? null,
-    registrationClosesAt: request.registrationClosesAt ?? null,
     attendeeInstructions: request.attendeeInstructions ?? null,
   }
 }
@@ -163,16 +163,20 @@ export function ClarificationResponsePage() {
   }
 
   function renderField(field: (typeof FIELD_ORDER)[number]): ReactNode {
+    if (['registrationCapacity', 'registrationOpensAt', 'attendeeInstructions'].includes(field)
+      && !fields!.registrationNeeds) return null
     const id = `clarify-${field}`
     const label = FIELD_LABELS[field]
     switch (field) {
       case 'startDatetime':
       case 'endDatetime':
+      case 'registrationOpensAt':
         return <DateTimeField id={id} label={label} value={fields![field]} error={errorFor(field)}
           onChange={(v) => setFields({ [field]: v })} />
       case 'expectedAttendance':
-        return <NumberField id={id} label={label} min={1} wholeNumber value={fields!.expectedAttendance} error={errorFor(field)}
-          onChange={(v) => setFields({ expectedAttendance: v })} />
+      case 'registrationCapacity':
+        return <NumberField id={id} label={label} min={1} wholeNumber value={fields![field]} error={errorFor(field)}
+          onChange={(v) => setFields({ [field]: v })} />
       case 'accessibilityNeeds':
         return <ChipGroup label={label} options={ACCESSIBILITY_OPTIONS} labels={ACCESSIBILITY_LABELS}
           selected={fields!.accessibilityNeeds} error={errorFor(field)}

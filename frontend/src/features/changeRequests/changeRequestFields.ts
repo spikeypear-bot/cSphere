@@ -17,6 +17,9 @@ export const CHANGE_FIELD_LABELS: Record<string, string> = {
   accessibilityNeeds: 'Accessibility needs',
   requiredFacilities: 'Required facilities',
   registrationNeeds: 'Registration',
+  registrationCapacity: 'Registration capacity',
+  registrationOpensAt: 'Registration opens',
+  attendeeInstructions: 'Attendee instructions',
 }
 
 /** Week 4: a change to these may mean existing arrangements must be reconsidered. */
@@ -29,6 +32,7 @@ export const AFFECTS_ARRANGEMENTS = new Set([...IMPORTANT_FIELDS, 'accessibility
 export type ChangeDetails = Required<Pick<SaveEventRequestRequest, 'eventName' | 'purpose' | 'description'
   | 'startDatetime' | 'endDatetime' | 'expectedAttendance' | 'venueRequirements' | 'equipmentRequirements'
   | 'accessibilityNeeds' | 'requiredFacilities' | 'registrationNeeds'>>
+  & Pick<SaveEventRequestRequest, 'registrationCapacity' | 'registrationOpensAt' | 'attendeeInstructions'>
 
 export function detailsOf(r: EventRequestDto): ChangeDetails {
   return {
@@ -37,6 +41,9 @@ export function detailsOf(r: EventRequestDto): ChangeDetails {
     venueRequirements: r.venueRequirements, equipmentRequirements: r.equipmentRequirements,
     accessibilityNeeds: r.accessibilityNeeds ?? [], requiredFacilities: r.requiredFacilities ?? [],
     registrationNeeds: r.registrationNeeds,
+    registrationCapacity: r.registrationCapacity ?? null,
+    registrationOpensAt: r.registrationOpensAt ?? null,
+    attendeeInstructions: r.attendeeInstructions ?? null,
   }
 }
 
@@ -47,7 +54,7 @@ function empty(v: unknown): boolean {
 /** Same meaning, not same spelling: one moment in two offsets, one list in two orders, surrounding spaces. */
 export function sameMeaning(field: string, a: unknown, b: unknown): boolean {
   if (empty(a) && empty(b)) return true
-  if (field.endsWith('Datetime') && typeof a === 'string' && typeof b === 'string') return Date.parse(a) === Date.parse(b)
+  if ((field.endsWith('Datetime') || field === 'registrationOpensAt') && typeof a === 'string' && typeof b === 'string') return Date.parse(a) === Date.parse(b)
   if (Array.isArray(a) && Array.isArray(b)) return [...a].map(String).sort().join('|') === [...b].map(String).sort().join('|')
   if (typeof a === 'string' && typeof b === 'string') return a.trim() === b.trim()
   if (typeof a === 'number' && typeof b === 'number') return a === b
@@ -65,8 +72,8 @@ export function showValue(field: string, value: unknown): string {
   if (field === 'requiredFacilities' && Array.isArray(value)) {
     return value.length === 0 ? '—' : value.map((v) => venueFacilityLabels[v as Facility] ?? String(v)).join(', ')
   }
-  if (field.endsWith('Datetime') && typeof value === 'string' && value) {
-    return `${formatFieldValue(field, value)} (Singapore time)`
+  if ((field.endsWith('Datetime') || field === 'registrationOpensAt') && typeof value === 'string' && value) {
+    return `${formatFieldValue('startDatetime', value)} (Singapore time)`
   }
   return formatFieldValue(field, value)
 }

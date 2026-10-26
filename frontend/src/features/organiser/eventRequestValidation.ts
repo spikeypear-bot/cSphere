@@ -10,7 +10,7 @@ export const ATTENDANCE_WHOLE_NUMBER = 'Expected attendance must be a whole numb
 const INVALID_DATES = 'Enter valid start and end dates and times.'
 
 export type RequestRuleField = 'startDatetime' | 'endDatetime' | 'expectedAttendance'
-  | 'registrationCapacity' | 'registrationOpensAt' | 'registrationClosesAt'
+  | 'registrationCapacity' | 'registrationOpensAt'
 export type RequestFieldProblems = Partial<Record<RequestRuleField, string>>
 
 /** The end must be strictly after the start, compared as moments: the same
@@ -32,7 +32,7 @@ export function dateRangeError(start: string | null, end: string | null): string
 export function requestFieldProblems(
   fields: { startDatetime: string | null; endDatetime: string | null; expectedAttendance: number | null
     registrationNeeds?: boolean | null; registrationCapacity?: number | null
-    registrationOpensAt?: string | null; registrationClosesAt?: string | null },
+    registrationOpensAt?: string | null },
   now: number = Date.now(),
 ): RequestFieldProblems {
   const problems: RequestFieldProblems = {}
@@ -53,12 +53,9 @@ export function requestFieldProblems(
       problems.registrationCapacity = 'Registration capacity must be a whole number of at least 1.'
     }
     const opens = fields.registrationOpensAt ? Date.parse(fields.registrationOpensAt) : NaN
-    const closes = fields.registrationClosesAt ? Date.parse(fields.registrationClosesAt) : NaN
     const eventStart = fields.startDatetime ? Date.parse(fields.startDatetime) : NaN
-    if (Number.isFinite(opens) && Number.isFinite(closes) && closes <= opens) {
-      problems.registrationClosesAt = 'Registration must close after it opens.'
-    } else if (Number.isFinite(closes) && Number.isFinite(eventStart) && closes > eventStart) {
-      problems.registrationClosesAt = 'Registration must close no later than the event start.'
+    if (Number.isFinite(opens) && Number.isFinite(eventStart) && opens >= eventStart) {
+      problems.registrationOpensAt = 'Registration must open before the event start.'
     }
   }
   return problems

@@ -60,7 +60,7 @@ public class EventRequestService {
             "eventName", "purpose", "description", "startDatetime", "endDatetime",
             "expectedAttendance", "venueRequirements", "equipmentRequirements",
             "accessibilityNeeds", "requiredFacilities", "registrationNeeds", "registrationCapacity",
-            "registrationOpensAt", "registrationClosesAt", "attendeeInstructions");
+            "registrationOpensAt", "attendeeInstructions");
 
     private final EventRequestRepository repository;
     private final EventRequestMapper mapper;
@@ -378,7 +378,6 @@ public class EventRequestService {
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
         event.setRegistrationCapacity(entity.getRegistrationCapacity());
         event.setRegistrationOpensAt(entity.getRegistrationOpensAt());
-        event.setRegistrationClosesAt(entity.getRegistrationClosesAt());
         event.setAttendeeInstructions(entity.getAttendeeInstructions());
         event.setOrganisation(entity.getOrganisation());
         event.setCoordinatorId(actingCoordinatorId);
@@ -752,12 +751,8 @@ public class EventRequestService {
                 problems.put("registrationCapacity", "Registration capacity must be at least 1.");
             }
             OffsetDateTime opens = entity.getRegistrationOpensAt();
-            OffsetDateTime closes = entity.getRegistrationClosesAt();
-            if (opens != null && closes != null && !closes.toInstant().isAfter(opens.toInstant())) {
-                problems.put("registrationClosesAt", "Registration must close after it opens.");
-            }
-            if (closes != null && start != null && closes.toInstant().isAfter(start.toInstant())) {
-                problems.put("registrationClosesAt", "Registration must close no later than the event start.");
+            if (opens != null && start != null && !opens.isBefore(start)) {
+                problems.put("registrationOpensAt", "Registration must open before the event start.");
             }
         }
         return problems;
@@ -810,7 +805,6 @@ public class EventRequestService {
         values.put("registrationNeeds", e.getRegistrationNeeds());
         values.put("registrationCapacity", e.getRegistrationCapacity());
         values.put("registrationOpensAt", e.getRegistrationOpensAt() == null ? null : e.getRegistrationOpensAt().toString());
-        values.put("registrationClosesAt", e.getRegistrationClosesAt() == null ? null : e.getRegistrationClosesAt().toString());
         values.put("attendeeInstructions", e.getAttendeeInstructions());
         return values;
     }
@@ -849,7 +843,7 @@ public class EventRequestService {
                 e.getRequiredFacilities() == null ? List.of()
                         : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
                 e.getRegistrationNeeds(), e.getRegistrationCapacity(), e.getRegistrationOpensAt(),
-                e.getRegistrationClosesAt(), e.getAttendeeInstructions());
+                e.getStartDatetime(), e.getAttendeeInstructions());
     }
 
     /** EO03: proposed details must be submittable exactly as a new request is
@@ -880,7 +874,6 @@ public class EventRequestService {
             event.setRegistrationNeeds(request.getRegistrationNeeds());
             event.setRegistrationCapacity(request.getRegistrationCapacity());
             event.setRegistrationOpensAt(request.getRegistrationOpensAt());
-            event.setRegistrationClosesAt(request.getRegistrationClosesAt());
             event.setAttendeeInstructions(request.getAttendeeInstructions());
             eventRepository.save(event);
         }
@@ -902,7 +895,6 @@ public class EventRequestService {
         entity.setRegistrationNeeds(request.registrationNeeds());
         entity.setRegistrationCapacity(request.registrationCapacity());
         entity.setRegistrationOpensAt(request.registrationOpensAt());
-        entity.setRegistrationClosesAt(request.registrationClosesAt());
         entity.setAttendeeInstructions(request.attendeeInstructions());
     }
 
@@ -964,7 +956,6 @@ public class EventRequestService {
         if (Boolean.TRUE.equals(entity.getRegistrationNeeds())) {
             if (entity.getRegistrationCapacity() == null) missing.add("registrationCapacity");
             if (entity.getRegistrationOpensAt() == null) missing.add("registrationOpensAt");
-            if (entity.getRegistrationClosesAt() == null) missing.add("registrationClosesAt");
         }
         return missing;
     }
