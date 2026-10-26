@@ -1,3 +1,4 @@
+// @stories EC07 EC-NEW3
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -105,6 +106,46 @@ describe('EquipmentRequestPage (EC07)', () => {
 
     expect(await screen.findByRole('heading', { name: 'Request already submitted' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Submit equipment request' })).not.toBeInTheDocument()
+  })
+
+  it('EC-NEW3: revises the active request, releasing reservations and superseding the old one', async () => {
+    seedSession('coordinator')
+    const calls = stubApi({
+      ...getBaseRoutes(),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [{
+        requestId: 'request-1',
+        eventId: EVENT_ID,
+        status: 'approved',
+        technicalRequirement: 'Two microphones',
+        rejectReason: null,
+        lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone', quantity: 2 }],
+      }]),
+      [`PATCH /api/events/${EVENT_ID}/equipment-request`]: (body) => jsonResponse(200, {
+        requestId: 'request-2',
+        eventId: EVENT_ID,
+        status: 'processing',
+        technicalRequirement: (body as { technicalRequirement: string }).technicalRequirement,
+        lines: [{ equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 1 }],
+      }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Revise request' }))
+    expect(screen.getByDisplayValue('Two microphones')).toBeInTheDocument()
+    await user.clear(screen.getByDisplayValue('Two microphones'))
+    await user.type(screen.getByLabelText('Technical requirements or notes'), 'Fewer microphones, a projector now')
+    await user.selectOptions(screen.getByLabelText('Equipment'), 'projector-1')
+    await user.clear(screen.getByLabelText('Quantity'))
+    await user.type(screen.getByLabelText('Quantity'), '1')
+    await user.click(screen.getByRole('button', { name: 'Submit revision' }))
+
+    expect(await screen.findByText(/revised/i)).toBeInTheDocument()
+    expect(screen.getByText('1 × Projector')).toBeInTheDocument()
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      technicalRequirement: 'Fewer microphones, a projector now',
+      items: [{ equipmentId: 'projector-1', quantity: 1 }],
+    })
   })
 
   it('shows Technical Support rejection status and reason', async () => {
