@@ -646,7 +646,76 @@ Each rule is one targeted query: `findOverlappingForUnit` for blocks and reserva
 
 `EquipmentDamageFlowTest.aDamagedReplacementIsRefused` covers TS09's replacement refusal, which had no test before.
 
-## Awaiting Team Confirmation
+### D36 — EC-NEW3: the coordinator revises an equipment request by superseding and rebuilding it
+
+2026-10-26, branch `feat/ec-new3-equipment-revision`.
+
+**Problem.** EC-NEW3 lets a coordinator propose a change (date, time, venue,
+equipment requirements...) for an approved event; `ChangeRequestService`
+approves it and writes the new values straight to `Event`/`EventRequest`.
+Nothing updates the event's *equipment request* to match. TS11 (on its own
+branch) tells Technical Support that an approved change may have affected
+the event's equipment, but it is deliberately read-only (AC13): it records
+a review, it never writes to a reservation or a request. Someone still has
+to decide what the request should now say, and the customer's own
+briefing (Equipment Request Management, Event Change Requests) gives that
+judgment call to the coordinator, not to Technical Support or to the
+system. There was no way for the coordinator to act on it.
+
+**Approaches considered.**
+1. **Edit the existing request's lines in place.** Simplest to build, but
+   loses the comparison a later audit needs (what did this event ask for
+   before the change?), and an approved request already has reservations
+   (`equipment_logs`) that an in-place quantity change would silently
+   desynchronise from.
+2. **A separate "amendment" record layered on the original request,** the
+   way TS09's shortfall ledger links an *additional* request to a
+   shortfall. Keeps history, but an amendment is additive by nature — it
+   does not fit a coordinator who needs to reduce or completely replace
+   what was asked for, which EC-NEW3 explicitly requires (equipment can
+   go either direction, not just up).
+3. **Supersede and rebuild (chosen).** Every reservation the event holds
+   is released, every non-rejected request for the event is marked
+   `superseded`, and one new `processing` request is created from the
+   coordinator's complete new picture — exactly as a first-time `submit`
+   would, through the same validation.
+
+**Decision (user, 2026-10-26).** Approach 3. A reservation
+(`equipment_logs`) names only its `event_id`, never a `request_id` (TS02),
+so a request-scoped release was never possible in the first place —
+releasing is necessarily event-scoped, which already pushed toward
+replacing the whole picture rather than editing one line. The superseded
+request's own row and lines are never edited or deleted, so the
+before/after is still there for whoever looks later. Technical Support is
+told nothing about *why* — the new request simply arrives exactly like a
+first-time one (TS01/EC07's queue, unchanged); a notice naming the EO's
+change is a separate TS-side story, deliberately out of this branch's
+scope so the two user stories, and their PRs, stay independent.
+
+**What triggers a revision.** Nothing automatic. The coordinator's own
+judgment decides when equipment no longer fits the event — the EO-C3/
+EC-NEW3 change itself only changes `Event` columns; nothing here reads
+`ChangeRequestService`'s approval event or hooks into its transaction (contrast VS17,
+which *is* hooked into that approval because a room requirement check is
+mechanical, not judgment). `PATCH /events/{eventId}/equipment-request`
+is reachable whenever the event is not cancelled or completed and has at
+least one `processing`/`approved` request to revise, independent of event
+status otherwise — unlike `submit`, which requires Planning, since a
+revision is explicitly for an event that has moved past Planning after an
+approved change.
+
+**Evidence:**
+- **Backend:** `EquipmentRequestServiceTest` (unit): releases reservations,
+  supersedes the old request, refuses with nothing to revise, refuses an
+  unassigned coordinator. `EquipmentRequestFlowTest` (real PostgreSQL):
+  revising a processing request, revising an approved+reserved one (and
+  the reservation rows are actually gone), refusing with no active
+  request, refusing after a rejection, role/assignment checks.
+- **Frontend:** `EquipmentRequestPage.test.tsx` — the Revise request
+  button pre-fills the active request's own items, submits through
+  `PATCH`, and shows the result.
+
+**Migration:** V52 (`equipment_request_status` adds `superseded`).
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
 - **Raised by:** repository/backlog inspection, 2026-09-12.
