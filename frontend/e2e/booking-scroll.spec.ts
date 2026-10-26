@@ -1,8 +1,8 @@
-// @stories VS-C3 VS-C2
+// @stories VS-C3 VS-C2 VS17
 import { expect, test } from '@playwright/test'
 
 for (const mobile of [false, true]) {
-  test(`booking expiry and focus refresh preserve scroll and the open editor (${mobile ? 'mobile' : 'desktop'})`, async ({ page }) => {
+  test(`VS-C3 (cross-cutting): booking expiry and focus refresh preserve scroll and the open editor (${mobile ? 'mobile' : 'desktop'})`, async ({ page }, testInfo) => {
     if (mobile) await page.setViewportSize({ width: 390, height: 844 })
     await page.clock.install({ time: new Date('2030-10-19T00:00:00Z') })
     await page.clock.pauseAt(new Date('2030-10-19T00:00:01Z'))
@@ -30,7 +30,11 @@ for (const mobile of [false, true]) {
     let deferReads = false
     let reads = 0
     await page.route('**/api/**', async route => {
-      if (!route.request().url().includes('/venue-bookings/scroll-fixture')) {
+      const path = new URL(route.request().url()).pathname
+      if (path.endsWith('/assessment')) {
+        await route.fulfill({ json: { bookingId: booking.bookingId, status: 'pending', checks: [], history: [] } }); return
+      }
+      if (path !== '/api/venue-bookings/scroll-fixture') {
         await route.fulfill({ json: [] }); return
       }
       reads++
@@ -38,7 +42,27 @@ for (const mobile of [false, true]) {
       await route.fulfill({ json: { ...booking, holds: [{ ...hold, status: reads === 1 ? 'active' : 'expired' }] } })
     })
     await page.goto('/venue-staff/bookings/scroll-fixture?from=booking-approvals')
-    await expect(page.getByLabel('Status: tentative')).toBeVisible()
+    await expect(page.getByLabel('Status: Tentative Hold')).toBeVisible()
+    const historyCard=page.getByRole('list',{name:'Hold history'}).locator('.card')
+    const previewCard=page.locator('.booking-detail-layout .venue-card-preview').first()
+    await expect(historyCard).toBeVisible()
+    for(const property of ['backgroundColor','borderRadius','paddingTop']) {
+      expect(await historyCard.evaluate((el,key)=>getComputedStyle(el)[key as 'backgroundColor'],property))
+        .toBe(await previewCard.evaluate((el,key)=>getComputedStyle(el)[key as 'backgroundColor'],property))
+    }
+    const historyFacts=historyCard.locator('dl')
+    const eventFacts=page.locator('.event-requirements-panel dl').first()
+    const badgeBox=await historyCard.locator('.booking-status-tag').boundingBox()
+    const factsBox=await historyFacts.boundingBox()
+    expect(badgeBox).not.toBeNull();expect(factsBox).not.toBeNull()
+    expect(Math.abs(badgeBox!.y-factsBox!.y)).toBeLessThan(2)
+    expect(badgeBox!.x).toBeGreaterThanOrEqual(factsBox!.x+factsBox!.width)
+
+    expect(await historyFacts.evaluate(el=>getComputedStyle(el).fontSize)).toBe(await eventFacts.evaluate(el=>getComputedStyle(el).fontSize))
+    expect(await historyFacts.locator('dt').first().evaluate(el=>getComputedStyle(el).fontWeight)).toBe(await eventFacts.locator('dt').first().evaluate(el=>getComputedStyle(el).fontWeight))
+    expect(await historyFacts.locator('dd').first().evaluate(el=>getComputedStyle(el).color)).toBe(await eventFacts.locator('dd').first().evaluate(el=>getComputedStyle(el).color))
+    await page.screenshot({path:testInfo.outputPath('hold-history-preview.png'),fullPage:true})
+
     await page.getByText('Edit booking timings', { exact: true }).click()
     const setup = page.getByLabel('Setup (minutes)')
     await setup.scrollIntoViewIfNeeded()

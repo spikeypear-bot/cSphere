@@ -76,7 +76,8 @@ public class VenueController {
                         case "venueAccessibilities" -> "venueAccessibilities must be an array of valid accessibility selections; use [] to clear selections, not null";
                         case "venueFacilities" -> "venueFacilities must be an array of valid facility selections; use [] to clear selections, not null";
                         case "additionalInformation" -> "additionalInformation must be text; use an empty string to clear it, not null";
-                        case "operatingInformation" -> "operatingInformation must be nonblank text; null is not allowed";
+                        case "operatingInformation" -> "operatingInformation must be text; update operatingHours to change the schedule";
+                        case "operatingHours" -> "operatingHours must be an array of valid day/open/close intervals; null is not allowed";
                         default -> null;
                     };
                     if (message != null) return ResponseEntity.badRequest().body(ApiError.of(message));

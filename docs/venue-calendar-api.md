@@ -2,9 +2,9 @@
 
 The Venue Staff availability route now shows a read-only month calendar in Asia/Singapore, with venue selection, previous/next month, Today, refresh, a type legend and entry details in a modal dialog. Every overlapping entry remains individually selectable; multi-day entries appear on each occupied date. Narrow screens can scroll the calendar horizontally.
 
-The route is `/venue-staff/availability-calendar`. The venue selector reuses the shared `.field` dropdown styling used in Booking Approval. Navigation and refresh use compact buttons. The month heading sits directly above a two-column row containing the legend on the left and Refresh schedule on the right.
+The route is `/venue-staff/availability-calendar`. The venue selector reuses the shared `.field` dropdown styling used in Booking Approval. Navigation and refresh use compact buttons. The legend and Refresh schedule share a row. The month heading and Previous month/Today/Next month controls sit immediately above the calendar grid.
 
-Approved bookings display as Approved booking. Pending requests display as Pending request and remain non-reserving. Active tentative holds display separately and reserve their saved occupied period until expiry. Each booking produces separate Event, Setup and Turnaround entries, with zero-length buffers omitted; an active hold replaces its pending booking's segments with one Reserved period entry. Hold details include the expiry timestamp and Active status. Details retain the full selected interval and original event timing. Unavailability details include the recorded reason. No mutation actions are available in this calendar.
+Approved bookings display as Approved booking. Bookings requiring reassessment display as Requires attention in red and retain their event, setup and turnaround entries and reserved occupancy. Conflict indicators include both approved and attention bookings. Pending requests display as Pending request and remain non-reserving. Active tentative holds display separately and reserve their saved occupied period until expiry. Each booking produces separate Event, Setup and Turnaround entries, with zero-length buffers omitted; an active hold replaces its pending booking's segments with one Reserved period entry. Hold details include the expiry timestamp and Active status. Details retain the full selected interval and original event timing. Unavailability details include the recorded reason. No mutation actions are available in this calendar.
 
 ## Schedule API
 
@@ -52,3 +52,5 @@ schedule reads include active, unexpired holds. Hold expiry, release and convers
 remove the hold from subsequent reads; conversion exposes the same booking as
 approved, without creating a second booking. Conflict indicators use the stored
 `approved` status and retain the shared booking-status colours.
+
+Presentation and integrated calendar checks are recorded in [the Venue Staff audit](venue-staff-presentation-audit.md).

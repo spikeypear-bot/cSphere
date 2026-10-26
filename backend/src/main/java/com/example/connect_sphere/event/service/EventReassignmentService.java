@@ -10,8 +10,6 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
@@ -92,8 +90,8 @@ public class EventReassignmentService {
                 ActivityType.event_reassignment_requested, coordinatorId, reason, null, null, null));
 
         List<UUID> leads = users.findByRole(UserRole.ecl).stream().map(User::getUserId).toList();
-        afterCommit(() -> notifications.createEventReassignmentRequestedNotifications(
-                leads, eventId, event.getEventName(), reason));
+        notifications.createEventReassignmentRequestedNotifications(
+                leads, eventId, event.getEventName(), reason);
         return toDto(saved, event, users.findById(coordinatorId).orElseThrow());
     }
 
@@ -177,20 +175,18 @@ public class EventReassignmentService {
 
         UUID eventId = event.getEventId();
         String eventName = event.getEventName();
-        afterCommit(() -> {
-            notifications.createEventReassignmentDecisionNotifications(
-                    List.of(request.getRequesterUserId()), eventId, eventName,
-                    NotificationType.event_reassignment_approved, message);
-            notifications.createEventReassignmentDecisionNotifications(
-                    List.of(nextCoordinator.getUserId()), eventId, eventName,
-                    NotificationType.event_reassignment_approved,
-                    "You are now coordinating this event.");
-            if (origin.getCreatedBy() != null) {
-                notifications.createCoordinatorAssignmentNotification(
-                        origin.getCreatedBy(), origin.getRequestId(), eventId, eventName,
-                        nextCoordinator.getUsername(), nextCoordinator.getEmail(), true);
-            }
-        });
+        notifications.createEventReassignmentDecisionNotifications(
+                List.of(request.getRequesterUserId()), eventId, eventName,
+                NotificationType.event_reassignment_approved, message);
+        notifications.createEventReassignmentDecisionNotifications(
+                List.of(nextCoordinator.getUserId()), eventId, eventName,
+                NotificationType.event_reassignment_approved,
+                "You are now coordinating this event.");
+        if (origin.getCreatedBy() != null) {
+            notifications.createCoordinatorAssignmentNotification(
+                    origin.getCreatedBy(), origin.getRequestId(), eventId, eventName,
+                    nextCoordinator.getUsername(), nextCoordinator.getEmail(), true);
+        }
         return toDto(saved, event, previousCoordinator);
     }
 
@@ -210,9 +206,9 @@ public class EventReassignmentService {
                 .orElseThrow(() -> new EventRequestNotFoundException(event.getEventId()));
         activity.record(new ActivityService.Entry(origin.getRequestId(), event.getEventId(),
                 ActivityType.event_reassignment_declined, leadId, reason, null, null, null));
-        afterCommit(() -> notifications.createEventReassignmentDecisionNotifications(
+        notifications.createEventReassignmentDecisionNotifications(
                 List.of(request.getRequesterUserId()), event.getEventId(), event.getEventName(),
-                NotificationType.event_reassignment_declined, "Request declined: " + reason));
+                NotificationType.event_reassignment_declined, "Request declined: " + reason);
         return toDto(saved, event, requester);
     }
 
@@ -265,16 +261,4 @@ public class EventReassignmentService {
         return OffsetDateTime.now(clock);
     }
 
-    private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
-    }
 }

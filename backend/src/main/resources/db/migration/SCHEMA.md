@@ -153,7 +153,7 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 | `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
 | `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |
-| `operating_information` | `TEXT` | no | | Operating days/hours and constraints; must contain non-whitespace text (V6) |
+| `operating_information` | `TEXT` | no | | Derived compatibility summary of structured hours; stored text remains nonblank (V6/V39) |
 | `venue_facilities` | `facilities[]` | no | | Facilities present. Defaults to `{}` |
 | `additional_information` | `TEXT` | yes | | Free-text notes |
 
@@ -178,10 +178,7 @@ blank address/operating information and addresses over 500 characters; addresses
 are trimmed, not checked for real-world existence. These DTO/service rules are
 distinct from the database constraints documented above.
 
-Operating information remains human-readable text (for example, "Mon-Fri,
-09:00-18:00; closed on public holidays"). These constraints ensure it is present,
-not that the schedule can be calculated automatically. Structured hours, booking
-availability remain separate stories. Venue address remains required.
+Operating hours are entered as structured daily intervals. Creation and hours updates require at least one operating day. The service generates operating_information from these intervals for catalogue, search, booking and organiser readers. Legacy records without structured hours may retain stored text, but every API reader and display reports Operating hours not configured until structured days are supplied. Legacy prose is never parsed or advertised as opening hours. Hours changes retain booking reassessment. Venue address remains required.
 The Venue API now records accessibility/facility selections in the existing enum
 arrays. Omitted/null lists become empty; duplicate/null entries are rejected.
 Accessibility `none` explicitly records no provisions and is exclusive. The entity
@@ -492,7 +489,7 @@ delete once real entities exist.
 | 3 | ~~`CHAR(1)` code mappings undocumented~~ | **Resolved in V3** for `request_type` (`C`/`A`) — see §2. `equipment_type` still TODO. |
 | 4 | `event_requests` has several nullable fields that `events` requires | Approval path must handle this. Widened in V3 (`event_name`, `purpose`, `expected_attendance`, `venue_requirements` are now also nullable, to support `draft` status) — `EventRequestService.submit()` is where completeness is enforced before a request may leave `draft`. |
 | 5 | `equipment_requirements` vs `equipment_requests.technical_requirement` | Overlapping free text — confirm which is authoritative |
-| 6 | ~~No audit of who approved a request~~ | **Resolved in V13** for event requests: `event_request_activity` records who submitted, assigned, clarified, responded, approved, rejected and requested a venue, and when. Bookings and registrations are not yet covered (rest of DEV07). |
+| 6 | ~~No audit of who approved a request~~ | **Resolved in V13** for event requests: `event_request_activity` records who submitted, assigned, clarified, responded, approved, rejected and requested a venue, and when. Venue booking decisions and lifecycle activity are now recorded, with hold, requirement review and assessment histories in V29/V34–V38. A universal audit log remains separate. |
 | 7 | `equipment_logs` has no return/check-in flag | Availability is inferred purely from the loan window |
 | 8 | `event_requests.accessibility_needs` is `text[]`, not the shared enum-array type | V4 migration — ORM limitation, not a data-modelling choice. Revisit if `venues`/`events` entities need the same values and a consistent type is wanted across tables. |
 
@@ -693,3 +690,60 @@ reservation as a **spare**: an extra unit held beyond what the event's requests 
 
 See [TS09 API](../../../../../../docs/equipment-damage-api.md) § Technical Support console and
 decision-log D33.
+
+## V42 update — venue requirement reviews (VS17)
+
+`venue_requirement_reviews` snapshots each active booking affected by an approved
+event change, including supported venue requirements before/after, approval and
+coordinator identity/contact, event/venue labels, booking window and durations.
+`status` is initially `pending`, separate from booking status and notification
+read state. `(change_request_id, booking_id)` is unique. Notifications gain a
+`requirement_review_id` FK and unique review/recipient index; the new
+`venue_requirement_changed` type requires review, event, booking and message.
+All earlier notification shape branches remain intact. See
+[VS17 design](../../../../../../docs/venue-requirement-changes.md).
+
+## V43 update — venue requirement review outcomes (VS17)
+
+Review statuses extend to `suitable` and `action_required`. The latter requires a
+nonblank comment (maximum 2000 characters); both require reviewed_by (user FK),
+reviewer_name, reviewed_at and reviewed_checks (JSON snapshot). A database trigger
+preserves historical snapshot fields and prevents deleting reviews or overwriting
+decided outcomes. New `venue_requirement_reviewed` notifications reference the
+review, booking and event; previous notification constraint branches are retained.
+Outcomes, review audit and notification share a transaction; no booking/event,
+hold or equipment status/window changes are performed by review actions.
+
+
+### V44–V46: current venue suitability and booking assessment history (VS17)
+`venue_booking_status.attention` retains the reservation but blocks event readiness.
+`venue_booking_assessments` is append-only and stores booking, outcome, source, reason,
+actor/name/time, previous/current venue JSON (including opening hours), and requirement JSON.
+Notifications add `venue_suitability_changed` (EC) and `venue_arrangements_changed` (EO).
+New catalogue defaults do not change existing booking duration snapshots.
+
+
+## V48–V49: venue workflow recovery and release
+
+`venue_unavailability` retains `released_at`, `released_by` (user FK), and `release_reason`. Released periods stop blocking but their rows and impact links remain. Database checks require complete release metadata and a nonblank reason of at most 2000 characters.
+
+`venue_replan_tasks` stores `task_id`, `event_id` (FK, cascade on explicit event deletion), `actor_id` (user FK), `reason`, `created_at`, and `completed_at`. Its partial pending index supports retry workers.
+
+`notification_outbox` stores a stable `notification_id`, JSONB payload, `created_at`, and `delivered_at`, with a partial pending index. Delivery writes the corresponding notification and marks its work item in one transaction. It retains payload snapshots as internal operational history. See [workflow repair contracts](../../../../../../docs/venue-workflow-repair.md).
+
+
+## V50: independent multi-venue requirements and evidence
+`venue_booking_requirements` retains event linkage and withdrawal metadata. `venue_bookings.requirement_id` groups replacement chains; `requirements` JSON stores per-room overrides. Active legacy chains are backfilled; terminal-only historical chains remain unrequired. `venue_booking_history` snapshots every subsequent booking insert/update and event requirements. `event_readiness_items.arrangement_fingerprint` binds each venue attestation to current facts. Rejection notification shape requires the booking, event, reason and message. See `docs/multiple-venue-bookings.md` for API and rollout semantics.
+
+SO-C5/SO-C6 feedback retains all six standard checklist keys and also accepts
+`venue_safety_<booking UUID>` keys. The database rejects malformed keys;
+`ReadinessService` additionally requires each selected key to belong to the
+event's current checklist before saving a decision.
+
+## V51: Venue Staff approval outcome
+
+`notification_type` adds `venue_booking_approved`. Its notification shape requires
+`event_id`, `venue_booking_id` and `message`. Booking approval and hold conversion
+enqueue the same outcome for the coordinator assigned when the decision commits.
+The conditional pending-to-approved update prevents duplicate outcomes; rollback
+also removes the outbox work. Previous notification shapes remain valid.

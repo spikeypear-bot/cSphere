@@ -1,6 +1,8 @@
 // Mirrors backend/src/main/java/com/example/connect_sphere/activity/dto/ActivityDto.java
 
 export type ActivityTypeName =
+  | 'venue_suitability_changed'
+  | 'venue_requirements_reviewed'
   | 'submitted'
   | 'coordinator_assigned'
   | 'coordinator_reassigned'

@@ -22,14 +22,21 @@ import lombok.Setter;
  * doesn't touch the read model's shape. Plain ids rather than associations:
  * writing a booking needs only the keys.
  *
- * <p>The booking's time window is the event's start/end (read through the
- * event), never a copy, so the two can't disagree (Week 1 briefing §8d).
+ * <p>Bookings have independent reserved windows and duration snapshots (VS-C2,
+ * EC-C2). Event times are a fallback for legacy null windows only (V26).
  */
 @Entity
 @Table(name = "venue_bookings")
 @Getter
 @Setter
 public class VenueBookingRecord {
+
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "requirements", columnDefinition = "jsonb")
+    private com.example.connect_sphere.venuebooking.dto.BookingRequirements requirements;
+
+    @Column(name = "requirement_id")
+    private UUID requirementId;
 
     @Id
     @Column(name = "booking_id")

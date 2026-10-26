@@ -25,15 +25,34 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 
 @Tag("unit")
 @Tag("VS07")
+@Tag("VS17")
 class VenueServiceTest {
     private final VenueRepository repository = mock(VenueRepository.class);
     private final VenueService service = new VenueService(repository, Mappers.getMapper(VenueMapper.class));
+
+    private static List<com.example.connect_sphere.venue.dto.VenueOperatingHourDto> schedule() {
+        return List.of(new com.example.connect_sphere.venue.dto.VenueOperatingHourDto(1, java.time.LocalTime.of(9,0), java.time.LocalTime.of(17,0)));
+    }
+    private final com.example.connect_sphere.venue.repository.VenueOperatingHourRepository hours = mock(com.example.connect_sphere.venue.repository.VenueOperatingHourRepository.class);
+    private final java.util.List<com.example.connect_sphere.venue.entity.VenueOperatingHour> storedHours = new java.util.ArrayList<>();
+    @org.junit.jupiter.api.BeforeEach
+    void structuredHoursRepository() {
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"hours",hours);
+        storedHours.add(new com.example.connect_sphere.venue.entity.VenueOperatingHour(java.util.UUID.randomUUID(),1,java.time.LocalTime.of(9,0),java.time.LocalTime.of(17,0)));
+        when(hours.findByVenueIdOrderByDayOfWeekAscOpenTimeAsc(any())).thenAnswer(call -> new java.util.ArrayList<>(storedHours));
+        doAnswer(call -> { storedHours.clear(); return null; }).when(hours).deleteByVenueId(any());
+        when(hours.saveAll(any())).thenAnswer(call -> {
+            var saved = new java.util.ArrayList<com.example.connect_sphere.venue.entity.VenueOperatingHour>();
+            for(var row : call.<Iterable<com.example.connect_sphere.venue.entity.VenueOperatingHour>>getArgument(0)) saved.add(row);
+            storedHours.addAll(saved); return saved;
+        });
+    }
 
     @Test
     void copiesSelectionsAndNormalisesMissingLists() {
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
         var result = service.createVenue(new CreateVenueDto("Venue", 50, List.of(VenueLayout.theatre),
-                "Daily", null, List.of(AccessibilityFeature.none), List.of(Facility.stage)));
+                "Daily", null, List.of(AccessibilityFeature.none), List.of(Facility.stage), schedule()));
         assertThat(result.venueAccessibilities()).containsExactly(AccessibilityFeature.none);
         assertThat(result.venueFacilities()).containsExactly(Facility.stage);
         var empty = service.createVenue(input("Venue", 50, List.of(VenueLayout.theatre), "Daily"));
@@ -52,7 +71,7 @@ class VenueServiceTest {
 
     private static CreateVenueDto selections(List<AccessibilityFeature> accessibility, List<Facility> facilities) {
         return new CreateVenueDto("Venue", 50, List.of(VenueLayout.theatre), "Daily", null,
-                accessibility, facilities);
+                accessibility, facilities, schedule());
     }
 
     @ParameterizedTest
@@ -68,12 +87,13 @@ class VenueServiceTest {
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
         var result = service.createVenue(new CreateVenueDto("  #01-02 Example\nSingapore 123456  ",
                 capacity, List.of(VenueLayout.theatre, VenueLayout.classroom), " Mon-Fri 9-5 ", null,
-                List.of(AccessibilityFeature.step_free_access), List.of(Facility.projection)));
+                List.of(AccessibilityFeature.step_free_access), List.of(Facility.projection), schedule()));
         assertThat(result.venueId()).isNotNull();
         assertThat(result.venueAddress()).isEqualTo("#01-02 Example\nSingapore 123456");
         assertThat(result.venueCapacity()).isEqualTo(capacity);
         assertThat(result.supportedLayouts()).containsExactly(VenueLayout.theatre, VenueLayout.classroom);
-        assertThat(result.operatingInformation()).isEqualTo("Mon-Fri 9-5");
+        assertThat(result.operatingInformation()).isEqualTo("Monday 09:00\u201317:00");
+        assertThat(result.operatingHours()).containsExactlyElementsOf(schedule());
         assertThat(result.additionalInformation()).isNull();
         assertThat(result.venueAccessibilities()).containsExactly(AccessibilityFeature.step_free_access);
         assertThat(result.venueFacilities()).containsExactly(Facility.projection);
@@ -95,7 +115,7 @@ class VenueServiceTest {
     }
 
     private static CreateVenueDto input(String address, Integer capacity, List<VenueLayout> layouts, String hours) {
-        return new CreateVenueDto(address, capacity, layouts, hours, null, null, null);
+        return new CreateVenueDto(address, capacity, layouts, hours, null, null, null, hours.isBlank() ? List.of() : schedule());
     }
 
     @ParameterizedTest
@@ -114,7 +134,7 @@ class VenueServiceTest {
     void selectionsDoNotBypassBasicVenueValidation(CreateVenueDto input) {
         var withSelections = new CreateVenueDto(input.venueAddress(), input.venueCapacity(),
                 input.supportedLayouts(), input.operatingInformation(), input.additionalInformation(),
-                List.of(AccessibilityFeature.elevators), List.of(Facility.stage));
+                List.of(AccessibilityFeature.elevators), List.of(Facility.stage), input.operatingHours());
         assertThatThrownBy(() -> service.createVenue(withSelections)).isInstanceOf(InvalidVenueException.class);
         verifyNoInteractions(repository);
     }
@@ -133,7 +153,8 @@ class VenueServiceTest {
         var response = new ApiExceptionHandler().handleInvalidVenue(exception);
         assertThat(response.getStatusCode().value()).isEqualTo(422);
         assertThat(response.getBody().message()).contains("venueAddress", "venueCapacity",
-                "supportedLayouts", "operatingInformation");
+                "supportedLayouts");
+        assertThat(response.getBody().message()).doesNotContain("operatingInformation");
     }
 
     @ParameterizedTest
@@ -153,7 +174,7 @@ class VenueServiceTest {
         if (all || field.equals("layouts")) input.setSupportedLayouts(List.of(VenueLayout.theatre));
         if (all || field.equals("accessibility")) input.setVenueAccessibilities(List.of(AccessibilityFeature.elevators));
         if (all || field.equals("facilities")) input.setVenueFacilities(List.of(Facility.stage));
-        if (all || field.equals("hours")) input.setOperatingInformation(" Weekdays ");
+        if (all || field.equals("hours")) input.setOperatingHours(List.of(new com.example.connect_sphere.venue.dto.VenueOperatingHourDto(1,java.time.LocalTime.of(10,30),java.time.LocalTime.of(18,0))));
         var result = service.updateVenue(venue.getVenueId(), input);
         assertThat(result.venueId()).isEqualTo(venue.getVenueId());
         assertThat(result.venueAddress()).isEqualTo("Venue");
@@ -162,7 +183,7 @@ class VenueServiceTest {
         assertThat(result.supportedLayouts()).containsExactly(all || field.equals("layouts") ? VenueLayout.theatre : VenueLayout.classroom);
         assertThat(result.venueAccessibilities()).containsExactly(all || field.equals("accessibility") ? AccessibilityFeature.elevators : AccessibilityFeature.step_free_access);
         assertThat(result.venueFacilities()).containsExactly(all || field.equals("facilities") ? Facility.stage : Facility.projection);
-        assertThat(result.operatingInformation()).isEqualTo(all || field.equals("hours") ? "Weekdays" : "Daily");
+        assertThat(result.operatingInformation()).isEqualTo(all || field.equals("hours") ? "Monday 10:30\u201318:00" : "Monday 09:00\u201317:00");
         verify(repository).save(venue);
     }
 
@@ -175,7 +196,7 @@ class VenueServiceTest {
         when(repository.findForUpdate(venue.getVenueId())).thenReturn(java.util.Optional.of(venue));
         var input = new com.example.connect_sphere.venue.dto.UpdateVenueDto();
         input.setVenueCapacity(java.math.BigDecimal.valueOf(150));
-        input.setOperatingInformation(" ");
+        input.setOperatingHours(List.of(new com.example.connect_sphere.venue.dto.VenueOperatingHourDto(1,java.time.LocalTime.of(9,0),java.time.LocalTime.of(9,0))));
         assertThatThrownBy(() -> service.updateVenue(venue.getVenueId(), input)).isInstanceOf(InvalidVenueException.class);
         assertThat(venue.getVenueCapacity()).isEqualTo(100);
         assertThat(venue.getOperatingInformation()).isEqualTo("Daily");

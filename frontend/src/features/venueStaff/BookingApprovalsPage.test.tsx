@@ -1,4 +1,4 @@
-// @stories VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -21,6 +21,10 @@ const booking: VenueBookingDto = {
 }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function page(role = 'venue-staff', path = '/venue-staff/booking-approvals') {
+  // VS17 has its own review read; these queue fixtures have no approved changes.
+  const originalFetch = globalThis.fetch
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/requirement-reviews')
+    ? Promise.resolve(response([])) : String(input).endsWith('/assessment') ? Promise.resolve(response({ bookingId: 'b1', status: 'pending', checks: [], history: [] })) : originalFetch(input, init))
   window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({
     accessToken: 'access-1', refreshToken: 'refresh-1', username: 'vs1', role, organisation: 'ConnectSphere',
   }))
@@ -30,6 +34,19 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); window.l
 
 const activeHold = { holdId: 'h1', bookingId: 'b2', status: 'active', serverTime: '2027-03-01T00:00:00Z',
   expiresAt: '2027-03-01T01:00:00Z', reservedStart: booking.event.startDatetime, reservedEnd: booking.event.endDatetime }
+
+it('VS17 (happy): queue identifies the event and booking, current coordinator and effective room requirements', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => response([{ ...booking, currentCoordinatorName: 'ec2', currentCoordinatorEmail: 'ec2@example.test',
+    effectiveRequirements: { expectedAttendance: 75, venueRequirements: 'Breakout', requiredFacilities: [], accessibilityNeeds: [] } }])))
+  page()
+  const pending = await screen.findByRole('region', { name: 'Pending booking requests' })
+  expect(within(pending).getByText('e1')).toBeInTheDocument()
+  expect(within(pending).getByText('b1')).toBeInTheDocument()
+  expect(within(pending).getByText('ec2 (ec2@example.test)')).toBeInTheDocument()
+  expect(within(pending).getByText('75 people')).toBeInTheDocument()
+  expect(within(pending).getByText('Breakout')).toBeInTheDocument()
+  expect(within(pending).getAllByText('None specified')).toHaveLength(2)
+})
 
 it('separates tentative holds from pending requests and filters the two queues with counts', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => response([booking, { ...booking, bookingId: 'b2', holds: [activeHold],
@@ -157,7 +174,7 @@ it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
     await userEvent.click(await screen.findByRole('link', { name: 'View booking details' }))
     expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('150 people')
     expect(screen.getByText('Updated seating')).toBeInTheDocument()
-    expect(screen.getByLabelText(`Status: ${status}`)).toBeInTheDocument()
+    expect(screen.getByLabelText('Status: ' + ({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled', tentative: 'Tentative Hold', attention: 'Requires attention' })[status])).toBeInTheDocument()
     expect(screen.queryByText(/This booking request is no longer pending/)).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Previous' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Next' })).not.toBeInTheDocument()
@@ -229,7 +246,24 @@ it('approves from the queue and removes the booking when returning', async () =>
   await user.click(await screen.findByRole('link', { name: 'View booking details' }))
   await user.click(await screen.findByRole('button', { name: 'Approve Booking' }))
   await user.click(screen.getByRole('button', { name: 'Confirm approval' }))
-  expect(await screen.findByLabelText('Status: approved')).toBeInTheDocument()
+  expect(await screen.findByLabelText('Status: Approved')).toBeInTheDocument()
   await user.click(screen.getByRole('link', { name: 'Back to Booking Approvals' }))
   expect(await screen.findByText('No pending booking requests found.')).toBeInTheDocument()
+})
+
+
+it.each([
+  [undefined, '120 people', 'Classroom seating'],
+  [{ expectedAttendance: 25, venueRequirements: 'Breakout seating' }, '25 people', 'Breakout seating'],
+  [{ expectedAttendance: 25, venueRequirements: '' }, '25 people', 'Not specified'],
+])('VS02 (boundary): queue and details show the same effective requirements (%j)', async (effectiveRequirements, attendance, requirements) => {
+  const current = {...booking, effectiveRequirements}
+  vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/booking-requests') || url.endsWith('/bookings') ? [current] : current)))
+  page()
+  expect(await screen.findByText(attendance)).toBeInTheDocument()
+  expect(screen.getByText(requirements)).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('link', {name: 'View booking details'}))
+  const detail = await screen.findByRole('region', {name: 'Event Requirements'})
+  expect(within(detail).getByText(attendance)).toBeInTheDocument()
+  expect(within(detail).getByText('Venue Requirements').nextElementSibling).toHaveTextContent(requirements)
 })

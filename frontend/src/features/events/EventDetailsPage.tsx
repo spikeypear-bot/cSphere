@@ -1,3 +1,6 @@
+import { OperatingHours } from '../../components/OperatingHours'
+import { BookingAssessment } from '../venueStaff/BookingAssessment'
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
@@ -35,6 +38,7 @@ import { EquipmentDamagePanel } from './EquipmentDamagePanel'
  * gets the confirmed arrangements (EO04).
  */
 export function EventDetailsPage() {
+  const liveRevision = useLiveRefresh()
   const { eventId } = useParams<{ eventId: string }>()
   const { role } = useSession()
   const location = useLocation()
@@ -71,10 +75,10 @@ export function EventDetailsPage() {
     return () => {
       cancelled = true
     }
-  }, [eventId, reloadToken, role])
+  }, [eventId, reloadToken, role, liveRevision])
 
   if (notAssigned) return <NotAssignedNotice what="event" />
-  if (error) return <p role="alert">{error}</p>
+  if (error && !event) return <p role="alert">{error}</p>
   if (!event) return <p>Loading…</p>
 
   const journey = event.journeyStatus ?? null
@@ -84,6 +88,7 @@ export function EventDetailsPage() {
 
   return (
     <div className="page">
+      {error && <p role="alert">Could not refresh event details. {error}</p>}
       <PageHeader
         title={event.eventName}
         actions={journey ? <JourneyStatusBadge status={journey} /> : (
@@ -192,6 +197,7 @@ export function EventDetailsPage() {
           ) : readinessState.loading ? <p role="status">Loading readiness checklist…</p> : null
       ) : null}
 
+      {role === 'coordinator' && <BookingAssessment eventId={event.eventId} />}
       <EventHistoryCard key={`history-${reloadToken}`} eventId={event.eventId} />
     </div>
   )
@@ -200,6 +206,7 @@ export function EventDetailsPage() {
 /** Loads one side panel's data independently of the event itself, so a
  * failure here never hides the event details. */
 function useSideData<T>(path: string, isValid: (value: unknown) => boolean, reloadKey = 0) {
+  const liveRevision = useLiveRefresh()
   const [data, setData] = useState<T | null>(null)
   const [failed, setFailed] = useState(false)
   useEffect(() => {
@@ -221,7 +228,7 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
     }
     // isValid is a stable module-level check at every call site.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, reloadKey])
+  }, [path, reloadKey, liveRevision])
   return { data, failed }
 }
 
@@ -238,10 +245,10 @@ function VenueBookingCard({ eventId, planning, active, canRebook, onCancelled }:
   const [error, setError] = useState<string | null>(null)
   if (failed) return null
   if (!bookings) return null
-  const activeBookings = bookings.filter((b) => b.status === 'pending' || b.status === 'approved')
+  const activeBookings = bookings.filter((b) => b.status === 'pending' || b.status === 'approved' || b.status === 'attention')
   const historicalBookings = bookings.filter((b) => b.status === 'rejected' || b.status === 'cancelled')
   const hasResolvedReplacement = (bookingId: string) => bookings.some((booking) =>
-    booking.replacesBookingId === bookingId && (booking.status === 'pending' || booking.status === 'approved'))
+    booking.replacesBookingId === bookingId && (booking.status === 'pending' || booking.status === 'approved' || booking.status === 'attention'))
   const replacementLink = (booking: EventVenueBookingDto) =>
     `/coordinator/events/${eventId}/venue-booking?replacesBookingId=${encodeURIComponent(booking.bookingId)}`
 
@@ -275,6 +282,7 @@ function VenueBookingCard({ eventId, planning, active, canRebook, onCancelled }:
                   <strong>{booking.venueAddress}</strong>: {BOOKING_STATUS_LABELS[booking.status]}
                   <BookingRequestMeta booking={booking} />
                 </p>
+                <dl className="venue-card-preview__information"><div><dt>Operating hours</dt><dd><OperatingHours hours={booking.operatingHours} /></dd></div></dl>
                 <BookingTimingSummary timing={booking.timing} />
                 {booking.requiresAlternative && canRebook && !hasResolvedReplacement(booking.bookingId) ? (
                   <Link className="button button--secondary" to={replacementLink(booking)}>Find replacement venue</Link>

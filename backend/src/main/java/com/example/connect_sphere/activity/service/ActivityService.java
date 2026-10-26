@@ -24,9 +24,8 @@ import com.example.connect_sphere.event.entity.EventStatus;
 /**
  * Writes and reads the request timeline.
  *
- * <p>{@link #record} is {@code MANDATORY}, the opposite of
- * NotificationService's {@code REQUIRES_NEW}, and on purpose. A notification
- * is a side effect that must never undo the action it reports. A timeline
+ * <p>{@link #record} is {@code MANDATORY}. Notification delivery work is also
+ * saved transactionally, while actual in-app delivery retries after commit. A timeline
  * entry is part of the action: EC01/EC02 say a failed clarification or
  * review "does not change the status or create a history record". Joining
  * the caller's transaction makes both commit together or neither does, and

@@ -1,0 +1,82 @@
+.venue-reviews { margin-block: 1.5rem; min-width: 0; }
+.venue-reviews > h2 { margin: 0 0 .75rem; }
+.venue-reviews__item { margin-block: 1rem; min-width: 0; overflow-wrap: anywhere; font-size: .9rem; }
+.venue-reviews__header { flex-wrap: wrap; }
+.venue-reviews__metadata { display: grid; gap: .35rem; min-width: 0; }
+.venue-reviews__metadata .venue-card-preview__id { margin: 0; font: inherit; font-size: .7rem; color: var(--ink-faint); }
+.venue-reviews__header > .venue-card-preview__tag { flex-shrink: 0; }
+.venue-reviews__item .venue-reviews__title { margin: .75rem 0 0; }
+.venue-reviews__table { overflow-x: auto; margin-top: 1.25rem; }
+.venue-reviews table { width: 100%; border-collapse: collapse; font: inherit; }
+.venue-reviews td, .venue-reviews th { padding: .75rem .5rem; border-bottom: 1px solid var(--hairline); text-align: left; vertical-align: top; }
+.venue-reviews th { font-weight: 600; }
+.venue-reviews td { color: var(--ink-soft); white-space: pre-line; }
+.venue-reviews__table > h3 { margin: 0 0 .5rem; }
+.venue-reviews__information { margin-top: 1.75rem; }
+.venue-reviews details { margin-block: 1.25rem; }
+.venue-reviews summary { font-weight: 600; cursor: pointer; }
+.venue-reviews details p, .venue-reviews li { color: var(--ink-soft); line-height: 1.6; }
+.venue-reviews li { margin-block: .75rem; }
+.venue-reviews li strong { color: var(--ink); font-weight: 600; }
+.venue-reviews li[data-attention=true] { border-left: 3px solid var(--danger); padding-left: .75rem; }
+.venue-reviews form { border-top: 1px solid var(--hairline); margin-top: 1.25rem; padding-top: 1.25rem; }
+.venue-reviews fieldset { border: 0; padding: 0; margin: 0; display: grid; gap: 1rem; }
+.venue-reviews legend { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; }
+.venue-reviews label { display: grid; gap: .5rem; font-size: .9rem; font-weight: 600; }
+.venue-reviews select, .venue-reviews textarea { width: 100%; padding: .75rem; font: inherit; font-weight: 400; color: var(--ink); background: var(--paper); border: 1px solid var(--hairline); border-radius: var(--radius-sm); box-sizing: border-box; }
+.venue-reviews textarea { resize: vertical; }
+.venue-reviews fieldset > p { margin: 0; color: var(--ink-soft); line-height: 1.6; }
+.venue-reviews fieldset > .button { justify-self: start; }
+
+.venue-reviews__suitability { border-top: 1px solid var(--hairline); margin-top: 1.5rem; padding-top: 1.5rem; }
+.venue-reviews__suitability h3 { margin: 0; }
+.venue-reviews__suitability .venue-reviews__table { margin-top: .75rem; }
+.venue-reviews tr[data-attention=true] td { color: var(--danger); font-weight: 600; }
+.venue-reviews__manual { margin-top: .75rem; color: var(--ink-soft); }
+
+.venue-reviews [data-review-status="suitable"] {
+  color: var(--success);
+  background: var(--success-soft);
+}
+.venue-reviews [data-review-status="action_required"] {
+  color: var(--danger);
+  background: var(--danger-soft);
+}
+
+.venue-reviews th.venue-reviews__new,
+.venue-reviews td.venue-reviews__new {
+  color: var(--danger);
+  font-weight: 700;
+}
+
+.venue-reviews td .venue-reviews__layout-context {
+  margin-top: .65rem;
+  font-weight: 400;
+  color: var(--ink-soft);
+}
+.venue-reviews__layout-context p + p { margin-top: .4rem; }
+
+.venue-reviews__outcome { margin-top: 1.25rem; }
+.venue-reviews__outcome p + p { margin-top: .5rem; }
+
+.venue-reviews > h2,
+.venue-reviews__table > h3,
+.venue-reviews__suitability h3,
+.venue-reviews legend {
+  font-family: var(--sans);
+  font-size: var(--section-heading-size);
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -.01em;
+  color: var(--ink);
+}
+.venue-reviews [data-review-status="pending"] {
+  color: #92400e;
+  background: #fef3c7;
+}
+@media (prefers-color-scheme: dark) {
+  .venue-reviews [data-review-status="pending"] {
+    color: #fbbf24;
+    background: #3a2b13;
+  }
+}

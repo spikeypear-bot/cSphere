@@ -1,4 +1,4 @@
-// @stories VS01 VS-C1  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS01 VS-C1 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -8,7 +8,7 @@ import { singaporeToday } from './unavailabilityValidation'
 
 vi.mock('../../lib/apiClient', async importOriginal => {
   const actual = await importOriginal<typeof import('../../lib/apiClient')>()
-  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn() } }
+  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }
 })
 afterEach(() => { cleanup(); vi.resetAllMocks() })
 const booking = { bookingId: 'b1', eventName: 'Workshop', status: 'approved',
@@ -25,6 +25,16 @@ function fill() {
   fireEvent.change(screen.getByLabelText('End date/time'), { target: { value: '2027-04-01T10:00' } })
   fireEvent.change(screen.getByLabelText('Reason'), { target: { value: ' Maintenance ' } })
 }
+it('VS17 (happy): unavailability preview identifies same-name bookings by event and booking IDs', async () => {
+  mount();fill()
+  vi.mocked(apiClient.post).mockResolvedValue({ previewToken: 'token', affectedBookings: [
+    { ...booking, eventId: 'event-one' }, { ...booking, eventId: 'event-two', bookingId: 'b2' }] })
+  await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
+  const preview = await screen.findByRole('alert', { name: 'Affected bookings' })
+  expect(preview).toHaveTextContent('Event ID: event-one · Booking ID: b1')
+  expect(preview).toHaveTextContent('Event ID: event-two · Booking ID: b2')
+  expect(apiClient.post).toHaveBeenCalledTimes(1)
+})
 it('rejects missing and equal timestamps near the relevant fields', async () => {
   mount()
   await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
@@ -122,4 +132,56 @@ it.each(['preview', 'save'])('shows an overlapping-period error from %s and pres
   expect(screen.getByLabelText('Reason')).toHaveValue(' Maintenance ')
   expect(recorded).not.toHaveBeenCalled()
   expect(apiClient.post).toHaveBeenCalledTimes(stage === 'save' ? 2 : 1)
+})
+
+it('VS17 (conflict): affected booking previews use the attention label and retain the explicit confirmation step', async () => {
+ mount();fill()
+ vi.mocked(apiClient.post).mockResolvedValue({affectedBookings:[{...booking,status:'attention'}],previewToken:'token'})
+ await userEvent.click(screen.getByRole('button',{name:'Record Unavailability'}))
+ expect(await screen.findByText('Requires attention')).toHaveAttribute('data-booking-status','attention')
+ expect(screen.getByRole('button',{name:'Confirm recording unavailability'})).toBeInTheDocument()
+ expect(apiClient.post).toHaveBeenCalledTimes(1)
+ expect(apiClient.post).toHaveBeenCalledWith('/venues/v1/unavailability/preview',expect.anything())
+})
+
+it('VS17 VS01 (happy): release requires a reason, preserves status semantics, and refreshes availability', async () => {
+  const period = { unavailabilityId: 'u1', startDateTime: booking.startDateTime, endDateTime: booking.endDateTime, reason: 'Maintenance' }
+  vi.mocked(apiClient.get).mockResolvedValueOnce([period]).mockResolvedValue([])
+  vi.mocked(apiClient.patch).mockResolvedValue({ ...period, releasedAt: '2027-04-01T08:00:00Z', releaseReason: 'Reopened' })
+  const recorded = vi.fn()
+  render(<VenueUnavailabilityPanel venueId="v1" onRecorded={recorded} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Release unavailable period' }))
+  await userEvent.click(screen.getByRole('button', { name: 'Confirm release' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Explain the release')
+  expect(apiClient.patch).not.toHaveBeenCalled()
+  await userEvent.type(screen.getByLabelText('Reason for releasing this period'), ' Reopened ')
+  await userEvent.click(screen.getByRole('button', { name: 'Confirm release' }))
+  await waitFor(() => expect(recorded).toHaveBeenCalledOnce())
+  expect(apiClient.patch).toHaveBeenCalledWith('/venues/v1/unavailability/u1/release', { reason: 'Reopened' })
+  expect(screen.getByText(/Booking statuses and reservations are unchanged/)).toBeInTheDocument()
+})
+
+it('VS17 VS01 (failure): release failure retains the entered reason for retry', async () => {
+  vi.mocked(apiClient.get).mockResolvedValue([{ unavailabilityId: 'u1', startDateTime: booking.startDateTime, endDateTime: booking.endDateTime, reason: 'Maintenance' }])
+  vi.mocked(apiClient.patch).mockRejectedValue(new ApiClientError('Storage unavailable. Please retry.', 503))
+  const recorded = vi.fn()
+  render(<VenueUnavailabilityPanel venueId="v1" onRecorded={recorded} />)
+  await userEvent.click(await screen.findByRole('button', { name: 'Release unavailable period' }))
+  await userEvent.type(screen.getByLabelText('Reason for releasing this period'), 'Reopened')
+  await userEvent.click(screen.getByRole('button', { name: 'Confirm release' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('Storage unavailable')
+  expect(screen.getByLabelText('Reason for releasing this period')).toHaveValue('Reopened')
+  expect(recorded).not.toHaveBeenCalled()
+})
+
+it('VS17 VS01 (happy): staff can inspect retained release history', async () => {
+  vi.mocked(apiClient.get).mockImplementation(async path => path.endsWith('/history') ? [{
+    unavailabilityId: 'u1', startDateTime: booking.startDateTime, endDateTime: booking.endDateTime, reason: 'Maintenance',
+    releasedAt: '2027-04-01T08:00:00Z', releaseReason: 'Repairs complete',
+  }] : [])
+  render(<VenueUnavailabilityPanel venueId="v1" onRecorded={vi.fn()} />)
+  await userEvent.click(screen.getByRole('button', { name: 'View unavailability history' }))
+  expect(await screen.findByText('Released: Repairs complete')).toBeInTheDocument()
+  await userEvent.click(screen.getByRole('button', { name: 'Hide unavailability history' }))
+  expect(screen.queryByText('Released: Repairs complete')).not.toBeInTheDocument()
 })

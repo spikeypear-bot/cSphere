@@ -17,5 +17,8 @@ public interface VenueBookingRepository extends Repository<VenueBooking, UUID> {
     Optional<VenueBooking> findById(UUID id);
 
     @EntityGraph(attributePaths = {"venue", "event", "alternativeVenue"})
+    List<VenueBooking> findByEventEventIdOrderByBookingIdAsc(UUID eventId);
+
+    @EntityGraph(attributePaths = {"venue", "event", "alternativeVenue"})
     List<VenueBooking> findByVenueVenueIdOrderByEventStartDatetimeAscBookingIdAsc(UUID venueId);
 }

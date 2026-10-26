@@ -16,6 +16,7 @@ public record CreateVenueDto(
         String venueAddress,
         Integer venueCapacity,
         List<VenueLayout> supportedLayouts,
+        // Compatibility input only; the service derives opening information from operatingHours.
         String operatingInformation,
         String additionalInformation,
         List<AccessibilityFeature> venueAccessibilities,

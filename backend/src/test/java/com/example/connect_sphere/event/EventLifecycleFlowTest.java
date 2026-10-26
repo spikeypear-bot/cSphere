@@ -44,7 +44,7 @@ import jakarta.persistence.EntityManager;
  * <p>Safety Officer decisions are recorded through the lifecycle service
  * directly: the Safety Officer's own screens and endpoints are SO-C4/C5/C6.
  */
-@Tag("integration")
+@Tag("integration") @Tag("VS17") @Tag("SO-C2")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -54,6 +54,11 @@ import jakarta.persistence.EntityManager;
 @Tag("SO-C4")
 @Tag("VS-C1")
 class EventLifecycleFlowTest {
+    @Autowired com.example.connect_sphere.safety.ReadinessService venueReadiness;
+    private void attestVenues(UUID eventId) {
+        for(var item:venueReadiness.forSafetyOfficer(eventId).items())
+            venueReadiness.updateItem(flow.idOf("so1"),eventId,item.itemKey(),new com.example.connect_sphere.safety.UpdateReadinessItemRequest(true,"Verified"));
+    }
 
     private static final List<VenueOperatingHourDto> ALL_WEEK = IntStream.rangeClosed(1, 7)
             .mapToObj(day -> new VenueOperatingHourDto(day, LocalTime.of(0, 0), LocalTime.of(23, 59))).toList();
@@ -118,6 +123,7 @@ class EventLifecycleFlowTest {
                 .andExpect(jsonPath("$.view").value("not_confirmed"))
                 .andExpect(jsonPath("$.venues").isEmpty());
 
+        attestVenues(eventId);
         lifecycle.recordSafetyDecision(flow.idOf("ecl1"), eventId, SafetyDecision.APPROVE, null);
 
         mvc.perform(post("/api/events/" + eventId + "/confirm").with(flow.as("ec1")))
@@ -176,6 +182,7 @@ class EventLifecycleFlowTest {
     void aVenueBecomingUnavailableAfterConfirmationSendsTheEventBackForReConfirmation() throws Exception {
         UUID eventId = readyEvent();
         mvc.perform(post("/api/events/" + eventId + "/safety-review").with(flow.as("ec1"))).andExpect(status().isOk());
+        attestVenues(eventId);
         lifecycle.recordSafetyDecision(flow.idOf("ecl1"), eventId, SafetyDecision.APPROVE, null);
         mvc.perform(post("/api/events/" + eventId + "/confirm").with(flow.as("ec1"))).andExpect(status().isOk());
 

@@ -5,27 +5,28 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**177 test files, 1674 tests, 64 stories traced, 0 files untraced.**
+**204 test files, 1844 tests, 70 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
-| AT01 | 3 |  | 2 |  | 39 | — | happy, negative, boundary, failure |
-| AT02 | 1 |  | 1 |  | 10 | — | happy, negative, boundary, failure |
-| AU04 | 6 | 6 | 3 |  | 82 | — | happy, negative, boundary, conflict, cross-cutting |
+| AT01 | 5 | 2 | 3 |  | 99 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT02 | 1 | 2 | 2 |  | 18 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AU04 | 6 | 7 | 3 | 1 | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | DEV05 |  | 3 | 4 |  | 53 | — | happy |
 | DEV15 | 1 | 2 |  |  | 6 | — | happy, negative |
 | EC01 | 2 | 2 | 2 |  | 74 | — | happy, negative, conflict |
 | EC02 | 2 | 5 | 5 | 3 | 142 | — | happy, negative, boundary, conflict, cross-cutting |
-| EC03 | 3 | 3 | 3 | 3 | 101 | — | happy, negative, conflict, failure, cross-cutting |
+| EC03 | 4 | 4 | 5 | 4 | 128 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 1 |  | 7 | — | — |
 | EC05 | 1 |  |  |  | 2 | — | — |
 | EC07 | 1 | 3 | 1 |  | 63 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC08 | 4 | 4 | 3 | 2 | 188 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC08 | 4 | 7 | 5 | 4 | 256 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 2 | 1 | 1 | 1 | 31 | — | happy, boundary, cross-cutting |
+| EC10 |  | 1 | 1 |  | 35 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C1 | 2 | 1 | 2 |  | 17 | — | — |
-| EC-C2 |  | 1 | 2 |  | 59 | — | negative |
+| EC-C2 | 2 | 4 | 2 | 1 | 108 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C3 | 2 | 1 | 2 |  | 45 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C4 |  | 1 | 1 |  | 45 | — | happy |
+| EC-C4 |  | 1 | 1 |  | 45 | — | happy, conflict |
 | EC-NEW2 | 2 | 1 | 7 | 2 | 161 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW3 | 3 | 2 | 1 | 1 | 71 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 1 |  |  |  | 47 | — | — |
@@ -34,53 +35,55 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
 | ECL-C3 | 2 | 1 | 4 | 2 | 140 | — | happy, boundary, failure |
 | ECL-C4 |  | 1 | 1 |  | 21 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C7 | 2 | 4 | 3 | 1 | 174 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C7 | 2 | 4 | 3 | 1 | 175 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ELC-C5 | 2 | 2 | 3 | 1 | 130 | — | happy, negative, boundary, conflict, cross-cutting |
 | ELC-C6 | 3 | 2 | 4 | 2 | 172 | — | happy |
 | EO01 | 2 | 1 | 4 | 3 | 88 | — | happy, boundary |
 | EO02 | 3 | 2 | 5 | 5 | 125 | — | happy, negative, boundary, conflict, failure |
-| EO03 | 2 | 2 | 1 | 1 | 62 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO04 | 1 | 2 | 3 | 1 | 100 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO07 | 4 | 4 | 3 | 1 | 167 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO09 | 3 | 2 | 1 | 1 | 91 | — | happy, boundary, cross-cutting |
-| EO10 | 1 |  | 1 |  | 11 | AC2, AC3, AC4, AC6, AC9 | — |
+| EO03 | 3 | 2 | 1 | 1 | 63 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO04 | 2 | 3 | 5 | 3 | 127 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO07 | 4 | 5 | 3 | 1 | 179 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO09 | 3 | 3 | 1 | 1 | 103 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO10 | 1 | 2 | 1 |  | 16 | AC2, AC3, AC4, AC6, AC9 | happy, boundary, conflict, cross-cutting |
 | EO15 | 1 | 1 | 4 | 2 | 44 | — | happy |
 | EO19 | 3 | 2 | 1 |  | 83 | — | happy |
 | EO26 | 3 | 3 | 5 |  | 114 | — | happy, negative, boundary, conflict, failure |
 | EO-C2 | 2 | 1 | 5 | 1 | 113 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure |
 | SO-C1 | 1 |  | 1 |  | 14 | — | happy, negative, conflict |
+| SO-C2 |  | 4 |  |  | 60 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C3 | 1 |  | 2 | 1 | 29 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C4 | 2 | 2 | 1 | 2 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C5 | 2 | 2 | 3 |  | 99 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C6 | 2 | 2 | 3 | 1 | 102 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C5 | 2 | 2 | 3 |  | 100 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C6 | 2 | 2 | 3 | 1 | 103 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS01 | 3 | 3 | 6 |  | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS02 | 2 | 4 | 5 |  | 124 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS03 | 4 | 4 | 5 |  | 113 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS06 | 1 | 3 | 3 |  | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS09 | 7 | 6 | 14 |  | 220 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS01 | 1 | 1 | 2 |  | 47 | — | — |
-| VS02 |  | 1 | 3 | 1 | 56 | — | happy, negative, conflict, failure, cross-cutting |
-| VS03 |  | 1 | 2 | 3 | 61 | — | conflict |
-| VS04 |  | 1 | 1 |  | 41 | — | — |
-| VS07 | 2 | 2 | 1 |  | 51 | — | — |
-| VS08 |  | 2 | 1 | 1 | 41 | — | negative, boundary, conflict, failure, cross-cutting |
-| VS09 |  | 1 | 1 |  | 41 | — | — |
-| VS13 | 2 | 1 | 1 |  | 29 | — | — |
-| VS15 |  |  | 3 | 1 | 20 | — | boundary, conflict |
-| VS16 |  | 1 | 1 |  | 15 | — | — |
-| VS18 |  | 1 | 1 |  | 27 | — | — |
-| VS-C1 |  | 3 | 1 |  | 61 | — | happy, negative, conflict, failure, cross-cutting |
-| VS-C2 | 1 | 2 | 3 | 1 | 43 | — | negative, boundary, conflict |
-| VS-C3 | 1 | 1 | 3 | 2 | 81 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS-C4 | 1 | 2 | 3 |  | 89 | AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS09 | 7 | 7 | 14 |  | 221 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS01 | 1 | 2 | 2 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS02 |  | 2 | 3 | 1 | 86 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS03 |  | 2 | 2 | 3 | 84 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS04 |  | 4 | 1 |  | 94 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS06A |  |  | 1 | 1 | 19 | — | negative, failure, cross-cutting |
+| VS06B |  |  | 1 | 1 | 19 | — | negative, failure, cross-cutting |
+| VS07 | 3 | 3 | 5 | 3 | 94 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS08 |  | 3 | 1 | 1 | 58 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS09 |  | 1 | 1 |  | 46 | — | happy, boundary, cross-cutting |
+| VS13 | 2 | 2 | 2 | 1 | 45 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS15 |  |  | 5 | 2 | 31 | — | happy, boundary, conflict, cross-cutting |
+| VS16 |  | 1 | 2 | 1 | 20 | — | happy, negative, cross-cutting |
+| VS17 | 12 | 20 | 23 | 8 | 648 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS18 |  | 1 | 2 | 1 | 34 | — | happy, negative, boundary, cross-cutting |
+| VS25 |  | 1 |  |  | 13 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C1 |  | 3 | 1 | 1 | 67 | — | happy, negative, conflict, failure, cross-cutting |
+| VS-C2 | 1 | 2 | 3 | 1 | 47 | — | happy, negative, boundary, conflict, cross-cutting |
+| VS-C3 | 1 | 3 | 5 | 2 | 118 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C4 | 1 | 2 | 3 |  | 99 | AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 
 ## High-priority stories with no automated test yet
 
 - EO11
 - EO12
-- EC10
-- VS06A
-- VS06B
 - AT03
 - AT08
 
@@ -96,15 +99,23 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeEventDetailsServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/RegistrationChangeFieldsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeEventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/registrationRules.test.ts`
 
 </details>
 <details><summary>AT02</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeEventDetailsServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeEventDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/registrationRules.test.ts`
 
 </details>
 <details><summary>AU04</summary>
@@ -121,9 +132,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/features/auth/LoginPage.test.tsx`
 - frontend component/unit: `frontend/src/lib/session.test.tsx`
+- e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
 <details><summary>DEV05</summary>
@@ -176,17 +189,22 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>EC03</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueHoursServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
+- frontend component/unit: `frontend/src/components/OperatingHours.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
+- frontend component/unit: `frontend/src/features/events/VenueOperatingHoursDisplay.test.tsx`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
+- e2e (browser): `frontend/e2e/venue-operating-hours.spec.ts`
 
 </details>
 <details><summary>EC04</summary>
@@ -215,15 +233,22 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/ReadinessServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
+- frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventLifecycle.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingAssessment.test.tsx`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/venue-suitability-live.spec.ts`
+- e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
 <details><summary>EC09</summary>
@@ -233,6 +258,12 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
+
+</details>
+<details><summary>EC10</summary>
+
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
+- frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
 
 </details>
 <details><summary>EC-C1</summary>
@@ -246,9 +277,15 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>EC-C2</summary>
 
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffAuditRegressionTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
+- e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
 <details><summary>EC-C3</summary>
@@ -427,6 +464,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeFieldsTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/RegistrationChangeFieldsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestNotificationFlowTest.java`
 - frontend component/unit: `frontend/src/features/changeRequests/ChangeRequests.test.tsx`
@@ -436,12 +474,18 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>EO04</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventArrangementsServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueHoursServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
+- frontend component/unit: `frontend/src/components/OperatingHours.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventLifecycle.test.tsx`
+- frontend component/unit: `frontend/src/features/events/VenueOperatingHoursDisplay.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/venue-operating-hours.spec.ts`
+- e2e (browser): `frontend/e2e/venue-suitability-live.spec.ts`
 
 </details>
 <details><summary>EO07</summary>
@@ -454,6 +498,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/events/EventCancellation.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/CancelRequest.test.tsx`
@@ -467,6 +512,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestScopingTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
@@ -474,6 +520,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>EO10</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - frontend component/unit: `frontend/src/features/events/OrganiserRegistrations.test.tsx`
 
 </details>
@@ -531,6 +579,14 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+
+</details>
+<details><summary>SO-C2</summary>
+
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 
 </details>
 <details><summary>SO-C3</summary>
@@ -643,6 +699,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/ReportDamageRequestTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestQueueServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/DevEquipmentSeederFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
@@ -669,13 +726,16 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueavailability/UnavailabilityValidationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
 <details><summary>VS02</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
@@ -685,6 +745,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>VS03</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
@@ -694,23 +755,48 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>VS04</summary>
 
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+
+</details>
+<details><summary>VS06A</summary>
+
+- frontend component/unit: `frontend/src/features/venueStaff/VenuePages.test.tsx`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
+
+</details>
+<details><summary>VS06B</summary>
+
+- frontend component/unit: `frontend/src/features/venueStaff/VenuePages.test.tsx`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
 <details><summary>VS07</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueHoursServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/service/VenuePersistenceTest.java`
+- frontend component/unit: `frontend/src/components/OperatingHours.test.tsx`
+- frontend component/unit: `frontend/src/features/events/VenueOperatingHoursDisplay.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingAssessment.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueEditReturn.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenuePages.test.tsx`
+- e2e (browser): `frontend/e2e/venue-operating-hours.spec.ts`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
+- e2e (browser): `frontend/e2e/venue-suitability-live.spec.ts`
 
 </details>
 <details><summary>VS08</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/bookingConflictHighlights.test.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
@@ -725,28 +811,110 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueissue/service/CoordinatorVenueOperationalIssueServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/OperationalIssuesPage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueOperationalIssuesPanel.test.tsx`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
 <details><summary>VS15</summary>
 
 - frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
+- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
 <details><summary>VS16</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueRead.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
+
+</details>
+<details><summary>VS17</summary>
+
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueRequirementChangeTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueSuitabilitySummaryTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventArrangementsServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleCancellationTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueHoursServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueRequirementReviewFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueReviewWorkflowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venue/service/VenuePersistenceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldReminderFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffAuditRegressionTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`
+- frontend component/unit: `frontend/src/components/OperatingHours.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/VenueSearchPage.test.tsx`
+- frontend component/unit: `frontend/src/features/events/EventCancellation.test.tsx`
+- frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
+- frontend component/unit: `frontend/src/features/events/VenueOperatingHoursDisplay.test.tsx`
+- frontend component/unit: `frontend/src/features/notifications/VenueRequirementNotification.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingAssessment.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
+- frontend component/unit: `frontend/src/features/venueStaff/TimingConflictReview.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueEditReturn.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueOperationalIssuesPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenuePages.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueRead.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueRequirementReviews.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- e2e (browser): `frontend/e2e/booking-scroll.spec.ts`
+- e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
+- e2e (browser): `frontend/e2e/venue-operating-hours.spec.ts`
+- e2e (browser): `frontend/e2e/venue-requirement-review.spec.ts`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
+- e2e (browser): `frontend/e2e/venue-suitability-live.spec.ts`
+- e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
 <details><summary>VS18</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueRead.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
+
+</details>
+<details><summary>VS25</summary>
+
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 
 </details>
 <details><summary>VS-C1</summary>
@@ -755,6 +923,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
 <details><summary>VS-C2</summary>
@@ -772,9 +941,13 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/activity/service/ActivityServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffAuditRegressionTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
 - e2e (browser): `frontend/e2e/booking-scroll.spec.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 

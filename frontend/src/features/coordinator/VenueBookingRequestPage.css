@@ -301,3 +301,5 @@
   .venue-request__replacement-callout { padding: 0.85rem; }
   .venue-request__review .venue-request__submit-button { width: 100%; }
 }
+
+[data-booking-status='attention'] { background: var(--danger-soft); color: var(--danger); }

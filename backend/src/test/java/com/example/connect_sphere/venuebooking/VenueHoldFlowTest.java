@@ -24,7 +24,8 @@ import com.example.connect_sphere.venueavailability.*;
 import com.example.connect_sphere.venuebooking.hold.*;
 import com.example.connect_sphere.venuebooking.service.*;
 
-@Tag("integration") @Tag("VS-C3") @Tag("VS-C4") @Tag("VS08")
+@Tag("integration") @Tag("VS-C3")
+@Tag("VS17") @Tag("VS-C4") @Tag("VS08")
 @SpringBootTest(properties="venue.holds.expiry-delay-ms=86400000")
 @AutoConfigureMockMvc
 @Import(VenueHoldFlowTest.TimeConfig.class)
@@ -56,9 +57,8 @@ class VenueHoldFlowTest {
         coordinator=jdbc.queryForObject("SELECT user_id FROM users WHERE username='ec1'",UUID.class);
     }
     UUID venue(){
-        UUID id=venues.createVenue(new CreateVenueDto("VS-C3 "+UUID.randomUUID(),200,List.of(VenueLayout.classroom),"Daily",null,null,null)).venueId();
+        UUID id=venues.createVenue(new CreateVenueDto("VS-C3 "+UUID.randomUUID(),200,List.of(VenueLayout.classroom),"Daily",null,null,null, com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek())).venueId();
         venueIds.add(id);
-        jdbc.update("INSERT INTO venue_operating_hours(operating_hour_id,venue_id,day_of_week,open_time,close_time) SELECT gen_random_uuid(),?,day,'00:00'::time,'23:59'::time FROM generate_series(1,7) day",id);
         return id;
     }
     UUID booking(UUID venue,String start,String end){
@@ -142,7 +142,8 @@ class VenueHoldFlowTest {
         assertThat(holds.history(pending).getFirst().endedAt()).isNull();
         assertThat(statusOf(a)).isEqualTo("approved");assertThat(statusOf(b)).isEqualTo("approved");
         assertThat(statusOf(pending)).isEqualTo("pending");
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE event_id IN (SELECT event_id FROM venue_bookings WHERE venue_id=?)",Integer.class,v)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE event_id IN (SELECT event_id FROM venue_bookings WHERE venue_id=?) AND type::text<>'venue_booking_approved'",Integer.class,v)).isZero();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id IN (?,?) AND type::text='venue_booking_approved' AND recipient_user_id=?",Integer.class,a,b,coordinator)).isEqualTo(2);
     }
     @Test @DisplayName("VS-C3 release (regression): manual release frees approval and removes calendar hold without modifying other reservations")
     void releaseFreesApproval(){

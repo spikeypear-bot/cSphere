@@ -104,12 +104,12 @@ NFRs (VERIFIED, customer briefing §8, INFERRED into concrete stories on the bac
 - **Usability**: no extensive training required; responsive desktop + mobile (DEV09).
 - **Reliability/consistency**: no contradictory information across event/venue/equipment/registration views.
 - **Scalability**: designed for growth in events/users/clients/venues/equipment/registrations over ~3 years — no specific numeric target given.
-- **Auditability**: what changed, who changed it, when (DEV07 — internal audit log). The current schema (`V2__init_tables.sql`) only captures `created_by` on `event_requests`; a general audit trail does not exist yet (see decision log).
+- **Auditability**: what changed, who changed it, when (DEV07 — internal audit log). The initial schema captured `created_by` on `event_requests`; workflow activity, requirement review, hold and assessment histories now exist; see the current migrations and feature guides.
 - **Maintainability**: architecture should allow future rules/features without a full rebuild — this is the stated reason for keeping schema ownership in Flyway migrations and documenting C4 diagrams (DEV01, DEV12).
 
 ## Critical Business Rules & Validation Rules (VERIFIED — customer briefing + backlog ACs)
 
-- A venue must **not** be treated as suitable when expected attendance exceeds its capacity, a required accessibility feature is absent, or a required facility is unavailable.
+- Capacity and required facilities are strict suitability blockers. A missing accessibility feature requires a written justification and Venue Staff judgement (D21); it must not be labelled automatically suitable.
 - **Booking conflict detection**: a confirmed venue booking must affect whether that venue is considered available for other events over the same period. The current schema has **no DB-level overlap constraint** on `venue_bookings` — this must be enforced in application logic (see `SCHEMA.md` gap #1); do not rely on the frontend alone as the customer briefing and DEV06 both call for a backend concurrency-safe check.
 - **Equipment availability** = `equipment_qty` − sum of overlapping `equipment_logs.quantity` for the requested window (see the query documented in `SCHEMA.md`). Damaged/maintenance equipment must not be treated as available.
 - **Draft → Submitted** transition: a draft may be saved with incomplete information; submission must be blocked while required fields are missing, and the system must tell the user what's missing (EO01/EO02 ACs).
@@ -127,9 +127,9 @@ NFRs (VERIFIED, customer briefing §8, INFERRED into concrete stories on the bac
 
 Authoritative reference: `backend/src/main/resources/db/migration/SCHEMA.md` (hand-written schema dictionary) and `V2__init_tables.sql`. Do not re-derive this from memory — read those files.
 
-Entities include `users`, `venues`, `events`, `event_requests`, equipment/booking tables, `refresh_tokens`, `notifications`, and (V22, SO-C1–SO-C4) `event_readiness_items` and `event_safety_reviews`. The current schema dictionary and migrations are authoritative for the latest version and every column. Note `venue_bookings` has **no start/end columns** and a NOT NULL `event_id` (FK to `events`), so a booking can only exist after approval has created the `Event`, and its time window is the event's. Read `SCHEMA.md` before writing any entity, repository, or migration.
+Entities include `users`, `venues`, `events`, `event_requests`, equipment/booking tables, `refresh_tokens`, `notifications`, and (V22, SO-C1–SO-C4) `event_readiness_items` and `event_safety_reviews`. The current schema dictionary and migrations are authoritative for the latest version and every column. `venue_bookings` has its own saved start/end and setup/turnaround snapshots (V25–V27), with event-time fallback only for nullable legacy rows. Its NOT NULL `event_id` requires the event to exist first. Read `SCHEMA.md` before writing any entity, repository, or migration.
 
-**Known, team-acknowledged gaps in the current schema** (from `SCHEMA.md` §5 — PROPOSED to resolve, not yet decided): no DB-level venue-booking overlap protection; `request_type`/`equipment_type` single-char codes undocumented; `event_requests` allows null start/end while `events` requires them (the approval path must handle this); overlap between `equipment_requirements` (free text) and `equipment_requests.technical_requirement`; no audit trail beyond `created_by`; no equipment return/check-in flag. Confirm resolutions with the team before assuming any of these are settled — see `docs/decision-log.md`.
+**Known, team-acknowledged gaps in the current schema** (from `SCHEMA.md` §5 — PROPOSED to resolve, not yet decided): no DB-level venue-booking overlap protection; `request_type`/`equipment_type` single-char codes undocumented; `event_requests` allows null start/end while `events` requires them (the approval path must handle this); overlap between `equipment_requirements` (free text) and `equipment_requests.technical_requirement`; workflow-specific histories exist, while a universal audit log remains separate; no equipment return/check-in flag. Confirm resolutions with the team before assuming any of these are settled — see `docs/decision-log.md`.
 
 `mock` / `mock_references` (`V1__mock_data.sql`) are scaffolding to demonstrate the MVC layering convention (see `backend/.../mock/*`) — not domain entities. Delete only once real entities exist and after team agreement.
 
@@ -509,3 +509,39 @@ Do not assume:
 - That a field, entity, API, or business-status enum exists without inspecting `SCHEMA.md`/the migrations and the approved backlog.
 - That "Developer", "Scrum Master", or "Product Owner" are application user roles — they are backlog-modelling categories for technical/process stories only (see "Users" above).
 - That the Sprint Backlog Status shown in the spreadsheet (e.g. a story marked "Done" or "In Progress") is automatically reflected in the actual repository — cross-check against real commits/branches before relying on it (a known discrepancy exists as of 2026-09-12; see `docs/decision-log.md`).
+
+## VS17 — approved venue requirement notifications (24 October 2026)
+
+VS17 is user-confirmed; VS15 remains the venue calendar. Approved venue-related
+event changes now snapshot each active booking's requirements and create staff
+notifications atomically with approval (V34). Existing EO/EC activity history,
+semantic comparisons and impact checks are reused. V35 now adds immutable review outcomes, staff booking
+page history/indicator, current suitability checks, and assignment-scoped coordinator
+outcome visibility and notifications. Review actions do not change reservations. See `docs/venue-requirement-changes.md` for
+scope, access limitations, transaction behaviour and outstanding source verification.
+
+
+## VS17 — live suitability (25 October 2026)
+Relevant venue edits or approved requirement changes now invalidate unsuitable approved bookings
+into `attention` while preserving their reservation. Staff explicitly restore approval through
+booking reassessment; EC/EO pages refresh automatically and events return through the existing
+Planning/safety flow. V36–V38 add the state and immutable assessment snapshots. Existing decided
+requirement reviews remain historic. See docs/venue-requirement-changes.md.
+
+## Venue Staff presentation audit (25 October 2026)
+Staff home now links to implemented features without scaffold copy. Shared booking
+labels and attention colours apply to staff lists, details, previews and calendars;
+attention reservations remain visible. Reassessment reuses existing review styles,
+review loading failures are retryable, and operational-issue inputs explicitly use
+Singapore time. See `docs/venue-staff-presentation-audit.md` for scope, evidence and
+completed structured-hour fixture updates and full regression evidence. No
+business-state or reservation rules were changed by the presentation audit.
+
+
+## Venue workflow repairs (25 October 2026)
+
+The user authorised all audit corrections and unavailable-period release, then explicitly retained shared Venue Staff access. Private staff booking GETs now require VS. Timed issues share the venue lock and block safety readiness. Live impact derives from current occupied intervals, active unavailability and timed issues. Final events do not block availability; replacements require a different venue. V40–V41 add audited period release and durable lifecycle/notification work. See [workflow repairs](docs/venue-workflow-repair.md) for contracts, retries, migration safety and verification. The live backlog still needs human synchronisation.
+
+
+## Multiple venue arrangements (26 October 2026)
+User-authorised EC-C2/EC08/EC10/SO-C2 implementation: per-booking requirements, durable unresolved requirement groups, same-venue and healthy-booking replacement retaining original reservations until approval, and per-booking safety evidence. Rejected requirements need replacement or explicit withdrawal. This supersedes earlier different-venue-only restrictions. See `docs/multiple-venue-bookings.md`; live backlog synchronisation remains outstanding.

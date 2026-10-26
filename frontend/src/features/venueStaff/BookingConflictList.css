@@ -1,3 +1,13 @@
-.booking-conflict-list { list-style: none; padding: 0; display: grid; gap: 1rem; }
-.booking-conflict-list > li > .card { padding: 1rem; overflow-wrap: anywhere; }
-.booking-conflict-list h3 { margin-block: .5rem; }
+.booking-conflicts { min-width: 0; }
+.booking-conflicts > h2 { margin: 0 0 .4rem; font-family: var(--sans); font-size: var(--section-heading-size); font-weight: 600; color: var(--ink); }
+.booking-conflicts > p { margin: 0 0 1rem; color: var(--ink-soft); line-height: 1.6; }
+.booking-conflict-list { list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem; }
+.booking-conflict-list__card { padding: 1.25rem; overflow-wrap: anywhere; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.25rem; }
+.booking-conflict-list h3 { margin: 0; font-size: 1.2rem; }
+.booking-conflict-list h3 a { color: var(--accent-strong); }
+.booking-conflict-list__information { display: grid; gap: .9rem; margin: 1.25rem 0 0; font-size: .9rem; }
+.booking-conflict-list__information dt { font-weight: 600; }
+.booking-conflict-list__information dd { margin: .25rem 0 0; color: var(--ink-soft); }
+.booking-conflict-list__card > p { grid-column: 1 / -1; margin: 0; border-top: 1px solid var(--hairline); padding-top: 1rem; color: var(--ink-soft); }
+.booking-conflict-list__card > p strong { color: var(--ink); }
+@media (max-width: 640px) { .booking-conflict-list__card { grid-template-columns: minmax(0, 1fr); } }

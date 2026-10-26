@@ -1,6 +1,6 @@
-// @stories VS07  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS07 VS06A VS06B VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { VenueEditPage } from './VenueEditPage'
@@ -9,7 +9,7 @@ import { VenueCataloguePage } from './VenueCataloguePage'
 
 const venue = { venueId: '123', venueAddress: 'Example Road', venueCapacity: 50,
   supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null,
-  venueAccessibilities: [], venueFacilities: [] }
+  venueAccessibilities: [], venueFacilities: [], operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'17:00'}] }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function page(path = '/venue-staff/catalogue/new') {
   render(<MemoryRouter initialEntries={[path]}><Routes>
@@ -28,7 +28,7 @@ it('defaults capacity to 50 and rejects missing fields without POST', async () =
   expect(screen.getByText('Enter the venue name.')).toBeInTheDocument()
   expect(screen.getByText('Enter the venue address.')).toBeInTheDocument()
   expect(screen.getByText('Select at least one layout.')).toBeInTheDocument()
-  expect(screen.getByText('Enter operating days and hours.')).toBeInTheDocument()
+  expect(screen.getByText('Select at least one operating day.')).toBeInTheDocument()
   expect(fetch).not.toHaveBeenCalled()
 })
 it.each(['-1', '0', '50001', '1.5'])('rejects capacity %s', async capacity => {
@@ -46,7 +46,8 @@ it('shows only the edited invalid field and clears its error when corrected', as
   page()
   const user = userEvent.setup()
   expect(screen.getByLabelText('Venue address')).toHaveAttribute('placeholder')
-  expect(screen.getByLabelText('Operating information')).toHaveAttribute('placeholder')
+  expect(screen.queryByLabelText('Operating information')).not.toBeInTheDocument()
+  expect(screen.getByRole('checkbox', {name:'Monday'})).toBeInTheDocument()
   expect(screen.getByLabelText('Additional information (optional)')).toHaveAttribute('placeholder')
   await user.type(screen.getByLabelText('Venue address'), 'Example Road')
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
@@ -63,7 +64,8 @@ async function fillForm() {
   await user.type(screen.getByLabelText('Venue name'), 'Example Hall')
   await user.type(screen.getByLabelText('Venue address'), ' Example Road ')
   await user.click(screen.getByRole('button', { name: 'Theatre' }))
-  await user.type(screen.getByLabelText('Operating information'), 'Monday 9-5')
+  await user.click(screen.getByRole('checkbox', {name:'Monday'}))
+  fireEvent.change(screen.getByLabelText('Monday closes'), {target:{value:'17:00'}})
   return user
 }
 it('POSTs trimmed input then GETs the catalogue and displays success', async () => {
@@ -77,8 +79,8 @@ it('POSTs trimmed input then GETs the catalogue and displays success', async () 
   expect(fetch.mock.calls[0][0]).toBe('/api/venues')
   expect(fetch.mock.calls[0][1].method).toBe('POST')
   expect(JSON.parse(fetch.mock.calls[0][1].body)).toEqual({ venueName: 'Example Hall', venueAddress: 'Example Road', venueCapacity: 50,
-    supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null,
-    venueAccessibilities: [], venueFacilities: [], operatingHours: [], setupMinutes: 0, turnaroundMinutes: 0 })
+    supportedLayouts: ['theatre'], additionalInformation: null,
+    venueAccessibilities: [], venueFacilities: [], operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'17:00'}], setupMinutes: 0, turnaroundMinutes: 0 })
   expect(fetch.mock.calls[1][1].method).toBe('GET')
   await user.click(screen.getByRole('button', { name: 'Dismiss' }))
   expect(screen.queryByText('Venue saved successfully.')).not.toBeInTheDocument()
@@ -110,7 +112,8 @@ it('saves selections and displays the freshly fetched catalogue labels', async (
   expect(screen.getByText('Fresh server details')).toBeInTheDocument()
   expect(screen.getByText('50 people')).toBeInTheDocument()
   expect(screen.getByText('Theatre')).toBeInTheDocument()
-  expect(screen.getByText('Monday 9-5')).toBeInTheDocument()
+  expect(screen.getByText('9am \u2013 5pm')).toBeInTheDocument()
+  expect(screen.queryByText('Monday 9-5')).not.toBeInTheDocument()
   expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({
     venueAccessibilities: saved.venueAccessibilities, venueFacilities: saved.venueFacilities,
   })
@@ -168,7 +171,7 @@ it('saves explicit no provisions as none and displays the saved meaning', async 
   expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ venueAccessibilities: ['none'], venueFacilities: [] })
 })
 
-it.each(['capacity', 'layouts', 'operating information'])('still validates %s when provisions are selected', async field => {
+it.each(['capacity', 'layouts', 'operating hours'])('still validates %s when provisions are selected', async field => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch)
   page(); const user = await fillForm()
   await user.click(screen.getByRole('button', { name: 'Elevators' }))
@@ -179,12 +182,11 @@ it.each(['capacity', 'layouts', 'operating information'])('still validates %s wh
   } else if (field === 'layouts') {
     await user.click(screen.getByRole('button', { name: 'Theatre' }))
   } else {
-    await user.clear(screen.getByLabelText('Operating information'))
-    await user.type(screen.getByLabelText('Operating information'), '   ')
+    await user.click(screen.getByRole('checkbox', {name:'Monday'}))
   }
   await user.click(screen.getByRole('button', { name: 'Save venue' }))
   expect(screen.getByRole('alert')).toHaveTextContent(field === 'capacity' ? 'Enter a whole number'
-    : field === 'layouts' ? 'Select at least one layout' : 'Enter operating days and hours')
+    : field === 'layouts' ? 'Select at least one layout' : 'Select at least one operating day')
   expect(fetch).not.toHaveBeenCalled()
   expect(screen.getByRole('button', { name: 'Elevators' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: 'Stage' })).toHaveAttribute('aria-pressed', 'true')
@@ -220,15 +222,15 @@ it.each(['capacity', 'layouts', 'accessibility', 'facilities', 'hours', 'additio
   expect(screen.getByRole('button', { name: 'Classroom' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: 'Step-free access' })).toHaveAttribute('aria-pressed', 'true')
   expect(screen.getByRole('button', { name: 'Projection' })).toHaveAttribute('aria-pressed', 'true')
-  expect(screen.getByLabelText('Operating information')).toHaveValue('Monday 9-5')
+  expect(screen.getByLabelText('Monday opens')).toHaveValue('09:00')
+  expect(screen.getByLabelText('Monday closes')).toHaveValue('17:00')
   if (field === 'capacity') {
     await user.clear(screen.getByLabelText('Overall capacity'))
     await user.type(screen.getByLabelText('Overall capacity'), '150')
   } else if (field === 'additional') {
     await user.type(screen.getByLabelText('Additional information (optional)'), 'Use Level 2')
   } else if (field === 'hours') {
-    await user.clear(screen.getByLabelText('Operating information'))
-    await user.type(screen.getByLabelText('Operating information'), 'Daily')
+    fireEvent.change(screen.getByLabelText('Monday closes'), {target:{value:'18:00'}})
   } else {
     await user.click(screen.getByRole('button', { name: field === 'layouts' ? 'Theatre' : field === 'accessibility' ? 'Elevators' : 'Stage' }))
   }
@@ -237,10 +239,11 @@ it.each(['capacity', 'layouts', 'accessibility', 'facilities', 'hours', 'additio
   expect(await screen.findByText(field === 'capacity' ? '150 people' : '100 people')).toBeInTheDocument()
   const update = fetch.mock.calls.find(call => call[1].method === 'PUT')!
   expect(update[0]).toContain('/venues/123')
-  expect(Object.keys(JSON.parse(update[1].body))).toEqual([({ capacity: 'venueCapacity', layouts: 'supportedLayouts', accessibility: 'venueAccessibilities', facilities: 'venueFacilities', hours: 'operatingInformation', additional: 'additionalInformation' })[field]])
+  expect(Object.keys(JSON.parse(update[1].body))).toEqual([({ capacity: 'venueCapacity', layouts: 'supportedLayouts', accessibility: 'venueAccessibilities', facilities: 'venueFacilities', hours: 'operatingHours', additional: 'additionalInformation' })[field]])
   await user.click(screen.getByRole('link', { name: 'Edit venue' }))
   expect(await screen.findByLabelText('Overall capacity')).toHaveValue(saved.venueCapacity)
-  expect(screen.getByLabelText('Operating information')).toHaveValue(saved.operatingInformation)
+  expect(screen.getByLabelText('Monday opens')).toHaveValue(saved.operatingHours[0].openTime)
+  expect(screen.getByLabelText('Monday closes')).toHaveValue(saved.operatingHours[0].closeTime)
   expect(screen.getByLabelText('Additional information (optional)')).toHaveValue(saved.additionalInformation ?? '')
   for (const name of ['Classroom', 'Step-free access', 'Projection', ...(field === 'layouts' ? ['Theatre'] : field === 'accessibility' ? ['Elevators'] : field === 'facilities' ? ['Stage'] : [])]) {
     expect(screen.getByRole('button', { name })).toHaveAttribute('aria-pressed', 'true')
@@ -286,20 +289,42 @@ it('saves multiple changes together, clears additional information and reopens c
   expect(await screen.findByLabelText('Additional information (optional)')).toHaveValue('Use Level 2')
   await user.clear(screen.getByLabelText('Overall capacity'))
   await user.type(screen.getByLabelText('Overall capacity'), '150')
-  await user.clear(screen.getByLabelText('Operating information'))
-  await user.type(screen.getByLabelText('Operating information'), 'Daily')
+  fireEvent.change(screen.getByLabelText('Monday closes'), {target:{value:'18:00'}})
   await user.clear(screen.getByLabelText('Additional information (optional)'))
   await user.click(screen.getByRole('button', { name: 'Save venue' }))
   expect(await screen.findByText('Venue updated successfully.')).toBeInTheDocument()
   expect(await screen.findByText('150 people')).toBeInTheDocument()
-  expect(screen.getByText('Daily')).toBeInTheDocument()
+  expect(screen.getByText('9am \u2013 6pm')).toBeInTheDocument()
   expect(screen.getByText('No Additional Information')).toBeInTheDocument()
   expect(JSON.parse(fetch.mock.calls.find(call => call[1].method === 'PUT')![1].body)).toEqual({
-    venueCapacity: 150, operatingInformation: 'Daily', additionalInformation: '',
+    venueCapacity: 150, operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'18:00'}], additionalInformation: '',
   })
   await user.click(screen.getByRole('link', { name: 'Edit venue' }))
   expect(await screen.findByLabelText('Overall capacity')).toHaveValue(150)
-  expect(screen.getByLabelText('Operating information')).toHaveValue('Daily')
+  expect(screen.getByLabelText('Monday closes')).toHaveValue('18:00')
   expect(screen.getByLabelText('Additional information (optional)')).toHaveValue('')
   expect(screen.getByRole('button', { name: 'Theatre' })).toHaveAttribute('aria-pressed', 'true')
+})
+
+it.each(['', '09:00', '08:30'])('VS06A (negative): missing, equal or reversed closing time %s blocks creation without a request', async close => {
+ const fetch=vi.fn();vi.stubGlobal('fetch',fetch);page();const user=await fillForm()
+ fireEvent.change(screen.getByLabelText('Monday closes'),{target:{value:close}})
+ await user.click(screen.getByRole('button',{name:'Save venue'}))
+ expect(screen.getByRole('alert')).toHaveTextContent('Closing times must be after opening times.')
+ expect(fetch).not.toHaveBeenCalled()
+ expect(screen.getByRole('checkbox',{name:'Monday'})).toBeChecked()
+ expect(screen.getByLabelText('Monday opens')).toHaveValue('09:00')
+})
+it('VS07 (failure): a failed hours update retains both edited times and excludes legacy text from the update',async()=>{
+ const fetch=vi.fn(async (_:unknown,init?:RequestInit)=>init?.method==='PUT' ? response({message:'Save unavailable'},503) : response(venue))
+ vi.stubGlobal('fetch',fetch);page('/venue-staff/catalogue/123/edit')
+ await screen.findByLabelText('Monday opens')
+ fireEvent.change(screen.getByLabelText('Monday opens'),{target:{value:'10:30'}})
+ fireEvent.change(screen.getByLabelText('Monday closes'),{target:{value:'23:30'}})
+ await userEvent.click(screen.getByRole('button',{name:'Save venue'}))
+ expect(await screen.findByRole('alert')).toHaveTextContent('Save unavailable')
+ expect(screen.getByLabelText('Monday opens')).toHaveValue('10:30')
+ expect(screen.getByLabelText('Monday closes')).toHaveValue('23:30')
+ expect(JSON.parse(String(fetch.mock.calls.find(c=>c[1]?.method==='PUT')?.[1]?.body))).toEqual({operatingHours:[{dayOfWeek:1,openTime:'10:30',closeTime:'23:30'}]})
+ expect(screen.queryByLabelText('Operating information')).not.toBeInTheDocument()
 })

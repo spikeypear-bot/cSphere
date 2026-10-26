@@ -10,8 +10,6 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
@@ -136,7 +134,7 @@ public class EventCancellationService {
         if (coordinatorId != null) {
             UUID id = saved.getRequestId();
             String name = saved.getEventName();
-            afterCommit(() -> notifications.createRequestCancelledNotification(coordinatorId, id, name, reason));
+            notifications.createRequestCancelledNotification(coordinatorId, id, name, reason);
         }
         return requestMapper.toDto(saved);
     }
@@ -189,8 +187,8 @@ public class EventCancellationService {
         if (coordinatorId != null) {
             UUID eventId = event.getEventId();
             String name = event.getEventName();
-            afterCommit(() -> notifications.createEventCancellationRequestedNotification(
-                    coordinatorId, eventId, name, reason));
+            notifications.createEventCancellationRequestedNotification(
+                    coordinatorId, eventId, name, reason);
         }
         return toDto(saved, event);
     }
@@ -248,8 +246,8 @@ public class EventCancellationService {
         String name = event.getEventName();
         String outcome = name + " has been cancelled as you asked." + (coordinatorNote == null ? ""
                 : " Coordinator's note: " + coordinatorNote);
-        afterCommit(() -> notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,
-                NotificationType.event_cancellation_approved, outcome));
+        notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,
+                NotificationType.event_cancellation_approved, outcome);
         return toDto(saved, event);
     }
 
@@ -275,8 +273,8 @@ public class EventCancellationService {
 
         UUID organiserId = saved.getRequesterUserId();
         String name = event.getEventName();
-        afterCommit(() -> notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,
-                NotificationType.event_cancellation_declined, "Cancellation declined: " + reason));
+        notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,
+                NotificationType.event_cancellation_declined, "Cancellation declined: " + reason);
         return toDto(saved, event);
     }
 
@@ -356,16 +354,4 @@ public class EventCancellationService {
         return OffsetDateTime.now(clock);
     }
 
-    private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
-    }
 }

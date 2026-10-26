@@ -25,7 +25,7 @@ When reviewing venue options for an assigned event, Coordinators can expand unav
 
 V27 saves setup/turnaround durations per booking. Existing bookings are backfilled from their venue's current values; subsequent availability, approval, impact-preview and schedule reads use those snapshots. New requests capture selected durations (venue defaults when omitted) under the venue lock. See [VS-C2 timing workflow and backfill policy](venue-booking-duration-snapshots.md).
 
-Venue Details includes setup/turnaround settings in whole minutes, 0–10080, defaulting to zero for existing venues. VS-C2 allows defaults to change independently of existing bookings and adds guarded booking-specific timing edits. Editing or deletion of unavailable periods remains outside this story.
+Venue Details includes setup/turnaround settings in whole minutes, 0–10080, defaulting to zero for existing venues. VS-C2 allows defaults to change independently of existing bookings and adds guarded booking-specific timing edits. The user-authorised 25 October repair adds explicit period release with retained history; editing/deletion remains unsupported. See [workflow repairs](venue-workflow-repair.md).
 
 Unavailable periods for the same venue cannot overlap. Both preview and creation return `409` for duplicate, contained, enclosing or partially overlapping ranges, comparing complete timestamp instants. Touching boundaries are allowed: if an existing period ends on 20 October at 14:00, another may start at 14:00 or 17:00 that day. Different venues are checked independently. Creation rechecks existing periods while holding the venue lock, so simultaneous submissions and stale previews cannot insert overlapping periods. Existing historical records are preserved.
 

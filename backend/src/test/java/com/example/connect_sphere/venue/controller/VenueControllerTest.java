@@ -30,6 +30,7 @@ import jakarta.persistence.EntityManager;
 @Transactional
 @WithMockUser(roles = "VS")
 @Tag("VS07")
+@Tag("VS17")
 @Tag("VS18")
 class VenueControllerTest {
     @Autowired MockMvc mvc;
@@ -40,7 +41,7 @@ class VenueControllerTest {
     void createsThenListsAndReadsSavedVenue() throws Exception {
         var response = mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"  API Test Venue  ","venueCapacity":50,
-                 "supportedLayouts":["theatre","classroom"],"operatingInformation":"Mon-Fri 9-5",
+                 "supportedLayouts":["theatre","classroom"],"operatingInformation":"Mon-Fri 9-5","operatingHours":[{"dayOfWeek":1,"openTime":"09:00","closeTime":"18:00"}],
                  "venueAccessibilities":["step_free_access"],"venueFacilities":["stage","projection"]}
                 """))
                 .andExpect(status().isCreated())
@@ -55,7 +56,7 @@ class VenueControllerTest {
         entityManager.clear();
         mvc.perform(get(location)).andExpect(status().isOk())
                 .andExpect(jsonPath("$.venueCapacity").value(50))
-                .andExpect(jsonPath("$.operatingInformation").value("Mon-Fri 9-5"))
+                .andExpect(jsonPath("$.operatingInformation").value("Monday 09:00\u201318:00"))
                 .andExpect(jsonPath("$.venueAccessibilities[0]").value("step_free_access"))
                 .andExpect(jsonPath("$.venueFacilities[1]").value("projection"))
                 .andExpect(jsonPath("$.supportedLayouts[0]").value("theatre"))
@@ -72,7 +73,7 @@ class VenueControllerTest {
     void emptySelectionsRemainCompatibleWithBasicCreation(String selections) throws Exception {
         var response = mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"Basic venue","venueCapacity":50,
-                 "supportedLayouts":["theatre"],"operatingInformation":"Daily"
+                 "supportedLayouts":["theatre"],"operatingInformation":"Daily","operatingHours":[{"dayOfWeek":1,"openTime":"09:00","closeTime":"18:00"}]
                 """ + selections + "}"))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.venueAccessibilities").isEmpty())
@@ -85,7 +86,7 @@ class VenueControllerTest {
                 .andExpect(jsonPath("$.venueFacilities").isEmpty())
                 .andExpect(jsonPath("$.venueCapacity").value(50))
                 .andExpect(jsonPath("$.supportedLayouts[0]").value("theatre"))
-                .andExpect(jsonPath("$.operatingInformation").value("Daily"));
+                .andExpect(jsonPath("$.operatingInformation").value("Monday 09:00\u201318:00"));
     }
 
     @ParameterizedTest
@@ -99,7 +100,7 @@ class VenueControllerTest {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"Invalid selections","venueCapacity":50,
-                 "supportedLayouts":["theatre"],"operatingInformation":"Daily",
+                 "supportedLayouts":["theatre"],"operatingInformation":"Daily","operatingHours":[{"dayOfWeek":1,"openTime":"09:00","closeTime":"18:00"}],
                 """ + selections + "}"))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(jsonPath("$.message").exists());
@@ -142,14 +143,14 @@ class VenueControllerTest {
     private String updateFixture() throws Exception {
         return mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"VS07 Venue","venueCapacity":100,"supportedLayouts":["classroom"],
-                 "operatingInformation":"Mon-Fri 09:00-18:00","additionalInformation":"Keep this",
+                 "operatingInformation":"Mon-Fri 09:00-18:00","operatingHours":[{"dayOfWeek":1,"openTime":"09:00","closeTime":"18:00"}],"additionalInformation":"Keep this",
                  "venueAccessibilities":["step_free_access"],"venueFacilities":["projection"]}
                 """))
                 .andExpect(status().isCreated()).andReturn().getResponse().getHeader("Location");
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"venueCapacity", "supportedLayouts", "venueAccessibilities", "venueFacilities", "operatingInformation", "all", "empty"})
+    @ValueSource(strings = {"venueCapacity", "supportedLayouts", "venueAccessibilities", "venueFacilities", "operatingHours", "all", "empty"})
     void updatesOnlySubmittedFieldsAndPersists(String field) throws Exception {
         String location = updateFixture();
         boolean all = field.equals("all");
@@ -158,10 +159,10 @@ class VenueControllerTest {
             case "supportedLayouts" -> "{\"supportedLayouts\":[\"theatre\"]}";
             case "venueAccessibilities" -> "{\"venueAccessibilities\":[]}";
             case "venueFacilities" -> "{\"venueFacilities\":[]}";
-            case "operatingInformation" -> "{\"operatingInformation\":\" Daily \"}";
+            case "operatingHours" -> "{\"operatingHours\":[{\"dayOfWeek\":1,\"openTime\":\"10:30\",\"closeTime\":\"23:30\"}]}";
             case "all" -> """
                 {"venueCapacity":150,"supportedLayouts":["theatre"],"venueAccessibilities":[],
-                 "venueFacilities":[],"operatingInformation":" Daily "}
+                 "venueFacilities":[],"operatingHours":[{"dayOfWeek":1,"openTime":"10:30","closeTime":"23:30"}]}
                 """;
             default -> "{}";
         };
@@ -173,7 +174,7 @@ class VenueControllerTest {
                 .andExpect(jsonPath("$.supportedLayouts[0]").value(all || field.equals("supportedLayouts") ? "theatre" : "classroom"))
                 .andExpect(jsonPath("$.venueAccessibilities.length()").value(all || field.equals("venueAccessibilities") ? 0 : 1))
                 .andExpect(jsonPath("$.venueFacilities.length()").value(all || field.equals("venueFacilities") ? 0 : 1))
-                .andExpect(jsonPath("$.operatingInformation").value(all || field.equals("operatingInformation") ? "Daily" : "Mon-Fri 09:00-18:00"))
+                .andExpect(jsonPath("$.operatingInformation").value(all || field.equals("operatingHours") ? "Monday 10:30\u201323:30" : "Monday 09:00\u201318:00"))
                 .andReturn().getResponse().getContentAsString();
         entityManager.flush(); entityManager.clear();
         assertThat(mvc.perform(get(location)).andReturn().getResponse().getContentAsString()).isEqualTo(updated);
@@ -181,7 +182,7 @@ class VenueControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"{\"venueCapacity\":0}", "{\"supportedLayouts\":[]}",
-            "{\"operatingInformation\":\" \"}", "{\"venueAccessibilities\":[\"none\",\"elevators\"]}",
+            "{\"operatingHours\":[]}", "{\"venueAccessibilities\":[\"none\",\"elevators\"]}",
             "{\"venueFacilities\":[\"stage\",\"stage\"]}"})
     void rejectsInvalidUpdateWithoutChangingVenue(String body) throws Exception {
         String location = updateFixture();
@@ -194,7 +195,7 @@ class VenueControllerTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"{\"venueCapacity\":null}", "{\"supportedLayouts\":null}",
-            "{\"operatingInformation\":null}", "{\"venueFacilities\":[\"unknown\"]}",
+            "{\"operatingHours\":null}", "{\"venueFacilities\":[\"unknown\"]}",
             "{\"venueAccessibilities\":[\"unknown\"]}", "{\"venueCapacity\":1.5}"})
     void rejectsMalformedUpdate(String body) throws Exception {
         mvc.perform(put(updateFixture()).contentType(MediaType.APPLICATION_JSON).content(body))
@@ -221,8 +222,8 @@ class VenueControllerTest {
                 org.junit.jupiter.params.provider.Arguments.of("supportedLayouts", "[null]", 422),
                 org.junit.jupiter.params.provider.Arguments.of("supportedLayouts", "[\"classroom\",\"classroom\"]", 422),
                 org.junit.jupiter.params.provider.Arguments.of("supportedLayouts", "[\"unknown\"]", 400),
-                org.junit.jupiter.params.provider.Arguments.of("operatingInformation", "\"   \"", 422),
-                org.junit.jupiter.params.provider.Arguments.of("operatingInformation", "null", 400),
+                org.junit.jupiter.params.provider.Arguments.of("operatingHours", "[]", 422),
+                org.junit.jupiter.params.provider.Arguments.of("operatingHours", "null", 400),
                 org.junit.jupiter.params.provider.Arguments.of("venueAccessibilities", "null", 400),
                 org.junit.jupiter.params.provider.Arguments.of("venueAccessibilities", "[null]", 422),
                 org.junit.jupiter.params.provider.Arguments.of("venueAccessibilities", "[\"elevators\",\"elevators\"]", 422),
@@ -282,7 +283,8 @@ class VenueControllerTest {
     }
 
     @Test
-    void characteristicUpdatesNeverCreateDeleteOrModifyBookings() throws Exception {
+    @org.junit.jupiter.api.DisplayName("VS17 (cross-cutting): venue edits only invalidate affected approvals and preserve complete reservation records")
+    void characteristicUpdatesPreserveReservationsAndInvalidateAffectedApprovals() throws Exception {
         String location = updateFixture();
         UUID venueId = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
         String otherLocation = updateFixture();
@@ -291,8 +293,8 @@ class VenueControllerTest {
         entityManager.createNativeQuery("""
                 INSERT INTO events (event_id,event_name,purpose,start_datetime,end_datetime,
                     expected_attendance,venue_requirements,status)
-                VALUES (:id,'VS07 booking isolation test','Test',CURRENT_TIMESTAMP,
-                    CURRENT_TIMESTAMP + interval '1 hour',50,'Test','confirmed')
+                VALUES (:id,'VS07 booking isolation test','Test','2031-04-01T10:00:00+08:00',
+                    '2031-04-01T11:00:00+08:00',50,'Test','confirmed')
                 """).setParameter("id", eventId).executeUpdate();
         for (String bookingStatus : java.util.List.of("pending", "approved", "changed", "rejected", "cancelled")) {
             for (UUID bookedVenue : java.util.List.of(venueId, otherVenueId)) {
@@ -306,21 +308,28 @@ class VenueControllerTest {
                         .executeUpdate();
             }
         }
-        Object before = bookingSnapshot();
+        // The fixed Tuesday window is outside this fixture's Monday hours. Its approved booking
+        // becomes attention; every other field and every other booking must survive.
+        entityManager.flush();
+        Object expected = entityManager.createNativeQuery("""
+                SELECT coalesce(jsonb_agg(CASE WHEN venue_id=:venue AND status='approved'
+                    THEN jsonb_set(to_jsonb(b),'{status}','"attention"'::jsonb) ELSE to_jsonb(b) END
+                    ORDER BY booking_id), '[]'::jsonb)::text FROM venue_bookings b
+                """).setParameter("venue",venueId).getSingleResult();
         for (String body : java.util.List.of(
                 "{\"venueCapacity\":150}", "{\"supportedLayouts\":[\"theatre\"]}",
                 "{\"venueAccessibilities\":[\"elevators\"]}", "{\"venueFacilities\":[\"stage\"]}",
-                "{\"operatingInformation\":\"Daily\"}", "{\"additionalInformation\":\"Level 2\"}",
+                "{\"operatingHours\":[{\"dayOfWeek\":1,\"openTime\":\"09:00\",\"closeTime\":\"17:00\"}]}", "{\"additionalInformation\":\"Level 2\"}",
                 "{\"venueCapacity\":200,\"venueFacilities\":[],\"venueAccessibilities\":[]}")) {
             mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content(body))
                     .andExpect(status().isOk());
-            assertThat(bookingSnapshot()).isEqualTo(before);
+            assertThat(bookingSnapshot()).isEqualTo(expected);
             entityManager.clear();
         }
         mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"venueCapacity\":0}"))
                 .andExpect(status().isUnprocessableEntity());
-        assertThat(bookingSnapshot()).isEqualTo(before);
+        assertThat(bookingSnapshot()).isEqualTo(expected);
     }
 
     @ParameterizedTest
@@ -408,4 +417,47 @@ class VenueControllerTest {
                 .andExpect(jsonPath("$.message").exists());
         assertThat(repository.count()).isEqualTo(before);
     }
+    @Test
+    @org.junit.jupiter.api.DisplayName("VS17 (boundary): legacy prose cannot create or overwrite an operating schedule")
+    void legacyProseDoesNotAdvertiseHours() throws Exception {
+        long before = repository.count();
+        mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
+            {"venueAddress":"Legacy-only venue","venueCapacity":50,"supportedLayouts":["theatre"],"operatingInformation":"fea"}
+            """))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("operatingHours")));
+        assertThat(repository.count()).isEqualTo(before);
+        String location = updateFixture();
+        String previous = mvc.perform(get(location)).andReturn().getResponse().getContentAsString();
+        mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content("{\"operatingInformation\":\"fea\"}"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.operatingInformation").value("Monday 09:00\u201318:00"))
+            .andExpect(jsonPath("$.operatingHours[0].dayOfWeek").value(1));
+        entityManager.flush(); entityManager.clear();
+        assertThat(mvc.perform(get(location)).andReturn().getResponse().getContentAsString()).isEqualTo(previous);
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "[]",
+        "[{\"dayOfWeek\":0,\"openTime\":\"09:00\",\"closeTime\":\"18:00\"}]",
+        "[{\"dayOfWeek\":8,\"openTime\":\"09:00\",\"closeTime\":\"18:00\"}]",
+        "[{\"dayOfWeek\":1,\"openTime\":\"09:00\",\"closeTime\":\"09:00\"}]",
+        "[{\"dayOfWeek\":1,\"openTime\":\"18:00\",\"closeTime\":\"09:00\"}]",
+        "[{\"dayOfWeek\":1,\"openTime\":null,\"closeTime\":\"18:00\"}]",
+        "[{\"dayOfWeek\":1,\"openTime\":\"09:00\",\"closeTime\":null}]",
+        "[null]",
+        "[{\"dayOfWeek\":1,\"openTime\":\"09:00\",\"closeTime\":\"18:00\"},{\"dayOfWeek\":1,\"openTime\":\"10:00\",\"closeTime\":\"19:00\"}]"
+    })
+    @org.junit.jupiter.api.DisplayName("VS17 (negative): invalid structured-hour updates identify the field and preserve saved hours")
+    void rejectsInvalidStructuredSchedules(String hours) throws Exception {
+        String location=updateFixture();
+        String previous=mvc.perform(get(location)).andReturn().getResponse().getContentAsString();
+        mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content("{\"operatingHours\":"+hours+"}"))
+            .andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("operatingHours")));
+        entityManager.flush();entityManager.clear();
+        assertThat(mvc.perform(get(location)).andReturn().getResponse().getContentAsString()).isEqualTo(previous);
+    }
+
 }

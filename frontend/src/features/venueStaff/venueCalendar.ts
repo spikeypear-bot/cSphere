@@ -2,7 +2,7 @@ import { BOOKING_STATUS_LABELS, type VenueBookingDisplayStatus } from '../../typ
 import type { VenueSchedule } from './VenueUnavailabilityPanel'
 
 export function approvedOverlaps(schedule: VenueSchedule) {
-  const bookings = schedule.bookings.filter(b => b.status === 'approved')
+  const bookings = schedule.bookings.filter(b => b.status === 'approved' || b.status === 'attention')
   return bookings.flatMap((first, index) => bookings.slice(index + 1)
     .filter(second => Date.parse(first.effectiveStart) < Date.parse(second.effectiveEnd)
       && Date.parse(first.effectiveEnd) > Date.parse(second.effectiveStart))
@@ -12,28 +12,35 @@ export function approvedOverlaps(schedule: VenueSchedule) {
 export interface CalendarEntry {
   id: string
   entryId: string
-  type: Extract<VenueBookingDisplayStatus, 'approved' | 'tentative' | 'pending'> | 'unavailable'
-  phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable' | 'Reserved period'
+  type: Extract<VenueBookingDisplayStatus, 'approved' | 'attention' | 'tentative' | 'pending'> | 'unavailable' | 'issue'
+  phase: 'Event' | 'Setup' | 'Turnaround' | 'Unavailable' | 'Reserved period' | 'Operational issue'
   title: string
   start: string
   end: string
   expiresAt?: string
   eventStart?: string
   eventEnd?: string
+  conflictReasons?: string[]
 }
-export const entryLabels = { approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable' }
+export const entryLabels = { attention: BOOKING_STATUS_LABELS.attention, approved: `${BOOKING_STATUS_LABELS.approved} booking`, tentative: BOOKING_STATUS_LABELS.tentative, pending: `${BOOKING_STATUS_LABELS.pending} request`, unavailable: 'Unavailable', issue: 'Blocking operational issue' }
 export function calendarEntries(schedule: VenueSchedule, expired = new Set<string>()): CalendarEntry[] {
   const entries: CalendarEntry[] = schedule.unavailablePeriods.map(p => ({
     id: `unavailable:${p.unavailabilityId}`, entryId: p.unavailabilityId, type: 'unavailable',
     phase: 'Unavailable', title: p.reason, start: p.startDateTime, end: p.endDateTime,
   }))
+  for (const issue of schedule.operationalIssues ?? []) {
+    if (!issue.affectedFrom || !issue.affectedUntil) continue
+    entries.push({ id: `issue:${issue.issueId}`, entryId: issue.issueId, type: 'issue', phase: 'Operational issue',
+      title: issue.description, start: issue.affectedFrom, end: issue.affectedUntil })
+  }
+  const restrictions = [...entries]
   const activeHolds = (schedule.holds ?? []).filter(h => h.status === 'active' && !expired.has(h.holdId))
   for (const h of activeHolds) entries.push({ id: 'hold:' + h.holdId, entryId: h.bookingId, type: 'tentative',
     phase: 'Reserved period', title: h.eventName, start: h.reservedStart, end: h.reservedEnd, expiresAt: h.expiresAt })
   for (const b of schedule.bookings) {
     if (activeHolds.some(h => h.bookingId === b.bookingId)) continue
-    if (b.status !== 'approved' && b.status !== 'pending') continue
-    const base = { entryId: b.bookingId, type: b.status === 'approved' ? 'approved' as const : 'pending' as const,
+    if (b.status !== 'approved' && b.status !== 'attention' && b.status !== 'pending') continue
+    const base = { entryId: b.bookingId, type: b.status as 'approved' | 'attention' | 'pending',
       title: b.eventName, eventStart: b.startDateTime, eventEnd: b.endDateTime }
     for (const [phase, start, end] of [
       ['Setup', b.effectiveStart, b.startDateTime], ['Event', b.startDateTime, b.endDateTime],
@@ -41,6 +48,11 @@ export function calendarEntries(schedule: VenueSchedule, expired = new Set<strin
     ] as const) {
       if (Date.parse(end) > Date.parse(start)) entries.push({ ...base, id: `booking:${b.bookingId}:${phase}`, phase, start, end })
     }
+  }
+  for (const entry of entries) {
+    if (entry.type === 'unavailable' || entry.type === 'issue') continue
+    entry.conflictReasons = restrictions.filter(r => Date.parse(r.start) < Date.parse(entry.end)
+      && Date.parse(r.end) > Date.parse(entry.start)).map(r => `${entryLabels[r.type]}: ${r.title}`)
   }
   return entries.sort((a, b) => Date.parse(a.start) - Date.parse(b.start) || a.id.localeCompare(b.id))
 }

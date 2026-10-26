@@ -14,8 +14,6 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.activity.entity.ActivityType;
@@ -208,8 +206,8 @@ public class EventRequestService {
                 null, fieldValues(saved)));
         if (saved.getCoordinatorId() != null) {
             UUID coordinatorId = saved.getCoordinatorId();
-            afterThisTransactionCommits(() -> notificationService.createClarificationRespondedNotification(
-                    coordinatorId, saved.getRequestId(), saved.getEventName(), reply));
+            notificationService.createClarificationRespondedNotification(
+                    coordinatorId, saved.getRequestId(), saved.getEventName(), reply);
         }
         return mapper.toDto(saved);
     }
@@ -339,8 +337,8 @@ public class EventRequestService {
         List<UUID> organisers = userRepository.findByRoleAndOrganisation(UserRole.eo, saved.getOrganisation())
                 .stream().map(User::getUserId).toList();
         if (!organisers.isEmpty()) {
-            afterThisTransactionCommits(() -> notificationService.createClarificationRequestedNotifications(
-                    organisers, saved.getRequestId(), saved.getEventName(), text));
+            notificationService.createClarificationRequestedNotifications(
+                    organisers, saved.getRequestId(), saved.getEventName(), text);
         }
         return mapper.toDto(saved);
     }
@@ -393,36 +391,14 @@ public class EventRequestService {
                 EventRequestStatus.pending.name(), EventRequestStatus.approved.name()));
 
         if (saved.getCreatedBy() != null) {
-            // The Event row saved above is not yet committed/durable in this
-            // still-open transaction. createStatusChangeNotification runs in
-            // its own REQUIRES_NEW transaction (a separate connection), which
-            // cannot see it yet — the notification's FK to events would fail.
-            // Deferring to afterCommit ensures the referenced event exists by
-            // the time the notification is written.
-            afterThisTransactionCommits(() -> notificationService.createStatusChangeNotification(
+            // The outbox joins this transaction; delivery waits until the event is committed.
+            notificationService.createStatusChangeNotification(
                     saved.getCreatedBy(), saved.getRequestId(), savedEvent.getEventId(),
-                    saved.getEventName(), "approved", null));
+                    saved.getEventName(), "approved", null);
         }
         return mapper.toDto(saved);
     }
 
-    /**
-     * Runs {@code action} once the currently active transaction commits, or
-     * immediately if there is none (e.g. a unit test calling this service
-     * method directly, bypassing the Spring transaction proxy).
-     */
-    private void afterThisTransactionCommits(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
-    }
 
     /** EO09 "Rejected". */
     @Transactional
@@ -446,9 +422,9 @@ public class EventRequestService {
                 previous.name(), EventRequestStatus.rejected.name()));
 
         if (saved.getCreatedBy() != null) {
-            afterThisTransactionCommits(() -> notificationService.createStatusChangeNotification(
+            notificationService.createStatusChangeNotification(
                     saved.getCreatedBy(), saved.getRequestId(), null,
-                    saved.getEventName(), "rejected", reason));
+                    saved.getEventName(), "rejected", reason);
         }
         return mapper.toDto(saved);
     }
@@ -563,10 +539,10 @@ public class EventRequestService {
             // After commit, like approve(): the notification is written in its
             // own transaction, and must neither reference an uncommitted row
             // nor announce an assignment that is then rolled back.
-            afterThisTransactionCommits(() -> notificationService.createCoordinatorAssignmentNotification(
+            notificationService.createCoordinatorAssignmentNotification(
                     saved.getCreatedBy(), saved.getRequestId(), saved.getEventId(),
                     saved.getEventName(), coordinator.getUsername(), coordinator.getEmail(),
-                    reassignment));
+                    reassignment);
         }
         return mapper.toDto(saved);
     }

@@ -48,7 +48,7 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
  * limit are accepted, a recorded unavailable period is named in the refusal,
  * and messages use the labels people see rather than stored codes.
  */
-@Tag("unit")
+@Tag("unit") @Tag("VS17") @Tag("EC-C2")
 @Tag("EC03")
 class VenueBookingWordingTest {
 
@@ -70,7 +70,8 @@ class VenueBookingWordingTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
-                activityService, notificationService, operationalIssues, null, availability, null);
+                activityService, notificationService, operationalIssues, null, availability, org.mockito.Mockito.mock(com.example.connect_sphere.event.service.EventLifecycleService.class));
+        org.springframework.test.util.ReflectionTestUtils.setField(service,"plan",org.mockito.Mockito.mock(BookingPlanService.class));
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(availability.settings(any())).thenReturn(new AvailabilityModels.Settings(0, 0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());

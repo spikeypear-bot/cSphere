@@ -37,5 +37,6 @@ public class UpdateVenueDto {
     private String venueName;
     @JsonSetter(nulls = Nulls.FAIL)
     private String additionalInformation;
+    @JsonSetter(nulls = Nulls.FAIL)
     private List<VenueOperatingHourDto> operatingHours;
 }

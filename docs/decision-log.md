@@ -91,7 +91,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
 - **Decision:** Build VS06A venue entry plus catalogue list/detail backend reads. Store required address, one overall capacity, supported layouts, required operating information and optional additional information. There is no booking request, approval state or per-layout capacity in this slice. Address and the application-generated UUID identify the venue; no venue-name column is added.
 - **Capacity:** One integer from 1 to 50,000 inclusive, shared by all selected layouts. The form starts at 50 and Venue Staff can change it. This is a frontend initial value, not a database default.
 - **Layouts:** API DTOs use `VenueLayout` with `classroom`, `theatre`, `boardroom`, `banquet`, `exhibition`; the entity uses `List<String>` and the database uses `supported_layouts text[]`. These are the implemented choices accepted in this task, not evidence of independent team/customer sign-off on an exhaustive vocabulary. At least one selection is required; duplicate/null selections are rejected.
-- **Validation:** Address is trimmed, required and limited to 500 characters by the service; it is not checked for real-world existence. Operating information is nonblank free text describing days/hours and closures. Structured opening-hour calculations remain outside this slice.
+- **Validation:** Address is trimmed, required and limited to 500 characters by the service; it is not checked for real-world existence. At this historical slice, operating information was nonblank free text. This has been superseded by the structured-hours implementation and canonical role displays; see `venue-operating-hours.md`.
 - **Source:** User instructions and approvals in this task, 2026-09-13/14; `VenueService`, `VenueLayout`, `VenueCreatePage` and `SCHEMA.md`.
 
 ### D13 — Local V5 revision during venue development
@@ -158,6 +158,8 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | Endpoint | Rule | Rationale |
   | --- | --- | --- |
   | `POST /api/auth/login\|refresh\|logout` | `permitAll` | Each carries its own credential; already implemented (D19). |
+  | `/api/venue-bookings/{id}/requirement-reviews`, `/api/venue-bookings/{id}/requirement-reviews/**` | `hasRole('VS')` | VS17 booking review history and decisions; existing role-wide staff access, no ownership table. |
+  | `GET /api/events/{id}/venue-reviews` | `hasRole('EC')` plus current event assignment check | VS17 coordinator outcome visibility; historical assignment does not grant access. |
   | `GET /api/venues`, `GET /api/venues/{id}` | `authenticated()` | Organisers browse venues when planning; Coordinators search them against requirements (EC04). Read is not Venue-Staff-only. |
   | `GET /api/venues/search` | `hasRole('EC')` | EC04's date/time, capacity and facility search is a Coordinator workflow; server-side availability excludes overlapping confirmed bookings. Per D12, free-text operating information is displayed but not parsed into opening-hour availability. |
   | `POST /api/venues`, `PUT /api/venues/{id}` | `hasAnyRole('EC','VS')` | Catalogue authoring is VS07/VS18; widened to Coordinators per open question 1 below. |
@@ -208,7 +210,7 @@ Built on `feature/ec01-ec02-ec03-review-clarification-booking` (2026-09-26), mig
 - **Approval re-checks EO02's submission rules** instead of trusting that nothing changed.
 - **Not-assigned coordinator now gets 403, not 409** (`ApiExceptionHandler`), per EC02's refined AC ("access-denied").
 - **Notifications for assignment and rejection are now sent after commit**, like approval already was (d1033d8). Before, a failing notification insert surfaced at commit, outside the try/catch meant to swallow it, and failed the whole request; it could also announce a change that was then rolled back.
-- **EC03/EC05 rules:** the booking uses the event's own times (no second copy); capacity blocks (attendance equal to capacity fits); missing required facilities block a request; a missing requested accessibility feature needs a written justification for Venue Staff; only *confirmed* bookings overlapping the event block a venue, and back-to-back is not an overlap; operational issues with overlapping affected periods also block a venue; at most one pending/confirmed request per event, enforced under a row lock on the event. `operating_information` remains descriptive text and is displayed but not parsed as a machine-checkable weekly schedule; structured operating hours remain a follow-up.
+- **EC03/EC05 rules:** the booking uses the event's own times (no second copy); capacity blocks (attendance equal to capacity fits); missing required facilities block a request; a missing requested accessibility feature needs a written justification for Venue Staff; only *confirmed* bookings overlapping the event block a venue, and back-to-back is not an overlap; operational issues with overlapping affected periods also block a venue; at most one pending/confirmed request per event, enforced under a row lock on the event. At this historical slice, `operating_information` was displayed as descriptive text. This is superseded by structured operating-hour checks and displays; see `venue-operating-hours.md`.
 - **Open, for the team:** (1) Customer Q&A: may a coordinator request a venue that is over capacity or missing a facility, with a justification? Changing the answer touches only `VenueSuitability`. (2) VS03/VS08 must re-run the overlap check when confirming. (3) "Venue Staff responsible for the venue" is not modelled; every VS user is notified.
 
 - **V14 follow-up (2026-09-26):**
@@ -781,3 +783,68 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - **Week 7 Change #6** says changes send the event back to planning; it does not say a rejection must end the event, so nothing in the customer's changes is contradicted.
 - **Consequence:** `EventStatus.ACTIVE`, `BEFORE_CONFIRMATION` and `IN_OR_PAST_SAFETY_CHECK` now name the status groups that nine services had written out by hand.
 
+
+## VS17 — transactional booking requirement reviews (24 October 2026)
+
+- User-confirmed story ID VS17; VS15 remains the calendar. This slice covers
+  approved-change tracking and notifications, not review outcome UI or final seeds.
+- Reuse EO/EC original/proposed requirements and the approval audit transaction.
+  Persist per-booking snapshots and in-app notifications in that transaction,
+  following existing hold notifications. No new delivery infrastructure.
+- Preserve explicit and legacy effective booking windows; never move reservations
+  automatically. Keep existing impact acknowledgements and safety re-planning.
+- Recipients follow existing role-wide VS access; venue ownership is not modelled.
+  No new organiser layout field or booking status. See
+  [design and verification scope](venue-requirement-changes.md).
+
+## VS17 — booking review outcomes and UI (24 October 2026)
+
+- V43 adds audited, immutable outcomes (`suitable` / `action_required`) to V42's
+  reviews. This is review state, not a new booking approval/status system.
+- Venue Staff review each approved change and booking separately. The current
+  assigned coordinator sees and is notified of the outcome. An action-required
+  outcome needs a comment. Review state and notification read state are independent.
+- Reuse existing suitability and availability checks at actual booked times,
+  excluding only the current booking, with its saved setup/turnaround. Staff cannot
+  mark a booking suitable while live checks report attention. Written layout and
+  venue requirements remain staff judgement, with no new organiser fields.
+- Decision, audit and notification are one transaction. Locks follow event →
+  venue → review. No reservations, booking statuses, event/safety lifecycle or
+  equipment periods change. See [workflow and verification](venue-requirement-changes.md).
+
+
+## VS17 — live venue suitability and approval invalidation (25 October 2026)
+User authorised a reservation-preserving `attention` booking state when current catalogue facts
+or approved requirements invalidate an approval. Reuse existing checks and lifecycle return to
+Planning, retain immutable decisions, and add independent append-only booking assessments.
+Restoration requires explicit VS reassessment; existing replacement/cancellation remain valid.
+EC and EO observe automatic five-second/focus refresh and consistent server status.
+See `venue-requirement-changes.md` for transactions, endpoints and recovery.
+
+
+## Canonical operating-hour displays across EO, EC and VS (25 October 2026)
+User requested consistent venue hours throughout the workflow. Structured weekly rows are
+authoritative for all venue read models, including EO arrangements and EC existing bookings.
+Legacy prose without structured hours is displayed as unconfigured. EC duplicate hours
+sections are removed and EO uses the Operating hours label. See venue-operating-hours.md.
+
+## Venue Staff presentation and structured-hour regression audit (25 October 2026)
+The user requested removal of leftover generated/scaffold text and consistent
+staff styles, then explicitly assigned all legacy hours form/navigation/fixture
+tests to this chat. Preserve human-entered descriptions/history and existing
+confirmation/state rules. Display structured operating hours in every role;
+legacy prose is compatibility data only, including plain mapper/service fallback
+construction. Existing valid fixture venues now declare explicit opening days.
+See venue-staff-presentation-audit.md and venue-operating-hours.md for the verified
+workflow map, test coverage and final unfiltered regression results.
+
+
+## Venue workflow audit corrections — 25 October 2026
+
+User instruction: carry out the audit fixes. The user subsequently chose shared staff access and cross-role protection, superseding the proposed individual-ownership extension. Unavailable-period release and durable lifecycle/notification recovery are authorised. Final events are excluded consistently from occupancy; all replacement sources require a different venue, reconciling conflicting earlier approval/replacement tests with the recorded workflow. Existing accessibility justification, strict tentative holds, saved duration snapshots and explicit reassessment are retained. See [repair specification](venue-workflow-repair.md). No live backlog edits were possible; the team must synchronise scope and execution evidence.
+
+
+## Multi-venue requirements and replacement policy — 26 October 2026
+The user explicitly chose: rejected required venues block readiness until replacement approval or explicit withdrawal; healthy approved arrangements may be replaced or rescheduled at the same venue while retaining the original reservation until approval. This supersedes the different-venue restriction in the 25 October repair decision. Preserve shared VS access, independent reservations, live unavailability impact flags and historical records. See [implementation contract](multiple-venue-bookings.md).
+
+D20 additions: the assigned EC may read booking history and withdraw rejected/cancelled requirements under `/api/events/{eventId}/venue-bookings/{bookingId}`; staff history `/api/venue-bookings/{bookingId}/history` is VS-only. Assignment and booking/event membership are enforced in the service.

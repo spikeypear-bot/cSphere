@@ -14,7 +14,7 @@ import './AssignedEventsPage.css'
 /** EC09: the signed-in coordinator's active events, in the server's order (soonest first). */
 export function AssignedEventsPage() {
   // Shared GET-on-mount hook; keeps the cards on screen during a refresh.
-  const { data: events, error, loading, retry } = useVenueRead<EventDto[]>('/events/assigned', true)
+  const { data: events, error, loading, retry } = useVenueRead<EventDto[]>('/events/assigned', true, 5000, true)
   const refreshing = loading && events !== undefined
   // EC-NEW3 AC4: pending change requests on this coordinator's events.
   const { data: changes } = useVenueRead<ChangeRequestView[]>('/change-requests', true)

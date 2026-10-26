@@ -1,4 +1,4 @@
-// @stories EC08 EO04 SO-C3 SO-C5 SO-C6 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 EC08 EO04 SO-C3 SO-C5 SO-C6 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -65,6 +65,8 @@ function readiness() {
 }
 
 function renderPage(basePath: string) {
+  const previousFetch = globalThis.fetch
+  vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/venue-assessments') ? Promise.resolve(jsonResponse(200, [])) : previousFetch(input, init))
   return render(
     <MemoryRouter initialEntries={[`${basePath}/events/${EVENT_ID}`]}>
       <SessionProvider>

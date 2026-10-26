@@ -69,9 +69,10 @@ final class ClassDiagrams {
             NOT_DESIGN,
             ".*\\$.*",
             ".*\\.(mock|config|common\\.web|controller|service|repository|dto|mapper)\\..*",
-            ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job)",
+            ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job|VenueSafetyChecklist)",
             ".*\\.(Add|Create|Reserve|Submit|Update|SafetyApproval)\\w*",
-            ".*\\.(JourneyStatusResolver|ExistingTimingConflictScan|AvailabilityModels|StatusView|OperatingHours)");
+            // VS17: retry orchestration is application plumbing, not a domain object.
+            ".*\\.(JourneyStatusResolver|ExistingTimingConflictScan|AvailabilityModels|StatusView|OperatingHours|VenueReplanQueue|VenueReplanWorker)");
 
     // Full level: everything except the mock scaffolding and MapStruct's
     // generated *MapperImpl classes (the hand-written mapper interfaces stay).

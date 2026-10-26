@@ -50,7 +50,7 @@ export function BookingTimingEditor({ booking, onSaved, disabled }: {
     } catch (cause) { setError(cause instanceof Error ? cause : new Error('Could not save booking timings.')) }
     finally { setBusy(false) }
   }
-  if (!timing || timing.editable === false || (booking.status !== 'pending' && booking.status !== 'approved')) return null
+  if (!timing || timing.editable === false || (booking.status !== 'pending' && booking.status !== 'approved' && booking.status !== 'attention')) return null
   return <Card className="feature-skeleton__body booking-timings-panel">
     <details>
       <summary>Edit booking timings</summary>

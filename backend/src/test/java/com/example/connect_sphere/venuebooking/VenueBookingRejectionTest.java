@@ -33,6 +33,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingStateExceptio
 @SpringBootTest
 @AutoConfigureMockMvc
 @Tag("VS04")
+@Tag("VS17")
 @Tag("VS09")
 class VenueBookingRejectionTest {
     @Autowired MockMvc mvc;
@@ -44,7 +45,7 @@ class VenueBookingRejectionTest {
 
     UUID venue() {
         UUID id = venues.createVenue(new CreateVenueDto("VS03 " + UUID.randomUUID(), 200,
-                List.of(VenueLayout.classroom), "Daily", null, null, null)).venueId();
+                List.of(VenueLayout.classroom), "Daily", null, null, null, com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek())).venueId();
         venueIds.add(id);
         return id;
     }

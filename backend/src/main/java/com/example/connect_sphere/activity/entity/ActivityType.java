@@ -28,6 +28,8 @@ import com.example.connect_sphere.user.entity.UserRole;
  * {@code ActivityService} decides it per entry.
  */
 public enum ActivityType {
+    venue_suitability_changed(Set.of(UserRole.eo, UserRole.ec, UserRole.vs), true),
+    venue_requirements_reviewed(Set.of(UserRole.ec, UserRole.vs)),
     venue_hold_created(Set.of(UserRole.ec, UserRole.vs)),
     venue_hold_released(Set.of(UserRole.ec, UserRole.vs)),
     venue_hold_expired(Set.of(UserRole.ec, UserRole.vs)),

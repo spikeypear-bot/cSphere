@@ -1,8 +1,8 @@
-// @stories VS-C3 VS03 VS08 VS15 EC03 EC-NEW5
+// @stories VS-C3 VS17 VS03 VS08 VS15 EC03 EC-NEW5
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, createVenue, createCompetingBooking, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
 
-test('Venue Staff hold, release and convert a coordinator booking without duplicating the reservation', async ({ browser, request }, testInfo) => {
+test('VS-C3 (cross-cutting): Venue Staff hold, release and convert a coordinator booking without duplicating the reservation', async ({ browser, request }, testInfo) => {
   test.setTimeout(180_000)
   const name = uniqueName('Hold journey')
   const venueName = uniqueName('Hold venue')
@@ -39,7 +39,7 @@ test('Venue Staff hold, release and convert a coordinator booking without duplic
   await expect(panel.getByText('Tentative hold created.')).toBeVisible()
   await expect(panel.getByRole('button', { name: 'Release Hold' })).toBeVisible()
   await expect(staff.getByRole('button', { name: 'Approve Booking', exact: true })).toBeDisabled()
-  const holdColour = await staff.getByLabel('Status: tentative').evaluate(node => getComputedStyle(node).color)
+  const holdColour = await staff.getByLabel('Status: Tentative Hold').evaluate(node => getComputedStyle(node).color)
   await staff.screenshot({ path: testInfo.outputPath('active-hold.png'), fullPage: true })
   await staff.setViewportSize({ width: 390, height: 844 })
   await expect.poll(() => staff.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
@@ -79,7 +79,7 @@ test('Venue Staff hold, release and convert a coordinator booking without duplic
   await panel.getByRole('button', { name: 'Place tentative hold' }).click()
   await expect(panel.getByRole('button', { name: 'Convert Hold to Approved Booking' })).toBeVisible()
   await panel.getByRole('button', { name: 'Convert Hold to Approved Booking' }).click()
-  await expect(staff.getByLabel('Status: approved')).toBeVisible()
+  await expect(staff.getByLabel('Status: Approved')).toBeVisible()
   await expect(panel.getByText('Converted', { exact: true })).toBeVisible()
   await schedule.getByRole('button', { name: 'Refresh schedule' }).click()
   await expect(schedule.getByRole('button', { name: new RegExp(`Approved booking.*${name}`) }).first()).toBeVisible()

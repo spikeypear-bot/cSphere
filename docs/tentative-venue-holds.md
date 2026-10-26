@@ -287,3 +287,20 @@ as Tentative Hold. Approval and conversion both retain final conflict checks.
   red conflicting periods, and horizontal overflow.
 - The development Docker backend was rebuilt. Browser verification used the
   isolated test database and temporary ports 18083/14175. No commit or push.
+
+## Hold history presentation (25 October 2026)
+Each saved hold now uses the shared venue preview Card surface, responsive padding,
+status badge and information-field styles. Labels use the same weight and values
+use the same muted colour and font size as the venue/event preview. Occupied,
+expiry and creation times remain Singapore time; fields wrap into a single column
+on narrow screens. Hold creation/release/conversion and deadline rules are unchanged.
+
+Focused verification: 63 hold/booking component tests and two desktop/mobile
+browser journeys passed. Browser assertions compare actual card padding, radius,
+background, label weight and value colour with the existing previews, then check
+hold expiry and focus-refresh scroll behaviour. Build and lint passed.
+
+The hold-history status badge is aligned at the card's top right, on the same row
+as the occupied/expiry/creation facts, rather than above them. The fact grid wraps
+on narrow screens. Desktop/mobile browser checks verify the badge and facts share
+their top edge and do not overlap; both expiry/scroll journeys still pass.

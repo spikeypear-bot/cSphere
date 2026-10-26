@@ -25,6 +25,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @Transactional
 @Tag("VS07")
+@Tag("VS17")
 class VenuePersistenceTest {
     @Autowired VenueService service;
     @Autowired VenueRepository repository;
@@ -36,7 +37,7 @@ class VenuePersistenceTest {
                 .filter(value -> value != AccessibilityFeature.none).toList();
         var facilities = List.of(Facility.values());
         var saved = service.createVenue(new CreateVenueDto("Accessible venue", 100,
-                List.of(VenueLayout.theatre), "Daily", null, features, facilities));
+                List.of(VenueLayout.theatre), "Daily", null, features, facilities, com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek()));
         entityManager.flush();
         entityManager.clear();
         var dto = service.get(saved.venueId());
@@ -66,7 +67,7 @@ class VenuePersistenceTest {
     void persistsLayoutsAndEmptyOptionalSelections(boolean omitted) {
         var saved = service.createVenue(new CreateVenueDto("Test venue", 50,
                 List.of(VenueLayout.theatre, VenueLayout.classroom), "Mon-Fri 9-5", " Level 2 ",
-                omitted ? null : List.of(), omitted ? null : List.of()));
+                omitted ? null : List.of(), omitted ? null : List.of(), com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek()));
         entityManager.flush();
         entityManager.clear();
 
@@ -74,7 +75,8 @@ class VenuePersistenceTest {
         assertThat(reloaded.getSupportedLayouts()).containsExactly("theatre", "classroom");
         assertThat(reloaded.getVenueCapacity()).isEqualTo(50);
         assertThat(reloaded.getAdditionalInformation()).isEqualTo("Level 2");
-        assertThat(reloaded.getOperatingInformation()).isEqualTo("Mon-Fri 9-5");
+        assertThat(reloaded.getOperatingInformation()).startsWith("Monday 00:00\u201323:59;").endsWith("Sunday 00:00\u201323:59");
+        assertThat(service.get(saved.venueId()).operatingHours()).containsExactlyElementsOf(com.example.connect_sphere.testsupport.VenueHoursFixtures.allWeek());
         assertThat(service.get(saved.venueId()).venueAccessibilities()).isEmpty();
         assertThat(service.get(saved.venueId()).venueFacilities()).isEmpty();
         assertThat(service.list()).filteredOn(value -> value.venueId().equals(saved.venueId()))

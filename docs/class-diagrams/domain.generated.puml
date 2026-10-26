@@ -56,6 +56,8 @@ enum ActivityType {
 	{field} +venue_hold_created
 	{field} +venue_hold_expired
 	{field} +venue_hold_released
+	{field} +venue_requirements_reviewed
+	{field} +venue_suitability_changed
 	{field} +venue_unavailable
 }
 
@@ -111,6 +113,34 @@ enum ChangeRequestStatus {
 	{field} +pending
 	{field} +rejected
 	{field} +withdrawn
+}
+
+
+class VenueRequirementReview <<Entity>>  {
+	{field} +approvedAt : OffsetDateTime
+	{field} +approvedBy : UUID
+	{field} +bookingId : UUID
+	{field} +changeRequestId : UUID
+	{field} +coordinatorEmail : String
+	{field} +coordinatorId : UUID
+	{field} +coordinatorName : String
+	{field} +eventId : UUID
+	{field} +eventName : String
+	{field} +newRequirements : Map<String, Object>
+	{field} +previousRequirements : Map<String, Object>
+	{field} +reservedEnd : OffsetDateTime
+	{field} +reservedStart : OffsetDateTime
+	{field} +reviewId : UUID {id}
+	{field} +reviewNote : String
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +reviewedChecks : List<Map<String, String>>
+	{field} +reviewerName : String
+	{field} +setupDurationMinutes : int
+	{field} +status : String
+	{field} +turnaroundDurationMinutes : int
+	{field} +venueAddress : String
+	{field} +venueId : UUID
 }
 
 
@@ -424,6 +454,7 @@ class Notification <<Entity>>  {
 	{field} +readAt : OffsetDateTime
 	{field} +reason : String
 	{field} +recipientUserId : UUID
+	{field} +requirementReviewId : UUID
 	{field} +venueBookingId : UUID
 }
 
@@ -449,10 +480,16 @@ enum NotificationType {
 	{field} +event_safety_approved
 	{field} +request_cancelled
 	{field} +status_change
+	{field} +venue_arrangements_changed
+	{field} +venue_booking_approved
 	{field} +venue_booking_cancelled
+	{field} +venue_booking_rejected
 	{field} +venue_booking_requested
 	{field} +venue_hold_expired
 	{field} +venue_hold_expiring
+	{field} +venue_requirement_changed
+	{field} +venue_requirement_reviewed
+	{field} +venue_suitability_changed
 	{field} +venue_timing_changed
 	{field} +venue_timing_conflict
 	{field} +venue_unavailable
@@ -471,6 +508,7 @@ class EventSafetyReview <<Entity>>  {
 
 
 class ReadinessItemState <<Entity>>  {
+	{field} +arrangementFingerprint : String
 	{field} -checked : boolean
 	{field} -checkedAt : OffsetDateTime
 	{field} -checkedBy : UUID
@@ -572,6 +610,8 @@ class VenueBooking <<Entity>>  {
 	{field} -endDatetime : OffsetDateTime
 	{field} -rejectReason : String
 	{field} -replacesBookingId : UUID
+	{field} -requirementId : UUID
+	{field} -requirements : BookingRequirements
 	{field} -setupDurationMinutes : int
 	{field} -startDatetime : OffsetDateTime
 	{field} -submittedAt : OffsetDateTime
@@ -590,6 +630,8 @@ class VenueBookingRecord <<Entity>>  {
 	{field} +eventId : UUID
 	{field} +rejectReason : String
 	{field} +replacesBookingId : UUID
+	{field} +requirementId : UUID
+	{field} +requirements : BookingRequirements
 	{field} +setupDurationMinutes : int
 	{field} +startDatetime : OffsetDateTime
 	{field} +submittedAt : OffsetDateTime
@@ -605,6 +647,7 @@ class VenueBookingRecord <<Entity>>  {
 
 enum VenueBookingStatus {
 	{field} +approved
+	{field} +attention
 	{field} +cancelled
 	{field} +changed
 	{field} +pending
@@ -619,6 +662,7 @@ class VenueEvent <<Entity>>  {
 	{field} -eventId : UUID {id}
 	{field} -eventName : String
 	{field} -expectedAttendance : Integer
+	{field} -requiredFacilities : List<String>
 	{field} -startDatetime : OffsetDateTime
 	{field} -venueRequirements : String
 }
@@ -727,6 +771,7 @@ Event "0..*" --> "0..1" Venue : venueId
 Notification "0..*" --> "0..1" Event : eventId
 Notification "0..*" --> "0..1" EventRequest : eventRequestId
 Notification "0..*" --> "1" User : recipientUserId
+Notification "0..*" --> "0..1" VenueRequirementReview : requirementReviewId
 VenueBookingRecord "0..*" --> "0..1" Venue : alternativeVenueId
 VenueBookingRecord "0..*" --> "1" Event : eventId
 VenueBooking "0..*" --> "0..1" VenueBooking : replacesBookingId
@@ -737,5 +782,12 @@ VenueBookingRecord "0..*" --> "1" Venue : venueId
 VenueOperatingHour "0..*" --> "1" Venue : venueId
 VenueOperationalIssue "0..*" --> "1" User : createdBy
 VenueOperationalIssue "0..*" --> "1" Venue : venueId
+VenueRequirementReview "0..*" --> "1" User : approvedBy
+VenueRequirementReview "0..*" --> "1" VenueBooking : bookingId
+VenueRequirementReview "0..*" --> "1" ChangeRequest : changeRequestId
+VenueRequirementReview "0..*" --> "0..1" User : coordinatorId
+VenueRequirementReview "0..*" --> "1" Event : eventId
+VenueRequirementReview "0..*" --> "0..1" User : reviewedBy
+VenueRequirementReview "0..*" --> "1" Venue : venueId
 
 @enduml

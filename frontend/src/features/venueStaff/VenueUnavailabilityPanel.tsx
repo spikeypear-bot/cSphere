@@ -1,3 +1,4 @@
+import { BOOKING_STATUS_LABELS, type VenueBookingStatus } from '../../types/venueBookingStatus'
 import { useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -10,6 +11,7 @@ import './VenueUnavailability.css'
 
 export interface UnavailablePeriod {
   unavailabilityId: string; startDateTime: string; endDateTime: string; reason: string
+  releasedAt?: string | null; releaseReason?: string | null
 }
 export interface ScheduleBooking {
   bookingId: string; eventName: string; status: string; startDateTime: string; endDateTime: string
@@ -20,6 +22,7 @@ export interface ScheduleBooking {
 interface Preview { affectedBookings: ScheduleBooking[]; previewToken: string }
 export interface OccupancySettings { setupMinutes: number; turnaroundMinutes: number }
 export interface VenueSchedule {
+  operationalIssues?: { issueId: string; description: string; affectedFrom: string; affectedUntil: string }[]
   holds?: import('../../types/venueHold').VenueHold[]
   settings: OccupancySettings; bookings: ScheduleBooking[]; unavailablePeriods: UnavailablePeriod[]
   activeConflicts?: import('./BookingConflictList').BookingOverlap[]
@@ -36,6 +39,11 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [success, setSuccess] = useState(false)
+  const [release, setRelease] = useState<string | null>(null)
+  const [releaseReason, setReleaseReason] = useState('')
+  const [releaseError, setReleaseError] = useState('')
+  const [releaseSuccess, setReleaseSuccess] = useState('')
+  const [showHistory, setShowHistory] = useState(false)
   const dateErrors = unavailabilityDateErrors(start, end)
   const startError = start || errors.start ? dateErrors.start : undefined
   const endError = end || errors.end ? dateErrors.end : undefined
@@ -71,6 +79,19 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
       if (result.affectedBookings.length) setPreview(result)
       else await save(result)
     } catch (e) { setError(message(e, 'Could not check affected bookings. Nothing was saved.')) }
+    finally { setBusy(false) }
+  }
+
+  async function releasePeriod() {
+    if (!releaseReason.trim() || releaseReason.trim().length > 2000) {
+      setReleaseError('Explain the release in 1 to 2000 characters.'); return
+    }
+    setBusy(true); setReleaseError('')
+    try {
+      await apiClient.patch(`/venues/${venueId}/unavailability/${release}/release`, { reason: releaseReason.trim() })
+      setRelease(null); setReleaseReason(''); setReleaseSuccess('Unavailable period released. Booking statuses and reservations are unchanged.')
+      periods.retry(); onRecorded()
+    } catch (e) { setReleaseError(message(e, 'Could not release this period. Please try again.')) }
     finally { setBusy(false) }
   }
 
@@ -111,7 +132,8 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
         <h3>Existing bookings will be affected</h3>
         <p>These events will not be cancelled automatically. Alternative venue arrangements will be required.</p>
         <ul>{preview.affectedBookings.map(b => <li key={b.bookingId}>
-          <strong>{b.eventName}</strong> — {range(b.startDateTime, b.endDateTime)} · {b.status}
+          <strong>{b.eventName}</strong> — {range(b.startDateTime, b.endDateTime)} · <span className="venue-card-preview__tag booking-status-tag" data-booking-status={b.status}>{BOOKING_STATUS_LABELS[b.status as VenueBookingStatus] ?? 'Unknown status'}</span>
+          <p>Event ID: {b.eventId} · Booking ID: {b.bookingId}</p>
           <p>Including setup and turnaround: {range(b.effectiveStart, b.effectiveEnd)}</p>
         </li>)}</ul>
         <div className="venue-unavailability__actions">
@@ -129,9 +151,36 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
       : <ul className="unavailability-periods">{periods.data.map(p => <li key={p.unavailabilityId}>
         <Card className="feature-skeleton__body venue-unavailability__period">
           <h3>{range(p.startDateTime, p.endDateTime)}</h3><p>{p.reason}</p>
+          {release === p.unavailabilityId ? <form onSubmit={e => { e.preventDefault(); void releasePeriod() }}>
+            <div className="field">
+              <label htmlFor="unavailability-release-reason">Reason for releasing this period</label>
+              <textarea id="unavailability-release-reason" maxLength={2000} value={releaseReason} disabled={busy}
+                onChange={e => setReleaseReason(e.target.value)} />
+            </div>
+            <p>Releasing this period makes its time available again. Existing booking statuses and reservations stay unchanged.</p>
+            {releaseError && <p role="alert" className="field-error">{releaseError}</p>}
+            <div className="venue-unavailability__actions">
+              <Button type="submit" disabled={busy}>{busy ? 'Releasing…' : 'Confirm release'}</Button>
+              <Button type="button" variant="secondary" disabled={busy} onClick={() => setRelease(null)}>Cancel release</Button>
+            </div>
+          </form> : <Button variant="secondary" disabled={busy} onClick={() => {
+            setRelease(p.unavailabilityId); setReleaseReason(''); setReleaseError(''); setReleaseSuccess('')
+          }}>Release unavailable period</Button>}
         </Card>
       </li>)}</ul>}
+    {releaseSuccess && <p role="status">{releaseSuccess}</p>}
+    <Button variant="secondary" onClick={() => setShowHistory(value => !value)}>{showHistory ? 'Hide unavailability history' : 'View unavailability history'}</Button>
+    {showHistory && <UnavailabilityHistory key={`${venueId}-${releaseSuccess}`} venueId={venueId} />}
   </section>
+}
+
+function UnavailabilityHistory({ venueId }: { venueId: string }) {
+  const history = useVenueRead<UnavailablePeriod[]>(`/venues/${venueId}/unavailability/history`)
+  if (history.error) return <p role="alert">{history.error} <Button onClick={history.retry}>Retry unavailability history</Button></p>
+  if (!history.data) return <p role="status">Loading unavailability history…</p>
+  return <div aria-label="Unavailability history">{history.data.length === 0 ? <p>No unavailable periods recorded.</p>
+    : <ul>{history.data.map(p => <li key={p.unavailabilityId}>{range(p.startDateTime, p.endDateTime)} — {p.reason}
+      {p.releasedAt ? <p>Released: {p.releaseReason}</p> : <p>Active</p>}</li>)}</ul>}</div>
 }
 
 export function VenueOccupancySettings({ venueId, onSaved }: { venueId: string; onSaved?: () => void }) {
@@ -158,11 +207,17 @@ function SettingsForm({ venueId, settings, onSaved }: { venueId: string; setting
       finally { setBusy(false) }
     }}>
       <fieldset disabled={busy}>
+        <div className="field">
         <label htmlFor="venue-setup">Setup (minutes)</label>
         <input id="venue-setup" required type="number" min={0} max={10080} step={1} value={setup} onChange={e => setSetup(e.target.value)} />
+        </div>
+        <div className="field">
         <label htmlFor="venue-turnaround">Turnaround (minutes)</label>
         <input id="venue-turnaround" required type="number" min={0} max={10080} step={1} value={turnaround} onChange={e => setTurnaround(e.target.value)} />
+        </div>
+        <div className="booking-approval__actions">
         <Button type="submit">Save setup and turnaround</Button>
+        </div>
       </fieldset>
       {feedback && <p role="status">{feedback}</p>}
     </form>
