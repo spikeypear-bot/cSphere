@@ -165,12 +165,13 @@ export function EventDetailsPage() {
         active={event.status !== 'completed' && event.status !== 'cancelled'}
         canRebook={planning || event.status === 'confirmed'}
         onCancelled={() => { setBookingReloadToken(n => n + 1); setReloadToken(n => n + 1); readinessState.reload() }} /> : null}
-      {role === 'coordinator' && planning ? (
+      {/* EC-NEW3 (D36): revision is reachable for any non-cancelled, non-completed event, not just Planning. */}
+      {role === 'coordinator' && event.status !== 'completed' && event.status !== 'cancelled' ? (
         <Card className="event-details__venue">
           <h2>Equipment</h2>
-          <p>Submit the equipment needs for Technical Support Staff to review and prepare.</p>
+          <p>Submit the equipment needs for Technical Support Staff to review and prepare, or revise an existing request.</p>
           <Link className="button button--primary" to={`/coordinator/events/${event.eventId}/equipment-request`}>
-            Request equipment
+            {planning ? 'Request equipment' : 'Manage equipment request'}
           </Link>
         </Card>
       ) : null}
