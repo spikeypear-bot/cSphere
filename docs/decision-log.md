@@ -759,6 +759,18 @@ while planning against the code:
   reservations are still held. Readiness reports it as outstanding, so the
   event cannot go to the safety check or be confirmed until it is resolved.
 
+**Before approval: a rough availability check (user, 2026-10-27).** The
+user wants a change approved only once equipment can roughly be confirmed
+to go through, without waiting on Technical Support (that would be the
+rejected approach 2). So when a change moves the event's times,
+`ChangeImpactService` also checks, for each kind the event's processing or
+approved requests ask for, how many are free at the new time
+(`EquipmentReservationService.needsAt`, reusing D32's availability
+calculation; the event's own reservations count as free, since they would
+move with it). Too few is an `attention` item the coordinator must
+acknowledge, as venue's "no longer fits" already is; enough is shown as OK.
+It never names the other events holding the stock.
+
 This revises D36's "What triggers a revision: nothing automatic": approval
 now flags the request, but *what* the request should say is still the
 coordinator's judgment. Two ways to clear it: **Revise** (D36, which now

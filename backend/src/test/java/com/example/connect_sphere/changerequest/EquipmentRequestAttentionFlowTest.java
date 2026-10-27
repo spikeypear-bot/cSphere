@@ -103,15 +103,20 @@ class EquipmentRequestAttentionFlowTest {
         return requestId;
     }
 
-    /** The organiser asks for {@code details}; the coordinator approves, acknowledging every attention item. */
-    private void changeApproved(UUID eventId, String details) throws Exception {
+    /** The organiser asks for {@code details}; returns the change request's id. */
+    private UUID asked(UUID eventId, String details) throws Exception {
         sync();
         UUID requestId = jdbc.queryForObject("SELECT request_id FROM event_requests WHERE event_id = ?", UUID.class, eventId);
         String asked = mvc.perform(post("/api/change-requests").with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON)
                         .content("{\"requestId\":\"" + requestId + "\",\"reason\":\"Plans changed\",\"details\":" + details + "}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         sync();
-        UUID changeId = UUID.fromString(flow.read(asked).get("changeRequestId").asString());
+        return UUID.fromString(flow.read(asked).get("changeRequestId").asString());
+    }
+
+    /** The organiser asks for {@code details}; the coordinator approves, acknowledging every attention item. */
+    private void changeApproved(UUID eventId, String details) throws Exception {
+        UUID changeId = asked(eventId, details);
         List<String> keys = new ArrayList<>();
         flow.read(mvc.perform(get("/api/change-requests/" + changeId).with(flow.as("ec1")))
                         .andExpect(status().isOk()).andReturn().getResponse().getContentAsString())
@@ -237,5 +242,32 @@ class EquipmentRequestAttentionFlowTest {
         changeApproved(eventId, details("13:00", "16:00", "Two more microphones"));
 
         assertThat(reasonOf(requestId)).isEqualTo(COVERAGE);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (negative): before approving, the coordinator sees that the equipment is not free at the new time")
+    void theImpactShowsEquipmentNotFreeAtTheNewTime() throws Exception {
+        UUID eventId = event();
+        UUID requestId = equipmentRequest(eventId, true);
+        UUID projector = jdbc.queryForObject(
+                "SELECT equipment_id FROM equipment_request_equipments WHERE request_id = ?", UUID.class, requestId);
+        // Another event holds 9 of the 10 projectors 13:00-16:00 Singapore time; this event needs 2.
+        UUID other = flow.approvedEvent("eo2", "ec1", FlowSupport.requestBody("Other Gala", 100, "none"));
+        sync();
+        jdbc.update("""
+                INSERT INTO equipment_logs (log_id, event_id, equipment_id, quantity, loaned_from, loaned_until, spare)
+                VALUES (?, ?, ?, 9, '2027-03-10T05:00:00Z', '2027-03-10T08:00:00Z', false)
+                """, UUID.randomUUID(), other, projector);
+
+        UUID changeId = asked(eventId, details("13:00", "16:00", null));
+
+        String body = mvc.perform(get("/api/change-requests/" + changeId).with(flow.as("ec1")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        List<String> keys = new ArrayList<>();
+        flow.read(body).get("impact").forEach(i -> {
+            if ("attention".equals(i.get("status").asString())) keys.add(i.get("key").asString());
+        });
+        assertThat(keys).contains("equipment:available:" + projector);
+        assertThat(body).contains("Only 1 of the 2 needed is free").doesNotContain("Other Gala");
     }
 }

@@ -1,5 +1,6 @@
 package com.example.connect_sphere.changerequest;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -256,6 +257,21 @@ public class ChangeImpactService {
                             r.quantity() + " reserved " + period(r.loanedFrom(), r.loanedUntil())
                                     + ". Technical Support need to move the reservation."));
                 }
+            }
+        }
+        if (timesChanged) {
+            // D37: a rough check that the equipment could still be had at the new time.
+            Instant start = proposed.startDatetime().toInstant();
+            Instant end = proposed.endDatetime().toInstant();
+            for (EquipmentReservationService.NeedAt need : equipment.needsAt(event.getEventId(), start, end)) {
+                boolean enough = need.free() >= need.needed();
+                items.add(new ImpactItem("equipment:available:" + need.equipmentId(), "equipment",
+                        enough ? OK : ATTENTION,
+                        enough ? need.equipmentName() + " is free at the new time"
+                                : "Not enough " + need.equipmentName() + " at the new time",
+                        enough ? need.needed() + " needed, " + need.free() + " free " + period(start, end) + "."
+                                : "Only " + need.free() + " of the " + need.needed() + " needed is free "
+                                        + period(start, end) + ". Technical Support may not be able to move it."));
             }
         }
         if (changedFields.contains("equipmentRequirements")) {
