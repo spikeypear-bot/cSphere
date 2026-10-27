@@ -718,6 +718,79 @@ approved change.
 
 **Migration:** V52 (`equipment_request_status` adds `superseded`).
 
+### D37 — EC-NEW3: an approved change flags the equipment request 'attention'
+
+2026-10-27, branch `feat/ec-new3-equipment-revision`. Design:
+`docs/superpowers/specs/2026-10-27-equipment-request-attention-design.md`.
+
+**Problem.** D36 gave the coordinator a way to revise an equipment request,
+but nothing told them *when* to. An approved change can move the event
+outside a reservation's loan window, or change the equipment requirements
+text, while the `equipment_requests` row keeps saying `approved`. The venue
+side already solves the same problem automatically: VS17 re-checks bookings
+in the approval transaction and flips them to `attention`.
+
+**Approaches considered.**
+1. **Build on TS11's `equipment_change_reviews`.** Rejected: an unmerged
+   branch, human-initiated rather than automatic, and it re-couples two
+   stories D36 kept independent.
+2. **Block `ChangeRequestService.approve()` until equipment is reconfirmed.**
+   Rejected: inconsistent with venue (approve now, flag after), and it turns
+   a single-role decision into a cross-role gate with no precedent here.
+3. **Mirror venue's `attention` on `equipment_requests` (chosen).**
+   `EquipmentRequestAttentionService` joins the approval transaction
+   (`Propagation.MANDATORY`), re-checks coverage with the predicate
+   `ChangeImpactService` already uses, and flags the request.
+
+**Decision (user, 2026-10-27).** Approach 3, with three refinements found
+while planning against the code:
+- **Only `approved` requests are flagged, never `processing`.** "Mark still
+  suitable" returns a request to `approved`; flagging a processing one would
+  let the coordinator approve something Technical Support never decided. A
+  processing request has no reservations yet and is reviewed against the
+  current details; the coordinator can still revise it.
+- **The reason is a column** (`equipment_requests.attention_reason`), shown
+  on the page directly, like `reject_reason`, rather than parsed back out of
+  the timeline.
+- **`attention` still counts as approved** wherever Technical Support's
+  reservations matter (cancellation and confirmation notices, the
+  organiser's arrangements, the TS09 ledger and damage impact), through
+  `EquipmentRequestStatus.heldByTechnicalSupport()`, because the
+  reservations are still held. Readiness reports it as outstanding, so the
+  event cannot go to the safety check or be confirmed until it is resolved.
+
+This revises D36's "What triggers a revision: nothing automatic": approval
+now flags the request, but *what* the request should say is still the
+coordinator's judgment. Two ways to clear it: **Revise** (D36, which now
+also supersedes an `attention` request), or **Mark still suitable**
+(`PATCH /events/{eventId}/equipment-request/{requestId}/still-suitable`,
+required note of 1–2000 characters, items and reservations untouched).
+The latter is meant for a wording-only change; the page says a time change
+that misses a reservation needs a revision, but the server does not enforce
+which reason allows which path, since the coordinator is the judge (D36).
+The change log records both (`equipment_request_attention`,
+`equipment_request_marked_suitable`, EC only, through `EventChange`, D26),
+and the coordinator gets an `equipment_request_attention` notification.
+
+**Evidence:**
+- **Backend:** `EquipmentRequestAttentionFlowTest` (real PostgreSQL): a time
+  outside the reservation and a requirements-text change each flag the
+  request, log it and notify the coordinator; a window still covered, a
+  processing request and an unrelated change are left alone.
+  `EquipmentRequestFlowTest`: mark still suitable (happy, blank and
+  over-long note, another coordinator, Technical Support, not flagged).
+  `EventLifecycleServiceTest`: readiness outstanding while flagged.
+  `EventLifecycleCancellationTest`: Technical Support still told on
+  cancellation. `EquipmentRequestServiceTest`: revising a flagged request.
+  `CoordinatorAssignmentScopeTest`: the new endpoint is assignment-scoped.
+- **Frontend:** `EquipmentRequestPage.test.tsx` (Needs attention, reason,
+  both actions, note required); `EventDetailsPage.test.tsx` (card names the
+  problem and links to resolve it).
+
+**Migration:** V53 (`equipment_request_status` adds `attention`;
+`equipment_requests.attention_reason`; `notification_type` adds
+`equipment_request_attention`).
+
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
 - **Raised by:** repository/backlog inspection, 2026-09-12.
 - **Context:** Backlog `Estimation` sheet: 310 total points ÷ 4 sprints = 77.5 planned velocity/sprint. Actual (Done-only) velocity to date: 8 points. The Week 3 course slide deck's own worked example uses a velocity of 15 for a comparably-sized team — 77.5 is roughly 5× that.
