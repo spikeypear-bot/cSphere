@@ -335,8 +335,9 @@ export function EquipmentRequestPage() {
             <Notice tone="info" as="div">
               <p>{activeRequest.attentionReason}</p>
               <p>
-                Mark it still suitable only if nothing about the items needs to change. A new time that a
-                reservation no longer covers needs a revision.
+                A new time that a reservation no longer covers is reviewed by Technical Support: if they find
+                it still suitable this clears; otherwise revise the request. Mark it still suitable yourself
+                only when just the wording changed.
               </p>
             </Notice>
           ) : null}

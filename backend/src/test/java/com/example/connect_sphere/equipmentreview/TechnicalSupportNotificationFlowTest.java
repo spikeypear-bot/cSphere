@@ -440,6 +440,99 @@ class TechnicalSupportNotificationFlowTest {
                 UUID.class, reviewId)).isEqualTo(flow.idOf("ts1"));
     }
 
+    // ---- AC13 (amended, EC-NEW3 D37): the outcome drives the equipment request's 'attention' flag ----
+
+    private ResultActions outcome(UUID reviewId, String body) throws Exception {
+        return mvc.perform(post("/api/equipment-change-reviews/" + reviewId + "/outcome").with(flow.as("ts1"))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private ResultActions markStillSuitable(UUID eventId, UUID requestId) throws Exception {
+        return mvc.perform(patch("/api/events/" + eventId + "/equipment-request/" + requestId + "/still-suitable")
+                .with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"Looks fine\"}"));
+    }
+
+    private String requestStatus(UUID requestId) {
+        return jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id = ?", String.class, requestId);
+    }
+
+    private String reservationsOf(UUID eventId) {
+        return jdbc.queryForObject("SELECT string_agg(log_id::text || quantity || loaned_from || loaned_until, ',')"
+                + " FROM equipment_logs WHERE event_id = ?", String.class, eventId);
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (happy): Technical Support finding a new time still suitable clears the coordinator's equipment flag and leaves the reservations as they were")
+    void stillSuitableClearsTheFlag() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 2);
+        approved(asked(eventId, "10:00", "13:00", 150, null));
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+        String before = reservationsOf(eventId);
+
+        outcome(reviewOf(eventId), "{\"outcome\":\"still_suitable\",\"note\":\"Mics are free all day\"}")
+                .andExpect(status().isOk());
+
+        assertThat(requestStatus(requestId)).isEqualTo("approved");
+        assertThat(jdbc.queryForObject("SELECT attention_reason FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId)).isNull();
+        assertThat(reservationsOf(eventId)).isEqualTo(before);
+        assertThat(jdbc.queryForList("SELECT message FROM event_request_activity WHERE event_id = ? "
+                + "AND activity_type = 'equipment_request_marked_suitable'", String.class, eventId))
+                .containsExactly("Technical Support found the equipment request still suitable: Mics are free all day");
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (conflict): still suitable on an older change leaves the flag while a later change's review is open, and clears it once that one is still suitable too")
+    void anOpenLaterReviewKeepsTheFlag() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 2);
+        approved(asked(eventId, "10:00", "13:00", 150, null));
+        UUID first = reviewOf(eventId);
+        approved(asked(eventId, "11:00", "14:00", 150, null));
+        UUID second = reviewOf(eventId);
+        assertThat(second).isNotEqualTo(first);
+
+        outcome(first, "{\"outcome\":\"still_suitable\"}").andExpect(status().isOk());
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+
+        outcome(second, "{\"outcome\":\"still_suitable\"}").andExpect(status().isOk());
+        assertThat(requestStatus(requestId)).isEqualTo("approved");
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (negative): after Technical Support say a wording change needs the coordinator, the coordinator cannot mark it still suitable and it stays flagged")
+    void needsCoordinatorActionBlocksMarkingStillSuitable() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 1);
+        approved(asked(eventId, "09:00", "12:00", 150, "Two extra microphones"));
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+        outcome(reviewOf(eventId), "{\"outcome\":\"needs_coordinator_action\",\"note\":\"Ask for two more mics\"}")
+                .andExpect(status().isOk());
+
+        markStillSuitable(eventId, requestId).andExpect(status().isConflict());
+
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (negative): a new time a reservation no longer covers is Technical Support's to clear; the coordinator cannot mark it still suitable")
+    void theCoordinatorCannotClearATimeFlag() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 2);
+        approved(asked(eventId, "10:00", "13:00", 150, null));
+        String before = reservationsOf(eventId);
+
+        markStillSuitable(eventId, requestId).andExpect(status().isConflict());
+
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+        assertThat(reservationsOf(eventId)).isEqualTo(before);
+    }
+
     @Test
     @DisplayName("TS11 AC11 (negative): needing the coordinator without a note is refused and the event stays flagged")
     void aNoteIsRequiredForCoordinatorAction() throws Exception {

@@ -43,6 +43,14 @@ public class EquipmentRequestService {
      * absent in plain unit tests, where no request is for a shortfall. */
     private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
 
+    /** TS11 (D34): Technical Support's reviews, which gate "mark still suitable". */
+    private com.example.connect_sphere.equipmentreview.EquipmentChangeReviewRepository changeReviews;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setChangeReviews(com.example.connect_sphere.equipmentreview.EquipmentChangeReviewRepository changeReviews) {
+        this.changeReviews = changeReviews;
+    }
+
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
         this.shortfalls = shortfalls;
@@ -192,8 +200,10 @@ public class EquipmentRequestService {
 
     /**
      * EC-NEW3 (D37): the coordinator judges that a request an approved change
-     * flagged still fits, e.g. only the requirements wording changed. It is
-     * approved again; its items and reservations are untouched.
+     * flagged still fits because only the requirements wording changed. It is
+     * approved again; its items and reservations are untouched. A time change
+     * is Technical Support's to clear (TS11 AC13, amended), and their "needs
+     * coordinator action" leaves only a revision.
      */
     @Transactional
     public EquipmentRequestDetailsResponse markStillSuitable(
@@ -206,6 +216,18 @@ public class EquipmentRequestService {
                 .findFirst()
                 .orElseThrow(() -> new EquipmentRequestStateException(
                         "This equipment request does not need attention."));
+        // EC-NEW3 D37 with TS11 AC13 (amended): a time a reservation no longer covers is Technical Support's call.
+        if (com.example.connect_sphere.changerequest.EquipmentRequestAttentionService.COVERAGE_BROKEN
+                .equals(request.getAttentionReason())) {
+            throw new EquipmentRequestStateException(
+                    "A reservation no longer covers the event's new time. Wait for Technical Support's review, or revise the request.");
+        }
+        if (changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
+                .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.ReviewOutcome.needs_coordinator_action)
+                .isPresent()) {
+            throw new EquipmentRequestStateException(
+                    "Technical Support said this request needs changing. Revise the request instead.");
+        }
         String note = rawNote == null ? "" : rawNote.strip();
         if (note.isEmpty() || note.length() > MAX_REQUIREMENT_LENGTH) {
             throw new InvalidEquipmentRequestException(

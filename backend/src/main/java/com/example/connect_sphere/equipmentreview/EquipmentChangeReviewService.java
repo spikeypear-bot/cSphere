@@ -11,11 +11,14 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import com.example.connect_sphere.activity.entity.ActivityType;
+import com.example.connect_sphere.activity.service.EventChange;
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
 import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Detail;
@@ -23,6 +26,9 @@ import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Outco
 import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Reservation;
 import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Summary;
 import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Values;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.event.service.EventNotFoundException;
@@ -33,8 +39,10 @@ import com.example.connect_sphere.user.repository.UserRepository;
 /**
  * TS11 AC10-AC14: Technical Support read and record their review of an
  * approved change's equipment impact; the assigned coordinator (and the Lead,
- * read-only) see the outcome. Recording an outcome changes nothing but the
- * review: no reservation, equipment request or event status (AC13).
+ * read-only) see the outcome. Recording an outcome changes no reservation
+ * or event status (AC13). Since EC-NEW3 (D37) it drives the equipment
+ * request's 'attention' flag: "still suitable" clears it once no review of
+ * the event is open; "needs coordinator action" leaves it for a revision.
  */
 @Service
 public class EquipmentChangeReviewService {
@@ -46,6 +54,9 @@ public class EquipmentChangeReviewService {
     private final EquipmentReservationService reservations;
     private final UserRepository users;
     private final Clock clock;
+    // Setter-injected, as in EquipmentRequestService; absent in plain unit tests.
+    private EquipmentRequestRepository requests;
+    private ApplicationEventPublisher changeLog;
 
     @Autowired
     public EquipmentChangeReviewService(EquipmentChangeReviewRepository reviews, EventRepository events,
@@ -60,6 +71,16 @@ public class EquipmentChangeReviewService {
         this.reservations = reservations;
         this.users = users;
         this.clock = clock;
+    }
+
+    @Autowired(required = false)
+    void setRequests(EquipmentRequestRepository requests) {
+        this.requests = requests;
+    }
+
+    @Autowired(required = false)
+    void setChangeLog(ApplicationEventPublisher changeLog) {
+        this.changeLog = changeLog;
     }
 
     /** Technical Support's queue: reviews still needed first, then newest first. */
@@ -101,7 +122,33 @@ public class EquipmentChangeReviewService {
         review.setOutcomeNote(note);
         review.setReviewedBy(reviewerId);
         review.setReviewedAt(OffsetDateTime.now(clock));
-        return detail(reviews.save(review));
+        EquipmentChangeReview saved = reviews.save(review);
+        if (outcome == ReviewOutcome.still_suitable) {
+            clearFlagIfSettled(saved.getEventId(), reviewerId, note);
+        }
+        return detail(saved);
+    }
+
+    /** AC13 (amended, EC-NEW3 D37): Technical Support judged the equipment
+     * still fits, so the request's 'attention' flag is cleared — but only
+     * when this is the latest word: no review of the event is still open and
+     * the newest one says still suitable. */
+    private void clearFlagIfSettled(UUID eventId, UUID reviewerId, String note) {
+        if (requests == null) return;
+        List<EquipmentChangeReview> all = reviews.findByEventIdOrderByChangedAtDesc(eventId);
+        if (all.stream().anyMatch(EquipmentChangeReview::needsReview)
+                || all.getFirst().getOutcome() != ReviewOutcome.still_suitable) return;
+        events.findForUpdate(eventId); // event before its requests, as ChangeRequestService.approve() locks them
+        List<EquipmentRequest> flagged = requests.findByEventIdForUpdate(eventId).stream()
+                .filter(r -> r.getStatus() == EquipmentRequestStatus.attention)
+                .toList();
+        if (flagged.isEmpty()) return;
+        flagged.forEach(EquipmentRequest::markStillSuitable);
+        requests.saveAll(flagged);
+        if (changeLog != null) {
+            changeLog.publishEvent(new EventChange(eventId, ActivityType.equipment_request_marked_suitable, reviewerId,
+                    "Technical Support found the equipment request still suitable" + (note == null ? "" : ": " + note)));
+        }
     }
 
     /** AC12: the assigned coordinator, or the Lead (read-only), sees the outcomes for an event. */
