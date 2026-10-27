@@ -89,6 +89,16 @@ public class EquipmentRequestController {
         return service.revise(userIdOf(jwt), eventId, request);
     }
 
+    // EC-NEW3 (D37): clears 'attention' without touching items or reservations.
+    @PatchMapping("/events/{eventId}/equipment-request/{requestId}/still-suitable")
+    public EquipmentRequestDetailsResponse markStillSuitable(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @PathVariable UUID requestId,
+            @RequestBody MarkStillSuitableRequest request) {
+        return service.markStillSuitable(userIdOf(jwt), eventId, requestId, request == null ? null : request.note());
+    }
+
     @PatchMapping("/equipment-requests/{requestId}/status")
     public EquipmentRequestDetailsResponse updateStatus(
             @PathVariable UUID requestId,

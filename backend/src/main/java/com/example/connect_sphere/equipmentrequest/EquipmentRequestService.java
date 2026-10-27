@@ -181,6 +181,34 @@ public class EquipmentRequestService {
         return responseOf(saved, validated);
     }
 
+    /**
+     * EC-NEW3 (D37): the coordinator judges that a request an approved change
+     * flagged still fits, e.g. only the requirements wording changed. It is
+     * approved again; its items and reservations are untouched.
+     */
+    @Transactional
+    public EquipmentRequestDetailsResponse markStillSuitable(
+            UUID coordinatorId, UUID eventId, UUID requestId, String rawNote) {
+        Event event = events.findForUpdate(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        requireAssigned(coordinatorId, event);
+        EquipmentRequest request = requests.findByEventIdForUpdate(eventId).stream()
+                .filter(r -> r.getId().equals(requestId))
+                .filter(r -> r.getStatus() == EquipmentRequestStatus.attention)
+                .findFirst()
+                .orElseThrow(() -> new EquipmentRequestStateException(
+                        "This equipment request does not need attention."));
+        String note = rawNote == null ? "" : rawNote.strip();
+        if (note.isEmpty() || note.length() > MAX_REQUIREMENT_LENGTH) {
+            throw new InvalidEquipmentRequestException(
+                    "Say why the request is still suitable, in 2000 characters or fewer.");
+        }
+        request.markStillSuitable();
+        EquipmentRequest saved = requests.save(request);
+        announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_request_marked_suitable,
+                coordinatorId, "Marked the equipment request still suitable: " + note);
+        return EquipmentRequestDetailsResponse.from(saved, lines.findByIdRequestId(saved.getId()));
+    }
+
     /** The shared rules {@link #submit} and {@link #revise} both apply to
      * their new items: at least one item or a note, each item valid and
      * named once, every equipment type real. */

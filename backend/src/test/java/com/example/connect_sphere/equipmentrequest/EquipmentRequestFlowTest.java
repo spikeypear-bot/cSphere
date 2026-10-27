@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -492,5 +493,106 @@ class EquipmentRequestFlowTest {
         revise(eventId, username, body("Hijacked", item(equipment("EC07 Microphone"), 1)))
                 .andExpect(status().isForbidden());
         assertThat(statusOf(requestId)).isEqualTo("processing");
+    }
+
+    // ---- EC-NEW3 (D37): the coordinator marks a flagged request still suitable ----
+
+    /** An approved request with a reservation, flagged as approving a change would flag it. */
+    private UUID flagged(UUID eventId) throws Exception {
+        UUID projector = equipment("D37 Projector");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+        jdbc.update("UPDATE equipment_requests SET status = 'attention', attention_reason = ? WHERE request_id = ?",
+                "The event's equipment requirements text changed.", requestId);
+        sync();
+        return requestId;
+    }
+
+    private ResultActions markStillSuitable(UUID eventId, UUID requestId, String as, String note) throws Exception {
+        return mvc.perform(patch("/api/events/" + eventId + "/equipment-request/" + requestId + "/still-suitable")
+                .with(flow.as(as)).contentType(MediaType.APPLICATION_JSON)
+                .content(note == null ? "{}" : "{\"note\":\"" + note + "\"}"));
+    }
+
+    private java.util.List<String> suitableEntries(UUID eventId) {
+        sync();
+        return jdbc.queryForList("""
+                SELECT message FROM event_request_activity
+                WHERE event_id = ? AND activity_type = 'equipment_request_marked_suitable'
+                """, String.class, eventId);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (D37) (happy): the coordinator marks a flagged request still suitable; it is approved again, with the note on the timeline")
+    void markingAFlaggedRequestStillSuitableApprovesItAgain() throws Exception {
+        UUID eventId = event();
+        UUID requestId = flagged(eventId);
+
+        markStillSuitable(eventId, requestId, "ec1", "Wording only, same projectors")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("approved"))
+                .andExpect(jsonPath("$.attentionReason").doesNotExist());
+
+        assertThat(statusOf(requestId)).isEqualTo("approved");
+        assertThat(jdbc.queryForObject("SELECT attention_reason FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId)).isNull();
+        assertThat(suitableEntries(eventId)).containsExactly("Marked the equipment request still suitable: Wording only, same projectors");
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+    }
+
+    @ParameterizedTest
+    @Tag("EC-NEW3")
+    @ValueSource(ints = {0, 2001})
+    @DisplayName("EC-NEW3 (D37) (negative): a missing or over-long note is refused and the request stays flagged")
+    void aMissingOrOverLongNoteIsRefused(int length) throws Exception {
+        UUID eventId = event();
+        UUID requestId = flagged(eventId);
+
+        markStillSuitable(eventId, requestId, "ec1", length == 0 ? "   " : "x".repeat(length))
+                .andExpect(status().isUnprocessableEntity());
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+        assertThat(suitableEntries(eventId)).isEmpty();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (D37) (negative): a coordinator not assigned to the event cannot mark it still suitable")
+    void anotherCoordinatorCannotMarkItStillSuitable() throws Exception {
+        UUID eventId = event();
+        UUID requestId = flagged(eventId);
+
+        markStillSuitable(eventId, requestId, "ec2", "Looks fine").andExpect(status().isForbidden());
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (D37) (negative): Technical Support cannot mark a flagged request still suitable")
+    void technicalSupportCannotMarkItStillSuitable() throws Exception {
+        UUID eventId = event();
+        UUID requestId = flagged(eventId);
+
+        markStillSuitable(eventId, requestId, "ts1", "Looks fine").andExpect(status().isForbidden());
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+        assertThat(suitableEntries(eventId)).isEmpty();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (D37) (conflict): a request that is not flagged cannot be marked still suitable")
+    void aRequestNotFlaggedCannotBeMarkedStillSuitable() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("D37 Projector");
+        UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
+
+        markStillSuitable(eventId, requestId, "ec1", "Looks fine").andExpect(status().isConflict());
+
+        assertThat(statusOf(requestId)).isEqualTo("processing");
+        assertThat(suitableEntries(eventId)).isEmpty();
     }
 }
