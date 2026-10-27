@@ -32,6 +32,9 @@ public class EquipmentRequest {
     @Column(name = "reject_reason")
     private String rejectReason;
 
+    @Column(name = "attention_reason")
+    private String attentionReason;
+
     protected EquipmentRequest() {}
 
     public EquipmentRequest(UUID id, UUID eventId, EquipmentRequestStatus status, String technicalRequirement) {
@@ -46,6 +49,7 @@ public class EquipmentRequest {
     public EquipmentRequestStatus getStatus() { return status; }
     public String getTechnicalRequirement() { return technicalRequirement; }
     public String getRejectReason() { return rejectReason; }
+    public String getAttentionReason() { return attentionReason; }
 
     public void decide(EquipmentRequestStatus status, String rejectReason) {
         this.status = status;
@@ -56,5 +60,17 @@ public class EquipmentRequest {
      * not deleted, as the before the audit needs. */
     public void supersede() {
         this.status = EquipmentRequestStatus.superseded;
+    }
+
+    /** EC-NEW3 (D37): an approved change means this approved request may no longer fit. */
+    public void flagAttention(String reason) {
+        this.status = EquipmentRequestStatus.attention;
+        this.attentionReason = reason;
+    }
+
+    /** EC-NEW3 (D37): the coordinator judged nothing about the items needs to change. */
+    public void markStillSuitable() {
+        this.status = EquipmentRequestStatus.approved;
+        this.attentionReason = null;
     }
 }

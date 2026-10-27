@@ -5,5 +5,13 @@ public enum EquipmentRequestStatus {
     approved,
     rejected,
     /** EC-NEW3 (D36, V52): replaced by a coordinator's complete revision. */
-    superseded
+    superseded,
+    /** EC-NEW3 (D37, V53): approved, but an approved change means it may no
+     * longer fit; reservations are still held until the coordinator resolves it. */
+    attention;
+
+    /** Approved by Technical Support with its reservations still held. */
+    public boolean heldByTechnicalSupport() {
+        return this == approved || this == attention;
+    }
 }

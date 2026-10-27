@@ -115,6 +115,24 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37) (happy): revising a request that needs attention supersedes it")
+    void revisingARequestThatNeedsAttentionSupersedesIt() {
+        EquipmentRequest flagged = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
+        flagged.flagAttention("The event's equipment requirements text changed.");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(flagged));
+
+        var result = service.revise(COORDINATOR_ID, EVENT_ID,
+                new SubmitEquipmentRequest("Four wireless microphones now",
+                        List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 4))));
+
+        assertThat(result.status()).isEqualTo("processing");
+        assertThat(flagged.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
+        verify(reservations).releaseAllForEvent(EVENT_ID);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
     void reviseWithNoActiveRequestIsRefused() {
         when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of());
 

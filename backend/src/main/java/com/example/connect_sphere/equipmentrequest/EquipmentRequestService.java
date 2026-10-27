@@ -154,7 +154,7 @@ public class EquipmentRequestService {
         }
         List<EquipmentRequest> active = requests.findByEventIdForUpdate(eventId).stream()
                 .filter(request -> request.getStatus() == EquipmentRequestStatus.processing
-                        || request.getStatus() == EquipmentRequestStatus.approved)
+                        || request.getStatus().heldByTechnicalSupport())
                 .toList();
         if (active.isEmpty()) {
             throw new EquipmentRequestStateException(
@@ -228,6 +228,7 @@ public class EquipmentRequestService {
                 saved.getStatus().name(),
                 saved.getTechnicalRequirement(),
                 saved.getRejectReason(),
+                saved.getAttentionReason(),
                 validated.items().stream().map(item -> new EquipmentRequestLineResponse(
                         item.equipmentId(),
                         validated.selectedEquipment().get(item.equipmentId()).getName(),

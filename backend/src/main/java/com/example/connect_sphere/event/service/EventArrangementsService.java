@@ -124,7 +124,7 @@ public class EventArrangementsService {
         Map<String, Integer> quantities = new LinkedHashMap<>();
         java.util.Set<UUID> counted = new java.util.HashSet<>();
         equipmentRequests.findByEventId(event.getEventId()).stream()
-                .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
+                .filter(r -> r.getStatus().heldByTechnicalSupport())
                 .flatMap(r -> equipmentLines.findByIdRequestId(r.getId()).stream())
                 .forEach((EquipmentRequestLine line) -> {
                     int quantity = line.getQuantity();

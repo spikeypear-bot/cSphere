@@ -166,9 +166,15 @@ public class EventLifecycleService {
         long processing = requests.stream().filter(r -> r.getStatus() == EquipmentRequestStatus.processing).count();
         long equipmentApproved = requests.stream().filter(r -> r.getStatus() == EquipmentRequestStatus.approved).count();
         boolean needsEquipment = event.getEquipmentRequirements() != null && !event.getEquipmentRequirements().isBlank();
+        // EC-NEW3 (D37): an approved change flagged it; the coordinator must resolve it first.
+        EquipmentRequest flagged = requests.stream()
+                .filter(r -> r.getStatus() == EquipmentRequestStatus.attention).findFirst().orElse(null);
         String equipmentState;
         String equipmentDetail;
-        if (processing > 0) {
+        if (flagged != null) {
+            equipmentState = "outstanding";
+            equipmentDetail = "The equipment request needs attention: " + flagged.getAttentionReason();
+        } else if (processing > 0) {
             equipmentState = "outstanding";
             equipmentDetail = plural(processing, "equipment request is", "equipment requests are")
                     + " still waiting for Technical Support.";
@@ -464,7 +470,7 @@ public class EventLifecycleService {
         record(saved, ActivityType.event_cancelled, actorId, message, from);
 
         boolean hasApprovedEquipment = equipmentRequests.findByEventId(eventId).stream()
-                .anyMatch(r -> r.getStatus() == EquipmentRequestStatus.approved);
+                .anyMatch(r -> r.getStatus().heldByTechnicalSupport());
         List<UUID> staff = Stream.concat(
                         released.isEmpty() ? Stream.<User>empty() : users.findByRole(UserRole.vs).stream(),
                         hasApprovedEquipment ? users.findByRole(UserRole.technician).stream() : Stream.<User>empty())
@@ -505,7 +511,7 @@ public class EventLifecycleService {
      * Approvers are not recorded, so the whole team is told (decision-log D22). */
     private List<UUID> staffInvolved(Event event) {
         boolean hasEquipment = equipmentRequests.findByEventId(event.getEventId()).stream()
-                .anyMatch(r -> r.getStatus() == EquipmentRequestStatus.approved);
+                .anyMatch(r -> r.getStatus().heldByTechnicalSupport());
         return Stream.concat(
                         users.findByRole(UserRole.vs).stream(),
                         hasEquipment ? users.findByRole(UserRole.technician).stream() : Stream.<User>empty())
