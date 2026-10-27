@@ -2,6 +2,7 @@ package com.example.connect_sphere.security;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,6 +52,7 @@ import jakarta.persistence.EntityManager;
 @Tag("AU04")
 @Tag("EO07")
 @Tag("TS11")
+@Tag("EC-NEW3")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -135,6 +137,9 @@ class CoordinatorAssignmentScopeTest {
                 get(event + "/equipment-requests"),
                 post(event + "/equipment-request").contentType(MediaType.APPLICATION_JSON)
                         .content("{\"technicalRequirement\":\"Mics\",\"items\":[]}"),
+                // EC-NEW3 (D37): clearing an equipment request's 'attention'
+                patch(event + "/equipment-request/" + UUID.randomUUID() + "/still-suitable")
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"Not mine\"}"),
                 // Safety review and confirmation (EC08), readiness (SO-C3 shared view)
                 get(event + "/lifecycle"),
                 get(event + "/readiness"),

@@ -59,5 +59,8 @@ public enum NotificationType {
     equipment_request_submitted,
     /** TS11 (V52): Technical Support told an approved event change affects an
      * event's equipment, and asked to review it. */
-    equipment_change_review
+    equipment_change_review,
+    /** EC-NEW3 (V54, D37): an approved change means the coordinator's
+     * approved equipment request needs attention. */
+    equipment_request_attention
 }

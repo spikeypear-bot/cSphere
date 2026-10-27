@@ -159,7 +159,7 @@ public class TechnicalSupportNotificationService {
         }
         Event event = found.get();
         boolean liveRequest = requests.findByEventId(event.getEventId()).stream()
-                .anyMatch(r -> r.getStatus() == EquipmentRequestStatus.approved
+                .anyMatch(r -> r.getStatus().heldByTechnicalSupport()
                         || r.getStatus() == EquipmentRequestStatus.processing);
         if (!liveRequest) {
             return Optional.empty();

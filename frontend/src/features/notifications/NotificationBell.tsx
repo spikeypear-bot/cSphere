@@ -45,6 +45,7 @@ function describe(n: NotificationDto): string {
   if (n.type === 'equipment_damage_outcome') return `Damaged equipment affects "${n.eventName}"`
   if (n.type === 'equipment_request_submitted') return `New equipment request for "${n.eventName}"`
   if (n.type === 'equipment_change_review') return `An approved change to "${n.eventName}" affects its equipment`
+  if (n.type === 'equipment_request_attention') return `The equipment request for "${n.eventName}" needs attention`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
   if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
   if (n.type === 'venue_unavailable') return `A venue booking for "${n.eventName}" is unavailable`

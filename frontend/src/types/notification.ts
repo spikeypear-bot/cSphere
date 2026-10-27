@@ -39,6 +39,8 @@ export type NotificationTypeName =
   // TS11
   | 'equipment_request_submitted'
   | 'equipment_change_review'
+  // EC-NEW3 (D37)
+  | 'equipment_request_attention'
 
 export interface NotificationDto {
   notificationId: string

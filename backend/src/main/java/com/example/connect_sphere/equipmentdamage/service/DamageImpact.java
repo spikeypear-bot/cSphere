@@ -63,7 +63,7 @@ public class DamageImpact {
      * processing are left to TS01/TS06's normal review. */
     public boolean qualifies(Event event, UUID equipmentId) {
         return isActive(event) && requests.findByEventId(event.getEventId()).stream()
-                .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
+                .filter(r -> r.getStatus().heldByTechnicalSupport())
                 .flatMap(r -> lines.findByIdRequestId(r.getId()).stream())
                 .anyMatch(line -> line.getId().getEquipmentId().equals(equipmentId));
     }

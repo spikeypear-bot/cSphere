@@ -59,6 +59,8 @@ const TITLES: Record<ActivityTypeName, string> = {
   equipment_rejected: 'rejected the equipment request',
   equipment_damage_outcome: 'reported damaged equipment and decided the outcome',
   equipment_shortfall_resolved: 'accepted an equipment shortfall',
+  equipment_request_attention: 'approved a change that means the equipment request needs attention',
+  equipment_request_marked_suitable: 'marked the equipment request still suitable',
   sent_for_safety_review: 'sent the event for its Operational Safety Check',
   safety_review_withdrawn: 'withdrew the event from safety review',
   safety_approved: 'approved the Operational Safety Check',

@@ -333,10 +333,53 @@ public class EquipmentReservationService {
         }
     }
 
+    /** EC-NEW3 (D37): one kind the event's requests ask for, and how many could be had at another time. */
+    public record NeedAt(UUID equipmentId, String equipmentName, int needed, int free) {
+    }
+
+    /**
+     * EC-NEW3 (D37): for each kind the event's processing or approved requests
+     * ask for, how many are free in [start, end). The event's own reservations
+     * there count as free: they are the units that would move with it.
+     */
+    @Transactional(readOnly = true)
+    public List<NeedAt> needsAt(UUID eventId, Instant start, Instant end) {
+        Map<UUID, Integer> needed = new LinkedHashMap<>();
+        Map<UUID, Equipment> kinds = new LinkedHashMap<>();
+        requestRepository.findByEventId(eventId).stream()
+                .filter(r -> r.getStatus() == EquipmentRequestStatus.processing || r.getStatus().heldByTechnicalSupport())
+                .flatMap(r -> requestLineRepository.findByIdRequestId(r.getId()).stream())
+                .forEach(line -> {
+                    kinds.putIfAbsent(line.getEquipment().getId(), line.getEquipment());
+                    needed.merge(line.getEquipment().getId(), line.getQuantity(), Integer::sum);
+                });
+        if (kinds.isEmpty()) return List.of();
+        Map<UUID, EquipmentAvailabilityService.Availability> available =
+                availability.forEquipment(kinds.values(), start, end);
+        Map<UUID, Integer> own = new HashMap<>();
+        logRepository.findOverlappingForEquipments(kinds.keySet(), start, end).stream()
+                .filter(log -> log.getEventId().equals(eventId))
+                .forEach(log -> own.merge(log.getEquipmentId(), log.getQuantity(), Integer::sum));
+        return kinds.values().stream()
+                .map(kind -> new NeedAt(kind.getId(), kind.getName(), needed.get(kind.getId()),
+                        available.get(kind.getId()).availableQuantity() + own.getOrDefault(kind.getId(), 0)))
+                .toList();
+    }
+
     // AC 11: reservations already made for an event.
     @Transactional(readOnly = true)
     public List<EquipmentReservationResponse> reservationsForEvent(UUID eventId) {
         return toResponses(logRepository.findByEventId(eventId));
+    }
+
+    /** EC-NEW3 (D36): a coordinator's complete revision of an event's
+     * equipment request releases every reservation the event holds, not one
+     * request's, since a reservation names only its event (TS02), never a
+     * request. Hard-deleted, as TS09's covered/short outcomes already do
+     * (D35) — the superseded request itself is kept for the audit trail. */
+    @Transactional
+    public void releaseAllForEvent(UUID eventId) {
+        logRepository.deleteAll(logRepository.findByEventId(eventId));
     }
 
     /** D32: the by-equipment twin of {@link #reservationsForEvent}: every

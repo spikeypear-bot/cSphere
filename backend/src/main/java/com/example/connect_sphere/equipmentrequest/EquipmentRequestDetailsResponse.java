@@ -9,6 +9,7 @@ public record EquipmentRequestDetailsResponse(
         String status,
         String technicalRequirement,
         String rejectReason,
+        String attentionReason,
         List<EquipmentRequestLineResponse> lines) {
 
     static EquipmentRequestDetailsResponse from(
@@ -19,6 +20,7 @@ public record EquipmentRequestDetailsResponse(
                 request.getStatus().name(),
                 request.getTechnicalRequirement(),
                 request.getRejectReason(),
+                request.getAttentionReason(),
                 lines.stream().map(EquipmentRequestLineResponse::from).toList());
     }
 }

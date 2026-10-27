@@ -169,6 +169,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `GET /api/equipment/{id}`, `GET /api/equipment/{id}/reservations?from&to`, `GET /api/equipment/status-periods` | `hasRole('TECHNICIAN')`, above the `GET /api/equipment/**` rule; `GET /api/equipment/units` keeps `hasAnyRole('TECHNICIAN','EC')` just above them | D32. A kind's reservations name events, so coordinators do not get them (ECL-C7, D25); detail and status periods are console reads. |
   | Other `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
   | `POST`, `DELETE /api/equipment/**` (incl. `POST /api/equipment/reservations/batch`) | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. D33's batch falls under the same rule; no new matcher. |
+  | `PATCH /api/events/{eventId}/equipment-request/{requestId}/still-suitable` | `hasRole('EC')`, plus assignment (D25) | EC-NEW3 (D37). Clears an equipment request's `attention` with a note; items and reservations untouched. |
   | `PATCH /api/equipment-requests/{id}/status` | `hasRole('TECHNICIAN')` | TS06 decision; approval additionally requires sufficient reservations covering the full event period. |
   | `GET /api/equipment-requests?status=…`, `GET /api/equipment-requests/processing`, `GET /api/equipment-requests/{id}/lines` | `hasRole('TECHNICIAN')` | TS01's queue; D32 adds the by-status form of the same list. Without the matcher the new path would fall to `anyRequest().authenticated()`. |
   | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
@@ -648,7 +649,176 @@ Each rule is one targeted query: `findOverlappingForUnit` for blocks and reserva
 
 `EquipmentDamageFlowTest.aDamagedReplacementIsRefused` covers TS09's replacement refusal, which had no test before.
 
-## Awaiting Team Confirmation
+### D36 — EC-NEW3: the coordinator revises an equipment request by superseding and rebuilding it
+
+2026-10-26, branch `feat/ec-new3-equipment-revision`.
+
+**Problem.** EC-NEW3 lets a coordinator propose a change (date, time, venue,
+equipment requirements...) for an approved event; `ChangeRequestService`
+approves it and writes the new values straight to `Event`/`EventRequest`.
+Nothing updates the event's *equipment request* to match. TS11 (on its own
+branch) tells Technical Support that an approved change may have affected
+the event's equipment, but it is deliberately read-only (AC13): it records
+a review, it never writes to a reservation or a request. Someone still has
+to decide what the request should now say, and the customer's own
+briefing (Equipment Request Management, Event Change Requests) gives that
+judgment call to the coordinator, not to Technical Support or to the
+system. There was no way for the coordinator to act on it.
+
+**Approaches considered.**
+1. **Edit the existing request's lines in place.** Simplest to build, but
+   loses the comparison a later audit needs (what did this event ask for
+   before the change?), and an approved request already has reservations
+   (`equipment_logs`) that an in-place quantity change would silently
+   desynchronise from.
+2. **A separate "amendment" record layered on the original request,** the
+   way TS09's shortfall ledger links an *additional* request to a
+   shortfall. Keeps history, but an amendment is additive by nature — it
+   does not fit a coordinator who needs to reduce or completely replace
+   what was asked for, which EC-NEW3 explicitly requires (equipment can
+   go either direction, not just up).
+3. **Supersede and rebuild (chosen).** Every reservation the event holds
+   is released, every non-rejected request for the event is marked
+   `superseded`, and one new `processing` request is created from the
+   coordinator's complete new picture — exactly as a first-time `submit`
+   would, through the same validation.
+
+**Decision (user, 2026-10-26).** Approach 3. A reservation
+(`equipment_logs`) names only its `event_id`, never a `request_id` (TS02),
+so a request-scoped release was never possible in the first place —
+releasing is necessarily event-scoped, which already pushed toward
+replacing the whole picture rather than editing one line. The superseded
+request's own row and lines are never edited or deleted, so the
+before/after is still there for whoever looks later. Technical Support is
+told nothing about *why* — the new request simply arrives exactly like a
+first-time one (TS01/EC07's queue, unchanged); a notice naming the EO's
+change is a separate TS-side story, deliberately out of this branch's
+scope so the two user stories, and their PRs, stay independent.
+
+**What triggers a revision.** Nothing automatic. The coordinator's own
+judgment decides when equipment no longer fits the event — the EO-C3/
+EC-NEW3 change itself only changes `Event` columns; nothing here reads
+`ChangeRequestService`'s approval event or hooks into its transaction (contrast VS17,
+which *is* hooked into that approval because a room requirement check is
+mechanical, not judgment). `PATCH /events/{eventId}/equipment-request`
+is reachable whenever the event is not cancelled or completed and has at
+least one `processing`/`approved` request to revise, independent of event
+status otherwise — unlike `submit`, which requires Planning, since a
+revision is explicitly for an event that has moved past Planning after an
+approved change.
+
+**Evidence:**
+- **Backend:** `EquipmentRequestServiceTest` (unit): releases reservations,
+  supersedes the old request, refuses with nothing to revise, refuses an
+  unassigned coordinator. `EquipmentRequestFlowTest` (real PostgreSQL):
+  revising a processing request, revising an approved+reserved one (and
+  the reservation rows are actually gone), refusing with no active
+  request, refusing after a rejection, role/assignment checks.
+- **Frontend:** `EquipmentRequestPage.test.tsx` — the Revise request
+  button pre-fills the active request's own items, submits through
+  `PATCH`, and shows the result.
+
+**Migration:** V53 (`equipment_request_status` adds `superseded`).
+
+### D37 — EC-NEW3: an approved change flags the equipment request 'attention'
+
+2026-10-27, branch `feat/ec-new3-equipment-revision`. Design:
+`docs/superpowers/specs/2026-10-27-equipment-request-attention-design.md`.
+
+**Problem.** D36 gave the coordinator a way to revise an equipment request,
+but nothing told them *when* to. An approved change can move the event
+outside a reservation's loan window, or change the equipment requirements
+text, while the `equipment_requests` row keeps saying `approved`. The venue
+side already solves the same problem automatically: VS17 re-checks bookings
+in the approval transaction and flips them to `attention`.
+
+**Approaches considered.**
+1. **Build on TS11's `equipment_change_reviews`.** Rejected: an unmerged
+   branch, human-initiated rather than automatic, and it re-couples two
+   stories D36 kept independent.
+2. **Block `ChangeRequestService.approve()` until equipment is reconfirmed.**
+   Rejected: inconsistent with venue (approve now, flag after), and it turns
+   a single-role decision into a cross-role gate with no precedent here.
+3. **Mirror venue's `attention` on `equipment_requests` (chosen).**
+   `EquipmentRequestAttentionService` joins the approval transaction
+   (`Propagation.MANDATORY`), re-checks coverage with the predicate
+   `ChangeImpactService` already uses, and flags the request.
+
+**Decision (user, 2026-10-27).** Approach 3, with three refinements found
+while planning against the code:
+- **Only `approved` requests are flagged, never `processing`.** "Mark still
+  suitable" returns a request to `approved`; flagging a processing one would
+  let the coordinator approve something Technical Support never decided. A
+  processing request has no reservations yet and is reviewed against the
+  current details; the coordinator can still revise it.
+- **The reason is a column** (`equipment_requests.attention_reason`), shown
+  on the page directly, like `reject_reason`, rather than parsed back out of
+  the timeline.
+- **`attention` still counts as approved** wherever Technical Support's
+  reservations matter (cancellation and confirmation notices, the
+  organiser's arrangements, the TS09 ledger and damage impact), through
+  `EquipmentRequestStatus.heldByTechnicalSupport()`, because the
+  reservations are still held. Readiness reports it as outstanding, so the
+  event cannot go to the safety check or be confirmed until it is resolved.
+
+**Before approval: a rough availability check (user, 2026-10-27).** The
+user wants a change approved only once equipment can roughly be confirmed
+to go through, without waiting on Technical Support (that would be the
+rejected approach 2). So when a change moves the event's times,
+`ChangeImpactService` also checks, for each kind the event's processing or
+approved requests ask for, how many are free at the new time
+(`EquipmentReservationService.needsAt`, reusing D32's availability
+calculation; the event's own reservations count as free, since they would
+move with it). Too few is an `attention` item the coordinator must
+acknowledge, as venue's "no longer fits" already is; enough is shown as OK.
+It never names the other events holding the stock.
+
+This revises D36's "What triggers a revision: nothing automatic": approval
+now flags the request, but *what* the request should say is still the
+coordinator's judgment. Two ways to clear it: **Revise** (D36, which now
+also supersedes an `attention` request), or **Mark still suitable**
+(`PATCH /events/{eventId}/equipment-request/{requestId}/still-suitable`,
+required note of 1–2000 characters, items and reservations untouched).
+The latter is meant for a wording-only change; the page says a time change
+that misses a reservation needs a revision, but the server does not enforce
+which reason allows which path, since the coordinator is the judge (D36).
+The change log records both (`equipment_request_attention`,
+`equipment_request_marked_suitable`, EC only, through `EventChange`, D26),
+and the coordinator gets an `equipment_request_attention` notification.
+
+**Review fixes (2026-10-27).** A whole-branch review found that the
+Technical Support console still treated `attention` as not approved. Fixed:
+- its decision card read "rejected" (and so did a `superseded` request's);
+- its Approved filter left flagged requests out.
+
+The review also found three other gaps, fixed too:
+- **Re-flagging.** A later change on an already flagged request was
+  ignored. It is now flagged again, keeping the reservation reason over a
+  wording one, and the coordinator is told again.
+- **Second flagged request.** The coordinator's page could hide a second
+  flagged (TS09 shortfall) request. It now shows a flagged one first.
+- **TS status endpoint.** Technical Support could set `attention` or
+  `superseded` through the status endpoint, which now accepts only
+  `approved` or `rejected`.
+
+**Evidence:**
+- **Backend:** `EquipmentRequestAttentionFlowTest` (real PostgreSQL): a time
+  outside the reservation and a requirements-text change each flag the
+  request, log it and notify the coordinator; a window still covered, a
+  processing request and an unrelated change are left alone.
+  `EquipmentRequestFlowTest`: mark still suitable (happy, blank and
+  over-long note, another coordinator, Technical Support, not flagged).
+  `EventLifecycleServiceTest`: readiness outstanding while flagged.
+  `EventLifecycleCancellationTest`: Technical Support still told on
+  cancellation. `EquipmentRequestServiceTest`: revising a flagged request.
+  `CoordinatorAssignmentScopeTest`: the new endpoint is assignment-scoped.
+- **Frontend:** `EquipmentRequestPage.test.tsx` (Needs attention, reason,
+  both actions, note required); `EventDetailsPage.test.tsx` (card names the
+  problem and links to resolve it).
+
+**Migration:** V54 (`equipment_request_status` adds `attention`;
+`equipment_requests.attention_reason`; `notification_type` adds
+`equipment_request_attention`).
 
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
 - **Raised by:** repository/backlog inspection, 2026-09-12.

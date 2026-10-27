@@ -165,14 +165,9 @@ export function EventDetailsPage() {
         active={event.status !== 'completed' && event.status !== 'cancelled'}
         canRebook={planning || event.status === 'confirmed'}
         onCancelled={() => { setBookingReloadToken(n => n + 1); setReloadToken(n => n + 1); readinessState.reload() }} /> : null}
-      {role === 'coordinator' && planning ? (
-        <Card className="event-details__venue">
-          <h2>Equipment</h2>
-          <p>Submit the equipment needs for Technical Support Staff to review and prepare.</p>
-          <Link className="button button--primary" to={`/coordinator/events/${event.eventId}/equipment-request`}>
-            Request equipment
-          </Link>
-        </Card>
+      {/* EC-NEW3 (D36): revision is reachable for any non-cancelled, non-completed event, not just Planning. */}
+      {role === 'coordinator' && event.status !== 'completed' && event.status !== 'cancelled' ? (
+        <EquipmentCard eventId={event.eventId} planning={planning} />
       ) : null}
       {/* TS09: damaged equipment the event relied on; the Lead reads it only. */}
       {role === 'coordinator' || role === 'coordinator-lead' ? (
@@ -230,6 +225,26 @@ function useSideData<T>(path: string, isValid: (value: unknown) => boolean, relo
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [path, reloadKey, liveRevision])
   return { data, failed }
+}
+
+/** EC07/EC-NEW3: the way to the equipment request page; names a request an approved change flagged (D37). */
+function EquipmentCard({ eventId, planning }: { eventId: string; planning: boolean }) {
+  const { data: requests } = useSideData<{ status: string; attentionReason?: string | null }[]>(
+    `/events/${eventId}/equipment-requests`, Array.isArray)
+  const flagged = requests?.find((request) => request.status === 'attention')
+  return (
+    <Card className="event-details__venue">
+      <h2>Equipment</h2>
+      {flagged ? (
+        <p>The equipment request needs attention: {flagged.attentionReason}</p>
+      ) : (
+        <p>Submit the equipment needs for Technical Support Staff to review and prepare, or revise an existing request.</p>
+      )}
+      <Link className="button button--primary" to={`/coordinator/events/${eventId}/equipment-request`}>
+        {flagged ? 'Resolve equipment request' : planning ? 'Request equipment' : 'Manage equipment request'}
+      </Link>
+    </Card>
+  )
 }
 
 /** EC03 from the event page: the current booking request, or the way to make one. */

@@ -397,6 +397,9 @@ class TechnicalSupportNotificationFlowTest {
         String before = jdbc.queryForObject("SELECT string_agg(log_id::text || quantity || loaned_from || loaned_until, ',')"
                 + " FROM equipment_logs WHERE event_id = ?", String.class, eventId);
         String eventStatus = jdbc.queryForObject("SELECT status::text FROM events WHERE event_id = ?", String.class, eventId);
+        // EC-NEW3 (D37) may already have flagged it 'attention'; the outcome must leave it as it was.
+        String requestStatus = jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId);
 
         // Reading the notice does not complete the review (AC13).
         UUID noticeId = jdbc.queryForObject("SELECT notification_id FROM notifications WHERE equipment_review_id = ? "
@@ -425,7 +428,7 @@ class TechnicalSupportNotificationFlowTest {
         assertThat(jdbc.queryForObject("SELECT string_agg(log_id::text || quantity || loaned_from || loaned_until, ',')"
                 + " FROM equipment_logs WHERE event_id = ?", String.class, eventId)).isEqualTo(before);
         assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id = ?",
-                String.class, requestId)).isEqualTo("approved");
+                String.class, requestId)).isEqualTo(requestStatus);
         assertThat(jdbc.queryForObject("SELECT status::text FROM events WHERE event_id = ?", String.class, eventId))
                 .isEqualTo(eventStatus);
 
