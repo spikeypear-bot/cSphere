@@ -1,4 +1,4 @@
-export type EquipmentRequestStatus = 'processing' | 'approved' | 'rejected'
+export type EquipmentRequestStatus = 'processing' | 'approved' | 'rejected' | 'superseded' | 'attention'
 /** What `GET /api/equipment-requests?status=` accepts (D32). */
 export type EquipmentRequestFilter = EquipmentRequestStatus | 'all'
 export const EQUIPMENT_REQUEST_FILTERS: EquipmentRequestFilter[] = ['processing', 'approved', 'rejected', 'all']
@@ -7,6 +7,10 @@ export const EQUIPMENT_REQUEST_FILTER_LABELS: Record<EquipmentRequestFilter, str
   processing: 'Awaiting review',
   approved: 'Approved',
   rejected: 'Rejected',
+  // EC-NEW3: still held by Technical Support while the coordinator resolves a change (D37),
+  // or replaced by a revision (D36). Shown in "All", never offered as a filter.
+  attention: 'Approved, coordinator reviewing a change',
+  superseded: 'Replaced by a revision',
   all: 'All',
 }
 

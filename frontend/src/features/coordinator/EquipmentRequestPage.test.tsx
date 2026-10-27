@@ -166,4 +166,60 @@ describe('EquipmentRequestPage (EC07)', () => {
     expect(await screen.findByText(/Previous request was not approved/)).toBeInTheDocument()
     expect(screen.getByText('Reason: Only one unit can be provided.')).toBeInTheDocument()
   })
+
+  describe('EC-NEW3 (D37): an equipment request that needs attention', () => {
+    const flagged = {
+      requestId: 'request-1',
+      eventId: EVENT_ID,
+      status: 'attention',
+      technicalRequirement: 'Two microphones',
+      rejectReason: null,
+      attentionReason: "The event's equipment requirements text changed.",
+      lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone', quantity: 2 }],
+    }
+
+    it('EC-NEW3 (D37) (happy): shows that it needs attention, why, and both ways to resolve it', async () => {
+      seedSession('coordinator')
+      stubApi({ ...getBaseRoutes(), [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]) })
+      renderPage()
+
+      expect(await screen.findByText('Needs attention')).toBeInTheDocument()
+      expect(screen.getByText("The event's equipment requirements text changed.")).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Revise request' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mark still suitable' })).toBeInTheDocument()
+    })
+
+    it('EC-NEW3 (D37) (happy): marking it still suitable with a note sends the note and shows it approved', async () => {
+      seedSession('coordinator')
+      const calls = stubApi({
+        ...getBaseRoutes(),
+        [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]),
+        [`PATCH /api/events/${EVENT_ID}/equipment-request/request-1/still-suitable`]: () =>
+          jsonResponse(200, { ...flagged, status: 'approved', attentionReason: null }),
+      })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Mark still suitable' }))
+      await user.type(screen.getByLabelText('Why is it still suitable?'), 'Wording only, same microphones')
+      await user.click(screen.getByRole('button', { name: 'Confirm still suitable' }))
+
+      expect(await screen.findByText('Approved')).toBeInTheDocument()
+      expect(screen.queryByText('Needs attention')).not.toBeInTheDocument()
+      expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ note: 'Wording only, same microphones' })
+    })
+
+    it('EC-NEW3 (D37) (negative): cannot confirm still suitable without a note', async () => {
+      seedSession('coordinator')
+      const calls = stubApi({ ...getBaseRoutes(), [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]) })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Mark still suitable' }))
+      await user.type(screen.getByLabelText('Why is it still suitable?'), '   ')
+
+      expect(screen.getByRole('button', { name: 'Confirm still suitable' })).toBeDisabled()
+      expect(calls.some((call) => call.method === 'PATCH')).toBe(false)
+    })
+  })
 })

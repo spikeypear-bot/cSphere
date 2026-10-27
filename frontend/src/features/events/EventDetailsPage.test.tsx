@@ -138,6 +138,26 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     expect(screen.queryByRole('link', { name: 'Request equipment' })).not.toBeInTheDocument()
   })
 
+  it('EC-NEW3 (D37) (happy): an equipment request needing attention is named on the card, linking to resolve it', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/equipment-requests')) {
+        return jsonResponse(200, [{ requestId: 'request-1', eventId: EVENT_ID, status: 'attention', technicalRequirement: '',
+          rejectReason: null, attentionReason: "The event's new time no longer matches an existing equipment reservation.", lines: [] }])
+      }
+      return jsonResponse(200, url.endsWith('/readiness') ? readiness() : url.endsWith('/timeline') ? [] : confirmedEvent('confirmed'))
+    }))
+
+    renderPage('/coordinator')
+
+    expect(await screen.findByRole('link', { name: 'Resolve equipment request' })).toHaveAttribute(
+      'href',
+      `/coordinator/events/${EVENT_ID}/equipment-request`,
+    )
+    expect(screen.getByText(/The equipment request needs attention: The event's new time no longer matches/)).toBeInTheDocument()
+  })
+
   it('EC-NEW3 (D36) (negative): a Cancelled event offers no link to the equipment request page', async () => {
     seedSession('coordinator')
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {

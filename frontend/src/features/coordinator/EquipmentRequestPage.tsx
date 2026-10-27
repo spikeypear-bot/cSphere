@@ -27,9 +27,11 @@ interface EquipmentRequestLine {
 interface EquipmentRequestDetails {
   requestId: string
   eventId: string
-  status: 'processing' | 'approved' | 'rejected' | 'superseded'
+  status: 'processing' | 'approved' | 'rejected' | 'superseded' | 'attention'
   technicalRequirement: string
   rejectReason: string | null
+  // EC-NEW3 (D37): why an approved change flagged it; set only while 'attention'.
+  attentionReason?: string | null
   lines: EquipmentRequestLine[]
 }
 
@@ -55,6 +57,8 @@ export function EquipmentRequestPage() {
   const [success, setSuccess] = useState<string | null>(null)
   // EC-NEW3: replaces the active request with a complete new one.
   const [revising, setRevising] = useState(false)
+  // EC-NEW3 (D37): clears 'attention' with a note, keeping items and reservations.
+  const [suitableNote, setSuitableNote] = useState<string | null>(null)
 
   useEffect(() => {
     if (!eventId) return
@@ -217,6 +221,23 @@ export function EquipmentRequestPage() {
     setRevising(true)
   }
 
+  async function markStillSuitable(request: EquipmentRequestDetails) {
+    if (!eventId || !suitableNote?.trim()) return
+    setSubmitting(true)
+    setError(null)
+    setSuccess(null)
+    try {
+      const updated = await apiClient.patch<EquipmentRequestDetails>(
+        `/events/${eventId}/equipment-request/${request.requestId}/still-suitable`, { note: suitableNote.trim() })
+      setRequests((current) => current.map((r) => r.requestId === updated.requestId ? updated : r))
+      setSuitableNote(null)
+    } catch (err) {
+      setError(err instanceof ApiClientError ? err.message : 'Could not update the equipment request.')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   function cancelRevise() {
     setRevising(false)
     setError(null)
@@ -304,8 +325,18 @@ export function EquipmentRequestPage() {
         <Card className="equipment-request__existing">
           <h2>Request already submitted</h2>
           <p>
-            Status: <strong>{activeRequest.status === 'processing' ? 'Awaiting Technical Support review' : 'Approved'}</strong>
+            Status: <strong>{activeRequest.status === 'processing' ? 'Awaiting Technical Support review'
+              : activeRequest.status === 'attention' ? 'Needs attention' : 'Approved'}</strong>
           </p>
+          {activeRequest.status === 'attention' ? (
+            <Notice tone="info" as="div">
+              <p>{activeRequest.attentionReason}</p>
+              <p>
+                Mark it still suitable only if nothing about the items needs to change. A new time that a
+                reservation no longer covers needs a revision.
+              </p>
+            </Notice>
+          ) : null}
           {activeRequest.technicalRequirement ? <p>{activeRequest.technicalRequirement}</p> : null}
           {activeRequest.lines.length ? (
             <ul>
@@ -318,6 +349,26 @@ export function EquipmentRequestPage() {
             <Button type="button" variant="secondary" onClick={() => startRevise(activeRequest)}>
               Revise request
             </Button>
+          ) : null}
+          {activeRequest.status === 'attention' && suitableNote === null ? (
+            <Button type="button" variant="ghost" onClick={() => setSuitableNote('')}>
+              Mark still suitable
+            </Button>
+          ) : null}
+          {activeRequest.status === 'attention' && suitableNote !== null ? (
+            <>
+              <label className="equipment-request__field">
+                Why is it still suitable?
+                <textarea value={suitableNote} maxLength={2000} rows={2}
+                  onChange={(change) => setSuitableNote(change.target.value)} />
+              </label>
+              <Button onClick={() => void markStillSuitable(activeRequest)} disabled={!suitableNote.trim() || submitting}>
+                Confirm still suitable
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => setSuitableNote(null)} disabled={submitting}>
+                Cancel
+              </Button>
+            </>
           ) : null}
         </Card>
       ) : event.status !== 'pending' && !shortfall ? (
