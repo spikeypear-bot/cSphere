@@ -87,6 +87,10 @@ public enum ActivityType {
     /** EC-NEW3: the coordinator replaced the equipment request with a
      * complete revision; the previous reservations were released. */
     equipment_revised(Set.of(UserRole.ec)),
+    /** EC-NEW3 (D37): an approved change flagged the approved equipment request. */
+    equipment_request_attention(Set.of(UserRole.ec)),
+    /** EC-NEW3 (D37): the coordinator judged a flagged request still suitable, with a note. */
+    equipment_request_marked_suitable(Set.of(UserRole.ec)),
     /** EC08: arrangements complete; handed to the Safety Officer. Internal. */
     sent_for_safety_review(Set.of(UserRole.ec)),
     /** EC08: the coordinator took the event back before a safety decision. */

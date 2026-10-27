@@ -54,5 +54,8 @@ public enum NotificationType {
     attendee_registration_confirmed,
     /** TS09 (V38): the assigned coordinator told what Technical Support
      * decided for their event after equipment was reported damaged. */
-    equipment_damage_outcome
+    equipment_damage_outcome,
+    /** EC-NEW3 (V53, D37): an approved change means the coordinator's
+     * approved equipment request needs attention. */
+    equipment_request_attention
 }

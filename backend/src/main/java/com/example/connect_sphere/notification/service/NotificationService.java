@@ -284,6 +284,17 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** EC-NEW3 (D37): an approved change flagged the event's equipment request. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createEquipmentRequestAttentionNotification(UUID coordinatorId, UUID eventId, String eventName,
+            String reason) {
+        Notification notification = base(coordinatorId, NotificationType.equipment_request_attention, eventName);
+        notification.setEventId(eventId);
+        notification.setReason(reason);
+        notification.setMessage("The equipment request needs attention: " + reason);
+        saveBestEffort(notification);
+    }
+
     private void createEventReassignmentNotifications(
             List<UUID> recipientUserIds, UUID eventId, String eventName,
             NotificationType type, String message) {
@@ -429,6 +440,7 @@ public class NotificationService {
             case venue_booking_approved, venue_booking_rejected, venue_suitability_changed, venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested, equipment_damage_outcome ->
                     "/coordinator/events/" + n.getEventId();
+            case equipment_request_attention -> "/coordinator/events/" + n.getEventId() + "/equipment-request";
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
             case event_reassignment_approved, event_reassignment_declined ->
                     "/coordinator/events/" + n.getEventId() + "/reassignment-request";
