@@ -782,11 +782,14 @@ When `ChangeRequestService.approve()` applies a change whose new times fall
 outside an event's equipment reservation, or whose equipment requirements
 text changed, every `approved` request for the event becomes `attention`
 with the reason, and the coordinator is notified — mirroring
-`venue_booking_status.attention` (VS17). Only `approved` requests are flagged:
-a `processing` one is still to be reviewed against the current details.
+`venue_booking_status.attention` (VS17). A request already in `attention` is
+flagged again by a later change (the reservation reason outranks the wording
+one). `processing` requests are never flagged: Technical Support's approval
+re-checks them against the current details. Only this flow sets `attention`;
+`PATCH /equipment-requests/{id}/status` accepts only `approved`/`rejected`.
 Reservations are untouched. The coordinator clears it by revising the
 request (D36, which supersedes it) or by
 `PATCH /events/{eventId}/equipment-request/{requestId}/still-suitable` with a
 note, which returns it to `approved`. Technical-Support-facing reads treat
-`attention` as approved, since the reservations are still held; readiness
-treats it as outstanding.
+`attention` as approved, since the reservations are still held (including
+the queue's `?status=approved` filter); readiness treats it as outstanding.

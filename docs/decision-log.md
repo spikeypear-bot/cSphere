@@ -784,6 +784,21 @@ The change log records both (`equipment_request_attention`,
 `equipment_request_marked_suitable`, EC only, through `EventChange`, D26),
 and the coordinator gets an `equipment_request_attention` notification.
 
+**Review fixes (2026-10-27).** A whole-branch review found that the
+Technical Support console still treated `attention` as not approved. Fixed:
+- its decision card read "rejected" (and so did a `superseded` request's);
+- its Approved filter left flagged requests out.
+
+The review also found three other gaps, fixed too:
+- **Re-flagging.** A later change on an already flagged request was
+  ignored. It is now flagged again, keeping the reservation reason over a
+  wording one, and the coordinator is told again.
+- **Second flagged request.** The coordinator's page could hide a second
+  flagged (TS09 shortfall) request. It now shows a flagged one first.
+- **TS status endpoint.** Technical Support could set `attention` or
+  `superseded` through the status endpoint, which now accepts only
+  `approved` or `rejected`.
+
 **Evidence:**
 - **Backend:** `EquipmentRequestAttentionFlowTest` (real PostgreSQL): a time
   outside the reservation and a requirements-text change each flag the
