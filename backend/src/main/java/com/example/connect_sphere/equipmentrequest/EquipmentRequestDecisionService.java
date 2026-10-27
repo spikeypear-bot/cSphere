@@ -68,6 +68,10 @@ public class EquipmentRequestDecisionService {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST, "A reviewed request cannot be returned to processing");
         }
+        // EC-NEW3: superseded (D36) and attention (D37) are set by the coordinator's flow, never decided here.
+        if (requestedStatus != EquipmentRequestStatus.approved && requestedStatus != EquipmentRequestStatus.rejected) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "status must be approved or rejected");
+        }
 
         EquipmentRequest request = requests.findForUpdate(requestId)
                 .orElseThrow(() -> new ResponseStatusException(

@@ -7,8 +7,8 @@ export const EQUIPMENT_REQUEST_FILTER_LABELS: Record<EquipmentRequestFilter, str
   processing: 'Awaiting review',
   approved: 'Approved',
   rejected: 'Rejected',
-  // EC-NEW3: still held by Technical Support while the coordinator resolves a change (D37),
-  // or replaced by a revision (D36). Shown in "All", never offered as a filter.
+  // EC-NEW3: still held by Technical Support while the coordinator resolves a change (D37;
+  // the Approved filter includes these), or replaced by a revision (D36).
   attention: 'Approved, coordinator reviewing a change',
   superseded: 'Replaced by a revision',
   all: 'All',
@@ -37,7 +37,7 @@ export interface EquipmentRequestSummary {
 export interface EquipmentRequestDecision {
   requestId: string
   eventId: string
-  status: 'processing' | 'approved' | 'rejected'
+  status: EquipmentRequestStatus
   technicalRequirement: string
   rejectReason: string | null
   lines: RequestLine[]

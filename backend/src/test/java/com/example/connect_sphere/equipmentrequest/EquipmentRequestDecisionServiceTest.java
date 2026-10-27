@@ -24,6 +24,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @Tag("unit")
 @Tag("TS06")
+@Tag("EC-NEW3")
 class EquipmentRequestDecisionServiceTest {
 
     private static final UUID REQUEST_ID = UUID.randomUUID();
@@ -129,5 +130,17 @@ class EquipmentRequestDecisionServiceTest {
 
     private static EquipmentLog reservation(int quantity, Instant from, Instant until) {
         return new EquipmentLog(EVENT_ID, EQUIPMENT_ID, quantity, null, from, until);
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"attention", "superseded"})
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37) (negative): Technical Support can only approve or reject, not set a coordinator-side status")
+    void technicalSupportCannotSetACoordinatorSideStatus(String status) {
+        assertThatThrownBy(() -> service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus(status, null)))
+                .isInstanceOf(ResponseStatusException.class)
+                .hasMessageContaining("status must be approved or rejected");
+
+        assertThat(request.getStatus()).isEqualTo(EquipmentRequestStatus.processing);
+        verify(requests, never()).save(request);
     }
 }

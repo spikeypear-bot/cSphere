@@ -41,6 +41,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("unit")
 @Tag("TS09")
 @Tag("TS01")
+@Tag("EC-NEW3")
 class EquipmentRequestQueueServiceTest {
 
     private final EquipmentRequestRepository requests = mock(EquipmentRequestRepository.class);
@@ -155,4 +156,14 @@ class EquipmentRequestQueueServiceTest {
         assertThat(queue.list("approved")).isEmpty();
     }
 
+    @Test
+    @DisplayName("EC-NEW3 (D37) (happy): the Approved filter includes a request a change flagged, whose reservations are still held")
+    void theApprovedFilterIncludesFlaggedRequests() {
+        laterRequest.flagAttention("The event's equipment requirements text changed.");
+        when(requests.findByStatusIn(EnumSet.of(EquipmentRequestStatus.approved, EquipmentRequestStatus.attention)))
+                .thenReturn(List.of(laterRequest));
+
+        assertThat(queue.list("approved")).extracting(EquipmentRequestResponse::requestId)
+                .containsExactly(laterRequest.getId());
+    }
 }

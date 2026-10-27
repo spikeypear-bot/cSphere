@@ -54,11 +54,16 @@ export function DecisionCard({ request, lines, reservations, ready, rejectReason
   }
 
   if (request.status !== 'processing') {
+    // EC-NEW3: a flagged request (D37) is still approved with its reservations held;
+    // a superseded one (D36) was replaced by the coordinator's revision.
+    const approved = request.status === 'approved' || request.status === 'attention'
     return (
       <Card className="tech-card decision">
         <h2>Decision</h2>
-        <Notice tone={request.status === 'approved' ? 'success' : 'danger'} as="div">
-          {request.status === 'approved' ? '✓ This request was approved.' : 'This request was rejected.'}
+        <Notice tone={approved ? 'success' : request.status === 'superseded' ? 'info' : 'danger'} as="div">
+          {approved ? '✓ This request was approved.'
+            : request.status === 'superseded' ? 'This request was replaced by a revision.' : 'This request was rejected.'}
+          {request.status === 'attention' ? <p>The coordinator is reviewing a change to the event.</p> : null}
           {request.status === 'rejected' && rejectReason ? <p className="decision__reason">Reason: {rejectReason}</p> : null}
         </Notice>
       </Card>

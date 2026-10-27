@@ -99,7 +99,9 @@ export function EquipmentRequestPage() {
   // no longer blocks anything either: the revision already replaced it.
   const activeRequest = shortfall
     ? requests.find((request) => request.status === 'processing')
-    : requests.find((request) => request.status !== 'rejected' && request.status !== 'superseded')
+    // EC-NEW3 (D37): a flagged request comes first, so a second one (TS09) can still be resolved.
+    : requests.find((request) => request.status === 'attention')
+      ?? requests.find((request) => request.status !== 'rejected' && request.status !== 'superseded')
   const availableItems = catalogue.filter((equipment) =>
     !items.some((item) => item.equipmentId === equipment.equipmentId))
   const hasDetails = technicalRequirement.trim() !== '' || items.length > 0

@@ -18,8 +18,9 @@ import com.example.connect_sphere.notification.service.NotificationService;
 
 /** EC-NEW3 (D37): the equipment side of VS17's live re-check. Joins the
  * approval transaction; flags approved equipment requests the change no
- * longer fits. Only 'approved' ones: a processing request is still to be
- * reviewed by Technical Support against the current details. */
+ * longer fits, and re-flags ones already flagged so a later change is not
+ * missed. Never 'processing' ones: Technical Support's approval re-checks
+ * them against the current details. */
 @Service
 public class EquipmentRequestAttentionService {
     static final String COVERAGE_BROKEN = "The event's new time no longer matches an existing equipment reservation.";
@@ -43,7 +44,7 @@ public class EquipmentRequestAttentionService {
     public void approved(ChangeRequest change, Event event, Set<String> changedFields, SaveEventRequestRequest proposed) {
         if (event == null) return;
         List<EquipmentRequest> active = requests.findByEventIdForUpdate(event.getEventId()).stream()
-                .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
+                .filter(r -> r.getStatus().heldByTechnicalSupport())
                 .toList();
         if (active.isEmpty()) return;
         boolean timesChanged = changedFields.contains("startDatetime") || changedFields.contains("endDatetime");
@@ -52,7 +53,8 @@ public class EquipmentRequestAttentionService {
                 .anyMatch(r -> !ChangeImpactService.covers(r, proposed.startDatetime(), proposed.endDatetime()));
         if (!coverageBroken && !changedFields.contains("equipmentRequirements")) return;
         String reason = coverageBroken ? COVERAGE_BROKEN : REQUIREMENTS_CHANGED;
-        active.forEach(r -> r.flagAttention(reason));
+        // A reservation the event no longer fits outranks a wording change, whichever came first.
+        active.forEach(r -> r.flagAttention(COVERAGE_BROKEN.equals(r.getAttentionReason()) ? COVERAGE_BROKEN : reason));
         requests.saveAll(active);
         changeLog.publishEvent(new EventChange(event.getEventId(), ActivityType.equipment_request_attention,
                 change.getDecidedBy(), reason));

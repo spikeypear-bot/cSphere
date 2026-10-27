@@ -209,6 +209,21 @@ describe('EquipmentRequestPage (EC07)', () => {
       expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ note: 'Wording only, same microphones' })
     })
 
+    it('EC-NEW3 (D37) (conflict): a flagged request is shown even when an approved one is listed before it', async () => {
+      seedSession('coordinator')
+      stubApi({
+        ...getBaseRoutes(),
+        [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [
+          { ...flagged, requestId: 'request-0', status: 'approved', attentionReason: null },
+          flagged,
+        ]),
+      })
+      renderPage()
+
+      expect(await screen.findByText('Needs attention')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mark still suitable' })).toBeInTheDocument()
+    })
+
     it('EC-NEW3 (D37) (negative): cannot confirm still suitable without a note', async () => {
       seedSession('coordinator')
       const calls = stubApi({ ...getBaseRoutes(), [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]) })

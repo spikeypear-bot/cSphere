@@ -211,4 +211,31 @@ class EquipmentRequestAttentionFlowTest {
         assertThat(statusOf(requestId)).isEqualTo("approved");
         assertThat(attentionNotices(eventId)).isZero();
     }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (conflict): a later change that breaks the reservation updates an already flagged request's reason and tells the coordinator again")
+    void aLaterChangeBreakingTheReservationUpdatesTheReason() throws Exception {
+        UUID eventId = event();
+        UUID requestId = equipmentRequest(eventId, true);
+        changeApproved(eventId, details("09:00", "12:00", "Two more microphones"));
+
+        changeApproved(eventId, details("13:00", "16:00", "Two more microphones"));
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+        assertThat(reasonOf(requestId)).isEqualTo(COVERAGE);
+        assertThat(attentionEntries(eventId)).containsExactlyInAnyOrder(TEXT, COVERAGE);
+        assertThat(attentionNotices(eventId)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (conflict): a later wording-only change keeps the reservation reason on a request already flagged for it")
+    void aLaterWordingChangeKeepsTheReservationReason() throws Exception {
+        UUID eventId = event();
+        UUID requestId = equipmentRequest(eventId, true);
+        changeApproved(eventId, details("13:00", "16:00", null));
+
+        changeApproved(eventId, details("13:00", "16:00", "Two more microphones"));
+
+        assertThat(reasonOf(requestId)).isEqualTo(COVERAGE);
+    }
 }
