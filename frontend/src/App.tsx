@@ -50,7 +50,6 @@ import { EquipmentDetailPage } from './features/technicalSupport/inventory/Equip
 import { FaultyEquipmentPage } from './features/technicalSupport/faulty/FaultyEquipmentPage'
 import { ReportProblemPage } from './features/technicalSupport/faulty/ReportProblemPage'
 import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
-// TS11: review pages still use the old page shell (no console nav entry yet; see D34 follow-up).
 import { ChangeReviewsPage } from './features/technicalSupport/changeReviews/ChangeReviewsPage'
 import { ChangeReviewPage } from './features/technicalSupport/changeReviews/ChangeReviewPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
@@ -194,7 +193,7 @@ function TechnicalSupportRoutes() {
         <Route path="faulty/reports/:reportId" element={<DamageReportDetailPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="inventory/:equipmentId" element={<EquipmentDetailPage />} />
-        {/* TS11: no console nav entry yet, reached by notification link (D34 follow-up). */}
+        {/* TS11: equipment change reviews. */}
         <Route path="change-reviews" element={<ChangeReviewsPage />} />
         <Route path="change-reviews/:reviewId" element={<ChangeReviewPage />} />
         {/* The routes before the rework, kept so old links still work. */}

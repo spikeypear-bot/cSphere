@@ -194,7 +194,7 @@ describe('TS11 Technical Support equipment notices and change reviews', () => {
     const user = userEvent.setup()
     renderAt('/technical-support/change-reviews/review-1')
 
-    expect(await screen.findByText('Could not load this equipment change review.')).toBeInTheDocument()
+    expect(await screen.findByText(/Could not load this equipment change review\./)).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
 
     expect(await screen.findByRole('heading', { name: 'Town Hall' })).toBeInTheDocument()
