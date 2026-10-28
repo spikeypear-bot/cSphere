@@ -92,6 +92,16 @@ class AttendeeRegistration <<Entity>>  {
 }
 
 
+class ChangeApproved {
+	{field} -approvedAt : OffsetDateTime
+	{field} -changeRequestId : UUID
+	{field} -changedFields : Set<String>
+	{field} -eventId : UUID
+	{field} -previousValues : Map<String, Object>
+	{field} -updatedValues : Map<String, Object>
+}
+
+
 class ChangeRequest <<Entity>>  {
 	{field} +acknowledgedImpacts : List<Map<String, String>>
 	{field} +changeRequestId : UUID {id}
@@ -318,6 +328,35 @@ enum EquipmentRequestStatus {
 }
 
 
+class EquipmentRequestSubmitted {
+	{field} -eventId : UUID
+	{field} -requestId : UUID
+}
+
+
+class EquipmentChangeReview <<Entity>>  {
+	{field} +affectedReservations : List<Map<String, Object>>
+	{field} +changeRequestId : UUID
+	{field} +changedAt : OffsetDateTime
+	{field} +coordinatorId : UUID
+	{field} +eventId : UUID
+	{field} +outcomeNote : String
+	{field} +previousValues : Map<String, Object>
+	{field} +requirementsChanged : boolean
+	{field} +reviewId : UUID {id}
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +updatedValues : Map<String, Object>
+	{method} +needsReview () : boolean
+}
+
+
+enum ReviewOutcome {
+	{field} +needs_coordinator_action
+	{field} +still_suitable
+}
+
+
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
@@ -443,6 +482,8 @@ enum EventRequestStatus {
 class Notification <<Entity>>  {
 	{field} +coordinatorEmail : String
 	{field} +coordinatorName : String
+	{field} +equipmentRequestId : UUID
+	{field} +equipmentReviewId : UUID
 	{field} +eventId : UUID
 	{field} +eventName : String
 	{field} +eventRequestId : UUID
@@ -467,7 +508,9 @@ enum NotificationType {
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +equipment_change_review
 	{field} +equipment_damage_outcome
+	{field} +equipment_request_submitted
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -712,6 +755,7 @@ EquipmentDamageReport --> "1" DamageReportStatus : status
 EquipmentRequest --> "1" EquipmentRequestStatus : status
 EquipmentRequestLine "0..*" --> "1" Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
+EquipmentChangeReview --> "0..1" ReviewOutcome : outcome
 Event --> "1" EventStatus : status
 EventCancellationRequest --> "1" EventCancellationStatus : status
 EventReassignmentRequest --> "1" EventReassignmentStatus : status
@@ -728,6 +772,10 @@ VenueBookingRecord --> "1" VenueBookingStatus : status
 VenueEvent --> "1" EventStatus : status
 
 
+EquipmentChangeReview "0..*" --> "1" ChangeRequest : changeRequestId
+EquipmentChangeReview "0..*" --> "0..1" User : coordinatorId
+EquipmentChangeReview "0..*" --> "1" Event : eventId
+EquipmentChangeReview "0..*" --> "0..1" User : reviewedBy
 EquipmentDamageOutcome "0..*" --> "0..1" EquipmentRequest : additionalRequestId
 EquipmentDamageOutcome "0..*" --> "0..1" User : decidedBy
 EquipmentDamageOutcome "0..*" --> "1" Event : eventId
@@ -768,6 +816,8 @@ EventSafetyReview "0..*" --> "1" User : reviewedBy
 Event "0..*" --> "0..1" User : confirmedBy
 Event "0..*" --> "0..1" User : coordinatorId
 Event "0..*" --> "0..1" Venue : venueId
+Notification "0..*" --> "0..1" EquipmentRequest : equipmentRequestId
+Notification "0..*" --> "0..1" EquipmentChangeReview : equipmentReviewId
 Notification "0..*" --> "0..1" Event : eventId
 Notification "0..*" --> "0..1" EventRequest : eventRequestId
 Notification "0..*" --> "1" User : recipientUserId

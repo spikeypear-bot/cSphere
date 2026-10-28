@@ -9,7 +9,19 @@
   list-style: none;
 }
 
-.equipment-damage__summary,
+/* EquipmentSummaryCard: the photo-and-details header used wherever one
+ * equipment kind is the focus of the page (shared/EquipmentSummaryCard). */
+.equipment-summary {
+  padding: 1.25rem;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+/* The same photo-beside-text layout as an inline row, not a card: each
+ * affected event already sits inside its own padded Card (coordinator's
+ * EquipmentDamagePanel), so this adds no padding of its own. */
 .equipment-damage__chosen {
   display: flex;
   flex-wrap: wrap;
@@ -39,7 +51,7 @@
   font-weight: 600;
 }
 
-.equipment-damage__summary dl,
+.equipment-summary dl,
 .equipment-damage__event dl {
   display: flex;
   flex-wrap: wrap;
@@ -47,19 +59,25 @@
   margin: 0;
 }
 
-.equipment-damage__summary dt,
+.equipment-summary dt,
 .equipment-damage__event dt {
   color: var(--ink-soft);
   font-size: 0.85rem;
 }
 
-.equipment-damage__summary dd,
+.equipment-summary dd,
 .equipment-damage__event dd {
   margin: 0.2rem 0 0;
   font-weight: 600;
 }
 
+.equipment-summary p {
+  margin: 0;
+  max-width: 32rem;
+}
+
 .equipment-damage__event {
+  padding: 1.25rem;
   display: grid;
   gap: 0.6rem;
 }
@@ -82,6 +100,10 @@
   display: grid;
   gap: 0.5rem;
   width: 100%;
+}
+
+.equipment-damage__form {
+  padding: 1.25rem;
 }
 
 .equipment-damage__form form {

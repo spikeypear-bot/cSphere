@@ -188,6 +188,8 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `POST /api/event-requests/{id}/cancel`, `POST /api/event-requests/{id}/cancellation-request` | `hasRole('EO')` (blanket `/api/event-requests/**` rule) **plus organisation scoping from the token claim** | EO07 (D28). Cancel a request before approval; request cancellation of its event after. Another organisation's request is 404. |
   | `GET /api/events/{id}/cancellation-requests` | `hasAnyRole('EO','EC','ECL')`, placed **above** `GET /api/events/**` **plus organisation or assignment check in the service** | EO07 (D28). The owning organisation's organisers, the assigned coordinator (403 otherwise, D25) and the Lead (read-only oversight). |
   | `POST /api/events/{id}/cancellation-requests/{cid}/approve\|decline` | `hasRole('EC')` **plus assignment check first in the service** | EO07 (D28). Only the event's current coordinator decides; the Lead and other coordinators are refused (403). Each has a row in `CoordinatorAssignmentScopeTest`. |
+  | `GET /api/equipment-change-reviews`, `GET /api/equipment-change-reviews/{id}`, `POST /api/equipment-change-reviews/{id}/outcome` | `hasRole('TECHNICIAN')` | TS11 (D34). Technical Support's queue, review page and outcome. |
+  | `GET /api/events/{id}/equipment-change-reviews` | `hasAnyRole('EC','ECL')`, placed **above** `GET /api/events/**` **plus assignment check in the service** | TS11 AC12 (D34). The assigned coordinator sees Technical Support's outcomes; the Lead reads them. |
   | `/swagger-ui/**`, `/v3/api-docs/**` | dev profile only, or accept 401 | springdoc is on the classpath; under `anyRequest().authenticated()` the docs page 401s, and a browser navigation cannot attach a Bearer token. |
 
 - **Open for the team to settle:**
@@ -716,7 +718,7 @@ approved change.
   button pre-fills the active request's own items, submits through
   `PATCH`, and shows the result.
 
-**Migration:** V52 (`equipment_request_status` adds `superseded`).
+**Migration:** V53 (`equipment_request_status` adds `superseded`).
 
 ### D37 — EC-NEW3: an approved change flags the equipment request 'attention'
 
@@ -780,6 +782,10 @@ required note of 1–2000 characters, items and reservations untouched).
 The latter is meant for a wording-only change; the page says a time change
 that misses a reservation needs a revision, but the server does not enforce
 which reason allows which path, since the coordinator is the judge (D36).
+*Amended 2026-10-28 when merged with TS11 (D34):* the server now enforces
+it. A reservation-time flag is cleared by Technical Support's "still
+suitable" review outcome, not by the coordinator, and a "needs coordinator
+action" outcome leaves only a revision.
 The change log records both (`equipment_request_attention`,
 `equipment_request_marked_suitable`, EC only, through `EventChange`, D26),
 and the coordinator gets an `equipment_request_attention` notification.
@@ -814,7 +820,7 @@ The review also found three other gaps, fixed too:
   both actions, note required); `EventDetailsPage.test.tsx` (card names the
   problem and links to resolve it).
 
-**Migration:** V53 (`equipment_request_status` adds `attention`;
+**Migration:** V54 (`equipment_request_status` adds `attention`;
 `equipment_requests.attention_reason`; `notification_type` adds
 `equipment_request_attention`).
 
@@ -953,6 +959,20 @@ The user approved implementing the supplied VS01 overview end to end, including 
 - **Week 7 Change #6** says changes send the event back to planning; it does not say a rejection must end the event, so nothing in the customer's changes is contradicted.
 - **Consequence:** `EventStatus.ACTIVE`, `BEFORE_CONFIRMATION` and `IN_OR_PAST_SAFETY_CHECK` now name the status groups that nine services had written out by hand.
 
+### D34 — TS11: Technical Support are told of equipment requests and of approved changes that affect equipment
+
+2026-10-25, branch `feat/ts11-technical-support-notifications`, migration **V52**. Written as D30 and V36; renumbered three times — when `main` was merged in the first time (`main` took D30/SO-C5/SO-C6 and V34–V36, and the TS09 console branch took D31–D33 and V37–V40), and again to make room for `main`'s V41–V51 (VS17 and others, merged in after TS11 branched). Picks up EC-NEW3 AC40's Technical Support half, which D29 handed to TS11.
+
+- **Two triggers, both after commit.** `EquipmentRequestService.submit` publishes `EquipmentRequestSubmitted`; `ChangeRequestService.approve` publishes `ChangeApproved`. `TechnicalSupportNotificationService` listens with `@TransactionalEventListener(AFTER_COMMIT)`, so a pending, rejected or withdrawn change, or a request that failed validation, tells no one (AC5). A failure in the listener is logged and never undoes the coordinator's action.
+- **`ChangeApproved` is shared.** VS17 (Venue Staff) was not on any branch when this was built, so the change detection here is TS11's own. `ChangeApproved` carries the before/after values and changed fields; VS17 can listen for the same event instead of hooking EC-NEW3 again.
+- **"Affects equipment" (AC4, AC6)** means the new start or end is no longer covered by one of the event's reservations, or the equipment requirements changed. The coverage rule is `EquipmentReservationResponse.covers`, now shared with `ChangeImpactService`, so the coordinator's impact review and the Technical Support notice cannot disagree. Only events with a processing or approved equipment request are considered (AC7).
+- **Recipients:** every Technical Support user, as for `event_confirmed` and `event_cancelled` (D22): approvers are not recorded.
+- **A review per approved change.** `equipment_change_reviews` keeps the before/after start, end and equipment requirements and the reservations that no longer covered the event, as they were at approval (AC9). No outcome means the event is flagged (AC14). Technical Support record `still_suitable` or `needs_coordinator_action` (with a note); recording it changes no reservation or event (AC13, amended 2026-10-28 — see "Merged with EC-NEW3" below). The assigned coordinator, and the Lead read-only, see the outcome on the event's equipment page (AC12).
+- **No duplicates (AC15):** one review per change (unique index), and one notice per user per request or review (partial unique indexes on the new `notifications` columns, with an existence check before insert).
+- **Not done here (depends on TS09):** AC2 (marking a shortfall request and linking it to the TS09 report) and the part of AC12 that lets "needs coordinator action" open TS09's additional-request flow. Reservations still cannot be moved to a new time; a coordinator acts through existing workflows.
+- **Evidence:** `TechnicalSupportNotificationFlowTest` (13, real PostgreSQL, committed), `EquipmentChangeImpactTest`, `TechnicalSupportNotificationServiceTest`, `EquipmentChangeReviewServiceTest` (unit), the new row in `CoordinatorAssignmentScopeTest`, and `ChangeReviews.test.tsx`.
+- **Merged with EC-NEW3 — the outcome drives the equipment request's flag (user, 2026-10-28).** Both stories reacted to the same approved change: TS11 opens this review, EC-NEW3 (D37) sets the request to `attention`. Left apart, a coordinator could mark a request still suitable after Technical Support said it needs action. The user chose to let Technical Support's outcome decide, amending **AC13**: `still_suitable` returns every `attention` request of the event to `approved` (logged as `equipment_request_marked_suitable`), but only when no review of the event is still open and the newest one says still suitable; `needs_coordinator_action` leaves the flag for a revision. Reservations and the event are still untouched. The coordinator's own "Mark still suitable" (D37) is now refused after a `needs_coordinator_action` outcome. **Both "still suitable" paths are refused while any reservation misses the event's current time** (user, 2026-10-28, after trying it: a time change had been marked suitable with the mics still booked for the old slot, free for others at the new one). Technical Support cannot move or delete a reservation, so a time change is resolved only by the coordinator's revision (D36). Migrations: TS11 keeps V52; EC-NEW3's became V53/V54. Evidence: five new tests in `TechnicalSupportNotificationFlowTest` (still suitable clears a wording flag; refused for a time a reservation misses; an open later review keeps the flag; needs action blocks the coordinator; the coordinator cannot clear a missed time) and one in `EquipmentChangeReviewServiceTest`.
+- **Merge note — `chk_notification_shape`.** V52 recreates the constraint from `main`'s latest version as of this merge (V51, Venue Staff approval outcome), adding only TS11's two branches (`equipment_request_submitted`, `equipment_change_review`) on top — every branch VS17, TS09 and earlier stories added (`equipment_damage_outcome`, `venue_requirement_changed`, `venue_requirement_reviewed`, `venue_suitability_changed`, `venue_arrangements_changed`, `venue_booking_approved`, and the rest) is carried forward unchanged. See `SCHEMA.md`, "V52 update".
 
 ## VS17 — transactional booking requirement reviews (24 October 2026)
 

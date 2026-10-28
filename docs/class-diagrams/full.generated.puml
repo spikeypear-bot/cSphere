@@ -272,6 +272,16 @@ class BookingAssessmentService.View {
 }
 
 
+class ChangeApproved {
+	{field} -approvedAt : OffsetDateTime
+	{field} -changeRequestId : UUID
+	{field} -changedFields : Set<String>
+	{field} -eventId : UUID
+	{field} -previousValues : Map<String, Object>
+	{field} -updatedValues : Map<String, Object>
+}
+
+
 class ChangeImpactService {
 	{field} {static} ~ATTENTION : String
 	{field} {static} ~OK : String
@@ -410,6 +420,7 @@ class ChangeRequestService {
 	{field} {static} ~MAX_TEXT : int
 	{field} {static} ~REQUEST_CHANGED_SINCE : String
 	{field} -clock : Clock
+	{field} -published : ApplicationEventPublisher
 	{method} +approve ( coordinator : Caller , changeRequestId : UUID , acknowledged : List ) : View
 	{method} +create ( organiser : Caller , requestId : UUID , rawReason : String , details : SaveEventRequestRequest ) : View
 	{method} +forEvent ( caller : Caller , eventId : UUID ) : List
@@ -808,6 +819,7 @@ class EquipmentReservationResponse {
 	{field} -quantity : int
 	{field} -serialNumber : String
 	{field} -spare : boolean
+	{method} +covers ( start : Instant , end : Instant ) : boolean
 }
 
 
@@ -1297,6 +1309,12 @@ enum EquipmentRequestStatus {
 }
 
 
+class EquipmentRequestSubmitted {
+	{field} -eventId : UUID
+	{field} -requestId : UUID
+}
+
+
 class InvalidEquipmentRequestException {
 }
 
@@ -1316,6 +1334,123 @@ class SubmitEquipmentRequest.Item {
 class UpdateEquipmentRequestStatus {
 	{field} -rejectReason : String
 	{field} -status : String
+}
+
+
+class EquipmentChangeReview <<Entity>>  {
+	{field} +affectedReservations : List<Map<String, Object>>
+	{field} +changeRequestId : UUID
+	{field} +changedAt : OffsetDateTime
+	{field} +coordinatorId : UUID
+	{field} +eventId : UUID
+	{field} +outcomeNote : String
+	{field} +previousValues : Map<String, Object>
+	{field} +requirementsChanged : boolean
+	{field} +reviewId : UUID {id}
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +updatedValues : Map<String, Object>
+	{method} +needsReview () : boolean
+}
+
+
+class EquipmentChangeReviewController {
+	{method} +detail ( reviewId : UUID ) : Detail
+	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
+	{method} +queue () : List
+	{method} +recordOutcome ( jwt : Jwt , reviewId : UUID , request : OutcomeRequest ) : Detail
+}
+
+
+class EquipmentChangeReviewDto {
+}
+
+
+class EquipmentChangeReviewDto.Detail {
+	{field} -changedAt : OffsetDateTime
+	{field} -coordinatorName : String
+	{field} -eventEnd : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -eventStart : OffsetDateTime
+	{field} -needsReview : boolean
+	{field} -outcome : String
+	{field} -outcomeNote : String
+	{field} -requirementsChanged : boolean
+	{field} -reviewId : UUID
+	{field} -reviewedAt : OffsetDateTime
+	{field} -reviewedByName : String
+}
+
+
+class EquipmentChangeReviewDto.OutcomeRequest {
+	{field} -note : String
+	{field} -outcome : String
+}
+
+
+class EquipmentChangeReviewDto.Reservation {
+	{field} -equipmentName : String
+	{field} -flagged : boolean
+	{field} -loanedFrom : Instant
+	{field} -loanedUntil : Instant
+	{field} -logId : UUID
+	{field} -quantity : int
+	{field} -serialNumber : String
+}
+
+
+class EquipmentChangeReviewDto.Summary {
+	{field} -affectedCount : int
+	{field} -changedAt : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -needsReview : boolean
+	{field} -outcome : String
+	{field} -outcomeNote : String
+	{field} -requirementsChanged : boolean
+	{field} -reviewId : UUID
+	{field} -reviewedAt : OffsetDateTime
+	{field} -reviewedByName : String
+}
+
+
+class EquipmentChangeReviewDto.Values {
+	{field} -end : OffsetDateTime
+	{field} -equipmentRequirements : String
+	{field} -start : OffsetDateTime
+}
+
+
+interface EquipmentChangeReviewRepository {
+	{method}  {abstract} +existsByChangeRequestId ( changeRequestId : UUID ) : boolean
+	{method}  {abstract} +findAllByOrderByChangedAtDesc () : List
+	{method}  {abstract} +findByEventIdOrderByChangedAtDesc ( eventId : UUID ) : List
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class EquipmentChangeReviewService {
+	{field} {static} ~MAX_NOTE : int
+	{field} -clock : Clock
+	{method} +detail ( reviewId : UUID ) : Detail
+	{method} +forEvent ( callerId : UUID , lead : boolean , eventId : UUID ) : List
+	{method} +queue () : List
+	{method} +recordOutcome ( reviewerId : UUID , reviewId : UUID , input : OutcomeRequest ) : Detail
+}
+
+
+enum ReviewOutcome {
+	{field} +needs_coordinator_action
+	{field} +still_suitable
+}
+
+
+class TechnicalSupportNotificationService {
+	{field} {static} ~SINGAPORE : DateTimeFormatter
+	{field} {static} -log : Logger
+	{method} +onChangeApproved ( approved : ChangeApproved ) : void
+	{method} +onEquipmentRequestSubmitted ( submitted : EquipmentRequestSubmitted ) : void
 }
 
 
@@ -2020,6 +2155,8 @@ class NotificationDto {
 class Notification <<Entity>>  {
 	{field} +coordinatorEmail : String
 	{field} +coordinatorName : String
+	{field} +equipmentRequestId : UUID
+	{field} +equipmentReviewId : UUID
 	{field} +eventId : UUID
 	{field} +eventName : String
 	{field} +eventRequestId : UUID
@@ -2044,7 +2181,9 @@ enum NotificationType {
 	{field} +clarification_requested
 	{field} +clarification_responded
 	{field} +coordinator_assignment
+	{field} +equipment_change_review
 	{field} +equipment_damage_outcome
+	{field} +equipment_request_submitted
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -2075,6 +2214,8 @@ enum NotificationType {
 
 interface NotificationRepository {
 	{method}  {abstract} +countByRecipientUserIdAndReadAtIsNull ( recipientUserId : UUID ) : long
+	{method}  {abstract} +existsByRecipientUserIdAndEquipmentRequestId ( recipientUserId : UUID , equipmentRequestId : UUID ) : boolean
+	{method}  {abstract} +existsByRecipientUserIdAndEquipmentReviewId ( recipientUserId : UUID , equipmentReviewId : UUID ) : boolean
 	{method}  {abstract} +findByRecipientUserIdOrderByOccurredAtDesc ( recipientUserId : UUID ) : List
 }
 
@@ -2105,7 +2246,9 @@ class NotificationService {
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
+	{method} +createEquipmentChangeReviewNotifications ( recipientUserIds : List , reviewId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createEquipmentDamageOutcomeNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , message : String ) : void
+	{method} +createEquipmentRequestSubmittedNotifications ( recipientUserIds : List , equipmentRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createEventCancellationDecisionNotification ( organiserId : UUID , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
 	{method} +createEventCancellationRequestedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createEventCancelledNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
@@ -3434,6 +3577,25 @@ EquipmentRequestService --> EquipmentRequestRepository : requests
 EquipmentRequestService --> EventRepository : events
 EquipmentRequestService --> EquipmentShortfallLedger : shortfalls
 SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
+EquipmentChangeReview --> ReviewOutcome : outcome
+EquipmentChangeReviewController --> EquipmentChangeReviewService : service
+EquipmentChangeReviewDto.Detail --> "0..*" EquipmentChangeReviewDto.Reservation : affectedAtChange
+EquipmentChangeReviewDto.Detail --> "0..*" EquipmentChangeReviewDto.Reservation : reservations
+EquipmentChangeReviewDto.Detail --> EquipmentChangeReviewDto.Values : previous
+EquipmentChangeReviewDto.Detail --> EquipmentChangeReviewDto.Values : updated
+EquipmentChangeReviewService --> EquipmentReservationService : reservations
+EquipmentChangeReviewService --> EquipmentChangeReviewRepository : reviews
+EquipmentChangeReviewService --> EventRepository : events
+EquipmentChangeReviewService --> UserRepository : users
+TechnicalSupportNotificationService --> EquipmentRepository : equipment
+TechnicalSupportNotificationService --> EquipmentReservationService : reservations
+TechnicalSupportNotificationService --> EquipmentRequestLineRepository : lines
+TechnicalSupportNotificationService --> EquipmentRequestRepository : requests
+TechnicalSupportNotificationService --> EquipmentChangeReviewRepository : reviews
+TechnicalSupportNotificationService --> TechnicalSupportNotificationService : self
+TechnicalSupportNotificationService --> EventRepository : events
+TechnicalSupportNotificationService --> NotificationService : notifications
+TechnicalSupportNotificationService --> UserRepository : users
 EventCancellationController --> EventCancellationService : service
 EventController --> EventArrangementsService : arrangements
 EventController --> EventLifecycleService : lifecycle

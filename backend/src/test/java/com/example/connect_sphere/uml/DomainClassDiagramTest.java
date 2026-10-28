@@ -45,6 +45,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 @Tag("integration")
 @Tag("DEV15")
+@Tag("TS11")
 @SpringBootTest
 class DomainClassDiagramTest {
 
@@ -56,6 +57,9 @@ class DomainClassDiagramTest {
             "EquipmentRequestLineId",
             "SerialisedEquipmentId",
             "VenueBecameUnavailable",
+            // TS11's application events, like VenueBecameUnavailable above.
+            "ChangeApproved",
+            "EquipmentRequestSubmitted",
             // VS-C3's tentative hold: a record read with JDBC, not an entity.
             "VenueHold");
 

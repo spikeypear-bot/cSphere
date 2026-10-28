@@ -32,6 +32,7 @@ public class NotificationOutbox {
         payload.put("is_reassignment",n.getIsReassignment()); payload.put("occurred_at",n.getOccurredAt().toString());
         payload.put("read_at",null); payload.put("message",n.getMessage());
         payload.put("venue_booking_id",n.getVenueBookingId()); payload.put("requirement_review_id",n.getRequirementReviewId());
+        payload.put("equipment_request_id",n.getEquipmentRequestId()); payload.put("equipment_review_id",n.getEquipmentReviewId());
         jdbc.update("INSERT INTO notification_outbox(notification_id,payload) VALUES (?,?::jsonb)",
             n.getNotificationId(),json.writeValueAsString(payload));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {

@@ -72,7 +72,7 @@ painful. Settle these before there is production data.
 | `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician`, `ecl` (V21), `safety_officer` (V22, SO-C1–SO-C4) | `users.role` |
 | `event_status` | `pending` (shown as Planning; added V12), `confirmed`, `cancelled`, `completed`; V23 adds `awaiting_safety_review`, `safety_changes_requested`, `safety_approved` (EC08) | `events.status` |
 | `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
-| `equipment_request_status` | `processing`, `approved`, `rejected`, `superseded` (V52, EC-NEW3), `attention` (V53, EC-NEW3) | `equipment_requests.status` |
+| `equipment_request_status` | `processing`, `approved`, `rejected`, `superseded` (V53, EC-NEW3), `attention` (V54, EC-NEW3) | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
 | `venue_booking_status` | `pending`, `approved` (renamed from `confirmed` in V16), `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
 | `accessibilities` | `accessible_parking`, `drop_off_zone`, `public_transport`, `step_free_access`, `wide_doorways`, `elevators`, `wheelchair_support`, `none` (added V5 — see EO02) | `venues.venue_accessibilities`, `events.accessibility_needs`, `event_requests.accessibility_needs` |
@@ -344,9 +344,9 @@ A request for equipment attached to an event. Header row; the items are in
 | `status` | `equipment_request_status` | no | | Approval state |
 | `technical_requirement` | `TEXT` | no | | Free-text technical needs |
 | `reject_reason` | `TEXT` | yes | | Populated only when `status = 'rejected'` |
-| `attention_reason` | `TEXT` | yes | | V53: why an approved change flagged it; populated only when `status = 'attention'` |
+| `attention_reason` | `TEXT` | yes | | V54: why an approved change flagged it; populated only when `status = 'attention'` |
 
-**V52 (EC-NEW3, D36):** `superseded` marks a request a coordinator's revision
+**V53 (EC-NEW3, D36):** `superseded` marks a request a coordinator's revision
 replaced. Reachable only from `processing`/`approved`, through
 `PATCH /events/{eventId}/equipment-request` — never a status TS01/TS06
 queue or decide directly. The replaced request's own row, and its lines,
@@ -701,6 +701,30 @@ reservation as a **spare**: an extra unit held beyond what the event's requests 
 See [TS09 API](../../../../../../docs/equipment-damage-api.md) § Technical Support console and
 decision-log D33.
 
+## V52 update — TS11 equipment change reviews and Technical Support notices
+
+`equipment_change_reviews` records an approved event change (EC-NEW3) that affected an event's
+equipment, and Technical Support's review of it. Columns: `review_id` (UUID PK), `event_id`
+(required FK → `events`), `change_request_id` (required FK → `event_change_requests`, unique: one
+review per change), `coordinator_id` (nullable FK → `users`, the coordinator at approval),
+`changed_at`, `previous_values` and `updated_values` (JSONB: `startDatetime`, `endDatetime`,
+`equipmentRequirements`), `affected_reservations` (JSONB snapshot of the reservations that no
+longer covered the event), `requirements_changed`, and the review: `outcome` (`still_suitable`,
+`needs_coordinator_action`), `outcome_note` (trimmed, 1–2000 characters), `reviewed_by` (FK →
+`users`) and `reviewed_at`. A check requires no review fields while unreviewed, a reviewer and time
+once reviewed, and a note for `needs_coordinator_action`.
+
+`notifications` gains `equipment_request_id` (FK → `equipment_requests`) and `equipment_review_id`
+(FK → `equipment_change_reviews`), each with a partial unique index on (`recipient_user_id`,
+column) so a user is told once. `notification_type` gains `equipment_request_submitted` (needs
+`event_id`, `equipment_request_id`, `message`) and `equipment_change_review` (needs `event_id`,
+`equipment_review_id`, `message`); the recreated `chk_notification_shape` keeps every prior branch,
+including VS17's V42/V43/V51 additions below and TS09's `equipment_damage_outcome`. See decision-log D34.
+
+V52 was written as V36, then V41, renumbered three times: first when `main` (V34–V36) was merged
+in, then to make room for TS09's V37–V40 (merged into `main` first), and finally to make room for
+`main`'s V41–V51 (VS17 and others, merged in after TS11 branched).
+
 ## V42 update — venue requirement reviews (VS17)
 
 `venue_requirement_reviews` snapshots each active booking affected by an approved
@@ -758,7 +782,7 @@ enqueue the same outcome for the coordinator assigned when the decision commits.
 The conditional pending-to-approved update prevents duplicate outcomes; rollback
 also removes the outbox work. Previous notification shapes remain valid.
 
-## V52 update — equipment request revision (EC-NEW3, D36)
+## V53 update — equipment request revision (EC-NEW3, D36)
 
 `equipment_request_status` adds `superseded`. The coordinator revises an
 event's equipment request ("Approach 3, supersede and rebuild": D36) when
@@ -774,7 +798,7 @@ before and after. No new table and no notification shape change: Technical
 Support sees the new request exactly as it would any first-time one
 (TS01/EC07), and is not told why the previous one stopped.
 
-## V53 update — equipment request attention (EC-NEW3, D37)
+## V54 update — equipment request attention (EC-NEW3, D37)
 
 `equipment_request_status` adds `attention`, `equipment_requests` adds
 `attention_reason`, and `notification_type` adds `equipment_request_attention`.

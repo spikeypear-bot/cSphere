@@ -19,4 +19,10 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     /** Powers an unread-count badge without pulling every row down to count
      * them client-side. */
     long countByRecipientUserIdAndReadAtIsNull(UUID recipientUserId);
+
+    /** TS11 AC15: has this user already been told about this equipment request? */
+    boolean existsByRecipientUserIdAndEquipmentRequestId(UUID recipientUserId, UUID equipmentRequestId);
+
+    /** TS11 AC15: has this user already been asked to review this change? */
+    boolean existsByRecipientUserIdAndEquipmentReviewId(UUID recipientUserId, UUID equipmentReviewId);
 }

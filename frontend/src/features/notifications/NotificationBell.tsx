@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useNotifications } from './useNotifications'
+import { useSession } from '../../lib/sessionContext'
 import type { NotificationDto } from '../../types/notification'
 import { JOURNEY_LABELS } from '../../types/status'
 import './notifications.css'
@@ -42,6 +43,8 @@ function describe(n: NotificationDto): string {
   if (n.type === 'attendee_registration_confirmed') return `Your registration for "${n.eventName}" is confirmed`
   // TS09: the outcome itself is the message, shown under the title.
   if (n.type === 'equipment_damage_outcome') return `Damaged equipment affects "${n.eventName}"`
+  if (n.type === 'equipment_request_submitted') return `New equipment request for "${n.eventName}"`
+  if (n.type === 'equipment_change_review') return `An approved change to "${n.eventName}" affects its equipment`
   if (n.type === 'equipment_request_attention') return `The equipment request for "${n.eventName}" needs attention`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`
   if (n.type === 'venue_timing_conflict') return `Venue timing conflict for "${n.eventName}"`
@@ -74,11 +77,23 @@ const STATUS_CHANGE_LABELS: Record<string, string> = {
   clarification_required: JOURNEY_LABELS.CLARIFICATION_REQUIRED,
 }
 
+/** Messages the server writes as a full sentence, shown without quotes. */
+const PLAIN_MESSAGE_TYPES = new Set<NotificationDto['type']>([
+  'venue_unavailable',
+  'venue_hold_expiring',
+  'equipment_request_submitted',
+  'equipment_change_review',
+])
+
 /** EO09/EO19: unread-count badge + a dropdown of every notification for the
  * signed-in user, newest first. Rendered in AppShell for any signed-in role
  * — today only Organisers receive anything, but nothing here assumes that. */
 export function NotificationBell() {
   const { notifications, unreadCount, markRead } = useNotifications()
+  const { role } = useSession()
+  // Technical Support's list is kept to the heading and when it happened —
+  // the reason/message detail lines (below) are left out for that role only.
+  const compact = role === 'technical-support'
   const [open, setOpen] = useState(false)
   const navigate = useNavigate()
   const containerRef = useRef<HTMLDivElement>(null)
@@ -133,10 +148,10 @@ export function NotificationBell() {
                     <span className="notification-bell__dot" aria-hidden="true" />
                     <span className="notification-bell__item-body">
                       <span className="notification-bell__item-text">{describe(n)}</span>
-                      {n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
+                      {!compact && n.type === 'status_change' && n.newStatus === 'rejected' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-                      {n.message && n.type !== 'venue_requirement_changed' && n.type !== 'venue_requirement_reviewed' && n.type !== 'venue_suitability_changed' && n.type !== 'venue_arrangements_changed' ? n.type === 'venue_unavailable' || n.type === 'venue_hold_expiring' ? (
+                      {!compact && n.message && n.type !== 'venue_requirement_changed' && n.type !== 'venue_requirement_reviewed' && n.type !== 'venue_suitability_changed' && n.type !== 'venue_arrangements_changed' ? PLAIN_MESSAGE_TYPES.has(n.type) ? (
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>

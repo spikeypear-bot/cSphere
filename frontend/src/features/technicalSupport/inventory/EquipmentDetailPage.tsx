@@ -6,12 +6,12 @@ import { Notice } from '../../../components/ui/Notice'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { equipmentMediaFor } from '../../equipment/equipmentCatalogueMedia'
 import { formatEventTimeRange } from '../../venueStaff/formatEventDateTime'
-import { EquipmentPhoto } from '../damage/EquipmentPhoto'
 import '../damage/equipmentDamage.css'
 import { fetchReports } from '../damage/equipmentDamageApi'
 import { removeStatusPeriod } from '../status/equipmentStatusApi'
 import { DateRangeFields } from '../shared/DateRangeFields'
 import { rangeFromParams, rangeToWindow } from '../shared/dateWindow'
+import { EquipmentSummaryCard } from '../shared/EquipmentSummaryCard'
 import { reportPath, TS } from '../shared/faultyEquipment'
 import { describeSpan } from '../shared/format'
 import { ResourceView } from '../shared/ResourceView'
@@ -66,14 +66,13 @@ export function EquipmentDetailPage() {
               </>
             )}
           />
-          <Card className="equipment-damage__summary">
-            <EquipmentPhoto name={kind.equipmentName} />
+          <EquipmentSummaryCard name={kind.equipmentName}>
             <dl>
               <div><dt>Category</dt><dd>{equipmentMediaFor(kind.equipmentName)?.category ?? 'Other'}</dd></div>
               <div><dt>Owned</dt><dd>{kind.totalQuantity}</dd></div>
               <div><dt>Tracking</dt><dd>{kind.serialised ? 'By unit' : 'By quantity'}</dd></div>
             </dl>
-          </Card>
+          </EquipmentSummaryCard>
 
           {notice ? <Notice>{notice}</Notice> : null}
           {actionError ? <Notice tone="danger">{actionError}</Notice> : null}

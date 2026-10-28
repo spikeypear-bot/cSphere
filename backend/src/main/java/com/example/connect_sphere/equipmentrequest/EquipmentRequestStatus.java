@@ -4,9 +4,9 @@ public enum EquipmentRequestStatus {
     processing,
     approved,
     rejected,
-    /** EC-NEW3 (D36, V52): replaced by a coordinator's complete revision. */
+    /** EC-NEW3 (D36, V53): replaced by a coordinator's complete revision. */
     superseded,
-    /** EC-NEW3 (D37, V53): approved, but an approved change means it may no
+    /** EC-NEW3 (D37, V54): approved, but an approved change means it may no
      * longer fit; reservations are still held until the coordinator resolves it. */
     attention;
 

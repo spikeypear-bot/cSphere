@@ -50,6 +50,8 @@ import { EquipmentDetailPage } from './features/technicalSupport/inventory/Equip
 import { FaultyEquipmentPage } from './features/technicalSupport/faulty/FaultyEquipmentPage'
 import { ReportProblemPage } from './features/technicalSupport/faulty/ReportProblemPage'
 import { DamageReportDetailPage } from './features/technicalSupport/damage/DamageReportDetailPage'
+import { ChangeReviewsPage } from './features/technicalSupport/changeReviews/ChangeReviewsPage'
+import { ChangeReviewPage } from './features/technicalSupport/changeReviews/ChangeReviewPage'
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { AttendeeEventDetailsPage } from './features/attendee/AttendeeEventDetailsPage'
 import { AttendeeEventsPage } from './features/attendee/AttendeeEventsPage'
@@ -191,6 +193,9 @@ function TechnicalSupportRoutes() {
         <Route path="faulty/reports/:reportId" element={<DamageReportDetailPage />} />
         <Route path="inventory" element={<InventoryPage />} />
         <Route path="inventory/:equipmentId" element={<EquipmentDetailPage />} />
+        {/* TS11: equipment change reviews. */}
+        <Route path="change-reviews" element={<ChangeReviewsPage />} />
+        <Route path="change-reviews/:reviewId" element={<ChangeReviewPage />} />
         {/* The routes before the rework, kept so old links still work. */}
         <Route path="availability" element={<LegacyRequestRedirect />} />
         <Route path="reservations" element={<LegacyRequestRedirect />} />

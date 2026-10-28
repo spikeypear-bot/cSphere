@@ -1,4 +1,4 @@
-// @stories TS01 TS02 TS03 TS06 TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories TS01 TS02 TS03 TS06 TS09 TS11  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -8,6 +8,7 @@ import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import { requestPageRoutes } from '../../test/requestPageStubs'
 import { AppShell } from '../../components/layout/AppShell'
 import { technicalSupportNav } from './technicalSupportNav'
+import { ChangeReviewsPage } from './changeReviews/ChangeReviewsPage'
 import { TechnicalSupportDashboardPage } from './dashboard/TechnicalSupportDashboardPage'
 import { EquipmentRequestDetailPage } from './requests/EquipmentRequestDetailPage'
 import { FaultyEquipmentPage } from './faulty/FaultyEquipmentPage'
@@ -32,6 +33,7 @@ function renderRoutes(path: string) {
           <Route path="/technical-support/faulty" element={<FaultyEquipmentPage />} />
           <Route path="/technical-support/faulty/new" element={<ReportProblemPage />} />
           <Route path="/technical-support/inventory/:equipmentId" element={<EquipmentDetailPage />} />
+          <Route path="/technical-support/change-reviews" element={<ChangeReviewsPage />} />
         </Routes>
         </AppShell>
       </SessionProvider>
@@ -63,6 +65,18 @@ describe('Technical Support UI integration', () => {
     )
     expect(within(nav).getByRole('link', { name: 'Dashboard' })).toHaveAttribute('aria-current', 'page')
     expect(await screen.findByText('Nothing to handle right now.')).toBeInTheDocument()
+  })
+
+  it('TS11 (happy): the console navigation opens the change reviews, marked as the current page', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
+    renderRoutes('/technical-support/change-reviews')
+
+    const nav = screen.getByRole('navigation', { name: 'Technical Support' })
+    const link = within(nav).getByRole('link', { name: 'Change reviews' })
+    expect(link).toHaveAttribute('href', '/technical-support/change-reviews')
+    expect(link).toHaveAttribute('aria-current', 'page')
+    expect(await screen.findByRole('heading', { level: 1, name: 'Change reviews' })).toBeInTheDocument()
+    expect(await screen.findByText('No approved changes have affected equipment yet.')).toBeInTheDocument()
   })
 
   it('TS02 (happy): one button reserves every remaining unit, and the saved reservation is listed for the event', async () => {

@@ -8,6 +8,7 @@ import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
 import type { EventDto } from '../../types/event'
+import { EquipmentChangeReviewsPanel } from './EquipmentChangeReviewsPanel'
 import type { EventEquipmentDamage } from '../technicalSupport/damage/equipmentDamage.types'
 import './EquipmentRequestPage.css'
 
@@ -334,8 +335,8 @@ export function EquipmentRequestPage() {
             <Notice tone="info" as="div">
               <p>{activeRequest.attentionReason}</p>
               <p>
-                Mark it still suitable only if nothing about the items needs to change. A new time that a
-                reservation no longer covers needs a revision.
+                If a reservation no longer covers the event's new time, revise the request. If only the wording
+                changed, you or Technical Support can mark it still suitable, unless they ask you to act.
               </p>
             </Notice>
           ) : null}
@@ -386,6 +387,7 @@ export function EquipmentRequestPage() {
           </Button>
         </Card>
       )}
+      {activeRequest ? <EquipmentChangeReviewsPanel eventId={event.eventId} /> : null}
     </section>
   )
 }

@@ -251,7 +251,7 @@ public class ChangeImpactService {
             boolean timesChanged, List<ImpactItem> items) {
         if (timesChanged) {
             for (EquipmentReservationResponse r : equipment.reservationsForEvent(event.getEventId())) {
-                if (!covers(r, proposed.startDatetime(), proposed.endDatetime())) {
+                if (!r.covers(proposed.startDatetime().toInstant(), proposed.endDatetime().toInstant())) {
                     items.add(new ImpactItem("equipment:" + r.logId(), "equipment", ATTENTION,
                             r.equipmentName() + " is reserved for the old time",
                             r.quantity() + " reserved " + period(r.loanedFrom(), r.loanedUntil())
@@ -278,13 +278,6 @@ public class ChangeImpactService {
             items.add(new ImpactItem("equipment:requirements", "equipment", ATTENTION, "Equipment requirements change",
                     "Update the event's equipment request to match (EC07)."));
         }
-    }
-
-    /** Whether the reservation's loan window still spans the whole event. */
-    static boolean covers(EquipmentReservationResponse r, OffsetDateTime start, OffsetDateTime end) {
-        return r.loanedFrom() != null && r.loanedUntil() != null
-                && !r.loanedFrom().isAfter(start.toInstant())
-                && !r.loanedUntil().isBefore(end.toInstant());
     }
 
     private void safetyImpact(Event event, Set<String> changedFields, List<ImpactItem> items) {
