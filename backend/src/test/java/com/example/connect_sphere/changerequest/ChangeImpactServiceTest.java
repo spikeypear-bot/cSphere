@@ -198,6 +198,34 @@ class ChangeImpactServiceTest {
     }
 
     @Test
+    @DisplayName("EC-NEW3 (D37) (negative): equipment the event asks for that is not free at the new time needs attention; enough is fine")
+    void equipmentAvailabilityAtTheNewTime() {
+        UUID projector = UUID.randomUUID();
+        UUID mic = UUID.randomUUID();
+        var later = START.plusDays(1);
+        when(equipment.needsAt(event.getEventId(), later.toInstant(), END.plusDays(1).toInstant())).thenReturn(List.of(
+                new EquipmentReservationService.NeedAt(projector, "Projector", 2, 1),
+                new EquipmentReservationService.NeedAt(mic, "Wireless mic", 4, 4)));
+
+        List<ImpactItem> items = service.assess(event, proposal(later, END.plusDays(1), 150, List.of(), null),
+                Set.of("startDatetime", "endDatetime"));
+
+        assertThat(attention(items)).containsExactly("equipment:available:" + projector);
+        assertThat(items).filteredOn(i -> i.key().equals("equipment:available:" + projector)).singleElement()
+                .satisfies(i -> assertThat(i.detail()).startsWith("Only 1 of the 2 needed is free"));
+        assertThat(items).filteredOn(i -> i.key().equals("equipment:available:" + mic)).singleElement()
+                .satisfies(i -> assertThat(i.status()).isEqualTo(ChangeImpactService.OK));
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (boundary): equipment availability is not checked when the times do not change")
+    void equipmentAvailabilityIsNotCheckedWithoutATimeChange() {
+        service.assess(event, proposal(START, END, 150, List.of(), "6 mics"), Set.of("equipmentRequirements"));
+
+        org.mockito.Mockito.verify(equipment, org.mockito.Mockito.never()).needsAt(any(), any(), any());
+    }
+
+    @Test
     @DisplayName("EC-NEW3 AC23, AC35 (happy): in the safety stages an important change sends the event back to Planning; a name change keeps it")
     void safetyConsequence() {
         event.setStatus(EventStatus.confirmed);

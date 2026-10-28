@@ -61,6 +61,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("unit")
 @Tag("EO07")
 @Tag("VS17")
+@Tag("EC-NEW3")
 class EventLifecycleCancellationTest {
 
     @Mock private EventRepository events;
@@ -187,6 +188,18 @@ class EventLifecycleCancellationTest {
     void venueStaffAndTechnicalSupportAreToldOnce() {
         booking(VenueBookingStatus.approved);
         equipmentRequest(EquipmentRequestStatus.approved);
+
+        service.cancel(COORDINATOR, event.getEventId(), MESSAGE);
+
+        verify(notifications, times(1)).createEventCancelledNotifications(eq(List.of(VS_USER, TECH_USER)),
+                eq(event.getEventId()), eq("Town Hall"), anyString());
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (happy): Technical Support is told of a cancellation while its approved equipment needs attention")
+    void technicalSupportIsToldWhileItsApprovedEquipmentNeedsAttention() {
+        booking(VenueBookingStatus.approved);
+        equipmentRequest(EquipmentRequestStatus.attention);
 
         service.cancel(COORDINATOR, event.getEventId(), MESSAGE);
 

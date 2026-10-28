@@ -1,5 +1,6 @@
 package com.example.connect_sphere.changerequest;
 
+import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -250,10 +251,7 @@ public class ChangeImpactService {
             boolean timesChanged, List<ImpactItem> items) {
         if (timesChanged) {
             for (EquipmentReservationResponse r : equipment.reservationsForEvent(event.getEventId())) {
-                boolean covers = r.loanedFrom() != null && r.loanedUntil() != null
-                        && !r.loanedFrom().isAfter(proposed.startDatetime().toInstant())
-                        && !r.loanedUntil().isBefore(proposed.endDatetime().toInstant());
-                if (!covers) {
+                if (!covers(r, proposed.startDatetime(), proposed.endDatetime())) {
                     items.add(new ImpactItem("equipment:" + r.logId(), "equipment", ATTENTION,
                             r.equipmentName() + " is reserved for the old time",
                             r.quantity() + " reserved " + period(r.loanedFrom(), r.loanedUntil())
@@ -261,10 +259,32 @@ public class ChangeImpactService {
                 }
             }
         }
+        if (timesChanged) {
+            // D37: a rough check that the equipment could still be had at the new time.
+            Instant start = proposed.startDatetime().toInstant();
+            Instant end = proposed.endDatetime().toInstant();
+            for (EquipmentReservationService.NeedAt need : equipment.needsAt(event.getEventId(), start, end)) {
+                boolean enough = need.free() >= need.needed();
+                items.add(new ImpactItem("equipment:available:" + need.equipmentId(), "equipment",
+                        enough ? OK : ATTENTION,
+                        enough ? need.equipmentName() + " is free at the new time"
+                                : "Not enough " + need.equipmentName() + " at the new time",
+                        enough ? need.needed() + " needed, " + need.free() + " free " + period(start, end) + "."
+                                : "Only " + need.free() + " of the " + need.needed() + " needed is free "
+                                        + period(start, end) + ". Technical Support may not be able to move it."));
+            }
+        }
         if (changedFields.contains("equipmentRequirements")) {
             items.add(new ImpactItem("equipment:requirements", "equipment", ATTENTION, "Equipment requirements change",
                     "Update the event's equipment request to match (EC07)."));
         }
+    }
+
+    /** Whether the reservation's loan window still spans the whole event. */
+    static boolean covers(EquipmentReservationResponse r, OffsetDateTime start, OffsetDateTime end) {
+        return r.loanedFrom() != null && r.loanedUntil() != null
+                && !r.loanedFrom().isAfter(start.toInstant())
+                && !r.loanedUntil().isBefore(end.toInstant());
     }
 
     private void safetyImpact(Event event, Set<String> changedFields, List<ImpactItem> items) {

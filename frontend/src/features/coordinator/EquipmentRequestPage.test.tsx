@@ -1,3 +1,4 @@
+// @stories EC07 EC-NEW3
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -107,6 +108,46 @@ describe('EquipmentRequestPage (EC07)', () => {
     expect(screen.queryByRole('button', { name: 'Submit equipment request' })).not.toBeInTheDocument()
   })
 
+  it('EC-NEW3: revises the active request, releasing reservations and superseding the old one', async () => {
+    seedSession('coordinator')
+    const calls = stubApi({
+      ...getBaseRoutes(),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [{
+        requestId: 'request-1',
+        eventId: EVENT_ID,
+        status: 'approved',
+        technicalRequirement: 'Two microphones',
+        rejectReason: null,
+        lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone', quantity: 2 }],
+      }]),
+      [`PATCH /api/events/${EVENT_ID}/equipment-request`]: (body) => jsonResponse(200, {
+        requestId: 'request-2',
+        eventId: EVENT_ID,
+        status: 'processing',
+        technicalRequirement: (body as { technicalRequirement: string }).technicalRequirement,
+        lines: [{ equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 1 }],
+      }),
+    })
+    const user = userEvent.setup()
+    renderPage()
+
+    await user.click(await screen.findByRole('button', { name: 'Revise request' }))
+    expect(screen.getByDisplayValue('Two microphones')).toBeInTheDocument()
+    await user.clear(screen.getByDisplayValue('Two microphones'))
+    await user.type(screen.getByLabelText('Technical requirements or notes'), 'Fewer microphones, a projector now')
+    await user.selectOptions(screen.getByLabelText('Equipment'), 'projector-1')
+    await user.clear(screen.getByLabelText('Quantity'))
+    await user.type(screen.getByLabelText('Quantity'), '1')
+    await user.click(screen.getByRole('button', { name: 'Submit revision' }))
+
+    expect(await screen.findByText(/revised/i)).toBeInTheDocument()
+    expect(screen.getByText('1 × Projector')).toBeInTheDocument()
+    expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
+      technicalRequirement: 'Fewer microphones, a projector now',
+      items: [{ equipmentId: 'projector-1', quantity: 1 }],
+    })
+  })
+
   it('shows Technical Support rejection status and reason', async () => {
     seedSession('coordinator')
     stubApi({
@@ -124,5 +165,76 @@ describe('EquipmentRequestPage (EC07)', () => {
 
     expect(await screen.findByText(/Previous request was not approved/)).toBeInTheDocument()
     expect(screen.getByText('Reason: Only one unit can be provided.')).toBeInTheDocument()
+  })
+
+  describe('EC-NEW3 (D37): an equipment request that needs attention', () => {
+    const flagged = {
+      requestId: 'request-1',
+      eventId: EVENT_ID,
+      status: 'attention',
+      technicalRequirement: 'Two microphones',
+      rejectReason: null,
+      attentionReason: "The event's equipment requirements text changed.",
+      lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone', quantity: 2 }],
+    }
+
+    it('EC-NEW3 (D37) (happy): shows that it needs attention, why, and both ways to resolve it', async () => {
+      seedSession('coordinator')
+      stubApi({ ...getBaseRoutes(), [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]) })
+      renderPage()
+
+      expect(await screen.findByText('Needs attention')).toBeInTheDocument()
+      expect(screen.getByText("The event's equipment requirements text changed.")).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Revise request' })).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mark still suitable' })).toBeInTheDocument()
+    })
+
+    it('EC-NEW3 (D37) (happy): marking it still suitable with a note sends the note and shows it approved', async () => {
+      seedSession('coordinator')
+      const calls = stubApi({
+        ...getBaseRoutes(),
+        [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]),
+        [`PATCH /api/events/${EVENT_ID}/equipment-request/request-1/still-suitable`]: () =>
+          jsonResponse(200, { ...flagged, status: 'approved', attentionReason: null }),
+      })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Mark still suitable' }))
+      await user.type(screen.getByLabelText('Why is it still suitable?'), 'Wording only, same microphones')
+      await user.click(screen.getByRole('button', { name: 'Confirm still suitable' }))
+
+      expect(await screen.findByText('Approved')).toBeInTheDocument()
+      expect(screen.queryByText('Needs attention')).not.toBeInTheDocument()
+      expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({ note: 'Wording only, same microphones' })
+    })
+
+    it('EC-NEW3 (D37) (conflict): a flagged request is shown even when an approved one is listed before it', async () => {
+      seedSession('coordinator')
+      stubApi({
+        ...getBaseRoutes(),
+        [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [
+          { ...flagged, requestId: 'request-0', status: 'approved', attentionReason: null },
+          flagged,
+        ]),
+      })
+      renderPage()
+
+      expect(await screen.findByText('Needs attention')).toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Mark still suitable' })).toBeInTheDocument()
+    })
+
+    it('EC-NEW3 (D37) (negative): cannot confirm still suitable without a note', async () => {
+      seedSession('coordinator')
+      const calls = stubApi({ ...getBaseRoutes(), [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [flagged]) })
+      const user = userEvent.setup()
+      renderPage()
+
+      await user.click(await screen.findByRole('button', { name: 'Mark still suitable' }))
+      await user.type(screen.getByLabelText('Why is it still suitable?'), '   ')
+
+      expect(screen.getByRole('button', { name: 'Confirm still suitable' })).toBeDisabled()
+      expect(calls.some((call) => call.method === 'PATCH')).toBe(false)
+    })
   })
 })

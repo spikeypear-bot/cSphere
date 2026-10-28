@@ -67,6 +67,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("VS17")
 @Tag("SO-C5")
 @Tag("SO-C6")
+@Tag("EC-NEW3")
 class EventLifecycleServiceTest {
 
     @Mock private EventRepository events;
@@ -194,6 +195,24 @@ class EventLifecycleServiceTest {
         equipmentRequest(EquipmentRequestStatus.processing);
 
         assertThat(service.readiness(COORDINATOR, event.getEventId()).canSendForReview()).isFalse();
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (D37) (negative): an equipment request needing attention keeps the equipment item outstanding")
+    void anEquipmentRequestNeedingAttentionKeepsTheEquipmentItemOutstanding() {
+        Event event = stored(EventStatus.pending);
+        booking(VenueBookingStatus.approved);
+        EquipmentRequest flagged = new EquipmentRequest(UUID.randomUUID(), event.getEventId(),
+                EquipmentRequestStatus.approved, "Microphones");
+        flagged.flagAttention("The event's equipment requirements text changed.");
+        eventEquipment.add(flagged);
+
+        EventReadinessDto readiness = service.readiness(COORDINATOR, event.getEventId());
+
+        assertThat(readiness.canSendForReview()).isFalse();
+        assertThat(item(readiness, "equipment").state()).isEqualTo("outstanding");
+        assertThat(item(readiness, "equipment").detail())
+                .isEqualTo("The equipment request needs attention: The event's equipment requirements text changed.");
     }
 
     @Test

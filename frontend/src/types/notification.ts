@@ -36,6 +36,8 @@ export type NotificationTypeName =
   | 'attendee_registration_confirmed'
   // TS09
   | 'equipment_damage_outcome'
+  // EC-NEW3 (D37)
+  | 'equipment_request_attention'
 
 export interface NotificationDto {
   notificationId: string

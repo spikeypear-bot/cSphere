@@ -191,6 +191,9 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.PATCH, "/api/equipment-requests/*/status").hasRole("TECHNICIAN")
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests").hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 		    .requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
+		    // EC-NEW3: the coordinator revises the complete equipment request.
+		    .requestMatchers(HttpMethod.PATCH, "/api/events/*/equipment-request").hasRole("EC")
+		    .requestMatchers(HttpMethod.PATCH, "/api/events/*/equipment-request/*/still-suitable").hasRole("EC")
 		    // TS09: Technical Support report damaged equipment and decide each
 		    // affected event. The event's assigned coordinator reads and resolves
 		    // its shortfalls; the Lead reads any (ECL-C7). Which event is the

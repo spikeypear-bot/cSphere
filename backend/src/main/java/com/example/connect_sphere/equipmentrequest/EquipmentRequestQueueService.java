@@ -127,6 +127,10 @@ public class EquipmentRequestQueueService {
         if ("all".equals(value)) {
             return EnumSet.allOf(EquipmentRequestStatus.class);
         }
+        if ("approved".equals(value)) {
+            // EC-NEW3 (D37): a flagged request is still approved, with reservations held.
+            return EnumSet.of(EquipmentRequestStatus.approved, EquipmentRequestStatus.attention);
+        }
         try {
             return EnumSet.of(EquipmentRequestStatus.valueOf(value));
         } catch (IllegalArgumentException e) {

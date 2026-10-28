@@ -72,7 +72,7 @@ painful. Settle these before there is production data.
 | `user_role` | `ec`, `eo`, `vs`, `attendee`, `technician`, `ecl` (V21), `safety_officer` (V22, SO-C1–SO-C4) | `users.role` |
 | `event_status` | `pending` (shown as Planning; added V12), `confirmed`, `cancelled`, `completed`; V23 adds `awaiting_safety_review`, `safety_changes_requested`, `safety_approved` (EC08) | `events.status` |
 | `event_request_status` | `draft`, `pending`, `clarification_required` (V13, EC01), `approved`, `rejected`, `cancelled` | `event_requests.status` |
-| `equipment_request_status` | `processing`, `approved`, `rejected` | `equipment_requests.status` |
+| `equipment_request_status` | `processing`, `approved`, `rejected`, `superseded` (V52, EC-NEW3), `attention` (V53, EC-NEW3) | `equipment_requests.status` |
 | `equipment_status` | `available`, `in_use`, `damaged`, `maintenance`, `retired` | `serialised_equipments.status` |
 | `venue_booking_status` | `pending`, `approved` (renamed from `confirmed` in V16), `changed`, `rejected`, `cancelled` | `venue_bookings.status` |
 | `accessibilities` | `accessible_parking`, `drop_off_zone`, `public_transport`, `step_free_access`, `wide_doorways`, `elevators`, `wheelchair_support`, `none` (added V5 — see EO02) | `venues.venue_accessibilities`, `events.accessibility_needs`, `event_requests.accessibility_needs` |
@@ -344,6 +344,16 @@ A request for equipment attached to an event. Header row; the items are in
 | `status` | `equipment_request_status` | no | | Approval state |
 | `technical_requirement` | `TEXT` | no | | Free-text technical needs |
 | `reject_reason` | `TEXT` | yes | | Populated only when `status = 'rejected'` |
+| `attention_reason` | `TEXT` | yes | | V53: why an approved change flagged it; populated only when `status = 'attention'` |
+
+**V52 (EC-NEW3, D36):** `superseded` marks a request a coordinator's revision
+replaced. Reachable only from `processing`/`approved`, through
+`PATCH /events/{eventId}/equipment-request` — never a status TS01/TS06
+queue or decide directly. The replaced request's own row, and its lines,
+are kept as they were; nothing about it is edited in place, so a later
+audit can still see what changed. The revision also releases every
+`equipment_logs` row for the event (D36) — a reservation names only its
+event, never a request, so a request-scoped release is not possible.
 
 ---
 
@@ -747,3 +757,39 @@ event's current checklist before saving a decision.
 enqueue the same outcome for the coordinator assigned when the decision commits.
 The conditional pending-to-approved update prevents duplicate outcomes; rollback
 also removes the outbox work. Previous notification shapes remain valid.
+
+## V52 update — equipment request revision (EC-NEW3, D36)
+
+`equipment_request_status` adds `superseded`. The coordinator revises an
+event's equipment request ("Approach 3, supersede and rebuild": D36) when
+an approved change means the equipment requested no longer fits, in either
+direction — more or less than before. `PATCH /events/{eventId}/equipment-request`
+releases every `equipment_logs` row the event holds (a reservation names
+only its event, TS02, never a request), marks every `processing`/`approved`
+request for the event `superseded`, and creates one new `processing`
+request from the coordinator's complete new picture — through the same
+validation `submit` already applies. Superseded requests and their lines
+are kept exactly as they were, never edited, so a later audit can compare
+before and after. No new table and no notification shape change: Technical
+Support sees the new request exactly as it would any first-time one
+(TS01/EC07), and is not told why the previous one stopped.
+
+## V53 update — equipment request attention (EC-NEW3, D37)
+
+`equipment_request_status` adds `attention`, `equipment_requests` adds
+`attention_reason`, and `notification_type` adds `equipment_request_attention`.
+When `ChangeRequestService.approve()` applies a change whose new times fall
+outside an event's equipment reservation, or whose equipment requirements
+text changed, every `approved` request for the event becomes `attention`
+with the reason, and the coordinator is notified — mirroring
+`venue_booking_status.attention` (VS17). A request already in `attention` is
+flagged again by a later change (the reservation reason outranks the wording
+one). `processing` requests are never flagged: Technical Support's approval
+re-checks them against the current details. Only this flow sets `attention`;
+`PATCH /equipment-requests/{id}/status` accepts only `approved`/`rejected`.
+Reservations are untouched. The coordinator clears it by revising the
+request (D36, which supersedes it) or by
+`PATCH /events/{eventId}/equipment-request/{requestId}/still-suitable` with a
+note, which returns it to `approved`. Technical-Support-facing reads treat
+`attention` as approved, since the reservations are still held (including
+the queue's `?status=approved` filter); readiness treats it as outstanding.

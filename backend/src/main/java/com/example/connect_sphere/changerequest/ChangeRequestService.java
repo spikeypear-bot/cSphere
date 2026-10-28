@@ -72,6 +72,8 @@ public class ChangeRequestService {
     private final UserRepository users;
     private final Clock clock;
     private final VenueRequirementChangeService venueRequirements;
+    /** EC-NEW3 (D37): absent in plain unit tests, where no equipment is flagged. */
+    @Autowired(required = false) private EquipmentRequestAttentionService equipmentAttention;
 
     @Autowired
     public ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
@@ -240,6 +242,7 @@ public class ChangeRequestService {
                 ActivityType.change_approved, coordinator.userId(), fitActivityMessage("Approved: " + summary), null, null, null, null,
                 ChangeFields.changedValues(changes)));
         venueRequirements.approved(saved, event, oldStart, oldEnd);
+        if (equipmentAttention != null) equipmentAttention.approved(saved, event, changed, proposed);
         if (replan) {
             lifecycle.returnToPlanning(event.getEventId(), coordinator.userId(),
                     fitActivityMessage("An approved change affects the event's arrangements: " + summary));

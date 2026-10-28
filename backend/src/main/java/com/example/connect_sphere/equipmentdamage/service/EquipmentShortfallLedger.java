@@ -50,7 +50,7 @@ public class EquipmentShortfallLedger {
     /** What the event is owed of this kind, leaving out {@code excludedOutcome}'s own shortfall. */
     public int need(UUID eventId, UUID equipmentId, UUID excludedOutcome) {
         int approved = requests.findByEventId(eventId).stream()
-                .filter(r -> r.getStatus() == EquipmentRequestStatus.approved)
+                .filter(r -> r.getStatus().heldByTechnicalSupport())
                 .flatMap(r -> lines.findByIdRequestId(r.getId()).stream())
                 .filter(line -> line.getId().getEquipmentId().equals(equipmentId))
                 .mapToInt(EquipmentRequestLine::getQuantity)

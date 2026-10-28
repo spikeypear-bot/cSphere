@@ -8,6 +8,7 @@ import static org.mockito.Mockito.when;
 
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentRepository;
+import com.example.connect_sphere.equipment.EquipmentReservationService;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
@@ -30,6 +31,7 @@ class EquipmentRequestServiceTest {
     @Mock private EquipmentRequestRepository requests;
     @Mock private EquipmentRequestLineRepository lines;
     @Mock private EquipmentRepository equipment;
+    @Mock private EquipmentReservationService reservations;
 
     private EquipmentRequestService service;
 
@@ -40,10 +42,12 @@ class EquipmentRequestServiceTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new EquipmentRequestService(events, requests, lines, equipment);
+        service = new EquipmentRequestService(events, requests, lines, equipment, reservations);
         when(events.findForUpdate(EVENT_ID)).thenReturn(Optional.of(event(COORDINATOR_ID)));
         when(requests.findByEventId(EVENT_ID)).thenReturn(List.of());
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of());
         when(requests.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(requests.saveAll(any())).thenAnswer(invocation -> invocation.getArgument(0));
         when(lines.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         Equipment catalogueItem = equipment();
         when(equipment.findAllById(any())).thenReturn(List.of(catalogueItem));
@@ -89,6 +93,64 @@ class EquipmentRequestServiceTest {
         assertThatThrownBy(() -> service.submit(COORDINATOR_ID, EVENT_ID,
                 new SubmitEquipmentRequest("", List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 0)))))
                 .isInstanceOf(InvalidEquipmentRequestException.class);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void reviseReleasesReservationsSupersedesTheOldRequestAndCreatesANewOne() {
+        EquipmentRequest existing = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(existing));
+
+        var result = service.revise(COORDINATOR_ID, EVENT_ID,
+                new SubmitEquipmentRequest("Four wireless microphones now",
+                        List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 4))));
+
+        assertThat(result.status()).isEqualTo("processing");
+        assertThat(result.lines()).containsExactly(
+                new EquipmentRequestLineResponse(EQUIPMENT_ID, "Wireless microphone", 4));
+        assertThat(existing.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
+        verify(reservations).releaseAllForEvent(EVENT_ID);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37) (happy): revising a request that needs attention supersedes it")
+    void revisingARequestThatNeedsAttentionSupersedesIt() {
+        EquipmentRequest flagged = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
+        flagged.flagAttention("The event's equipment requirements text changed.");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(flagged));
+
+        var result = service.revise(COORDINATOR_ID, EVENT_ID,
+                new SubmitEquipmentRequest("Four wireless microphones now",
+                        List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 4))));
+
+        assertThat(result.status()).isEqualTo("processing");
+        assertThat(flagged.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
+        verify(reservations).releaseAllForEvent(EVENT_ID);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void reviseWithNoActiveRequestIsRefused() {
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of());
+
+        assertThatThrownBy(() -> service.revise(COORDINATOR_ID, EVENT_ID,
+                new SubmitEquipmentRequest("Microphones", List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 1)))))
+                .isInstanceOf(EquipmentRequestStateException.class);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    void onlyTheAssignedCoordinatorCanRevise() {
+        EquipmentRequest existing = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Microphones");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(existing));
+
+        assertThatThrownBy(() -> service.revise(UUID.randomUUID(), EVENT_ID,
+                new SubmitEquipmentRequest("Microphones", List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 1)))))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
     }
 
     private static Event event(UUID coordinatorId) {

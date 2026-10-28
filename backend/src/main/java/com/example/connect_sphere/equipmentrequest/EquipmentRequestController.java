@@ -79,6 +79,30 @@ public class EquipmentRequestController {
                 .body(service.submit(userIdOf(jwt), eventId, request));
     }
 
+    // EC-NEW3: the coordinator replaces the complete equipment request,
+    // releasing reservations and superseding what it replaces.
+    @PatchMapping("/events/{eventId}/equipment-request")
+    public EquipmentRequestDetailsResponse revise(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @RequestBody SubmitEquipmentRequest request) {
+        return service.revise(userIdOf(jwt), eventId, request);
+    }
+
+    // EC-NEW3 (D37): clears 'attention' without touching items or reservations.
+    @PatchMapping("/events/{eventId}/equipment-request/{requestId}/still-suitable")
+    public EquipmentRequestDetailsResponse markStillSuitable(
+            @AuthenticationPrincipal Jwt jwt,
+            @PathVariable UUID eventId,
+            @PathVariable UUID requestId,
+            @RequestBody StillSuitableNote request) {
+        return service.markStillSuitable(userIdOf(jwt), eventId, requestId, request == null ? null : request.note());
+    }
+
+    /** EC-NEW3 (D37): why the coordinator judged a flagged request still suitable. */
+    record StillSuitableNote(String note) {
+    }
+
     @PatchMapping("/equipment-requests/{requestId}/status")
     public EquipmentRequestDetailsResponse updateStatus(
             @PathVariable UUID requestId,

@@ -10,6 +10,8 @@ const STATUS_BADGE: Record<EquipmentRequestSummary['status'], string> = {
   processing: 'tech-badge--warning',
   approved: 'tech-badge--success',
   rejected: 'tech-badge--danger',
+  attention: 'tech-badge--warning',
+  superseded: 'tech-badge--neutral',
 }
 
 /** The status badge, plus Shortfall for an additional request (TS09 AC19). */

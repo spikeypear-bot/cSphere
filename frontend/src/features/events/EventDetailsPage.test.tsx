@@ -1,4 +1,4 @@
-// @stories VS17 EC08 EO04 SO-C3 SO-C5 SO-C6 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 EC08 EO04 SO-C3 SO-C5 SO-C6 EC03 EC-NEW3  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -44,6 +44,10 @@ function pendingEvent() {
     coordinatorName: 'ec1',
     coordinatorEmail: 'ec1@connectsphere.test',
   }
+}
+
+function confirmedEvent(status: string) {
+  return { ...pendingEvent(), status }
 }
 
 function readiness() {
@@ -116,6 +120,56 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     expect(screen.getByText('Rejected')).toBeInTheDocument()
     expect(screen.getByText('Recheck the venue setup')).toBeInTheDocument()
     expect(screen.getByText(/by so1 · 22 Sept 2026, 10:00 am \(Singapore time\)/)).toBeInTheDocument()
+  })
+
+  it('EC-NEW3 (D36) (happy): a Confirmed event still links the coordinator to the equipment request page', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return jsonResponse(200, url.endsWith('/readiness') ? readiness() : url.endsWith('/timeline') ? [] : confirmedEvent('confirmed'))
+    }))
+
+    renderPage('/coordinator')
+
+    expect(await screen.findByRole('link', { name: 'Manage equipment request' })).toHaveAttribute(
+      'href',
+      `/coordinator/events/${EVENT_ID}/equipment-request`,
+    )
+    expect(screen.queryByRole('link', { name: 'Request equipment' })).not.toBeInTheDocument()
+  })
+
+  it('EC-NEW3 (D37) (happy): an equipment request needing attention is named on the card, linking to resolve it', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/equipment-requests')) {
+        return jsonResponse(200, [{ requestId: 'request-1', eventId: EVENT_ID, status: 'attention', technicalRequirement: '',
+          rejectReason: null, attentionReason: "The event's new time no longer matches an existing equipment reservation.", lines: [] }])
+      }
+      return jsonResponse(200, url.endsWith('/readiness') ? readiness() : url.endsWith('/timeline') ? [] : confirmedEvent('confirmed'))
+    }))
+
+    renderPage('/coordinator')
+
+    expect(await screen.findByRole('link', { name: 'Resolve equipment request' })).toHaveAttribute(
+      'href',
+      `/coordinator/events/${EVENT_ID}/equipment-request`,
+    )
+    expect(screen.getByText(/The equipment request needs attention: The event's new time no longer matches/)).toBeInTheDocument()
+  })
+
+  it('EC-NEW3 (D36) (negative): a Cancelled event offers no link to the equipment request page', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return jsonResponse(200, url.endsWith('/readiness') ? readiness() : url.endsWith('/timeline') ? [] : confirmedEvent('cancelled'))
+    }))
+
+    renderPage('/coordinator')
+
+    await screen.findByRole('heading', { name: 'Q1 Town Hall' })
+    expect(screen.queryByRole('link', { name: 'Manage equipment request' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Request equipment' })).not.toBeInTheDocument()
   })
 
   it('SO-C5 AC10, SO-C6 AC11 (happy): the coordinator sees the decision, its reason and the checklist items it concerns, highlighted in the checklist', async () => {
