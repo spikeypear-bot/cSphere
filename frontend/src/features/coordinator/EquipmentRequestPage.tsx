@@ -335,9 +335,8 @@ export function EquipmentRequestPage() {
             <Notice tone="info" as="div">
               <p>{activeRequest.attentionReason}</p>
               <p>
-                A new time that a reservation no longer covers is reviewed by Technical Support: if they find
-                it still suitable this clears; otherwise revise the request. Mark it still suitable yourself
-                only when just the wording changed.
+                If a reservation no longer covers the event's new time, revise the request. If only the wording
+                changed, you or Technical Support can mark it still suitable, unless they ask you to act.
               </p>
             </Notice>
           ) : null}

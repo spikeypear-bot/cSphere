@@ -43,6 +43,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
  * or event status (AC13). Since EC-NEW3 (D37) it drives the equipment
  * request's 'attention' flag: "still suitable" clears it once no review of
  * the event is open; "needs coordinator action" leaves it for a revision.
+ * "Still suitable" is refused while a reservation misses the event's time.
  */
 @Service
 public class EquipmentChangeReviewService {
@@ -118,6 +119,10 @@ public class EquipmentChangeReviewService {
         if (!review.needsReview()) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "This change has already been reviewed.");
         }
+        if (outcome == ReviewOutcome.still_suitable && !reservationsCoverEvent(review.getEventId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "A reservation no longer covers the event's time, "
+                    + "so the equipment is not still suitable. Record that the coordinator needs to act, so they revise the request.");
+        }
         review.setOutcome(outcome);
         review.setOutcomeNote(note);
         review.setReviewedBy(reviewerId);
@@ -127,6 +132,13 @@ public class EquipmentChangeReviewService {
             clearFlagIfSettled(saved.getEventId(), reviewerId, note);
         }
         return detail(saved);
+    }
+
+    /** Still suitable means the bookings as they stand fit the event as it now is. */
+    private boolean reservationsCoverEvent(UUID eventId) {
+        Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        return reservations.reservationsForEvent(eventId).stream()
+                .allMatch(r -> r.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()));
     }
 
     /** AC13 (amended, EC-NEW3 D37): Technical Support judged the equipment

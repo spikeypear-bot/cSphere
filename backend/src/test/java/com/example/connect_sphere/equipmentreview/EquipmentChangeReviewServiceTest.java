@@ -77,6 +77,13 @@ class EquipmentChangeReviewServiceTest {
                 Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T04:00:00Z"), null, false)));
     }
 
+    /** The reservation re-booked to span the event's 10:00-13:00, so "still suitable" is allowed. */
+    private void reservationCoversTheEvent() {
+        when(reservations.reservationsForEvent(event.getEventId())).thenReturn(List.of(new EquipmentReservationResponse(
+                logId, event.getEventId(), UUID.randomUUID(), "Mic", 2, null,
+                Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T05:00:00Z"), null, false)));
+    }
+
     private void refused(OutcomeRequest request, HttpStatus status) {
         assertThatThrownBy(() -> service.recordOutcome(reviewer, review.getReviewId(), request))
                 .isInstanceOfSatisfying(ResponseStatusException.class,
@@ -87,6 +94,7 @@ class EquipmentChangeReviewServiceTest {
     @Test
     @DisplayName("TS11 AC11, AC14 (happy): recording 'still suitable' saves who and when, and clears the flag")
     void stillSuitable() {
+        reservationCoversTheEvent();
         var detail = service.recordOutcome(reviewer, review.getReviewId(), new OutcomeRequest("still_suitable", null));
 
         assertThat(review.getOutcome()).isEqualTo(ReviewOutcome.still_suitable);
@@ -140,8 +148,17 @@ class EquipmentChangeReviewServiceTest {
     }
 
     @Test
+    @DisplayName("TS11 AC13 (negative): 'still suitable' is refused while a reservation misses the event's time, and nothing is saved")
+    void stillSuitableIsRefusedWhileAReservationMissesTheEvent() {
+        refused(new OutcomeRequest("still_suitable", null), HttpStatus.CONFLICT);
+
+        assertThat(review.getOutcome()).isNull();
+    }
+
+    @Test
     @DisplayName("TS11 AC13 (cross-cutting): recording an outcome only reads reservations; it never reserves, releases or changes the event")
     void outcomeChangesNothingElse() {
+        reservationCoversTheEvent();
         service.recordOutcome(reviewer, review.getReviewId(), new OutcomeRequest("still_suitable", null));
 
         verify(reservations, never()).reserve(any());

@@ -23,8 +23,8 @@ import com.example.connect_sphere.notification.service.NotificationService;
  * them against the current details. */
 @Service
 public class EquipmentRequestAttentionService {
-    public static final String COVERAGE_BROKEN = "The event's new time no longer matches an existing equipment reservation.";
-    public static final String REQUIREMENTS_CHANGED = "The event's equipment requirements text changed.";
+    static final String COVERAGE_BROKEN = "The event's new time no longer matches an existing equipment reservation.";
+    static final String REQUIREMENTS_CHANGED = "The event's equipment requirements text changed.";
 
     private final EquipmentRequestRepository requests;
     private final EquipmentReservationService reservations;

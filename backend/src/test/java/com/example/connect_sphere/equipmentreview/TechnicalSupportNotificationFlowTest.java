@@ -462,16 +462,16 @@ class TechnicalSupportNotificationFlowTest {
     }
 
     @Test
-    @DisplayName("TS11 AC13 (happy): Technical Support finding a new time still suitable clears the coordinator's equipment flag and leaves the reservations as they were")
+    @DisplayName("TS11 AC13 (happy): Technical Support finding a wording change still suitable clears the coordinator's equipment flag and leaves the reservations as they were")
     void stillSuitableClearsTheFlag() throws Exception {
         UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
         UUID eventId = event();
         UUID requestId = reservedAndApproved(eventId, mics, 2);
-        approved(asked(eventId, "10:00", "13:00", 150, null));
+        approved(asked(eventId, "09:00", "12:00", 150, "Two mics on stage"));
         assertThat(requestStatus(requestId)).isEqualTo("attention");
         String before = reservationsOf(eventId);
 
-        outcome(reviewOf(eventId), "{\"outcome\":\"still_suitable\",\"note\":\"Mics are free all day\"}")
+        outcome(reviewOf(eventId), "{\"outcome\":\"still_suitable\",\"note\":\"Same two mics\"}")
                 .andExpect(status().isOk());
 
         assertThat(requestStatus(requestId)).isEqualTo("approved");
@@ -480,7 +480,25 @@ class TechnicalSupportNotificationFlowTest {
         assertThat(reservationsOf(eventId)).isEqualTo(before);
         assertThat(jdbc.queryForList("SELECT message FROM event_request_activity WHERE event_id = ? "
                 + "AND activity_type = 'equipment_request_marked_suitable'", String.class, eventId))
-                .containsExactly("Technical Support found the equipment request still suitable: Mics are free all day");
+                .containsExactly("Technical Support found the equipment request still suitable: Same two mics");
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (negative): a new time the reservation no longer covers cannot be found still suitable; the review stays open and the request flagged")
+    void stillSuitableIsRefusedForATimeTheReservationMisses() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 2);
+        approved(asked(eventId, "10:00", "13:00", 150, null));
+        UUID reviewId = reviewOf(eventId);
+        String before = reservationsOf(eventId);
+
+        outcome(reviewId, "{\"outcome\":\"still_suitable\"}").andExpect(status().isConflict());
+
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+        assertThat(reservationsOf(eventId)).isEqualTo(before);
+        assertThat(jdbc.queryForObject("SELECT outcome IS NULL FROM equipment_change_reviews WHERE review_id = ?",
+                Boolean.class, reviewId)).isTrue();
     }
 
     @Test
@@ -489,9 +507,9 @@ class TechnicalSupportNotificationFlowTest {
         UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
         UUID eventId = event();
         UUID requestId = reservedAndApproved(eventId, mics, 2);
-        approved(asked(eventId, "10:00", "13:00", 150, null));
+        approved(asked(eventId, "09:00", "12:00", 150, "Two mics on stage"));
         UUID first = reviewOf(eventId);
-        approved(asked(eventId, "11:00", "14:00", 150, null));
+        approved(asked(eventId, "09:00", "12:00", 150, "Two mics on stage, one spare"));
         UUID second = reviewOf(eventId);
         assertThat(second).isNotEqualTo(first);
 
@@ -519,7 +537,7 @@ class TechnicalSupportNotificationFlowTest {
     }
 
     @Test
-    @DisplayName("EC-NEW3 (D37) (negative): a new time a reservation no longer covers is Technical Support's to clear; the coordinator cannot mark it still suitable")
+    @DisplayName("EC-NEW3 (D37) (negative): the coordinator cannot mark a request still suitable while a reservation misses the event's new time")
     void theCoordinatorCannotClearATimeFlag() throws Exception {
         UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
         UUID eventId = event();

@@ -152,7 +152,7 @@ export function ChangeReviewPage() {
               <form onSubmit={submit} noValidate>
                 <fieldset className="change-review-outcomes">
                   <legend>Outcome</legend>
-                  <p>Still suitable clears the coordinator's equipment flag. Needs coordinator action keeps it until they revise the request.</p>
+                  <p>Still suitable clears the coordinator's equipment flag, and only while every reservation covers the event's time. Needs coordinator action keeps it until they revise the request.</p>
                   {(Object.keys(OUTCOME_LABELS) as ReviewOutcome[]).map((value) => (
                     <label key={value}>
                       <input

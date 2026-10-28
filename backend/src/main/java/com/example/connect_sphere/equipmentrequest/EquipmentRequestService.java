@@ -201,9 +201,9 @@ public class EquipmentRequestService {
     /**
      * EC-NEW3 (D37): the coordinator judges that a request an approved change
      * flagged still fits because only the requirements wording changed. It is
-     * approved again; its items and reservations are untouched. A time change
-     * is Technical Support's to clear (TS11 AC13, amended), and their "needs
-     * coordinator action" leaves only a revision.
+     * approved again; its items and reservations are untouched. Refused while a
+     * reservation misses the event's time, or after Technical Support's "needs
+     * coordinator action" (TS11 AC13, amended): both leave only a revision.
      */
     @Transactional
     public EquipmentRequestDetailsResponse markStillSuitable(
@@ -216,11 +216,11 @@ public class EquipmentRequestService {
                 .findFirst()
                 .orElseThrow(() -> new EquipmentRequestStateException(
                         "This equipment request does not need attention."));
-        // EC-NEW3 D37 with TS11 AC13 (amended): a time a reservation no longer covers is Technical Support's call.
-        if (com.example.connect_sphere.changerequest.EquipmentRequestAttentionService.COVERAGE_BROKEN
-                .equals(request.getAttentionReason())) {
+        // EC-NEW3 D37 with TS11 AC13 (amended): bookings that miss the event's time are not still suitable.
+        if (reservations.reservationsForEvent(eventId).stream().anyMatch(r -> !r.covers(
+                event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))) {
             throw new EquipmentRequestStateException(
-                    "A reservation no longer covers the event's new time. Wait for Technical Support's review, or revise the request.");
+                    "A reservation no longer covers the event's time. Revise the request instead.");
         }
         if (changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
                 .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.ReviewOutcome.needs_coordinator_action)
