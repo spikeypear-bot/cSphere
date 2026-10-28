@@ -101,6 +101,21 @@ Goal: the remaining core-feature surface — event changes/cancellation, attende
 
 Backlog stories: EO03, EO07, EO10–EO12, VS17, VS24, TS09, AT01–AT08, AU01A/B/C, AU02, DEV08, DEV10.
 
+### AT04 — registration history (implemented on the AT04 feature branch)
+
+AT01/AT02 were merged through PR #82. The current AT04 implementation reuses
+their registration model and attendee event projection: authenticated read-only
+list/detail endpoints, My Registrations and registration details routes, separate
+registration/event status, retained history, retry and live refresh. Ownership
+is enforced server-side. AT08 withdrawal eligibility is shown without executing
+withdrawal; AT03/AT08/AT09 commands are outside this slice.
+
+Implementation verification on 28 October 2026 passed 48 focused backend tests,
+836 frontend tests with two workers, one real browser journey, builds/lint and
+traceability. This records local implementation evidence, not merge/review or
+backlog Done status. See the [API/workflow contract](attendee-registration-status-api.md)
+and [manual testing guide](attendee-registration-status-manual-testing.md).
+
 ## Build now vs. defer unless required (recap)
 
 **Build now:** all stories listed in Slices 0–3 above (everything currently `Within Scope, Included`/`Added`).

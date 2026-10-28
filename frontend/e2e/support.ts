@@ -131,7 +131,8 @@ export async function leadAssigns(page: Page, requestId: string) {
  * confirmation). Each step is the real endpoint each role would use, so the
  * event is genuinely Confirmed. Returns the event's id. */
 export async function confirmedEventByApi(request: APIRequestContext, eventName: string, venueId: string,
-  startDatetime: string, endDatetime: string): Promise<string> {
+  startDatetime: string, endDatetime: string,
+  registrationSettings?: { registrationCapacity: number; registrationOpensAt: string }): Promise<string> {
   const tokens = {
     eo: await apiToken(request, 'eo1'), ecl: await apiToken(request, 'ecl1'), ec: await apiToken(request, 'ec1'),
     vs: await apiToken(request, 'vs1'), so: await apiToken(request, 'so1'),
@@ -143,7 +144,7 @@ export async function confirmedEventByApi(request: APIRequestContext, eventName:
   }
   const draft = await call('post', '/api/event-requests', tokens.eo, { eventName, purpose: 'Cancellation journey',
     startDatetime, endDatetime, expectedAttendance: 120, venueRequirements: 'Theatre seating',
-    accessibilityNeeds: ['none'], requiredFacilities: [], registrationNeeds: false })
+    accessibilityNeeds: ['none'], requiredFacilities: [], registrationNeeds: !!registrationSettings, ...registrationSettings })
   await call('post', `/api/event-requests/${draft.requestId}/submit`, tokens.eo)
   const people = await apiGet<{ userId: string; username: string }[]>(request, tokens.ecl,
     '/api/event-requests/unassigned/coordinators')

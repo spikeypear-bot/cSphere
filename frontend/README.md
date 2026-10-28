@@ -62,6 +62,23 @@ convention, not a ConnectSphere one) — see
 
 ## Routing
 
+### Attendee registration and status (AT01/AT02/AT04)
+
+The implemented attendee flow is `/attendee/browse` → `/attendee/events/:eventId`
+(register here) → `/attendee/my-registrations` →
+`/attendee/my-registrations/:registrationId`. Registration details link back to
+the current event details. `/attendee/register` remains a placeholder.
+
+My Registrations uses the authenticated `/api/attendee/registrations` list/detail
+APIs. It displays registration and event status separately, retains withdrawn
+history, shows Singapore time, and refreshes on navigation, focus and every five
+seconds via `useLiveRefresh`. Withdrawal eligibility is explanatory text only;
+no withdrawal action is implemented. Re-confirmation means a previously
+confirmed event has returned through planning/safety checks.
+
+See the [AT04 workflow contract](../docs/attendee-registration-status-api.md) and
+[manual testing guide](../docs/attendee-registration-status-manual-testing.md).
+
 `src/App.tsx` is the single, central place routes are declared — there is no
 other router configuration anywhere in the app. It's organised in two tiers:
 
@@ -101,28 +118,20 @@ routed.
 
 ## Authentication-aware navigation
 
-There is no real login yet (see `../docs/decision-log.md` D6a) — a role is
-chosen with a "Login as [Role]" button on the main page
-(`src/features/roleSelect/RoleSelectPage.tsx`), stored via
-`SessionProvider`/`useSession` (`src/lib/session.tsx`,
-`src/lib/sessionContext.ts`), and persisted to `localStorage` so a refresh
-doesn't lose it.
+Users sign in with username/password through `LoginPage` and the backend auth
+API (D19 supersedes the earlier D6a role selector). `SessionProvider` mirrors
+the stored account/token information into React state; reloads restore the
+session. The role comes from the authenticated account, not a role picker.
 
-- **Signed-out vs. signed-in:** `AppShell`'s header shows nothing extra when
-  `role` is `null`; once a role is set, it shows the role's label,
-  organisation (if any), and a "Switch role" control.
-- **Role-appropriate navigation once role is known:** each `/<role>/*` route
-  group (`App.tsx`) is gated by `useRoleGate`, which checks the current
-  session's `role` against the route's expected role — visiting a route that
-  doesn't match the signed-in role redirects to the role selector.
-- **This is a UI convenience, not the security control.** `useRoleGate`'s own
-  comment says so explicitly: hiding routes/links client-side stops nothing
-  by itself — it only avoids showing a signed-in user pages that aren't
-  theirs. **The backend/API is, and remains, responsible for enforcing who
-  can actually perform which action** (see `AU04` in
-  `../docs/product-context.md` and `../docs/decision-log.md` Q2 for whether
-  server-side enforcement is already in place during this interim,
-  no-real-accounts phase).
+- Signed-in headers show username, role, organisation, notifications and
+  **Log out**. Local demo accounts are listed in `../AI_Context.md`.
+- `useRoleGate` sends signed-out visitors to login; a signed-in visitor to
+  another role's console is redirected to their own console with an access
+  denied notice.
+- Backend role and relationship checks enforce access independently of the
+  UI. AT04 additionally scopes list/detail queries to the token subject;
+  belonging to the same organisation does not grant access to another
+  attendee's registrations.
 
 ## Shared API client
 
@@ -134,7 +143,8 @@ request handling stays consistent app-wide. It normalises four outcomes:
 | ------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
 | Success                              | Resolves with the parsed JSON body (or `undefined` for a `204`).                                            |
 | Validation error (e.g. `422`)        | Rejects with an `ApiClientError` whose `.missingFields` names the fields that failed validation.             |
-| Unauthorised / expired session (`401`/`403`) | Rejects with an `ApiClientError` (`.isUnauthorised` is `true`) **and** dispatches a `connectsphere:unauthorised` `window` event; `SessionProvider` listens for it and clears the session, so any route gated by `useRoleGate` bounces back to the role selector — the same shared path a real "your login expired" flow will use later. |
+| Unauthorised / expired session (`401`) | Attempts one token renewal and replays the request. If the session cannot be renewed, clears tokens and dispatches `connectsphere:unauthorised`; `SessionProvider` clears the session and route guards return to login. |
+| Forbidden (`403`) | Rejects with an `ApiClientError` whose `.isForbidden` is true. The session remains valid; a forbidden response does not log the user out. |
 | Unexpected failure (network error, other 4xx/5xx) | Rejects with an `ApiClientError` carrying a status code and a message safe to show the user.                 |
 
 Base URL and environment handling is centralised there too — see

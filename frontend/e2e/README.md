@@ -43,6 +43,22 @@ npm run test:e2e
 A failed run leaves a trace in `test-results/`; replay it step by step with
 `npx playwright show-trace <path-to-trace.zip>`.
 
+## Attendee registration history (AT04)
+
+`attendee-registration-status.spec.ts` covers AT01 registration → AT04 list and
+details → AT02 latest event details, plus a direct API ownership check for a
+second attendee. It creates its own unique confirmed event through the API,
+using the shared fixture helper's optional registration settings; it does not
+depend on the manually seeded AT04 demo batch. The test also captures desktop
+and mobile details screenshots under `test-results/`.
+
+```powershell
+npm run test:e2e -- e2e/attendee-registration-status.spec.ts
+```
+
+For status mapping, read-only guarantees, AT08 boundaries and the current local
+demo data, see the [AT04 manual guide](../../docs/attendee-registration-status-manual-testing.md).
+
 ## Writing a new one
 
 - Only for a journey a user would notice breaking (sign-in, submitting a

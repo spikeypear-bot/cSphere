@@ -189,6 +189,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | `GET /api/events/{id}/cancellation-requests` | `hasAnyRole('EO','EC','ECL')`, placed **above** `GET /api/events/**` **plus organisation or assignment check in the service** | EO07 (D28). The owning organisation's organisers, the assigned coordinator (403 otherwise, D25) and the Lead (read-only oversight). |
   | `POST /api/events/{id}/cancellation-requests/{cid}/approve\|decline` | `hasRole('EC')` **plus assignment check first in the service** | EO07 (D28). Only the event's current coordinator decides; the Lead and other coordinators are refused (403). Each has a row in `CoordinatorAssignmentScopeTest`. |
   | `/swagger-ui/**`, `/v3/api-docs/**` | dev profile only, or accept 401 | springdoc is on the classpath; under `anyRequest().authenticated()` the docs page 401s, and a browser navigation cannot attach a Bearer token. |
+  | `GET /api/attendee/registrations`, `GET /api/attendee/registrations/{id}` | Existing `/api/attendee/**` rule: `hasRole('ATTENDEE')`, plus token-subject ownership in repository queries | AT04: list own complete history; missing and other-owned details both return 404. Read-only; registration status and event lifecycle stay separate. See [API contract](attendee-registration-status-api.md). |
 
 - **Open for the team to settle:**
   1. ~~**Should `EC` be able to create or update venues?**~~ **Settled on this branch, 2026-09-22 — widened to `hasAnyRole('EC','VS')`.** The duplicate `@PreAuthorize` on `VenueService.createVenue` was then removed: the URL rule rejects first, so keeping both meant a pure role check written twice, where a drift would let the narrower one win silently while the annotation still looked load-bearing. `VenueService.update` never carried one, so the two write paths are now consistent. Recorded rather than argued: the backlog story that motivates Coordinator involvement with venues is EC04, which is *searching* them (a read), so nothing in the current stories requires Coordinators to author catalogue entries. Still worth a sentence of team confirmation — if the intent was read-only, this row should go back to `hasRole('VS')`.
@@ -496,7 +497,7 @@ Every "attention" item has a stable key, and the coordinator must acknowledge ea
 
 **Story gaps (raise in the Sheet):**
 - **EO07 (cancellation) is not built.** EO03 AC6 (no change while a cancellation is pending) and AC7 (close on cancellation) wait for it.
-- **Registrations (AT01) are not built.** EO03 AC19 and EC-NEW3 AC22 wait for them.
+- **AT01 dependency update (29 October 2026):** AT01/AT02 are available following PR #82; the earlier statement that registrations were not built is superseded. AT04 now reads their records without changing registrations or event lifecycle. This does not by itself establish completion of EO03 AC19 or EC-NEW3 AC22; verify those cross-story criteria separately. See the [AT04 contract](attendee-registration-status-api.md).
 - **EC-NEW3 AC40** (Venue Staff and Technical Support told of approved changes) is VS17's and TS11's work.
 - **EC-NEW3 AC9** said pending booking requests clash. They do not reserve anything anywhere else in the system, so they are not counted here either.
 

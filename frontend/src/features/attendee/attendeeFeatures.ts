@@ -29,10 +29,10 @@ export const attendeeFeatures: SkeletonFeature[] = [
     path: 'my-registrations',
     navLabel: 'My registrations',
     pageTitle: 'My Registrations',
-    storyIds: ['AT03', 'AT07'],
+    storyIds: ['AT04'],
     featureArea: 'Attendee Registration',
     summary: "View your registration status and confirmation for events you've registered for.",
     layout: 'list',
-    suggestedBackendPackage: 'com.example.connect_sphere.attendeeregistration',
+    suggestedBackendPackage: 'com.example.connect_sphere.attendee',
   },
 ]

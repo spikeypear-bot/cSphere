@@ -95,7 +95,7 @@ export function AttendeeEventDetailsPage() {
   return <main className="attendee-event-details">
     <PageHeader eyebrow={<Link to="/attendee/browse">Browse events</Link>} title={event.eventName}
       description={<span className="attendee-status" data-status={event.status}>{STATUS_LABELS[event.status]}</span>}
-      actions={<Link className="button button--ghost" to="/attendee/browse">All events</Link>} />
+      actions={<><Link className="button button--ghost" to="/attendee/my-registrations">My Registrations</Link><Link className="button button--ghost" to="/attendee/browse">All events</Link></>} />
     {event.status === 'reconfirming' && <Notice tone="info">The event is being re-confirmed. Any venue marked unavailable is affected; other approved venue details remain current.</Notice>}
     {event.status === 'cancelled' && <Notice tone="danger">This event has been cancelled.</Notice>}
     {event.status === 'completed' && <Notice tone="info">This event has finished. These details are shown as a past record.</Notice>}

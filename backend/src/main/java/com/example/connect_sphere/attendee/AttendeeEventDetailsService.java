@@ -7,7 +7,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
@@ -82,10 +81,7 @@ public class AttendeeEventDetailsService {
     }
 
     private String attendeeStatus(Event event) {
-        JourneyStatus journey = statuses.journeyOf(event);
-        return journey == JourneyStatus.CONFIRMED ? "confirmed"
-                : journey == JourneyStatus.COMPLETED ? "completed"
-                : journey == JourneyStatus.CANCELLED ? "cancelled" : "reconfirming";
+        return AttendeeEventStatus.of(statuses.journeyOf(event));
     }
 
     private AttendeeEventDetailsDto.AttendeeVenue toVenue(VenueBookingRecord booking) {

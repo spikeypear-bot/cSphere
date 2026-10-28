@@ -87,6 +87,10 @@
 .attendee-status[data-status='reconfirming'] { background: var(--accent-soft); color: var(--accent-strong); }
 .attendee-status[data-status='cancelled'] { background: var(--danger-soft); color: var(--danger); }
 .attendee-status[data-status='completed'] { background: var(--hairline); color: var(--ink-soft); }
+.attendee-status[data-status='withdrawn'] { background: var(--hairline); color: var(--ink-soft); }
+.attendee-status[data-status='event_cancelled'] { background: var(--danger-soft); color: var(--danger); }
+.attendee-events__card > h2 { margin: 0; font-size: 1.08rem; overflow-wrap: anywhere; }
+.attendee-events__card dd { overflow-wrap: anywhere; }
 
 .attendee-events__facts {
   display: grid;
