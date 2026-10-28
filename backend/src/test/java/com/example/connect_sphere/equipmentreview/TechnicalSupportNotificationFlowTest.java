@@ -212,6 +212,26 @@ class TechnicalSupportNotificationFlowTest {
     }
 
     @Test
+    @DisplayName("TS11 AC1 (happy): a coordinator's revision is a new request, so every Technical Support user is told of it once")
+    void aRevisionTellsTechnicalSupport() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID first = reservedAndApproved(eventId, mics, 2);
+
+        String body = mvc.perform(patch("/api/events/" + eventId + "/equipment-request").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"technicalRequirement\":\"Four mics\",\"items\":[{\"equipmentId\":\"%s\",\"quantity\":4}]}"
+                                .formatted(mics)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        UUID revised = UUID.fromString(flow.read(body).get("requestId").asString());
+
+        assertThat(revised).isNotEqualTo(first);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE type::text = 'equipment_request_submitted' "
+                + "AND equipment_request_id = ?", Integer.class, revised)).isEqualTo(technicians());
+        assertThat(notices("equipment_request_submitted")).isEqualTo(2 * technicians());
+    }
+
+    @Test
     @DisplayName("TS11 AC16 (negative): only Technical Support are told of a new request; the coordinator, organiser and Venue Staff are not")
     void onlyTechnicalSupportAreToldOfARequest() throws Exception {
         UUID projector = equipment("TS11 Projector " + UUID.randomUUID(), 5);

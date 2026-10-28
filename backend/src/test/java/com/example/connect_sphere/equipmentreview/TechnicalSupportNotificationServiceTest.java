@@ -1,6 +1,7 @@
 package com.example.connect_sphere.equipmentreview;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatCode;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -29,6 +30,7 @@ import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.EquipmentRequestSubmitted;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.notification.service.NotificationService;
@@ -106,6 +108,33 @@ class TechnicalSupportNotificationServiceTest {
         request(EquipmentRequestStatus.processing);
 
         assertThat(service.openReview(approved)).isPresent();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("TS11 AC4 (happy): a request an earlier change flagged 'attention' still counts as a live request, so a later change is reviewed too")
+    void attentionCounts() {
+        request(EquipmentRequestStatus.attention);
+
+        assertThat(service.openReview(approved)).isPresent();
+    }
+
+    @Test
+    @DisplayName("TS11 AC1, AC4 (failure): a notice or review that cannot be made is logged and never fails the saved request or approval")
+    void aFailingNoticeNeverFailsTheCoordinatorsAction() {
+        TechnicalSupportNotificationService self = mock(TechnicalSupportNotificationService.class);
+        NotificationService notifications = mock(NotificationService.class);
+        when(self.describeRequest(any())).thenThrow(new IllegalStateException("database down"));
+        when(self.openReview(any())).thenThrow(new IllegalStateException("database down"));
+        TechnicalSupportNotificationService listener = new TechnicalSupportNotificationService(events, requests,
+                mock(EquipmentRequestLineRepository.class), mock(EquipmentRepository.class), reservations,
+                reviews, users, notifications, self);
+
+        assertThatCode(() -> listener.onEquipmentRequestSubmitted(
+                new EquipmentRequestSubmitted(UUID.randomUUID(), event.getEventId()))).doesNotThrowAnyException();
+        assertThatCode(() -> listener.onChangeApproved(approved)).doesNotThrowAnyException();
+        verify(notifications, never()).createEquipmentRequestSubmittedNotifications(any(), any(), any(), any(), any());
+        verify(notifications, never()).createEquipmentChangeReviewNotifications(any(), any(), any(), any(), any());
     }
 
     @Test
