@@ -26,7 +26,10 @@ enum ActivityType {
 	{field} +equipment_approved
 	{field} +equipment_damage_outcome
 	{field} +equipment_rejected
+	{field} +equipment_request_attention
+	{field} +equipment_request_marked_suitable
 	{field} +equipment_requested
+	{field} +equipment_revised
 	{field} +equipment_shortfall_resolved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -292,11 +295,15 @@ enum ShortfallResolution {
 
 
 class EquipmentRequest <<Entity>>  {
+	{field} -attentionReason : String
 	{field} -eventId : UUID
 	{field} -id : UUID {id}
 	{field} -rejectReason : String
 	{field} -technicalRequirement : String
 	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
+	{method} +flagAttention ( reason : String ) : void
+	{method} +markStillSuitable () : void
+	{method} +supersede () : void
 }
 
 
@@ -313,8 +320,10 @@ class EquipmentRequestLineId {
 
 enum EquipmentRequestStatus {
 	{field} +approved
+	{field} +attention
 	{field} +processing
 	{field} +rejected
+	{field} +superseded
 }
 
 
@@ -468,6 +477,7 @@ enum NotificationType {
 	{field} +clarification_responded
 	{field} +coordinator_assignment
 	{field} +equipment_damage_outcome
+	{field} +equipment_request_attention
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested

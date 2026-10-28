@@ -42,7 +42,10 @@ enum ActivityType {
 	{field} +equipment_approved
 	{field} +equipment_damage_outcome
 	{field} +equipment_rejected
+	{field} +equipment_request_attention
+	{field} +equipment_request_marked_suitable
 	{field} +equipment_requested
+	{field} +equipment_revised
 	{field} +equipment_shortfall_resolved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -435,6 +438,14 @@ enum ChangeRequestStatus {
 }
 
 
+class EquipmentRequestAttentionService {
+	{field} {static} ~COVERAGE_BROKEN : String
+	{field} {static} ~REQUIREMENTS_CHANGED : String
+	{field} -changeLog : ApplicationEventPublisher
+	{method} +approved ( change : ChangeRequest , event : Event , changedFields : Set , proposed : SaveEventRequestRequest ) : void
+}
+
+
 class VenueRequirementChangeService {
 	{field} {static} -FIELDS : Set<String>
 	{method} +approved ( change : ChangeRequest , event : Event , oldStart : OffsetDateTime , oldEnd : OffsetDateTime ) : void
@@ -813,10 +824,20 @@ class EquipmentReservationResponse {
 
 class EquipmentReservationService {
 	{method} +availabilityForEvent ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +needsAt ( eventId : UUID , start : Instant , end : Instant ) : List
+	{method} +releaseAllForEvent ( eventId : UUID ) : void
 	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
 	{method} +reservationsForEvent ( eventId : UUID ) : List
 	{method} +reserve ( req : ReserveEquipmentRequest ) : EquipmentReservationResponse
 	{method} +reserveBatch ( req : ReserveBatchRequest ) : List
+}
+
+
+class EquipmentReservationService.NeedAt {
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -free : int
+	{field} -needed : int
 }
 
 
@@ -1178,11 +1199,15 @@ class EventEquipmentDamageService {
 
 
 class EquipmentRequest <<Entity>>  {
+	{field} -attentionReason : String
 	{field} -eventId : UUID
 	{field} -id : UUID {id}
 	{field} -rejectReason : String
 	{field} -technicalRequirement : String
 	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
+	{method} +flagAttention ( reason : String ) : void
+	{method} +markStillSuitable () : void
+	{method} +supersede () : void
 }
 
 
@@ -1191,6 +1216,8 @@ class EquipmentRequestController {
 	{method} +lines ( requestId : UUID ) : List
 	{method} +list ( status : String ) : List
 	{method} +listProcessing () : List
+	{method} +markStillSuitable ( jwt : Jwt , eventId : UUID , requestId : UUID , request : StillSuitableNote ) : EquipmentRequestDetailsResponse
+	{method} +revise ( jwt : Jwt , eventId : UUID , request : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
 	{method} +submit ( jwt : Jwt , eventId : UUID , request : SubmitEquipmentRequest ) : ResponseEntity
 	{method} +updateStatus ( requestId : UUID , request : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
 }
@@ -1204,6 +1231,7 @@ class EquipmentRequestDecisionService {
 
 
 class EquipmentRequestDetailsResponse {
+	{field} -attentionReason : String
 	{field} -eventId : UUID
 	{field} -rejectReason : String
 	{field} -requestId : UUID
@@ -1282,6 +1310,8 @@ class EquipmentRequestService {
 	{field} -changeLog : ApplicationEventPublisher
 	{method} +listForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +listForSafetyOfficer ( eventId : UUID ) : List
+	{method} +markStillSuitable ( coordinatorId : UUID , eventId : UUID , requestId : UUID , rawNote : String ) : EquipmentRequestDetailsResponse
+	{method} +revise ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
 	{method} +submit ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
 }
 
@@ -1292,8 +1322,10 @@ class EquipmentRequestStateException {
 
 enum EquipmentRequestStatus {
 	{field} +approved
+	{field} +attention
 	{field} +processing
 	{field} +rejected
+	{field} +superseded
 }
 
 
@@ -2045,6 +2077,7 @@ enum NotificationType {
 	{field} +clarification_responded
 	{field} +coordinator_assignment
 	{field} +equipment_damage_outcome
+	{field} +equipment_request_attention
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -2106,6 +2139,7 @@ class NotificationService {
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
 	{method} +createEquipmentDamageOutcomeNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , message : String ) : void
+	{method} +createEquipmentRequestAttentionNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createEventCancellationDecisionNotification ( organiserId : UUID , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
 	{method} +createEventCancellationRequestedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createEventCancelledNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
@@ -3314,7 +3348,11 @@ ChangeRequestService --> EventRequestRepository : requests
 ChangeRequestService --> EventRequestService : requestRules
 ChangeRequestService --> NotificationService : notifications
 ChangeRequestService --> UserRepository : users
+ChangeRequestService --> EquipmentRequestAttentionService : equipmentAttention
 ChangeRequestService.Caller --> UserRole : role
+EquipmentRequestAttentionService --> EquipmentReservationService : reservations
+EquipmentRequestAttentionService --> EquipmentRequestRepository : requests
+EquipmentRequestAttentionService --> NotificationService : notifications
 VenueRequirementChangeService --> VenueRequirementReviewRepository : reviews
 VenueRequirementChangeService --> NotificationService : notifications
 VenueRequirementChangeService --> UserRepository : users
@@ -3429,6 +3467,7 @@ EquipmentRequestQueueService --> UserRepository : users
 EquipmentRequestResponse --> "0..*" EquipmentRequestResponse.Item : items
 EquipmentRequestResponse --> EquipmentRequestResponse.Person : requestedBy
 EquipmentRequestService --> EquipmentRepository : equipment
+EquipmentRequestService --> EquipmentReservationService : reservations
 EquipmentRequestService --> EquipmentRequestLineRepository : lines
 EquipmentRequestService --> EquipmentRequestRepository : requests
 EquipmentRequestService --> EventRepository : events

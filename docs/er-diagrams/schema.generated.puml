@@ -70,6 +70,7 @@ entity equipment_requests {
 	* status : equipment_request_status
 	* technical_requirement : text
 	reject_reason : text
+	attention_reason : text
 }
 
 entity equipment_status_periods {
@@ -492,6 +493,8 @@ enum equipment_request_status {
 	processing
 	approved
 	rejected
+	superseded
+	attention
 }
 
 enum equipment_status {
@@ -563,6 +566,7 @@ enum notification_type {
 	venue_arrangements_changed
 	venue_booking_rejected
 	venue_booking_approved
+	equipment_request_attention
 }
 
 enum user_role {
