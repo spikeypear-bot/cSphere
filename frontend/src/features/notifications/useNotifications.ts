@@ -6,21 +6,20 @@ import type { NotificationDto } from '../../types/notification'
 const POLL_INTERVAL_MS = 30_000
 
 /**
- * EO09/EO19: owns fetching/polling/marking-read for the signed-in user's own
- * notifications. Polling (not push) is a deliberate, disclosed simplification
- * — see docs/decision-log.md: a real-time channel (WebSocket/SSE) is a
- * reasonable future enhancement, not required by either story's ACs, which
- * only ask that the notification exist and be viewable, not that it arrive
- * instantly.
+ * EO09/EO19/EC-NEW4: owns fetching, polling and marking read for the
+ * signed-in user's own notifications. Polls every 30 seconds and refreshes at
+ * once when the person comes back to the tab (EC-NEW4), so a notice that
+ * arrived while they were away is there when they look. Polling (not push) is
+ * a deliberate, disclosed simplification: see docs/decision-log.md.
  */
 export function useNotifications() {
   const { role } = useSession()
   const [notifications, setNotifications] = useState<NotificationDto[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
+  const [loaded, setLoaded] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // Bumped to re-trigger the effect below on demand (e.g. right after
-  // markRead) without putting a fetch call inside the effect body itself —
-  // same inline-fetch-effect shape as useEventRequestDraft.ts.
+  // Bumped to re-trigger the effect below on demand (e.g. Try again)
+  // without putting a fetch call inside the effect body itself.
   const [refreshToken, setRefreshToken] = useState(0)
 
   useEffect(() => {
@@ -36,31 +35,37 @@ export function useNotifications() {
           if (cancelled) return
           setNotifications(list)
           setUnreadCount(count.count)
+          setLoaded(true)
           setError(null)
         })
         .catch((err: unknown) => {
           if (cancelled) return
-          // A failed refresh should never crash the bell — just try again on
-          // the next poll, same "don't let notification plumbing break
-          // anything else" principle as the backend's own best-effort save.
+          // A failed refresh never breaks the page; the bell says so and offers Try again.
           setError(err instanceof ApiClientError ? err.message : 'Could not load notifications.')
         })
     }
 
+    function onVisible() {
+      if (document.visibilityState === 'visible') poll()
+    }
+
     poll()
     const timer = setInterval(poll, POLL_INTERVAL_MS)
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('focus', onVisible)
     return () => {
       cancelled = true
       clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('focus', onVisible)
     }
   }, [role, refreshToken])
 
   const refresh = useCallback(() => setRefreshToken((n) => n + 1), [])
 
   const markRead = useCallback(async (notificationId: string) => {
-    // Optimistic — EO09/EO19's own AC says marking as read never changes
-    // anything else, so there is nothing to roll back if the request fails;
-    // worst case the next poll re-syncs the true state.
+    // Optimistic: marking as read never changes anything else, so there is
+    // nothing to roll back if it fails; the next poll re-syncs.
     setNotifications((prev) =>
       prev.map((n) => (n.notificationId === notificationId ? { ...n, read: true } : n)),
     )
@@ -68,9 +73,24 @@ export function useNotifications() {
     try {
       await apiClient.post<NotificationDto>(`/notifications/${notificationId}/read`)
     } catch {
-      // Best-effort; the next poll (30s) reconciles either way.
+      // Best-effort; the next poll reconciles either way.
     }
   }, [])
 
-  return { notifications, unreadCount, error, markRead, refresh }
+  /** EC-NEW4: marks read everything up to the newest notice on screen; one
+   * that arrives meanwhile stays unread. */
+  const markAllRead = useCallback(async () => {
+    if (notifications.length === 0) return
+    const newest = notifications.reduce((a, b) => (Date.parse(b.occurredAt) > Date.parse(a.occurredAt) ? b : a)).occurredAt
+    setNotifications((prev) => prev.map((n) => (Date.parse(n.occurredAt) <= Date.parse(newest) ? { ...n, read: true } : n)))
+    setUnreadCount(0)
+    try {
+      await apiClient.post('/notifications/read-all', { upTo: newest })
+    } catch {
+      // The next poll reconciles.
+    }
+    setRefreshToken((n) => n + 1)
+  }, [notifications])
+
+  return { notifications, unreadCount, loaded, error, markRead, markAllRead, refresh }
 }

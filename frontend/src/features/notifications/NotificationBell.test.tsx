@@ -158,7 +158,7 @@ describe('NotificationBell — EO09/EO19', () => {
     renderBell()
 
     await user.click(await screen.findByLabelText('Notifications'))
-    expect(await screen.findByText('Nothing yet.')).toBeInTheDocument()
+    expect(await screen.findByText('No notifications yet.')).toBeInTheDocument()
   })
 
   it('EC-C4 identifies the affected venue booking in the immediate notification', async () => {

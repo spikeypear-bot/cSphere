@@ -301,7 +301,9 @@ class EventRequestServiceTest {
         assertThat(result.coordinatorId()).isEqualTo(COORDINATOR_ID);
         verify(notificationService).createCoordinatorAssignmentNotification(
                 eq(CREATED_BY), eq(id), isNull(), any(), eq("ec1"), eq("ec1@connectsphere.test"), eq(false));
-        // Only the organiser hears of it: telling the coordinator is EC-NEW4.
+        // EC-NEW4: and the coordinator who now has it; nobody else.
+        verify(notificationService).createRequestAssignedNotification(eq(COORDINATOR_ID), eq(id), isNull(), any(),
+                eq(false), any());
         verifyNoMoreInteractions(notificationService);
     }
 

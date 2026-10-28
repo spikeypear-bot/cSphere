@@ -167,8 +167,10 @@ public class VenueBookingService {
             throw new VenueBookingStateException("A venue operational issue overlaps the occupied booking period.");
         if (availability.outsideOperatingHours(booking.getVenueId(), start, end, durations))
             throw new VenueBookingStateException("The full occupied period, including setup and turnaround, must fit within configured venue opening hours.");
+        String replacedVenue = null;
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow(() -> new VenueBookingStateException("Original booking no longer exists."));
+            replacedVenue = venues.findById(original.getVenueId()).map(com.example.connect_sphere.venue.entity.Venue::getVenueAddress).orElse(null);
             if (!original.getEventId().equals(eventId)
                     || !isEligibleReplacementSource(original)
                     || records.existsByReplacesBookingIdAndStatusIn(original.getBookingId(),
@@ -196,6 +198,12 @@ public class VenueBookingService {
         VenueBookingDto approved = get(bookingId);
         notifications.createVenueBookingApprovedNotification(event.getCoordinatorId(), bookingId, eventId,
                 event.getEventName(), approved.venue().venueAddress());
+        if (replacedVenue != null && changeLog != null) {
+            // EO-C1: approved, not yet confirmed; the follow-up comes on re-confirmation.
+            changeLog.publishEvent(new com.example.connect_sphere.venueavailability.VenueArrangementChanged(eventId,
+                    List.of(bookingId), "A replacement venue was approved for your event: " + approved.venue().venueAddress()
+                            + ", replacing " + replacedVenue + ".", null));
+        }
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_booking_approved, null,
                 "Approved " + approved.venue().venueAddress());
         return approved;
@@ -250,7 +258,10 @@ public class VenueBookingService {
         }
         VenueBookingDto rejected = get(bookingId);
         notifications.createVenueBookingRejectedNotification(event.getCoordinatorId(),bookingId,eventId,
-                event.getEventName(),rejected.venue().venueAddress(),trimmedReason);
+                event.getEventName(),rejected.venue().venueAddress(),trimmedReason,
+                rejected.alternativeVenueAddress() != null
+                        ? "Suggested instead: " + rejected.alternativeVenueAddress() + (trimmedArrangement != null ? ". " + trimmedArrangement : "")
+                        : trimmedArrangement);
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.venue_booking_rejected, null,
                 "Rejected " + rejected.venue().venueAddress() + ": " + trimmedReason);
         if (rejected.alternativeVenueAddress() != null || trimmedArrangement != null) {
@@ -318,6 +329,10 @@ public class VenueBookingService {
         booking.setTimingUpdatedBy(actor);
         records.saveAndFlush(booking);
         lifecycle.returnToPlanning(eventId,actor,"Venue booking occupied times changed; reassess safety arrangements.");
+        if (booking.getStatus() != VenueBookingStatus.pending && changeLog != null) {
+            changeLog.publishEvent(new com.example.connect_sphere.venueavailability.VenueArrangementChanged(eventId,
+                    List.of(bookingId), "The venue's booked setup and turnaround times for your event changed.", null));
+        }
         var period = com.example.connect_sphere.venueavailability.EffectivePeriod.of(start, end, durations);
         timingConflicts.notifyCoordinator(event.getCoordinatorId(), eventId, bookingId, event.getEventName(), "venue_timing_changed",
                 "Venue Staff saved setup " + setup + " minutes and turnaround " + turnaround + " minutes. Occupied: "

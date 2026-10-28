@@ -33,6 +33,14 @@ public class EquipmentRequestDecisionService {
         this.changeLog = changeLog;
     }
 
+    /** EC-NEW4: the coordinator hears Technical Support's decision. */
+    private com.example.connect_sphere.notification.service.NotificationService notifications;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setNotifications(com.example.connect_sphere.notification.service.NotificationService notifications) {
+        this.notifications = notifications;
+    }
+
     private void announce(UUID eventId, com.example.connect_sphere.activity.entity.ActivityType type, UUID actor,
             String message) {
         if (changeLog != null) {
@@ -120,6 +128,12 @@ public class EquipmentRequestDecisionService {
                 requestedStatus == EquipmentRequestStatus.approved
                         ? "Approved the equipment request"
                         : "Rejected the equipment request: " + rejectReason);
+        if (notifications != null) {
+            notifications.createEquipmentRequestDecidedNotification(event.getCoordinatorId(), event.getEventId(),
+                    event.getEventName(), rejectReason, requestedStatus == EquipmentRequestStatus.approved
+                            ? "Technical Support approved your equipment request."
+                            : "Technical Support rejected your equipment request: " + rejectReason);
+        }
         return EquipmentRequestDetailsResponse.from(request, lines.findByIdRequestId(requestId));
     }
 

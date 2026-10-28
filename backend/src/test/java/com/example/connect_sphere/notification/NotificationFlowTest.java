@@ -2,6 +2,7 @@ package com.example.connect_sphere.notification;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.contains;
+import static org.hamcrest.Matchers.containsInAnyOrder;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -249,10 +250,12 @@ class NotificationFlowTest {
 
         reassign(requestId, "ec2").andExpect(status().isOk());
 
-        // Telling the coordinators is a separate story (EC-NEW4).
-        for (String staff : List.of("ec1", "ec2", "ecl1")) {
-            notificationsOf(staff).andExpect(jsonPath(mine(), empty()));
-        }
+        // EC-NEW4 AC3, AC4: both coordinators are now told (the new one that it is
+        // theirs, the previous one a final handoff); the Lead, who did it, is not
+        // told about the reassignment (AC15) and has only the original submission.
+        notificationsOf("ec2").andExpect(jsonPath(mine() + ".type", contains("request_assigned")));
+        notificationsOf("ec1").andExpect(jsonPath(mine() + ".type", containsInAnyOrder("request_assigned", "request_handed_over")));
+        notificationsOf("ecl1").andExpect(jsonPath(mine() + ".type", contains("request_submitted")));
     }
 
     @Test
@@ -392,7 +395,9 @@ class NotificationFlowTest {
     }
 
     @ParameterizedTest
-    @ValueSource(strings = {"eo2", "eo3", "ec1"})
+    // ec2 is a coordinator not on this event; ec1, its coordinator, is now told of
+    // the assignment (EC-NEW4), so is no longer an outsider here.
+    @ValueSource(strings = {"eo2", "eo3", "ec2"})
     void onlyTheOrganiserWhoCreatedTheRequestSeesItsNotifications(String username) throws Exception {
         approve(assignedRequest());
 
