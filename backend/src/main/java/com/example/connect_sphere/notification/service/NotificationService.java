@@ -2,6 +2,7 @@ package com.example.connect_sphere.notification.service;
 
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import org.slf4j.Logger;
@@ -26,8 +27,94 @@ public class NotificationService {
 
     private final NotificationRepository repository;
 
+    /** EC-NEW4: resolves "who did it" from the signed-in user; optional so
+     * plain unit tests need nothing extra. */
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private com.example.connect_sphere.user.repository.UserRepository users;
+
+    /**
+     * EC-NEW4: the only notices someone receives about their own action. An
+     * attendee's confirmation is their receipt; equipment needing attention
+     * (D37) is a follow-up left open by the change they approved, and stays
+     * there until Technical Support re-approves it.
+     */
+    private static final Set<NotificationType> SELF_NOTICES = Set.of(NotificationType.attendee_registration_confirmed,
+            NotificationType.equipment_request_attention);
+
     public NotificationService(NotificationRepository repository) {
         this.repository = repository;
+    }
+
+    // ---- EC-NEW4: what the coordinator (and the Lead) is told ----------------
+
+    /** A new request is waiting to be assigned: every Lead is told. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createRequestSubmittedNotifications(List<UUID> leads, UUID eventRequestId, String eventName,
+            String message) {
+        for (UUID lead : leads) {
+            Notification n = base(lead, NotificationType.request_submitted, eventName);
+            n.setEventRequestId(eventRequestId);
+            n.setMessage(message);
+            saveBestEffort(n);
+        }
+    }
+
+    /** The Lead assigned or transferred a request (and its event) to this coordinator. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createRequestAssignedNotification(UUID coordinator, UUID eventRequestId, UUID eventId,
+            String eventName, boolean transfer, String message) {
+        Notification n = base(coordinator, NotificationType.request_assigned, eventName);
+        n.setEventRequestId(eventRequestId);
+        n.setEventId(eventId);
+        n.setIsReassignment(transfer);
+        n.setMessage(message);
+        saveBestEffort(n);
+    }
+
+    /** The Lead moved it away: the previous coordinator's last notice about it. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createRequestHandedOverNotification(UUID previousCoordinator, UUID eventRequestId, UUID eventId,
+            String eventName, String message) {
+        Notification n = base(previousCoordinator, NotificationType.request_handed_over, eventName);
+        n.setEventRequestId(eventRequestId);
+        n.setEventId(eventId);
+        n.setMessage(message);
+        saveBestEffort(n);
+    }
+
+    /** Technical Support decided the coordinator's equipment request. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createEquipmentRequestDecidedNotification(UUID coordinator, UUID eventId, String eventName,
+            String reason, String message) {
+        if (coordinator == null) return;
+        Notification n = base(coordinator, NotificationType.equipment_request_decided, eventName);
+        n.setEventId(eventId);
+        n.setReason(reason);
+        n.setMessage(message);
+        saveBestEffort(n);
+    }
+
+    /** EO-C1: the organisers of a previously confirmed event are told its venue
+     * arrangements changed. Callers decide whether the rules apply
+     * (OrganiserVenueNotices); this writes one notice per organiser. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createOrganiserVenueChangeNotifications(List<UUID> organisers, UUID eventId, UUID bookingId,
+            String eventName, String message) {
+        for (UUID organiser : organisers) {
+            Notification n = base(organiser, NotificationType.confirmed_venue_changed, eventName);
+            n.setEventId(eventId);
+            n.setVenueBookingId(bookingId);
+            n.setMessage(message);
+            saveBestEffort(n);
+        }
+    }
+
+    /** EC-NEW4: marks read every unread notification up to {@code upTo} (what
+     * the reader has seen); anything newer stays unread. Returns how many. */
+    @Transactional
+    public int markAllRead(UUID recipientUserId, OffsetDateTime upTo) {
+        OffsetDateTime now = OffsetDateTime.now();
+        return repository.markAllRead(recipientUserId, upTo == null || upTo.isAfter(now) ? now : upTo, now);
     }
 
     /** EO09. {@code recipientUserId} is always the request/event's creator —
@@ -107,11 +194,12 @@ public class NotificationService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public void createVenueBookingRejectedNotification(UUID coordinator, UUID bookingId, UUID eventId,
-            String eventName, String venue, String reason) {
+            String eventName, String venue, String reason, String alternative) {
         if(coordinator==null) return;
         Notification notification=base(coordinator,NotificationType.venue_booking_rejected,eventName);
         notification.setEventId(eventId); notification.setVenueBookingId(bookingId);
-        notification.setReason(reason); notification.setMessage("Booking at " + venue + " was rejected: " + reason);
+        notification.setReason(reason); notification.setMessage("Booking at " + venue + " was rejected: " + reason
+                + (alternative == null || alternative.isBlank() ? "" : ". " + alternative));
         saveBestEffort(notification);
     }
 
@@ -121,7 +209,7 @@ public class NotificationService {
         if (coordinator==null) return;
         Notification notification=base(coordinator,NotificationType.venue_booking_approved,eventName);
         notification.setEventId(eventId); notification.setVenueBookingId(bookingId);
-        notification.setMessage("Booking " + bookingId + " for event " + eventId + " at " + venue + " was approved.");
+        notification.setMessage("Booking at " + venue + " was approved.");
         saveBestEffort(notification);
     }
 
@@ -356,6 +444,23 @@ public class NotificationService {
         repository.saveAndFlush(n);
     }
 
+    /** EC-NEW4: the signed-in user is who did it; a scheduled job has none. */
+    private void stampActor(Notification n) {
+        if (n.getActorName() != null) return;
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (!(auth instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwt)) {
+            return;
+        }
+        try {
+            UUID actor = UUID.fromString(jwt.getToken().getSubject());
+            n.setActorUserId(actor);
+            n.setActorRole(jwt.getToken().getClaimAsString("role"));
+            if (users != null) users.findById(actor).ifPresent(u -> n.setActorName(u.getUsername()));
+        } catch (IllegalArgumentException notAUser) {
+            // A token without a user id says nothing about who acted.
+        }
+    }
+
     private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
@@ -367,6 +472,13 @@ public class NotificationService {
     }
 
     private void saveBestEffort(Notification notification) {
+        stampActor(notification);
+        // EC-NEW4: nobody is notified about their own action (except an
+        // attendee's own registration confirmation, which is the point of it).
+        if (notification.getActorUserId() != null && notification.getActorUserId().equals(notification.getRecipientUserId())
+                && !SELF_NOTICES.contains(notification.getType())) {
+            return;
+        }
         if (outbox!=null) {
             outbox.enqueue(notification);
             return;
@@ -432,7 +544,9 @@ public class NotificationService {
                 n.getOccurredAt(),
                 n.getReadAt() != null,
                 linkPath,
-                n.getMessage());
+                n.getMessage(),
+                n.getActorName(),
+                n.getActorRole());
     }
 
     /** Each type is only ever sent to one role, so the type alone decides
@@ -444,6 +558,14 @@ public class NotificationService {
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested, equipment_damage_outcome ->
                     "/coordinator/events/" + n.getEventId();
             case equipment_request_attention -> "/coordinator/events/" + n.getEventId() + "/equipment-request";
+            // EC-NEW4: the Lead assigns from the request; the coordinator acts on
+            // the event once it exists, else on the request. An old link after a
+            // handover opens the "not assigned to you" notice (ECL-C7).
+            case request_submitted -> "/coordinator-lead/unassigned-requests/" + n.getEventRequestId();
+            case request_assigned, request_handed_over -> n.getEventId() != null
+                    ? "/coordinator/events/" + n.getEventId()
+                    : "/coordinator/requests/" + n.getEventRequestId();
+            case equipment_request_decided -> "/coordinator/events/" + n.getEventId() + "/equipment-request";
             case event_reassignment_requested -> "/coordinator-lead/reassignment-requests";
             case event_reassignment_approved, event_reassignment_declined ->
                     "/coordinator/events/" + n.getEventId() + "/reassignment-request";
@@ -462,7 +584,7 @@ public class NotificationService {
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_requirement_changed, venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
-            case venue_arrangements_changed, status_change, coordinator_assignment -> n.getEventId() != null
+            case venue_arrangements_changed, confirmed_venue_changed, status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()
                     : n.getEventRequestId() != null
                             ? "/organiser/requests/" + n.getEventRequestId()

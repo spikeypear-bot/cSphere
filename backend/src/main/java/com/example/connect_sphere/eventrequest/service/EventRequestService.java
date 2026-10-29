@@ -155,7 +155,20 @@ public class EventRequestService {
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null, ActivityType.submitted,
                 actingUserId, null, null, EventRequestStatus.draft.name(), EventRequestStatus.pending.name()));
+        // EC-NEW4 / Week 7: a new request waits, unassigned, for the Lead.
+        List<UUID> leads = userRepository.findByRole(UserRole.ecl).stream().map(User::getUserId).toList();
+        if (!leads.isEmpty()) {
+            notificationService.createRequestSubmittedNotifications(leads, saved.getRequestId(), saved.getEventName(),
+                    saved.getOrganisation() + " submitted a request for " + when(saved) + ", "
+                            + saved.getExpectedAttendance() + " expected. It is waiting to be assigned.");
+        }
         return mapper.toDto(saved);
+    }
+
+    /** EC-NEW4: "10 Mar 2027, 9:00 AM to 12:00 PM (Singapore time)". */
+    private static String when(EventRequest r) {
+        var format = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+        return format.format(r.getStartDatetime()) + " to " + format.format(r.getEndDatetime()) + " (Singapore time)";
     }
 
     /**
@@ -534,6 +547,19 @@ public class EventRequestService {
         activityService.record(new ActivityService.Entry(saved.getRequestId(), saved.getEventId(),
                 reassignment ? ActivityType.coordinator_reassigned : ActivityType.coordinator_assigned,
                 leadId, note, null, null, null));
+
+        // EC-NEW4: the coordinator who now has it, and the one who no longer does.
+        String details = saved.getOrganisation() + ", " + when(saved) + ", " + saved.getExpectedAttendance() + " expected.";
+        String previousName = reassignment ? userRepository.findById(previousCoordinatorId).map(User::getUsername)
+                .orElse("the previous coordinator") : null;
+        notificationService.createRequestAssignedNotification(coordinatorUserId, saved.getRequestId(), saved.getEventId(),
+                saved.getEventName(), reassignment, (reassignment
+                        ? "Transferred to you from " + previousName + ": " : "Assigned to you: ") + details);
+        if (reassignment) {
+            notificationService.createRequestHandedOverNotification(previousCoordinatorId, saved.getRequestId(),
+                    saved.getEventId(), saved.getEventName(), "Reassigned to " + coordinator.getUsername()
+                            + ". You no longer coordinate it, and will not be told about it any more.");
+        }
 
         if (saved.getCreatedBy() != null) {
             // After commit, like approve(): the notification is written in its

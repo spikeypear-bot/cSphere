@@ -19,4 +19,12 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     /** Powers an unread-count badge without pulling every row down to count
      * them client-side. */
     long countByRecipientUserIdAndReadAtIsNull(UUID recipientUserId);
+
+    /** EC-NEW4: "mark all as read" covers only what had arrived by {@code upTo}. */
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.data.jpa.repository.Query("UPDATE Notification n SET n.readAt = :now "
+            + "WHERE n.recipientUserId = :recipient AND n.readAt IS NULL AND n.occurredAt <= :upTo")
+    int markAllRead(@org.springframework.data.repository.query.Param("recipient") UUID recipient,
+            @org.springframework.data.repository.query.Param("upTo") java.time.OffsetDateTime upTo,
+            @org.springframework.data.repository.query.Param("now") java.time.OffsetDateTime now);
 }

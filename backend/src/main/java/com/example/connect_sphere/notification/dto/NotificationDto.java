@@ -24,5 +24,8 @@ public record NotificationDto(
         OffsetDateTime occurredAt,
         boolean read,
         String linkPath,
-        String message) {
+        String message,
+        /** EC-NEW4: who did it ("ecl1") and their role ("ecl"); null when the system did. */
+        String actorName,
+        String actorRole) {
 }

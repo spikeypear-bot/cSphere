@@ -7,7 +7,7 @@ AT03 now extends the existing detail page with the reusable confirmation view,
 including approved venues fetched through AT02, and registration-specific
 notification links. AT04's list/detail API contract is unchanged. See
 [AT03 delivery and confirmation contract](registration-confirmation.md) for its
-separate V54 notification migration and retry guarantees.
+separate V55 notification migration and retry guarantees.
 
 ## Attendee workflow
 

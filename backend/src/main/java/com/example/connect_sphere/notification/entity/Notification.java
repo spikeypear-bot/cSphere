@@ -95,6 +95,18 @@ public class Notification {
     @Column(name = "requirement_review_id")
     private UUID requirementReviewId;
 
+    /** EC-NEW4: who did it, for "not about your own actions"; not stored. */
+    @jakarta.persistence.Transient
+    private UUID actorUserId;
+
+    /** EC-NEW4 (V54): who did what this is about; null when the system did it. */
+    @Column(name = "actor_name")
+    private String actorName;
+
+    /** EC-NEW4 (V54): their role, as the token's role claim (e.g. "ecl"). */
+    @Column(name = "actor_role")
+    private String actorRole;
+
     public Notification() {
     }
 }

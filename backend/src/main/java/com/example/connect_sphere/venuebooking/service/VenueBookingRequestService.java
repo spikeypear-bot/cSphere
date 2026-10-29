@@ -75,6 +75,14 @@ public class VenueBookingRequestService {
     private final VenueMapper venueMapper;
     private final ActivityService activityService;
     private final NotificationService notificationService;
+
+    /** EO-C1: venue changes a confirmed event's organiser may need to know. */
+    private org.springframework.context.ApplicationEventPublisher arrangementEvents;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setArrangementEvents(org.springframework.context.ApplicationEventPublisher arrangementEvents) {
+        this.arrangementEvents = arrangementEvents;
+    }
     private final VenueOperationalIssueRepository operationalIssues;
     private final VenueOperatingHourRepository operatingHours;
     private final com.example.connect_sphere.event.service.EventLifecycleService lifecycle;
@@ -401,9 +409,14 @@ public class VenueBookingRequestService {
         if(booking.getReplacesBookingId()==null || previous==VenueBookingStatus.approved || previous==VenueBookingStatus.attention)
             plan.withdraw(booking.getRequirementId(),coordinatorId,why==null?"Venue arrangement cancelled":why);
         VenueBookingRecord saved = bookings.save(booking);
-        if (previous == VenueBookingStatus.approved || previous == VenueBookingStatus.attention)
+        if (previous == VenueBookingStatus.approved || previous == VenueBookingStatus.attention) {
             lifecycle.returnToPlanning(eventId, coordinatorId, "An approved venue booking was cancelled."
                     + (why == null ? "" : " " + why));
+            if (arrangementEvents != null) {
+                arrangementEvents.publishEvent(new com.example.connect_sphere.venueavailability.VenueArrangementChanged(
+                        eventId, List.of(bookingId), "A confirmed venue booking for your event was cancelled.", why));
+            }
+        }
 
         String venueName = venues.findById(saved.getVenueId()).map(Venue::getVenueAddress).orElse("the venue");
         eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(

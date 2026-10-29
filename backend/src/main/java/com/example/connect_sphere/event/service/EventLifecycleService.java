@@ -67,6 +67,14 @@ public class EventLifecycleService {
     private final AvailabilityService availability;
     private final ActivityService activity;
     private final NotificationService notifications;
+
+    /** EO-C1: setter-injected, so unit tests of the lifecycle need nothing extra. */
+    private OrganiserVenueNotices venueNotices;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setVenueNotices(OrganiserVenueNotices venueNotices) {
+        this.venueNotices = venueNotices;
+    }
     private final UserRepository users;
     private final JourneyStatusResolver statuses;
     private final Clock clock;
@@ -292,6 +300,7 @@ public class EventLifecycleService {
             throw new EventNotReadyException("This event can no longer be confirmed as it stands.", readiness.blockers());
         }
         OffsetDateTime now = now();
+        boolean reconfirming = event.getFirstConfirmedAt() != null;
         event.setStatus(EventStatus.confirmed);
         event.setConfirmedAt(now);
         event.setConfirmedBy(coordinatorId);
@@ -299,6 +308,10 @@ public class EventLifecycleService {
             event.setFirstConfirmedAt(now);
         }
         Event saved = events.save(event);
+        // EO-C1: once confirmed again, the organiser hears which venues it now has.
+        if (reconfirming && venueNotices != null) {
+            venueNotices.reconfirmed(saved);
+        }
         record(saved, ActivityType.event_confirmed, coordinatorId, null, JourneyStatus.SAFETY_APPROVED);
 
         UUID organiser = eventRequests.findByEventId(eventId).map(EventRequest::getCreatedBy).orElse(null);

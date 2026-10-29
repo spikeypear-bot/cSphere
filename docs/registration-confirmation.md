@@ -99,9 +99,33 @@ it explicitly says the registration was saved and offers a read-only retry.
 It does not label that case a failed registration or resubmit the POST. Capacity
 is refreshed from the server rather than decremented for an idempotent response.
 
-## V54 migration and compatibility
+## V55 migration and compatibility
 
-`V54__registration_confirmation_links.sql` adds nullable
+Main owns `V54__coordinator_notifications.sql`. During integration, AT03's
+branch-local V54 was renumbered to V55 without changing its SQL. Main's migration
+is unchanged. Fresh databases and databases on main's V54 can apply V55 normally.
+A development database that previously applied AT03's original V54 needs a
+separate, backed-up migration-history reconciliation before running this merged
+code. Do not run Flyway repair, change its history, or reset that database as
+part of the code merge. The existing demo database was left untouched.
+
+The notification merge keeps main's actor metadata, self-notification exemption
+for attendee receipts, mark-all-read, loading/error/retry UI and visible-tab/focus
+refresh. AT03 adds only the exact registration link, stable notification identity,
+idempotent outbox enqueue, immediate saved-registration refresh, five-second
+attendee polling and protection against stale fetch responses. Staff retain
+main's 30-second polling. The two attendee badges and status priorities are
+independent of the notification bell and keep their shared outlined styling.
+
+Merge verification on 29 October 2026 passed 263 relevant backend tests,
+all 888 frontend tests and five browser journeys covering attendee badges and
+registration as well as EC-NEW4/EO-C1 notifications. Lint, production builds,
+migration uniqueness, main V54 checksum preservation and test traceability also
+passed. The merge resolutions remain uncommitted. The pending merge targets
+main's `858aa9c`; fetched `origin/main` at `cf37814` adds only regenerated diagrams,
+with no additional application or migration changes.
+
+`V55__registration_confirmation_links.sql` adds nullable
 `notifications.registration_id` with a registration FK and lookup index. The
 outbox carries the same field in its existing JSON payload; its table is reused.
 
@@ -151,7 +175,7 @@ creates a client-only notification or bypasses committed database status.
 
 The live-app follow-up also covers automatic discovery of later delivery with
 the attendee five-second poll (48 focused tests passed). The development backend
-was rebuilt and V54 applied to the existing local database without resetting its
+was rebuilt and the original branch-local V54 applied to the existing local database without resetting its
 data. The no-reload notification browser journey passed against the actual
 frontend at port 5173, not only the isolated preview. Frontend lint/build and
 traceability passed as well.

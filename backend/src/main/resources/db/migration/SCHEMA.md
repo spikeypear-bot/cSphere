@@ -606,7 +606,7 @@ decision-log D30.
 
 ## V35/V36 registration schema and V41 attendee extension (EO10, AT01, AT02)
 
-AT03 V54 adds nullable `notifications.registration_id` referencing
+AT03 V55 adds nullable `notifications.registration_id` referencing
 `event_registrations.registration_id`, with a partial lookup index. Existing
 notification rows and outbox JSON payloads are backfilled by exact confirmation
 reference, recipient and event. Unmatched legacy rows remain nullable; they keep

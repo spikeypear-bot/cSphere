@@ -22,12 +22,12 @@ class RegistrationConfirmationMigrationTest {
     @Autowired DataSource dataSource;
 
     @Test
-    @DisplayName("AT03 (cross-cutting): upgrading V53 links old and queued notices to the exact owned registration, including withdrawn history")
+    @DisplayName("AT03 (cross-cutting): upgrading main's V54 links old and queued notices to the exact owned registration, including withdrawn history")
     void upgradesHistoricalAndQueuedConfirmations() throws Exception {
         String schema = "at03_" + UUID.randomUUID().toString().replace("-", "");
         JdbcTemplate admin = new JdbcTemplate(dataSource);
         try {
-            Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).target("53").load().migrate();
+            Flyway.configure().dataSource(dataSource).schemas(schema).defaultSchema(schema).target("54").load().migrate();
             try (Connection connection = dataSource.getConnection()) {
                 String original = connection.getSchema();
                 try {

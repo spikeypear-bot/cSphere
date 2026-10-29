@@ -104,7 +104,7 @@ Backlog stories: EO03, EO07, EO10–EO12, VS17, VS24, TS09, AT01–AT08, AU01A/B
 ### AT04 — registration history (implemented on the AT04 feature branch)
 
 AT03 on `feat/at03-registration-confirmation` builds on this slice with a shared
-confirmation view, exact-registration notification links and V54's nullable
+confirmation view, exact-registration notification links and V55's nullable
 notification FK. Durable enqueueing joins registration's transaction; delivery
 uses the existing outbox and retries. See [AT03 workflow and verification](registration-confirmation.md).
 

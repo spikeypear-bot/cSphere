@@ -34,6 +34,10 @@ logs/
 ### Generated test output ###
 backend/test-output.txt
 
+### Personal test-case working notes ###
+# Week 4 test cases are kept in the team Sheet; these local drafts stay out of the repo.
+docs/test-cases/
+
 ### OS ###
 .DS_Store
 Thumbs.db

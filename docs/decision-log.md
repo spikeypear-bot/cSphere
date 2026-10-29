@@ -819,6 +819,70 @@ The review also found three other gaps, fixed too:
 `equipment_requests.attention_reason`; `notification_type` adds
 `equipment_request_attention`).
 
+### D38 — EC-NEW4 + EO-C1: coordinator and organiser notifications
+
+2026-10-28, branch `feat/ecnew4-eoc1-notifications`.
+
+**Problem.** Coordinators were not told when a request was assigned or
+transferred to them, when Technical Support decided their equipment request,
+or (for the Lead) when a new request arrived. No notification said who did
+it. Nothing stopped people being told about their own actions. "Mark all as
+read" did not exist. Organisers of a confirmed event heard nothing when its
+venue became unavailable, had an operational issue, was cancelled, had its
+times changed or was replaced; only VS17's reassessment told them anything.
+
+**Decisions.**
+1. **Who did it is recorded once, centrally.** `NotificationService.saveBestEffort`
+   reads the signed-in user from the JWT and stamps `actor_name`/`actor_role`
+   (V54) on every notification. No call site passes an actor, so none can
+   forget it. Anything the system does on its own (a scheduler) has no
+   signed-in user, so it records no actor.
+2. **Nobody is told about their own action (AC15), enforced in the same
+   place.** There are two exemptions. An attendee's registration
+   confirmation is their receipt. Equipment needing attention (D37) is a
+   follow-up the change left open, not a record of the change.
+3. **"Mark all as read" stops at what was seen.** The client sends the newest
+   `occurredAt` it showed. The server marks only up to it, and clamps a
+   future or missing bound to now, so a notice that arrives meanwhile stays
+   unread (AC26). This is the same model as GitHub and Slack.
+4. **EO-C1 is decoupled by an event.** The venue modules publish
+   `VenueArrangementChanged(eventId, bookingIds, what, reason)`.
+   `OrganiserVenueNotices` (event module) decides whether it applies: the
+   event was confirmed at least once, isn't cancelled or completed, and
+   hasn't ended. It writes one notice per change, naming only the affected
+   venues. Re-confirmation sends a follow-up naming the approved venues. The
+   venue modules never learn about organisers.
+5. **A separate type for organisers.** `confirmed_venue_changed` is written
+   for organisers and shown in full. VS17's `venue_arrangements_changed`
+   carries staff reassessment text, which the bell deliberately hides. Reusing
+   it would have broken that rule.
+6. **Delivery stays on the outbox (V48).** Each notice is queued in the
+   action's own transaction and delivered after commit, at most once
+   (`ON CONFLICT DO NOTHING`). So a refused or rolled-back action tells
+   nobody (AC29), and retries never duplicate (AC28).
+
+**Rejected.** Push or WebSockets instead of 30-second polling plus a refresh
+on tab focus: more infrastructure than AC22 needs. Emailing organisers: out
+of scope for Release 1.
+
+**Teammate tests updated, not weakened.** `NotificationFlowTest` and the
+`EventRequest*ServiceTest`s had said "telling the coordinator is EC-NEW4", and
+now check it. `VenueStaffAuditRegressionTest` now expects the approval
+message without internal ids (AC9); the ids are checked on their columns
+instead. No test lost tests or assertions (checked with
+`test-protection.py`'s counts).
+
+**Tests.** Unit: `CoordinatorNotificationsTest`, `OrganiserVenueNoticesTest`.
+Integration: `CoordinatorNotificationFlowTest`, `OrganiserVenueNoticeFlowTest`
+(setup-only overlap vs touching boundary, multi-venue, cancellation, timing,
+operational issue), `NotificationDeliveryOnceTest` (committed). Frontend:
+`NotificationBell.ecnew4.test.tsx`. E2E: `e2e/notifications.spec.ts`.
+
+**Migration:** V54 (`notifications.actor_name`, `actor_role`; types
+`request_submitted`, `request_assigned`, `request_handed_over`,
+`equipment_request_decided`, `confirmed_venue_changed`; shape rule extended
+as in V51; partial index on unread rows).
+
 ### Q1 — Is the planned velocity (77.5 points/sprint) realistic?
 - **Raised by:** repository/backlog inspection, 2026-09-12.
 - **Context:** Backlog `Estimation` sheet: 310 total points ÷ 4 sprints = 77.5 planned velocity/sprint. Actual (Done-only) velocity to date: 8 points. The Week 3 course slide deck's own worked example uses a velocity of 15 for a comparably-sized team — 77.5 is roughly 5× that.

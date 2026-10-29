@@ -46,6 +46,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("AT03")
 @Tag("AT01")
 @Tag("AT04")
+@Tag("EC-NEW4")
 class RegistrationConfirmationFlowTest {
     @Autowired MockMvc mvc;
     @Autowired JdbcTemplate jdbc;
@@ -86,6 +87,8 @@ class RegistrationConfirmationFlowTest {
         doCallRealMethod().when(delivery).deliver(any());
         outbox.retry(); outbox.retry();
         assertThat(count("notifications", event.getEventId())).isEqualTo(1);
+        assertThat(jdbc.queryForMap("SELECT actor_name, actor_role, registration_id FROM notifications WHERE event_id=?", event.getEventId()))
+                .containsEntry("actor_name", "att1").containsEntry("actor_role", "attendee").containsEntry("registration_id", id);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'event_id'=? AND delivered_at IS NULL", Integer.class, event.getEventId().toString())).isZero();
         mvc.perform(get("/api/notifications").with(flow.as("att1")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[?(@.eventId == '" + event.getEventId() + "')].linkPath")
