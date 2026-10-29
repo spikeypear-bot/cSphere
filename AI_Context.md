@@ -470,6 +470,18 @@ An event can have several venue bookings, each with its own saved start/end wind
 
 ## AT04 — attendee registration history
 
+Attendee pages share exactly two status badges, with lifecycle first and personal
+registration/availability second. The read-only event summaries/details expose
+owned status and availability fields; enums and AT01 mutation rules stay intact.
+See [badge priorities and verification](docs/attendee-status-badges.md).
+
+AT03 builds on this history: complete saved confirmations reuse AT02's approved
+venues, and V54 links notifications/outbox payloads to the exact registration.
+Registration and durable confirmation enqueueing share one transaction; the
+existing outbox delivers after commit and retries with a stable identity. See
+[AT03 contract](docs/registration-confirmation.md). Do not restore the earlier
+registration after-commit enqueue callback: it leaves a durability gap.
+
 AT04 registration history is implemented under `/api/attendee/registrations` and
 `/attendee/my-registrations`. Reads scope to the token subject and preserve stored
 registration history separately from event lifecycle. AT08 eligibility is shown

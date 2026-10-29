@@ -1,6 +1,6 @@
-// @stories AT01 AT02
+// @stories AT01 AT02 AT03
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AttendeeEventDetailsPage } from './AttendeeEventDetailsPage'
 import { AttendeeEventsPage } from './AttendeeEventsPage'
@@ -10,7 +10,7 @@ const details = {
   startDatetime: '2027-03-01T09:00:00+08:00', endDatetime: '2027-03-01T17:00:00+08:00',
   status: 'confirmed', updatedAt: '2026-12-02T12:00:00Z',
   accessibilityInformation: ['step_free_access'], registrationRequired: true,
-  registrationOpensAt: null, registrationClosesAt: null, registrationCapacity: null,
+  registrationOpensAt: '2020-01-01T00:00:00Z', registrationClosesAt: '2027-03-01T01:00:00Z', registrationCapacity: 10,
   attendeeInstructions: null,
   availablePlaces: 8,
   registrationReference: null, registeredAt: null,
@@ -47,7 +47,9 @@ describe('AT02 attendee event details', () => {
     renderPage()
     expect(await screen.findByRole('heading', { name: 'Community Conference' })).toBeInTheDocument()
     expect(screen.getByText('Meet the community.')).toBeInTheDocument()
-    expect(screen.getAllByText(/UTC\+08:00/)).toHaveLength(2)
+    const eventInformation = screen.getByRole('heading', { name: 'Event information' }).parentElement!
+    expect(within(eventInformation).getByText('1 March 2027 at 9:00 am (SGT)')).toBeInTheDocument()
+    expect(within(eventInformation).getByText('1 March 2027 at 5:00 pm (SGT)')).toBeInTheDocument()
     expect(screen.getByText('10 Bay Road')).toBeInTheDocument()
     expect(screen.getByText('Step-free access')).toBeInTheDocument()
     expect(screen.getByText('Registration is required.')).toBeInTheDocument()
@@ -74,7 +76,9 @@ describe('AT02 attendee event details', () => {
       venues: [{ ...details.venues[0], unavailable: true }] }
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => JSON.stringify(reconfirming) }))
     renderPage()
-    expect(await screen.findAllByText(/being re-confirmed/i)).toHaveLength(2)
+    expect(await screen.findByText('Awaiting Re-confirmation')).toBeInTheDocument()
+    expect(screen.getByText('Registration Paused')).toBeInTheDocument()
+    expect(screen.getAllByText(/being re-confirmed/i)).toHaveLength(1)
     expect(screen.getByText('10 Bay Road')).toBeInTheDocument()
     expect(screen.getByText(/venue is currently unavailable/i)).toBeInTheDocument()
   })

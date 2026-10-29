@@ -2,16 +2,19 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { NotificationDto } from '../../types/notification'
+import { NOTIFICATIONS_CHANGED_EVENT } from './notificationRefresh'
 
 const POLL_INTERVAL_MS = 30_000
+const ATTENDEE_POLL_INTERVAL_MS = 5_000
 
 /**
  * EO09/EO19: owns fetching/polling/marking-read for the signed-in user's own
  * notifications. Polling (not push) is a deliberate, disclosed simplification
  * — see docs/decision-log.md: a real-time channel (WebSocket/SSE) is a
  * reasonable future enhancement, not required by either story's ACs, which
- * only ask that the notification exist and be viewable, not that it arrive
- * instantly.
+ * ask that the notification exist and be viewable. AT03 also triggers an
+ * immediate server refresh after registration succeeds; polling remains
+ * the fallback for delayed outbox delivery and changes from other sessions.
  */
 export function useNotifications() {
   const { role } = useSession()
@@ -26,20 +29,22 @@ export function useNotifications() {
   useEffect(() => {
     if (!role) return
     let cancelled = false
+    let latestRequest = 0
 
     function poll() {
+      const request = ++latestRequest
       Promise.all([
         apiClient.get<NotificationDto[]>('/notifications'),
         apiClient.get<{ count: number }>('/notifications/unread-count'),
       ])
         .then(([list, count]) => {
-          if (cancelled) return
+          if (cancelled || request !== latestRequest) return
           setNotifications(list)
           setUnreadCount(count.count)
           setError(null)
         })
         .catch((err: unknown) => {
-          if (cancelled) return
+          if (cancelled || request !== latestRequest) return
           // A failed refresh should never crash the bell — just try again on
           // the next poll, same "don't let notification plumbing break
           // anything else" principle as the backend's own best-effort save.
@@ -48,9 +53,17 @@ export function useNotifications() {
     }
 
     poll()
-    const timer = setInterval(poll, POLL_INTERVAL_MS)
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, poll)
+    window.addEventListener('focus', poll)
+    const refreshVisible = () => { if (document.visibilityState === 'visible') poll() }
+    document.addEventListener('visibilitychange', refreshVisible)
+    // Also discover confirmations delivered later by the outbox or from another tab.
+    const timer = setInterval(poll, role === 'attendee' ? ATTENDEE_POLL_INTERVAL_MS : POLL_INTERVAL_MS)
     return () => {
       cancelled = true
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, poll)
+      window.removeEventListener('focus', poll)
+      document.removeEventListener('visibilitychange', refreshVisible)
       clearInterval(timer)
     }
   }, [role, refreshToken])

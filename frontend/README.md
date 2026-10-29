@@ -78,6 +78,13 @@ confirmed event has returned through planning/safety checks.
 
 See the [AT04 workflow contract](../docs/attendee-registration-status-api.md) and
 [manual testing guide](../docs/attendee-registration-status-manual-testing.md).
+Every attendee card/details section uses `AttendeeStatusBadges`: lifecycle first,
+owned registration/availability second, exactly two badges. Raw event and
+registration enums stay unchanged. See [badge priority and colours](../docs/attendee-status-badges.md).
+AT03 adds complete, reopenable confirmation details and approved venues to the
+same flow, plus registration-specific persistent notification links. Venue or
+confirmation read failures offer GET-only retries after a saved registration.
+See the [AT03 contract](../docs/registration-confirmation.md).
 
 `src/App.tsx` is the single, central place routes are declared — there is no
 other router configuration anywhere in the app. It's organised in two tiers:

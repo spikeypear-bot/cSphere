@@ -30,6 +30,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 
 @Tag("unit")
 @Tag("AT01")
+@Tag("AT03")
 class AttendeeRegistrationServiceTest {
     private static final UUID EVENT_ID = UUID.randomUUID();
     private static final UUID USER_ID = UUID.randomUUID();
@@ -52,7 +53,7 @@ class AttendeeRegistrationServiceTest {
         assertThat(result.reference()).startsWith("CS-");
         assertThat(result.registeredAt()).isEqualTo(NOW);
         verify(registrations).saveAndFlush(any());
-        verify(notifications).createAttendeeRegistrationConfirmation(USER_ID, EVENT_ID, "Workshop", result.reference());
+        verify(notifications).createAttendeeRegistrationConfirmation(USER_ID, EVENT_ID, "Workshop", result.reference(), result.registrationId());
     }
 
     @Test
@@ -147,7 +148,7 @@ class AttendeeRegistrationServiceTest {
         assertThatThrownBy(() -> service.register(EVENT_ID, USER_ID))
                 .isInstanceOf(AttendeeRegistrationException.class).hasMessage("Registration is closed.");
         verify(registrations, never()).saveAndFlush(any());
-        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any());
+        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any(), any());
     }
 
     @Test
@@ -185,7 +186,7 @@ class AttendeeRegistrationServiceTest {
                 .thenReturn(Optional.of(existing));
         assertThat(service.register(EVENT_ID, USER_ID).status()).isEqualTo("event_cancelled");
         verify(registrations, never()).saveAndFlush(any());
-        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any());
+        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any(), any());
     }
 
     private static User user() {

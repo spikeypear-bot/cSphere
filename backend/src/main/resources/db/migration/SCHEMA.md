@@ -606,6 +606,14 @@ decision-log D30.
 
 ## V35/V36 registration schema and V41 attendee extension (EO10, AT01, AT02)
 
+AT03 V54 adds nullable `notifications.registration_id` referencing
+`event_registrations.registration_id`, with a partial lookup index. Existing
+notification rows and outbox JSON payloads are backfilled by exact confirmation
+reference, recipient and event. Unmatched legacy rows remain nullable; they keep
+their event link. Registration writes and stable-identity outbox enqueueing now
+share a transaction, while delivery/retries stay after commit. No registration
+schema is duplicated. See [AT03 contract](../../../../../../docs/registration-confirmation.md).
+
 V35 creates `event_registrations` with the unique `reference` field and statuses
 `confirmed`, `withdrawn`, `event_cancelled`. V36 removes the separate event
 closing timestamp: registration closes exactly at `events.start_datetime`.

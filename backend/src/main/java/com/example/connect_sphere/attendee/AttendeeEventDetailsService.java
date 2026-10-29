@@ -41,10 +41,26 @@ public class AttendeeEventDetailsService {
     @PreAuthorize("hasRole('ATTENDEE')")
     @Transactional(readOnly = true)
     public List<AttendeeEventListItemDto> list() {
+        return list(null);
+    }
+
+    @PreAuthorize("hasRole('ATTENDEE')")
+    @Transactional(readOnly = true)
+    public List<AttendeeEventListItemDto> list(UUID attendeeId) {
+        java.util.Map<UUID, AttendeeRegistration> owned = new java.util.HashMap<>();
+        if (attendeeId != null) {
+            // Newest history first, but an active registration always takes precedence.
+            registrations.findByAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(attendeeId)
+                    .forEach(registration -> owned.merge(registration.getEventId(), registration,
+                            (previous, next) -> "confirmed".equals(previous.getStatus()) ? previous
+                                    : "confirmed".equals(next.getStatus()) ? next : previous));
+        }
         return events.findByFirstConfirmedAtIsNotNullOrderByStartDatetimeAsc().stream()
                 .map(event -> new AttendeeEventListItemDto(event.getEventId(), event.getEventName(),
                         event.getStartDatetime(), event.getEndDatetime(), attendeeStatus(event),
-                        event.getRegistrationNeeds()))
+                        event.getRegistrationNeeds(), event.getRegistrationOpensAt(), event.getStartDatetime(),
+                        event.getRegistrationCapacity(), remainingPlaces(event),
+                        owned.containsKey(event.getEventId()) ? owned.get(event.getEventId()).getStatus() : null))
                 .toList();
     }
 
@@ -70,14 +86,22 @@ public class AttendeeEventDetailsService {
         }
         AttendeeRegistration myRegistration = attendeeId == null ? null : registrations
                 .findByEventIdAndAttendeeIdAndStatus(eventId, attendeeId, "confirmed").orElse(null);
+        AttendeeRegistration history = myRegistration != null || attendeeId == null ? myRegistration : registrations
+                .findFirstByEventIdAndAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(eventId, attendeeId).orElse(null);
         return new AttendeeEventDetailsDto(event.getEventId(), event.getEventName(), event.getDescription(),
                 event.getStartDatetime(), event.getEndDatetime(), view, event.getConfirmedAt(),
                 event.getAccessibilityNeeds() == null ? List.of() : List.copyOf(event.getAccessibilityNeeds()),
                 event.getRegistrationNeeds(), event.getRegistrationOpensAt(), event.getStartDatetime(),
-                event.getRegistrationCapacity(), event.getRegistrationCapacity() == null ? null
-                        : Math.max(0, event.getRegistrationCapacity() - (int) registrations.countByEventIdAndStatus(eventId, "confirmed")),
+                event.getRegistrationCapacity(), remainingPlaces(event),
                 event.getAttendeeInstructions(), myRegistration == null ? null : myRegistration.getRegistrationReference(),
-                myRegistration == null ? null : myRegistration.getRegisteredAt(), attendeeVenues);
+                myRegistration == null ? null : myRegistration.getRegisteredAt(), attendeeVenues,
+                myRegistration == null ? null : myRegistration.getRegistrationId(),
+                history == null ? null : history.getStatus());
+    }
+
+    private Integer remainingPlaces(Event event) {
+        return event.getRegistrationCapacity() == null ? null : Math.max(0,
+                event.getRegistrationCapacity() - (int) registrations.countByEventIdAndStatus(event.getEventId(), "confirmed"));
     }
 
     private String attendeeStatus(Event event) {

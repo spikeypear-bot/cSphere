@@ -3,7 +3,8 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { EVENT_LABELS, REGISTRATION_LABELS, registrationDateTime, useRegistrations, type RegistrationDetails } from './registrationView'
+import { registrationDateTime, useRegistrations, type RegistrationDetails } from './registrationView'
+import { AttendeeStatusBadges } from './AttendeeStatusBadges'
 import './AttendeePages.css'
 
 export function MyRegistrationsPage() {
@@ -21,10 +22,9 @@ export function MyRegistrationsPage() {
         {data.map(registration => <li key={registration.registrationId}>
           <Card className="attendee-events__card">
             <h2><Link to={`/attendee/my-registrations/${encodeURIComponent(registration.registrationId)}`}>{registration.eventName}</Link></h2>
+            <AttendeeStatusBadges value={registration} />
             <dl className="attendee-event-details__facts">
               <div><dt>Registration reference</dt><dd>{registration.reference}</dd></div>
-              <div><dt>Registration status</dt><dd><span className="attendee-status" data-status={registration.registrationStatus}>{REGISTRATION_LABELS[registration.registrationStatus]}</span></dd></div>
-              <div><dt>Event status</dt><dd><span className="attendee-status" data-status={registration.eventStatus}>{EVENT_LABELS[registration.eventStatus]}</span></dd></div>
               <div><dt>Starts</dt><dd>{registrationDateTime(registration.startDatetime)}</dd></div>
               <div><dt>Ends</dt><dd>{registrationDateTime(registration.endDatetime)}</dd></div>
               <div><dt>Registered</dt><dd>{registrationDateTime(registration.registeredAt)}</dd></div>

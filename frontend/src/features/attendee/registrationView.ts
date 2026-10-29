@@ -17,8 +17,6 @@ export interface RegistrationDetails {
   withdrawalReason: string
 }
 
-export const REGISTRATION_LABELS = { confirmed: 'Confirmed', withdrawn: 'Withdrawn', event_cancelled: 'Cancelled by event cancellation' }
-export const EVENT_LABELS = { confirmed: 'Confirmed', reconfirming: 'Awaiting re-confirmation', cancelled: 'Cancelled', completed: 'Completed' }
 
 export function registrationDateTime(value: string): string {
   return new Intl.DateTimeFormat('en-SG', {
@@ -27,17 +25,18 @@ export function registrationDateTime(value: string): string {
 }
 
 /** Fresh on navigation, focus and the existing live-refresh interval; old responses cannot win. */
-export function useRegistrations<T>(path: string) {
+export function useRegistrations<T>(path: string, enabled = true) {
   const [result, setResult] = useState<{ path: string; data?: T; error?: ApiClientError } | null>(null)
   const [attempt, setAttempt] = useState(0)
-  const revision = useLiveRefresh()
+  const revision = useLiveRefresh(enabled)
   useEffect(() => {
+    if (!enabled) return
     let active = true
     apiClient.get<T>(path, { cache: 'no-store' })
       .then(data => { if (active) setResult({ path, data }) })
       .catch(error => { if (active) setResult({ path, error }) })
     return () => { active = false }
-  }, [path, attempt, revision])
+  }, [path, attempt, revision, enabled])
   return {
     data: result?.path === path ? result.data : undefined,
     error: result?.path === path ? result.error : undefined,

@@ -22,7 +22,9 @@ public record AttendeeEventDetailsDto(
         String attendeeInstructions,
         String registrationReference,
         OffsetDateTime registeredAt,
-        List<AttendeeVenue> venues) {
+        List<AttendeeVenue> venues,
+        UUID registrationId,
+        String registrationStatus) {
 
     public record AttendeeVenue(UUID venueId, String name, String address, boolean unavailable) { }
 }

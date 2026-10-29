@@ -3,6 +3,11 @@
 AT04 extends AT01/AT02 with read-only registration history. It reuses
 `AttendeeRegistration`, `event_registrations`, the authenticated attendee namespace,
 and the canonical `JourneyStatusResolver`. No migration or new dependency is needed.
+AT03 now extends the existing detail page with the reusable confirmation view,
+including approved venues fetched through AT02, and registration-specific
+notification links. AT04's list/detail API contract is unchanged. See
+[AT03 delivery and confirmation contract](registration-confirmation.md) for its
+separate V54 notification migration and retry guarantees.
 
 ## Attendee workflow
 
@@ -68,9 +73,9 @@ The backend computes the attendee status before returning it to the frontend.
 | Stored event state | Attendee API status | My Registrations label |
 |---|---|---|
 | `confirmed`, with an end time that has not passed | `confirmed` | Confirmed |
-| `pending`, `awaiting_safety_review`, `safety_changes_requested`, `safety_approved` | `reconfirming` | Awaiting re-confirmation |
+| `pending`, `awaiting_safety_review`, `safety_changes_requested`, `safety_approved` | `reconfirming` | Awaiting Re-confirmation |
 | `cancelled` | `cancelled` | Cancelled |
-| `completed`, or `confirmed` with an end time strictly before the server clock | `completed` | Completed |
+| `completed`, or `confirmed` with an end time strictly before the server clock | `completed` | Past Event |
 
 For the AT02 catalogue/details, the prior-confirmation gate is important: the
 four internal planning/safety states mean **re-confirmation of a previously
@@ -79,20 +84,19 @@ initial checks. AT04 reads owned history directly, including records retained
 through a return to planning. Completion is derived on read; viewing does not
 persist a new event or registration status.
 
-The current UI uses slightly different labels for the same API values:
-Browse events shows **Being re-confirmed** and **Past event**; event details
-shows **Arrangements being re-confirmed** and **Past event**; My Registrations
-shows **Awaiting re-confirmation** and **Completed**. This is wording variation,
-not separate lifecycle states.
+All attendee pages now share exactly two badges: **Event status** and
+**Registration status / availability**. Labels are consistent across browse,
+event details, My Registrations and confirmation details. The second badge uses
+personal history before availability; see the [badge mapping](attendee-status-badges.md).
 
 | Stored registration | Current event | Expected AT04 presentation |
 |---|---|---|
 | `confirmed` | Confirmed | Registration Confirmed; Event Confirmed |
 | `confirmed` | Re-confirming | Registration Confirmed; event warning; no automatic withdrawal |
-| `confirmed` | Cancelled | Registration Confirmed as stored history; Event Cancelled and cancellation warning; attendance is no longer confirmed to proceed |
-| `confirmed` | Completed | Registration Confirmed as stored history; Event Completed |
+| `confirmed` | Cancelled | Registration badge Affected by Cancellation; stored registration stays confirmed; Event Cancelled and cancellation warning |
+| `confirmed` | Completed | Registration Confirmed as stored history; Event badge Past Event |
 | `withdrawn` | Any lifecycle | Registration Withdrawn remains in history; current event status is shown separately |
-| `event_cancelled` | Any lifecycle | Registration Cancelled by event cancellation; current event status is shown separately |
+| `event_cancelled` | Any lifecycle | Registration badge Affected by Cancellation; current event status is shown separately |
 
 AT04 does not rewrite a stored `confirmed` row to `event_cancelled`. Existing
 AT01/EO10 responses can derive `event_cancelled` for a cancelled event; that

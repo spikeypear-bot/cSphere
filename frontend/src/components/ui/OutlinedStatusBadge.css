@@ -1,0 +1,23 @@
+.outlined-status-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: calc(0.3rem - 1px) calc(0.7rem - 1px);
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 5%, transparent);
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.outlined-status-badge[data-tone='success'] { color: var(--success); }
+.outlined-status-badge[data-tone='warning'] { color: var(--booking-hold); }
+.outlined-status-badge[data-tone='danger'] { color: var(--danger); }
+.outlined-status-badge[data-tone='info'] { color: #1e40af; }
+.outlined-status-badge[data-tone='neutral'] { color: #374151; }
+
+@media (prefers-color-scheme: dark) {
+  .outlined-status-badge[data-tone='info'] { color: #bfdbfe; }
+  .outlined-status-badge[data-tone='neutral'] { color: #e5e7eb; }
+}

@@ -1,6 +1,6 @@
-// @stories AT04 AT01 AT02
+// @stories AT04 AT01 AT02 AT03
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { MyRegistrationsPage } from './MyRegistrationsPage'
 import { RegistrationDetailsPage } from './RegistrationDetailsPage'
@@ -18,7 +18,7 @@ const eventDetails = {
   eventId: 'event-1', eventName: 'Community Conference', startDatetime: registration.startDatetime,
   endDatetime: registration.endDatetime, status: 'confirmed', updatedAt: null,
   accessibilityInformation: [], venues: [], registrationRequired: true, registrationCapacity: 10,
-  availablePlaces: 5, registrationOpensAt: null, registrationClosesAt: null,
+  availablePlaces: 5, registrationOpensAt: '2020-01-01T00:00:00Z', registrationClosesAt: '2027-03-01T01:00:00Z',
   registrationReference: null, registeredAt: null,
 }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) })
@@ -48,7 +48,8 @@ describe('AT04 registration pages', () => {
     fireEvent.click(screen.getByRole('link', { name: 'View registration' }))
     expect(await screen.findByText(/Available\. Withdrawal is available/)).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'View latest event details' })).toHaveAttribute('href', '/attendee/events/event-1')
-    expect(fetchMock).toHaveBeenLastCalledWith('/api/attendee/registrations/reg-1', expect.objectContaining({ method: 'GET', cache: 'no-store' }))
+    expect(fetchMock).toHaveBeenCalledWith('/api/attendee/registrations/reg-1', expect.objectContaining({ method: 'GET', cache: 'no-store' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/attendee/events/event-1', expect.objectContaining({ method: 'GET', cache: 'no-store' })))
     expect(screen.queryByRole('button', { name: /withdraw/i })).not.toBeInTheDocument()
   })
 
@@ -85,11 +86,11 @@ describe('AT04 registration pages', () => {
   })
 
   it.each([
-    ['cancelled', 'confirmed', 'This event has been cancelled.', 'Confirmed', 'Cancelled'],
-    ['completed', 'confirmed', 'This event has completed.', 'Confirmed', 'Completed'],
-    ['reconfirming', 'confirmed', 'Existing registrations have not been automatically withdrawn.', 'Confirmed', 'Awaiting re-confirmation'],
+    ['cancelled', 'confirmed', 'This event has been cancelled.', 'Affected by Cancellation', 'Cancelled'],
+    ['completed', 'confirmed', 'This event has completed.', 'Registration Confirmed', 'Past Event'],
+    ['reconfirming', 'confirmed', 'Existing registrations have not been automatically withdrawn.', 'Registration Confirmed', 'Awaiting Re-confirmation'],
     ['cancelled', 'withdrawn', 'This event has been cancelled.', 'Withdrawn', 'Cancelled'],
-    ['cancelled', 'event_cancelled', 'This event has been cancelled.', 'Cancelled by event cancellation', 'Cancelled'],
+    ['cancelled', 'event_cancelled', 'This event has been cancelled.', 'Affected by Cancellation', 'Cancelled'],
   ] as const)('AT04 (cross-cutting): %s event preserves %s registration history', async (eventStatus, registrationStatus, message, registrationLabel, eventLabel) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...registration, eventStatus, registrationStatus,
       withdrawalAvailable: false, withdrawalReason: 'Withdrawal is unavailable.' })))
@@ -146,7 +147,7 @@ describe('AT04 registration pages', () => {
     expect(await screen.findByRole('link', { name: 'View registration' })).toBeInTheDocument()
     fireEvent.click(screen.getByRole('link', { name: 'View registration' }))
     fireEvent.click(await screen.findByRole('link', { name: 'View latest event details' }))
-    expect(await screen.findByText(/You’re registered/)).toBeInTheDocument()
+    expect(await screen.findByText(/Registration Confirmed/)).toBeInTheDocument()
     expect(fetchMock.mock.calls.filter(([, options]) => options.method === 'POST')).toHaveLength(1)
   })
 })
