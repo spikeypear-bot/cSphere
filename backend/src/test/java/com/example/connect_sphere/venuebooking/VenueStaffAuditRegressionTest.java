@@ -162,7 +162,9 @@ class VenueStaffAuditRegressionTest {
         for(UUID booking:List.of(a.bookingId(),b.bookingId())) {
             assertThat(notices(booking)).isEqualTo(1);
             assertThat(jdbc.queryForObject("SELECT recipient_user_id FROM notifications WHERE venue_booking_id=? AND type::text='venue_booking_approved'",UUID.class,booking)).isEqualTo(current);
-            assertThat(jdbc.queryForObject("SELECT message FROM notifications WHERE venue_booking_id=? AND type::text='venue_booking_approved'",String.class,booking)).contains(e.toString(),booking.toString());
+            // EC-NEW4 AC9: the message reads as people say it (no internal ids); the booking and event are linked by their columns.
+            assertThat(jdbc.queryForObject("SELECT message FROM notifications WHERE venue_booking_id=? AND type::text='venue_booking_approved'",String.class,booking)).matches("Booking at .+ was approved[.]");
+            assertThat(jdbc.queryForObject("SELECT event_id FROM notifications WHERE venue_booking_id=? AND type::text='venue_booking_approved'",UUID.class,booking)).isEqualTo(e);
         }
     }
     @Test @DisplayName("VS17 (failure): approval rollback retains pending status and creates no durable approval notice")

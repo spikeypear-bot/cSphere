@@ -116,6 +116,15 @@ public class AvailabilityService {
             publisher.publishEvent(new VenueBecameUnavailable(
                     p.affectedBookings().stream().map(Booking::eventId).distinct().toList(), actor,
                     "A venue for this event became unavailable: " + r.reason().strip()));
+            // EO-C1: one notice per affected event, naming only its affected bookings
+            // (occupied times include setup and turnaround; times that only touch do not count).
+            var format = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+            p.affectedBookings().stream().collect(java.util.stream.Collectors.groupingBy(Booking::eventId,
+                    java.util.LinkedHashMap::new, java.util.stream.Collectors.mapping(Booking::bookingId,
+                            java.util.stream.Collectors.toList())))
+                    .forEach((eventId, ids) -> publisher.publishEvent(new VenueArrangementChanged(eventId, ids,
+                            "A venue for your event is unavailable from " + format.format(r.startDateTime()) + " to "
+                                    + format.format(r.endDateTime()) + " (Singapore time).", r.reason().strip())));
         }
         return repository.periods(id).stream().filter(x -> x.unavailabilityId().equals(key)).findFirst().orElseThrow();
     }

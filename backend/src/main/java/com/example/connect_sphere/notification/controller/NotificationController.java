@@ -46,6 +46,16 @@ public class NotificationController {
         return Map.of("count", service.unreadCount(userIdOf(jwt)));
     }
 
+    /** EC-NEW4: body {@code {"upTo": "<newest seen occurredAt>"}}; anything newer stays unread. */
+    @PostMapping("/read-all")
+    public Map<String, Integer> markAllRead(@AuthenticationPrincipal Jwt jwt,
+            @org.springframework.web.bind.annotation.RequestBody(required = false) ReadAll body) {
+        return Map.of("marked", service.markAllRead(userIdOf(jwt), body == null ? null : body.upTo()));
+    }
+
+    public record ReadAll(java.time.OffsetDateTime upTo) {
+    }
+
     @PostMapping("/{id}/read")
     public NotificationDto markRead(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id) {
         return service.markRead(userIdOf(jwt), id);

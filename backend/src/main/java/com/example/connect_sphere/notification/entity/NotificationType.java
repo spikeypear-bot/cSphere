@@ -57,5 +57,15 @@ public enum NotificationType {
     equipment_damage_outcome,
     /** EC-NEW3 (V53, D37): an approved change means the coordinator's
      * approved equipment request needs attention. */
-    equipment_request_attention
+    equipment_request_attention,
+    /** EC-NEW4 (V54): a new request is waiting to be assigned; sent to every Lead. */
+    request_submitted,
+    /** EC-NEW4 (V54): the Lead assigned, or transferred, a request to this coordinator. */
+    request_assigned,
+    /** EC-NEW4 (V54): the Lead moved it to another coordinator; sent to the previous one. */
+    request_handed_over,
+    /** EC-NEW4 (V54): Technical Support approved or rejected the coordinator's equipment request. */
+    equipment_request_decided,
+    /** EO-C1 (V54): a confirmed event's venue changed, or it is confirmed again; for its organisers. */
+    confirmed_venue_changed
 }

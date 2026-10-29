@@ -143,3 +143,18 @@
     max-height: min(24rem, calc(100svh - 6.5rem));
   }
 }
+
+/* EC-NEW4 */
+.notification-bell__panel-header { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.notification-bell__mark-all,
+.notification-bell__retry {
+  background: none; border: 0; padding: 0; color: var(--accent-strong); font: inherit; font-size: 0.85rem;
+  font-weight: 600; text-decoration: underline; cursor: pointer;
+}
+.notification-bell__error { padding: 0.75rem 1rem; display: grid; gap: 0.35rem; justify-items: start; }
+.notification-bell__error p { margin: 0; }
+.notification-bell__unread {
+  align-self: flex-start; font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--accent-strong);
+}
+.notification-bell__actor { font-size: 0.8rem; color: var(--ink-soft); }

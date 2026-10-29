@@ -38,6 +38,13 @@ export type NotificationTypeName =
   | 'equipment_damage_outcome'
   // EC-NEW3 (D37)
   | 'equipment_request_attention'
+  // EC-NEW4 (V54)
+  | 'request_submitted'
+  | 'request_assigned'
+  | 'request_handed_over'
+  | 'equipment_request_decided'
+  // EO-C1 (V54)
+  | 'confirmed_venue_changed'
 
 export interface NotificationDto {
   notificationId: string
@@ -55,4 +62,7 @@ export interface NotificationDto {
   linkPath: string | null
   /** The clarification message or organiser response, where there is one. */
   message?: string | null
+  /** EC-NEW4: who did it, and their role claim; null when the system did. */
+  actorName?: string | null
+  actorRole?: string | null
 }

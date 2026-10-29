@@ -56,6 +56,8 @@ class DomainClassDiagramTest {
             "EquipmentRequestLineId",
             "SerialisedEquipmentId",
             "VenueBecameUnavailable",
+            // EO-C1: what changed about a confirmed event's venue, told to its organiser.
+            "VenueArrangementChanged",
             // VS-C3's tentative hold: a record read with JDBC, not an entity.
             "VenueHold");
 

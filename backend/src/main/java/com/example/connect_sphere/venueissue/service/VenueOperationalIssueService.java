@@ -65,6 +65,13 @@ public class VenueOperationalIssueService {
             availability.notifyOperationalIssue(venueId,affected,request.description().strip());
             if (!affected.isEmpty()) publisher.publishEvent(new com.example.connect_sphere.venueavailability.VenueBecameUnavailable(
                 affected.stream().map(b -> b.eventId()).distinct().toList(),userId,"A venue operational issue requires review: "+request.description().strip()));
+            // EO-C1: the organisers of affected events that have been confirmed.
+            affected.stream().collect(java.util.stream.Collectors.groupingBy(b -> b.eventId(),
+                    java.util.LinkedHashMap::new, java.util.stream.Collectors.mapping(b -> b.bookingId(),
+                            java.util.stream.Collectors.toList())))
+                    .forEach((eventId, ids) -> publisher.publishEvent(new com.example.connect_sphere.venueavailability.VenueArrangementChanged(
+                            eventId, ids, "Venue Staff reported an operational issue at a venue for your event.",
+                            request.description().strip())));
         }
         return VenueOperationalIssueDto.from(saved);
     }

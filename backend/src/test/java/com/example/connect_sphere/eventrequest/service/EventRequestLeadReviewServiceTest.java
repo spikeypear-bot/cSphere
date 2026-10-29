@@ -404,6 +404,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @org.junit.jupiter.api.DisplayName("ELC-C6, EC-NEW4 AC2 (happy): assigning tells the organiser who their coordinator is, and the coordinator it is theirs; nobody else")
     void assigningTellsTheOrganiserWhoTheirCoordinatorIsAndNotifiesNobodyElse() {
         EventRequest request = stored(EventRequestStatus.pending, null);
         coordinator("ec1");
@@ -412,7 +413,10 @@ class EventRequestLeadReviewServiceTest {
 
         verify(notificationService).createCoordinatorAssignmentNotification(
                 ORGANISER, request.getRequestId(), null, "Q1 Town Hall", "ec1", "ec1@connectsphere.test", false);
-        // Telling the coordinator is a separate story (EC-NEW4).
+        // EC-NEW4: the coordinator is told too, with the organisation and the dates.
+        verify(notificationService).createRequestAssignedNotification(eq(COORDINATOR), eq(request.getRequestId()),
+                eq(null), eq("Q1 Town Hall"), eq(false),
+                org.mockito.ArgumentMatchers.argThat(m -> m.startsWith("Assigned to you: ") && m.contains("(Singapore time)")));
         verifyNoMoreInteractions(notificationService);
     }
 
@@ -555,6 +559,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @org.junit.jupiter.api.DisplayName("ELC-C5, EC-NEW4 AC3, AC4 (happy): reassigning tells the organiser, the new coordinator (naming the previous one) and the previous coordinator (the handoff); nobody else")
     void reassigningTellsTheOrganiserTheirCoordinatorChangedAndNotifiesNobodyElse() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         coordinator("ec2");
@@ -564,7 +569,13 @@ class EventRequestLeadReviewServiceTest {
         // EO19's notice, marked as a reassignment and naming the new coordinator.
         verify(notificationService).createCoordinatorAssignmentNotification(
                 ORGANISER, request.getRequestId(), null, "Q1 Town Hall", "ec2", "ec2@connectsphere.test", true);
-        // Telling either coordinator is a separate story (EC-NEW4).
+        // EC-NEW4: both coordinators are told.
+        verify(notificationService).createRequestAssignedNotification(eq(COORDINATOR), eq(request.getRequestId()),
+                eq(null), eq("Q1 Town Hall"), eq(true),
+                org.mockito.ArgumentMatchers.argThat(m -> m.startsWith("Transferred to you from ec1: ")));
+        verify(notificationService).createRequestHandedOverNotification(eq(PREVIOUS_COORDINATOR), eq(request.getRequestId()),
+                eq(null), eq("Q1 Town Hall"),
+                org.mockito.ArgumentMatchers.argThat(m -> m.startsWith("Reassigned to ec2.")));
         verifyNoMoreInteractions(notificationService);
     }
 
