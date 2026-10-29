@@ -92,6 +92,7 @@ class AttendeeRegistration <<Entity>>  {
 	{field} +registrationId : UUID {id}
 	{field} +registrationReference : String
 	{field} +status : String
+	{field} +withdrawnAt : OffsetDateTime
 }
 
 
@@ -450,6 +451,9 @@ enum EventRequestStatus {
 
 
 class Notification <<Entity>>  {
+	{field} +actorName : String
+	{field} +actorRole : String
+	{field} +actorUserId : UUID
 	{field} +coordinatorEmail : String
 	{field} +coordinatorName : String
 	{field} +eventId : UUID
@@ -463,6 +467,7 @@ class Notification <<Entity>>  {
 	{field} +readAt : OffsetDateTime
 	{field} +reason : String
 	{field} +recipientUserId : UUID
+	{field} +registrationId : UUID
 	{field} +requirementReviewId : UUID
 	{field} +venueBookingId : UUID
 }
@@ -470,14 +475,17 @@ class Notification <<Entity>>  {
 
 enum NotificationType {
 	{field} +attendee_registration_confirmed
+	{field} +attendee_registration_withdrawn
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
+	{field} +confirmed_venue_changed
 	{field} +coordinator_assignment
 	{field} +equipment_damage_outcome
 	{field} +equipment_request_attention
+	{field} +equipment_request_decided
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -488,7 +496,10 @@ enum NotificationType {
 	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
+	{field} +request_assigned
 	{field} +request_cancelled
+	{field} +request_handed_over
+	{field} +request_submitted
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved
@@ -602,6 +613,14 @@ class EffectivePeriod {
 	{method}  {static} +minutes ( value : BigDecimal , fallback : int ) : int
 	{method}  {static} +of ( eventStart : OffsetDateTime , eventEnd : OffsetDateTime , durations : Settings ) : EffectivePeriod
 	{method}  {static} +validate ( durations : Settings ) : void
+}
+
+
+class VenueArrangementChanged {
+	{field} -bookingIds : List<UUID>
+	{field} -eventId : UUID
+	{field} -reason : String
+	{field} -what : String
 }
 
 
@@ -781,6 +800,7 @@ Event "0..*" --> "0..1" Venue : venueId
 Notification "0..*" --> "0..1" Event : eventId
 Notification "0..*" --> "0..1" EventRequest : eventRequestId
 Notification "0..*" --> "1" User : recipientUserId
+Notification "0..*" --> "0..1" EventRegistration : registrationId
 Notification "0..*" --> "0..1" VenueRequirementReview : requirementReviewId
 VenueBookingRecord "0..*" --> "0..1" Venue : alternativeVenueId
 VenueBookingRecord "0..*" --> "1" Event : eventId

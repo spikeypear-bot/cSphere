@@ -1,4 +1,4 @@
-// @stories AT04 AT01 AT02 AT03
+// @stories AT04 AT01 AT02 AT03 AT08
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within, waitFor } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -50,7 +50,7 @@ describe('AT04 registration pages', () => {
     expect(screen.getByRole('link', { name: 'View latest event details' })).toHaveAttribute('href', '/attendee/events/event-1')
     expect(fetchMock).toHaveBeenCalledWith('/api/attendee/registrations/reg-1', expect.objectContaining({ method: 'GET', cache: 'no-store' }))
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/attendee/events/event-1', expect.objectContaining({ method: 'GET', cache: 'no-store' })))
-    expect(screen.queryByRole('button', { name: /withdraw/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Withdraw Registration' })).toBeEnabled()
   })
 
   it('AT04 (boundary): loading is visible until the list resolves', () => {

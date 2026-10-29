@@ -485,11 +485,34 @@ registration after-commit enqueue callback: it leaves a durability gap.
 
 AT04 registration history is implemented under `/api/attendee/registrations` and
 `/attendee/my-registrations`. Reads scope to the token subject and preserve stored
-registration history separately from event lifecycle. AT08 eligibility is shown
-without a withdrawal action. See [AT04 API and scope](docs/attendee-registration-status-api.md).
+registration history separately from event lifecycle. AT08 now adds the owned
+withdrawal command and confirmation dialog. See [AT04 API and scope](docs/attendee-registration-status-api.md).
 Awaiting re-confirmation describes a previously confirmed event returned to
 planning/safety checks, not the initial processing of a new EO request. See the
 [manual workflow and current local demo caveats](docs/attendee-registration-status-manual-testing.md).
+
+## AT08 — attendee withdrawal
+
+V56 adds nullable
+`event_registrations.withdrawn_at`, AT04 list/detail exposes `withdrawnAt`, and
+`POST /api/attendee/registrations/{id}/withdraw` uses token ownership and shared
+eligibility. The command locks the event then the owned registration, records
+the date and retains the original reference/history. Historical dates stay
+unknown. The details page has a confirmation dialog, immediate saved status,
+SGT withdrawal date and reconciliation after uncertain responses. V57 adds
+the personal withdrawal receipt; its stable ID and outbox enqueue join the
+withdrawal transaction, with delivery/retry after commit. This self-receipt is
+exempt from actor suppression. AT07/AT09 remain separate stories. See
+[AT08 contract](docs/attendee-withdrawal-api.md).
+
+The [29 October AT08 review](docs/at08-implementation-review.md) reproduced a P2
+reconciliation race, subsequently fixed in the [attendee workflow audit](docs/attendee-workflow-audit.md).
+Use `useAttendeeResource` for attendee reads and reconciliation; mutations
+invalidate older results, while pending polls do not starve valid slow reads.
+Event routes scope pending actions to their event, successful reads clear old
+errors, and failed registration responses are reconciled before showing failure.
+Notification read mutations block stale unread polls. `/attendee/register`
+redirects to Browse events. Backend locking/deduplication and V56/V57 are unchanged.
 
 ## Git Safety
 

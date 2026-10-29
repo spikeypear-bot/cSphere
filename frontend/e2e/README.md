@@ -71,6 +71,28 @@ npm run test:e2e -- e2e/attendee-registration-status.spec.ts
 For status mapping, read-only guarantees, AT08 boundaries and the current local
 demo data, see the [AT04 manual guide](../../docs/attendee-registration-status-manual-testing.md).
 
+## Attendee withdrawal (AT08)
+
+`attendee-withdrawal.spec.ts` registers through the UI, cancels the confirmation
+dialog without changing state, then withdraws on mobile. It reopens the exact
+receipt, checks history and released capacity, registers again while preserving
+the withdrawn record, and verifies another attendee cannot open that record.
+Run alongside the existing AT01–AT04 journey:
+
+```powershell
+npm run test:e2e -- e2e/attendee-withdrawal.spec.ts e2e/attendee-registration-status.spec.ts
+```
+
+The [AT08 contract](../../docs/attendee-withdrawal-api.md) describes transaction,
+delivery/retry and stale-state safeguards. AT07/AT09 remain independent.
+
+`attendee-resilience.spec.ts` checks the legacy `/attendee/register` redirect and
+real response-loss recovery: each write commits on the backend, then its browser
+response is dropped. The UI recovers the saved registration/withdrawal with one
+POST per action and one receipt per type. Use a separate disposable browser
+database from backend integration tests so saved browser fixtures do not alter
+history-count assertions. See the [workflow audit](../../docs/attendee-workflow-audit.md).
+
 ## Writing a new one
 
 - Only for a journey a user would notice breaking (sign-in, submitting a

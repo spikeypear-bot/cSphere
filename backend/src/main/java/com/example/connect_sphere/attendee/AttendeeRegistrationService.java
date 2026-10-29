@@ -100,6 +100,28 @@ public class AttendeeRegistrationService {
         return dto(saved, event);
     }
 
+    @Transactional
+    public AttendeeRegistrationDetailsDto withdraw(UUID registrationId, UUID attendeeId) {
+        UUID eventId = registrations.findOwnedEventId(registrationId, attendeeId)
+                .orElseThrow(() -> new AttendeeRegistrationException(404, "Registration unavailable."));
+        // Match AT01/lifecycle lock order: event first, then the fresh owned registration.
+        Event event = events.findForUpdate(eventId)
+                .orElseThrow(() -> new AttendeeRegistrationException(404, "Registration unavailable."));
+        AttendeeRegistration registration = registrations.findOwnedForUpdate(registrationId, attendeeId)
+                .orElseThrow(() -> new AttendeeRegistrationException(404, "Registration unavailable."));
+        OffsetDateTime now = OffsetDateTime.now(clock);
+        JourneyStatus journey = statuses.journeyOf(event);
+        String reason = AttendeeWithdrawalPolicy.reason(registration, event, journey, now);
+        if (reason != null) refuse(reason);
+
+        registration.setStatus("withdrawn");
+        registration.setWithdrawnAt(now);
+        registrations.saveAndFlush(registration);
+        notifications.createAttendeeWithdrawalConfirmation(attendeeId, eventId, event.getEventName(),
+                registration.getRegistrationReference(), registrationId, now);
+        return AttendeeRegistrationDetailsDto.from(registration, event, journey, now);
+    }
+
     private static void refuse(String message) { throw new AttendeeRegistrationException(409, message); }
 
     private static AttendeeRegistrationDto dto(AttendeeRegistration registration, Event event) {

@@ -55,7 +55,6 @@ import { AttendeeEventDetailsPage } from './features/attendee/AttendeeEventDetai
 import { AttendeeEventsPage } from './features/attendee/AttendeeEventsPage'
 import { MyRegistrationsPage } from './features/attendee/MyRegistrationsPage'
 import { RegistrationDetailsPage } from './features/attendee/RegistrationDetailsPage'
-import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
 import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
 
@@ -217,7 +216,7 @@ function AttendeeRoutes() {
       <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
       <Route path="my-registrations" element={<MyRegistrationsPage />} />
       <Route path="my-registrations/:registrationId" element={<RegistrationDetailsPage />} />
-      {skeletonRoutes(attendeeFeatures.filter(feature => !['browse', 'my-registrations'].includes(feature.path)))}
+      <Route path="register" element={<Navigate to="/attendee/browse" replace />} />
     </Routes>
   )
 }

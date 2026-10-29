@@ -19,6 +19,7 @@ export function RegistrationConfirmation({ registration, showBadges = true }: { 
     <dl className="attendee-event-details__facts">
       <div><dt>Registration reference</dt><dd>{registration.reference}</dd></div>
       <div><dt>Registered</dt><dd>{registrationDateTime(registration.registeredAt)}</dd></div>
+      {registration.registrationStatus === 'withdrawn' && <div><dt>Withdrawal date</dt><dd>{registration.withdrawnAt ? registrationDateTime(registration.withdrawnAt) : 'Not recorded'}</dd></div>}
       <div><dt>Starts</dt><dd>{registrationDateTime(registration.startDatetime)}</dd></div>
       <div><dt>Ends</dt><dd>{registrationDateTime(registration.endDatetime)}</dd></div>
       <div><dt>Withdrawal availability</dt><dd>{registration.withdrawalAvailable ? 'Available' : 'Unavailable'}. {registration.withdrawalReason}</dd></div>

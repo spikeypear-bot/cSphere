@@ -159,6 +159,7 @@ entity event_registrations {
 	* status : text
 	attendee_id : uuid <<FK>>
 	attendee_email : text
+	withdrawn_at : timestamp with time zone
 }
 
 entity event_request_activity {
@@ -273,6 +274,9 @@ entity notifications {
 	message : text
 	venue_booking_id : uuid
 	requirement_review_id : uuid <<FK>>
+	actor_name : text
+	actor_role : text
+	registration_id : uuid <<FK>>
 }
 
 entity refresh_tokens {
@@ -567,6 +571,12 @@ enum notification_type {
 	venue_booking_rejected
 	venue_booking_approved
 	equipment_request_attention
+	request_submitted
+	request_assigned
+	request_handed_over
+	equipment_request_decided
+	confirmed_venue_changed
+	attendee_registration_withdrawn
 }
 
 enum user_role {
@@ -631,6 +641,7 @@ events }o--o| venues : venue_id
 notifications }o--o| events : event_id
 notifications }o--o| event_requests : event_request_id
 notifications }o--|| users : recipient_user_id
+notifications }o--o| event_registrations : registration_id
 notifications }o--o| venue_requirement_reviews : requirement_review_id
 refresh_tokens }o--|| users : user_id
 serialised_equipments }o--|| equipments : equipment_id
