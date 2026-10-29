@@ -273,6 +273,8 @@ entity notifications {
 	message : text
 	venue_booking_id : uuid
 	requirement_review_id : uuid <<FK>>
+	actor_name : text
+	actor_role : text
 }
 
 entity refresh_tokens {
@@ -567,6 +569,11 @@ enum notification_type {
 	venue_booking_rejected
 	venue_booking_approved
 	equipment_request_attention
+	request_submitted
+	request_assigned
+	request_handed_over
+	equipment_request_decided
+	confirmed_venue_changed
 }
 
 enum user_role {

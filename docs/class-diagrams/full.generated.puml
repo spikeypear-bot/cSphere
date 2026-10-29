@@ -1770,6 +1770,13 @@ class EventService {
 }
 
 
+class OrganiserVenueNotices {
+	{field} {static} -SINGAPORE : DateTimeFormatter
+	{method} +on ( change : VenueArrangementChanged ) : void
+	{method} +reconfirmed ( event : Event ) : void
+}
+
+
 class EventRequestController {
 	{method} +approve ( jwt : Jwt , id : UUID ) : EventRequestDto
 	{method} +assignUnassigned ( jwt : Jwt , id : UUID , request : AssignCoordinatorRequest ) : EventRequestDto
@@ -2026,12 +2033,20 @@ class NotAssignedCoordinatorException {
 
 class NotificationController {
 	{method} +list ( jwt : Jwt ) : List
+	{method} +markAllRead ( jwt : Jwt , body : ReadAll ) : Map
 	{method} +markRead ( jwt : Jwt , id : UUID ) : NotificationDto
 	{method} +unreadCount ( jwt : Jwt ) : Map
 }
 
 
+class NotificationController.ReadAll {
+	{field} -upTo : OffsetDateTime
+}
+
+
 class NotificationDto {
+	{field} -actorName : String
+	{field} -actorRole : String
 	{field} -coordinatorEmail : String
 	{field} -coordinatorName : String
 	{field} -eventId : UUID
@@ -2050,6 +2065,9 @@ class NotificationDto {
 
 
 class Notification <<Entity>>  {
+	{field} +actorName : String
+	{field} +actorRole : String
+	{field} +actorUserId : UUID
 	{field} +coordinatorEmail : String
 	{field} +coordinatorName : String
 	{field} +eventId : UUID
@@ -2075,9 +2093,11 @@ enum NotificationType {
 	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
+	{field} +confirmed_venue_changed
 	{field} +coordinator_assignment
 	{field} +equipment_damage_outcome
 	{field} +equipment_request_attention
+	{field} +equipment_request_decided
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -2088,7 +2108,10 @@ enum NotificationType {
 	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
+	{field} +request_assigned
 	{field} +request_cancelled
+	{field} +request_handed_over
+	{field} +request_submitted
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved
@@ -2109,6 +2132,7 @@ enum NotificationType {
 interface NotificationRepository {
 	{method}  {abstract} +countByRecipientUserIdAndReadAtIsNull ( recipientUserId : UUID ) : long
 	{method}  {abstract} +findByRecipientUserIdOrderByOccurredAtDesc ( recipientUserId : UUID ) : List
+	{method}  {abstract} +markAllRead ( recipient : UUID , upTo : OffsetDateTime , now : OffsetDateTime ) : int
 }
 
 
@@ -2140,6 +2164,7 @@ class NotificationService {
 	{method} +createCoordinatorAssignmentNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , coordinatorName : String , coordinatorEmail : String , isReassignment : boolean ) : void
 	{method} +createEquipmentDamageOutcomeNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createEquipmentRequestAttentionNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
+	{method} +createEquipmentRequestDecidedNotification ( coordinator : UUID , eventId : UUID , eventName : String , reason : String , message : String ) : void
 	{method} +createEventCancellationDecisionNotification ( organiserId : UUID , eventId : UUID , eventName : String , type : NotificationType , message : String ) : void
 	{method} +createEventCancellationRequestedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createEventCancelledNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , message : String ) : void
@@ -2148,17 +2173,22 @@ class NotificationService {
 	{method} +createEventReassignmentRequestedNotifications ( recipientUserIds : List , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createHoldExpiredNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , name : String , expiry : OffsetDateTime ) : void
 	{method} +createHoldExpiringNotification ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , eventName : String , venueName : String , expiry : OffsetDateTime ) : void
+	{method} +createOrganiserVenueChangeNotifications ( organisers : List , eventId : UUID , bookingId : UUID , eventName : String , message : String ) : void
+	{method} +createRequestAssignedNotification ( coordinator : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , transfer : boolean , message : String ) : void
 	{method} +createRequestCancelledNotification ( coordinatorId : UUID , eventRequestId : UUID , eventName : String , reason : String ) : void
+	{method} +createRequestHandedOverNotification ( previousCoordinator : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
+	{method} +createRequestSubmittedNotifications ( leads : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
 	{method} +createVenueBookingApprovedNotification ( coordinator : UUID , bookingId : UUID , eventId : UUID , eventName : String , venue : String ) : void
 	{method} +createVenueBookingCancelledNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String , reason : String ) : void
-	{method} +createVenueBookingRejectedNotification ( coordinator : UUID , bookingId : UUID , eventId : UUID , eventName : String , venue : String , reason : String ) : void
+	{method} +createVenueBookingRejectedNotification ( coordinator : UUID , bookingId : UUID , eventId : UUID , eventName : String , venue : String , reason : String , alternative : String ) : void
 	{method} +createVenueBookingRequestedNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String ) : void
 	{method} +createVenueRequirementChangedNotifications ( recipients : List , review : VenueRequirementReview , changes : String ) : void
 	{method} +createVenueRequirementReviewedNotification ( coordinator : UUID , review : VenueRequirementReview , message : String ) : void
 	{method} +list ( recipientUserId : UUID ) : List
+	{method} +markAllRead ( recipientUserId : UUID , upTo : OffsetDateTime ) : int
 	{method} +markRead ( recipientUserId : UUID , notificationId : UUID ) : NotificationDto
 	{method} +unreadCount ( recipientUserId : UUID ) : long
 }
@@ -2735,6 +2765,14 @@ class TimingConflictService.Overlap {
 }
 
 
+class VenueArrangementChanged {
+	{field} -bookingIds : List<UUID>
+	{field} -eventId : UUID
+	{field} -reason : String
+	{field} -what : String
+}
+
+
 class VenueBecameUnavailable {
 	{field} -actorId : UUID
 	{field} -eventIds : List<UUID>
@@ -3158,6 +3196,7 @@ class VenueBookingNotFoundException {
 class VenueBookingRequestService {
 	{field} {static} ~MAX_TEXT_LENGTH : int
 	{field} {static} -SGT : DateTimeFormatter
+	{field} -arrangementEvents : ApplicationEventPublisher
 	{method} +bookingsForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +bookingsForSafetyOfficer ( eventId : UUID ) : List
 	{method} +cancel ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , reason : String ) : EventVenueBookingDto
@@ -3454,6 +3493,7 @@ EquipmentRequestDecisionService --> EquipmentRequestLineRepository : lines
 EquipmentRequestDecisionService --> EquipmentRequestRepository : requests
 EquipmentRequestDecisionService --> EventRepository : events
 EquipmentRequestDecisionService --> EquipmentShortfallLedger : shortfalls
+EquipmentRequestDecisionService --> NotificationService : notifications
 EquipmentRequestDetailsResponse --> "0..*" EquipmentRequestLineResponse : lines
 EquipmentRequestLine --> Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
@@ -3526,6 +3566,7 @@ EventLifecycleService --> UserRepository : users
 EventLifecycleService --> AvailabilityService : availability
 EventLifecycleService --> VenueHoldService : holds
 EventLifecycleService --> VenueBookingRecordRepository : bookings
+EventLifecycleService --> OrganiserVenueNotices : venueNotices
 EventLifecycleService --> VenueSafetyChecklist : venueChecklist
 EventLifecycleService --> VenueRepository : cancellationVenues
 EventLifecycleService --> BookingPlanService : bookingPlan
@@ -3544,6 +3585,11 @@ EventService --> EventLifecycleService : lifecycle
 EventService --> EventRequestRepository : eventRequestRepository
 EventService --> NotificationService : notificationService
 EventService --> UserRepository : userRepository
+OrganiserVenueNotices --> EventRepository : events
+OrganiserVenueNotices --> NotificationService : notifications
+OrganiserVenueNotices --> UserRepository : users
+OrganiserVenueNotices --> VenueRepository : venues
+OrganiserVenueNotices --> VenueBookingRecordRepository : bookings
 EventRequestController --> EventRequestService : service
 CoordinatorAssignmentsDto --> "0..*" CoordinatorAssignmentsDto.AssignedRequest : requests
 CoordinatorAssignmentsDto.AssignedRequest --> EventRequestDto : request
@@ -3569,8 +3615,10 @@ EventRequestService --> UserRepository : userRepository
 NotificationController --> NotificationService : service
 Notification --> NotificationType : type
 NotificationOutbox --> NotificationDelivery : delivery
+NotificationService --> "0..*" NotificationType : SELF_NOTICES
 NotificationService --> NotificationRepository : repository
 NotificationService --> NotificationOutbox : outbox
+NotificationService --> UserRepository : users
 EventReadinessController --> ReadinessService : readiness
 ReadinessDto --> "0..*" ReadinessItemDto : items
 ReadinessService --> EventRepository : events

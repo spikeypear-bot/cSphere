@@ -450,6 +450,9 @@ enum EventRequestStatus {
 
 
 class Notification <<Entity>>  {
+	{field} +actorName : String
+	{field} +actorRole : String
+	{field} +actorUserId : UUID
 	{field} +coordinatorEmail : String
 	{field} +coordinatorName : String
 	{field} +eventId : UUID
@@ -475,9 +478,11 @@ enum NotificationType {
 	{field} +change_request_withdrawn
 	{field} +clarification_requested
 	{field} +clarification_responded
+	{field} +confirmed_venue_changed
 	{field} +coordinator_assignment
 	{field} +equipment_damage_outcome
 	{field} +equipment_request_attention
+	{field} +equipment_request_decided
 	{field} +event_cancellation_approved
 	{field} +event_cancellation_declined
 	{field} +event_cancellation_requested
@@ -488,7 +493,10 @@ enum NotificationType {
 	{field} +event_reassignment_requested
 	{field} +event_returned_to_planning
 	{field} +event_safety_approved
+	{field} +request_assigned
 	{field} +request_cancelled
+	{field} +request_handed_over
+	{field} +request_submitted
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved
@@ -602,6 +610,14 @@ class EffectivePeriod {
 	{method}  {static} +minutes ( value : BigDecimal , fallback : int ) : int
 	{method}  {static} +of ( eventStart : OffsetDateTime , eventEnd : OffsetDateTime , durations : Settings ) : EffectivePeriod
 	{method}  {static} +validate ( durations : Settings ) : void
+}
+
+
+class VenueArrangementChanged {
+	{field} -bookingIds : List<UUID>
+	{field} -eventId : UUID
+	{field} -reason : String
+	{field} -what : String
 }
 
 
