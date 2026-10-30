@@ -29,6 +29,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("EO19")
 @Tag("EC-C3")
 @Tag("AT01")
+@Tag("AT03")
 class NotificationServiceTest {
 
     @Mock
@@ -86,7 +87,7 @@ class NotificationServiceTest {
     void attendeeRegistrationConfirmationCarriesEventAndReference() {
         UUID eventId = UUID.randomUUID();
 
-        service.createAttendeeRegistrationConfirmation(RECIPIENT, eventId, "Town Hall", "CS-ABC123");
+        service.createAttendeeRegistrationConfirmation(RECIPIENT, eventId, "Town Hall", "CS-ABC123", UUID.randomUUID());
 
         Notification saved = captureSaved();
         assertThat(saved.getRecipientUserId()).isEqualTo(RECIPIENT);

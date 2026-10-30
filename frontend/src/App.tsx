@@ -53,6 +53,8 @@ import { DamageReportDetailPage } from './features/technicalSupport/damage/Damag
 import { AttendeeHomePage } from './features/attendee/AttendeeHomePage'
 import { AttendeeEventDetailsPage } from './features/attendee/AttendeeEventDetailsPage'
 import { AttendeeEventsPage } from './features/attendee/AttendeeEventsPage'
+import { MyRegistrationsPage } from './features/attendee/MyRegistrationsPage'
+import { RegistrationDetailsPage } from './features/attendee/RegistrationDetailsPage'
 import { attendeeFeatures } from './features/attendee/attendeeFeatures'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
 import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
@@ -213,7 +215,9 @@ function AttendeeRoutes() {
       <Route index element={<AttendeeHomePage />} />
       <Route path="browse" element={<AttendeeEventsPage />} />
       <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
-      {skeletonRoutes(attendeeFeatures.filter(feature => feature.path !== 'browse'))}
+      <Route path="my-registrations" element={<MyRegistrationsPage />} />
+      <Route path="my-registrations/:registrationId" element={<RegistrationDetailsPage />} />
+      {skeletonRoutes(attendeeFeatures.filter(feature => !['browse', 'my-registrations'].includes(feature.path)))}
     </Routes>
   )
 }

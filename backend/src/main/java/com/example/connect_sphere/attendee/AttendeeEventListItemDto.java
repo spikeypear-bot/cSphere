@@ -10,4 +10,9 @@ public record AttendeeEventListItemDto(
         OffsetDateTime startDatetime,
         OffsetDateTime endDatetime,
         String status,
-        Boolean registrationRequired) { }
+        Boolean registrationRequired,
+        OffsetDateTime registrationOpensAt,
+        OffsetDateTime registrationClosesAt,
+        Integer registrationCapacity,
+        Integer availablePlaces,
+        String registrationStatus) { }

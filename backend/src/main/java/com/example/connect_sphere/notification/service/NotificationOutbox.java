@@ -26,6 +26,7 @@ public class NotificationOutbox {
         var payload=new LinkedHashMap<String,Object>();
         payload.put("notification_id",n.getNotificationId()); payload.put("recipient_user_id",n.getRecipientUserId());
         payload.put("event_request_id",n.getEventRequestId()); payload.put("event_id",n.getEventId());
+        payload.put("registration_id",n.getRegistrationId());
         payload.put("type",n.getType().name()); payload.put("event_name",n.getEventName());
         payload.put("new_status",n.getNewStatus()); payload.put("reason",n.getReason());
         payload.put("coordinator_name",n.getCoordinatorName()); payload.put("coordinator_email",n.getCoordinatorEmail());
@@ -34,7 +35,7 @@ public class NotificationOutbox {
         payload.put("venue_booking_id",n.getVenueBookingId()); payload.put("requirement_review_id",n.getRequirementReviewId());
         // EC-NEW4 (V54): who did it travels with the queued notice.
         payload.put("actor_name",n.getActorName()); payload.put("actor_role",n.getActorRole());
-        jdbc.update("INSERT INTO notification_outbox(notification_id,payload) VALUES (?,?::jsonb)",
+        jdbc.update("INSERT INTO notification_outbox(notification_id,payload) VALUES (?,?::jsonb) ON CONFLICT (notification_id) DO NOTHING",
             n.getNotificationId(),json.writeValueAsString(payload));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
             @Override public void afterCommit() { attempt(n.getNotificationId()); }

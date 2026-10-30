@@ -2,15 +2,17 @@ import { useCallback, useEffect, useState } from 'react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { NotificationDto } from '../../types/notification'
+import { NOTIFICATIONS_CHANGED_EVENT } from './notificationRefresh'
 
 const POLL_INTERVAL_MS = 30_000
+const ATTENDEE_POLL_INTERVAL_MS = 5_000
 
 /**
  * EO09/EO19/EC-NEW4: owns fetching, polling and marking read for the
- * signed-in user's own notifications. Polls every 30 seconds and refreshes at
- * once when the person comes back to the tab (EC-NEW4), so a notice that
- * arrived while they were away is there when they look. Polling (not push) is
- * a deliberate, disclosed simplification: see docs/decision-log.md.
+ * signed-in user's own notifications. Keeps EC-NEW4's visibility/focus refresh
+ * and 30-second polling for staff. AT03 adds immediate refresh after a saved
+ * registration and five-second attendee polling for delayed delivery.
+ * Polling (not push) is a deliberate simplification: see docs/decision-log.md.
  */
 export function useNotifications() {
   const { role } = useSession()
@@ -25,21 +27,23 @@ export function useNotifications() {
   useEffect(() => {
     if (!role) return
     let cancelled = false
+    let latestRequest = 0
 
     function poll() {
+      const request = ++latestRequest
       Promise.all([
         apiClient.get<NotificationDto[]>('/notifications'),
         apiClient.get<{ count: number }>('/notifications/unread-count'),
       ])
         .then(([list, count]) => {
-          if (cancelled) return
+          if (cancelled || request !== latestRequest) return
           setNotifications(list)
           setUnreadCount(count.count)
           setLoaded(true)
           setError(null)
         })
         .catch((err: unknown) => {
-          if (cancelled) return
+          if (cancelled || request !== latestRequest) return
           // A failed refresh never breaks the page; the bell says so and offers Try again.
           setError(err instanceof ApiClientError ? err.message : 'Could not load notifications.')
         })
@@ -50,11 +54,14 @@ export function useNotifications() {
     }
 
     poll()
-    const timer = setInterval(poll, POLL_INTERVAL_MS)
+    window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, poll)
+    // Also discover confirmations delivered later by the outbox or from another tab.
+    const timer = setInterval(poll, role === 'attendee' ? ATTENDEE_POLL_INTERVAL_MS : POLL_INTERVAL_MS)
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
     return () => {
       cancelled = true
+      window.removeEventListener(NOTIFICATIONS_CHANGED_EVENT, poll)
       clearInterval(timer)
       document.removeEventListener('visibilitychange', onVisible)
       window.removeEventListener('focus', onVisible)

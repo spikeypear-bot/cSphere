@@ -5,9 +5,15 @@ import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient } from '../../lib/apiClient'
+import { SavedRegistrationConfirmation } from './RegistrationConfirmation'
+import { requestNotificationRefresh } from '../notifications/notificationRefresh'
+import { AttendeeStatusBadges } from './AttendeeStatusBadges'
+import { registrationBadge, type AttendeeStatusInput } from './attendeeStatus'
+import { registrationDateTime as dateTime } from './registrationView'
+import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import './AttendeePages.css'
 
-interface AttendeeEventDetails {
+interface AttendeeEventDetails extends Omit<AttendeeStatusInput, 'eventStatus'> {
   eventId: string
   eventName: string
   description: string | null
@@ -24,6 +30,7 @@ interface AttendeeEventDetails {
   attendeeInstructions: string | null
   registrationReference: string | null
   registeredAt: string | null
+  registrationId?: string | null
   venues: { venueId: string; name: string; address: string; unavailable: boolean }[]
 }
 
@@ -33,38 +40,25 @@ const ACCESSIBILITY_LABELS: Record<string, string> = {
   wheelchair_support: 'Wheelchair support', none: 'No specific accessibility provisions',
 }
 
-function dateTime(value: string): string {
-  const date = new Date(value)
-  const offset = value.match(/([+-]\d{2}:\d{2}|Z)$/)?.[0] ?? ''
-  const sign = offset.startsWith('-') ? -1 : 1
-  const minutes = offset && offset !== 'Z' ? sign * (Number(offset.slice(1, 3)) * 60 + Number(offset.slice(4, 6))) : 0
-  const wallClock = new Date(date.getTime() + minutes * 60_000)
-  const zone = offset === 'Z' ? 'UTC' : `UTC${offset}`
-  return `${new Intl.DateTimeFormat('en-SG', { dateStyle: 'long', timeStyle: 'short', timeZone: 'UTC' }).format(wallClock)} (${zone})`
-}
-
-const STATUS_LABELS: Record<AttendeeEventDetails['status'], string> = {
-  confirmed: 'Confirmed', reconfirming: 'Arrangements being re-confirmed', cancelled: 'Cancelled', completed: 'Past event',
-}
-
 export function AttendeeEventDetailsPage() {
   const { eventId = '' } = useParams()
   const [event, setEvent] = useState<AttendeeEventDetails | null>(null)
   const [unavailable, setUnavailable] = useState(false)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
-  const [registration, setRegistration] = useState<{ reference: string; registeredAt: string } | null>(null)
+  const [registration, setRegistration] = useState<{ reference: string; registeredAt: string; registrationId?: string } | null>(null)
   const [registering, setRegistering] = useState(false)
   const [registrationError, setRegistrationError] = useState('')
+  const revision = useLiveRefresh()
   const load = useCallback(() => {
     let active = true
     apiClient.get<AttendeeEventDetails>(`/attendee/events/${encodeURIComponent(eventId)}`)
       .then(value => {
         if (active) {
           setEvent(value)
-          if (value.registrationReference && value.registeredAt) {
-            setRegistration({ reference: value.registrationReference, registeredAt: value.registeredAt })
-          }
+          setRegistration(value.registrationReference && value.registeredAt
+            ? { reference: value.registrationReference, registeredAt: value.registeredAt, registrationId: value.registrationId ?? undefined }
+            : null)
         }
       })
       .catch(error => {
@@ -75,7 +69,7 @@ export function AttendeeEventDetailsPage() {
     return () => { active = false }
   }, [eventId])
 
-  useEffect(() => load(), [load, attempt])
+  useEffect(() => load(), [load, attempt, revision])
 
   if (failed) return <main className="page attendee-event-details">
     <PageHeader eyebrow="Attendee" title="Event details" />
@@ -94,8 +88,9 @@ export function AttendeeEventDetailsPage() {
 
   return <main className="attendee-event-details">
     <PageHeader eyebrow={<Link to="/attendee/browse">Browse events</Link>} title={event.eventName}
-      description={<span className="attendee-status" data-status={event.status}>{STATUS_LABELS[event.status]}</span>}
-      actions={<Link className="button button--ghost" to="/attendee/browse">All events</Link>} />
+      description={<AttendeeStatusBadges value={{ ...event, eventStatus: event.status,
+        registrationStatus: event.registrationStatus ?? (event.registrationReference ? 'confirmed' : null) }} />}
+      actions={<><Link className="button button--ghost" to="/attendee/my-registrations">My Registrations</Link><Link className="button button--ghost" to="/attendee/browse">All events</Link></>} />
     {event.status === 'reconfirming' && <Notice tone="info">The event is being re-confirmed. Any venue marked unavailable is affected; other approved venue details remain current.</Notice>}
     {event.status === 'cancelled' && <Notice tone="danger">This event has been cancelled.</Notice>}
     {event.status === 'completed' && <Notice tone="info">This event has finished. These details are shown as a past record.</Notice>}
@@ -138,26 +133,30 @@ export function AttendeeEventDetailsPage() {
           {event.registrationClosesAt && <div><dt>Closes</dt><dd>{dateTime(event.registrationClosesAt)}</dd></div>}
           {event.registrationCapacity !== null && <div><dt>Capacity</dt><dd>{event.registrationCapacity}</dd></div>}
         </dl>}
-        {registration && <Notice tone="success">You’re registered. Reference: <strong>{registration.reference}</strong></Notice>}
-        {!registration && event.registrationRequired === true && event.status === 'confirmed' && event.availablePlaces !== null && event.availablePlaces > 0 &&
+        {registration && !registration.registrationId && <p>Registration reference: <strong>{registration.reference}</strong></p>}
+        {!registration && registrationBadge({ ...event, eventStatus: event.status, registrationStatus: null }).label === 'Open for Registration' &&
           <Button disabled={registering} onClick={async () => {
             setRegistering(true); setRegistrationError('')
             try {
-              const result = await apiClient.post<{ reference: string; registeredAt: string }>(`/attendee/events/${encodeURIComponent(eventId)}/registrations`)
+              const result = await apiClient.post<{ registrationId: string; reference: string; registeredAt: string }>(`/attendee/events/${encodeURIComponent(eventId)}/registrations`)
               setRegistration(result)
-              setEvent(current => current ? { ...current,
-                availablePlaces: current.availablePlaces === null ? null : Math.max(0, current.availablePlaces - 1),
-                registrationReference: result.reference, registeredAt: result.registeredAt,
-              } : current)
+              setEvent(current => current ? { ...current, registrationStatus: 'confirmed', registrationReference: result.reference,
+                registeredAt: result.registeredAt, registrationId: result.registrationId } : current)
+              requestNotificationRefresh()
+              // An idempotent response need not consume another place. Refresh authoritative capacity.
+              if (result.registrationId) {
+                void apiClient.get<AttendeeEventDetails>(`/attendee/events/${encodeURIComponent(eventId)}`)
+                  .then(value => { if (value) setEvent(value) }).catch(() => { /* Saved confirmation remains accessible. */ })
+              }
             } catch (error) {
               const message = error instanceof Error ? error.message : 'Please try again.'
               setRegistrationError(`Registration could not be saved: ${message}`)
             } finally { setRegistering(false) }
           }}>{registering ? 'Registering…' : 'Register for this event'}</Button>}
         {registrationError && <Notice tone="danger">{registrationError} You can retry without creating a duplicate.</Notice>}
-        {event.registrationRequired === true && event.availablePlaces === 0 && <p role="status" className="attendee-muted">This event is full.</p>}
       </Card>
 
+      {registration?.registrationId && <SavedRegistrationConfirmation registrationId={registration.registrationId} reference={registration.reference} showBadges={false} />}
       {event.attendeeInstructions && <Card className="attendee-details-card"><h2>Attendee instructions</h2><p>{event.attendeeInstructions}</p></Card>}
     </div>
   </main>

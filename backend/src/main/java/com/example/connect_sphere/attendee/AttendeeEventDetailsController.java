@@ -21,8 +21,8 @@ public class AttendeeEventDetailsController {
     }
 
     @GetMapping
-    public java.util.List<AttendeeEventListItemDto> list() {
-        return service.list();
+    public java.util.List<AttendeeEventListItemDto> list(Authentication authentication) {
+        return service.list(UUID.fromString(authentication.getName()));
     }
 
     @GetMapping("/{eventId}")

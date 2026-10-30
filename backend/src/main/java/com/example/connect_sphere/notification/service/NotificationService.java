@@ -351,12 +351,15 @@ public class NotificationService {
         }
     }
 
-    /** AT01 AC9: confirm an attendee's registration after it has committed. */
-    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    /** AT03: enqueue with the saved registration; the outbox delivers only after commit. */
+    @Transactional(propagation = Propagation.REQUIRED)
     public void createAttendeeRegistrationConfirmation(UUID recipientUserId, UUID eventId, String eventName,
-            String registrationReference) {
+            String registrationReference, UUID registrationId) {
         Notification notification = base(recipientUserId, NotificationType.attendee_registration_confirmed,
                 eventName);
+        notification.setNotificationId(UUID.nameUUIDFromBytes(("attendee_registration_confirmed:" + registrationId)
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        notification.setRegistrationId(registrationId);
         notification.setEventId(eventId);
         notification.setMessage("Your registration is confirmed. Reference: " + registrationReference);
         saveBestEffort(notification);
@@ -570,7 +573,9 @@ public class NotificationService {
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
             case event_confirmed, event_cancelled -> null;
-            case attendee_registration_confirmed -> "/attendee/events/" + n.getEventId();
+            case attendee_registration_confirmed -> n.getRegistrationId() == null
+                    ? "/attendee/events/" + n.getEventId()
+                    : "/attendee/my-registrations/" + n.getRegistrationId();
             case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();
             // EO03/EC-NEW3: the coordinator, or the Lead while unassigned, gets the
             // same link; the page sends each reader to their own console.

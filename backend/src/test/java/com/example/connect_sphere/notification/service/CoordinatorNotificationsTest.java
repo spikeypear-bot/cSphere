@@ -41,6 +41,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
  */
 @Tag("unit")
 @Tag("EC-NEW4")
+@Tag("AT03")
 class CoordinatorNotificationsTest {
 
     private static final UUID LEAD = UUID.randomUUID();
@@ -119,11 +120,13 @@ class CoordinatorNotificationsTest {
     @DisplayName("EC-NEW4 AC15 (boundary): an attendee's own registration confirmation is the one notice about one's own action")
     void anAttendeesOwnConfirmationStillArrives() {
         UUID attendee = UUID.randomUUID();
+        UUID registration = UUID.randomUUID();
         signedInAs(attendee, "attendee");
 
-        service.createAttendeeRegistrationConfirmation(attendee, EVENT, "Town Hall", "Registered: ref ABC123");
+        service.createAttendeeRegistrationConfirmation(attendee, EVENT, "Town Hall", "Registered: ref ABC123", registration);
 
         assertThat(saved().getRecipientUserId()).isEqualTo(attendee);
+        assertThat(saved().getRegistrationId()).isEqualTo(registration);
     }
 
     @Test

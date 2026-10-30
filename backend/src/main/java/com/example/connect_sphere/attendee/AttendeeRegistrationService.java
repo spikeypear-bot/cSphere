@@ -8,8 +8,6 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
@@ -96,19 +94,9 @@ public class AttendeeRegistrationService {
         registration.setStatus("confirmed");
         registration.setRegisteredAt(now);
         AttendeeRegistration saved = registrations.saveAndFlush(registration);
-        UUID recipientId = attendee.getUserId();
-        String eventName = event.getEventName();
-        String reference = saved.getRegistrationReference();
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    notifications.createAttendeeRegistrationConfirmation(recipientId, eventId, eventName, reference);
-                }
-            });
-        } else {
-            notifications.createAttendeeRegistrationConfirmation(recipientId, eventId, eventName, reference);
-        }
+        // Persist the delivery intent atomically with the registration. Only delivery waits for commit.
+        notifications.createAttendeeRegistrationConfirmation(attendee.getUserId(), eventId, event.getEventName(),
+                saved.getRegistrationReference(), saved.getRegistrationId());
         return dto(saved, event);
     }
 

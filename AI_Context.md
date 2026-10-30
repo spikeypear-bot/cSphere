@@ -469,6 +469,28 @@ Week 6: automated testing + CI (above). Week 7: six mandatory customer changes (
 
 An event can have several venue bookings, each with its own saved start/end window and setup/turnaround snapshot. Occupied time expands the booking window, not the advertised event window. Event times are a fallback only for legacy nullable booking fields. Keep incoming batch submission, safety-review lifecycle actions and notifications. The existing one-active-booking-per-venue-per-event rule remains. Venue defaults apply to future requests; changing them does not rewrite saved booking durations. See [timing workflow and migration policy](docs/venue-booking-duration-snapshots.md) and [booking API](docs/venue-booking-api.md).
 
+## AT04 — attendee registration history
+
+Attendee pages share exactly two status badges, with lifecycle first and personal
+registration/availability second. The read-only event summaries/details expose
+owned status and availability fields; enums and AT01 mutation rules stay intact.
+See [badge priorities and verification](docs/attendee-status-badges.md).
+
+AT03 builds on this history: complete saved confirmations reuse AT02's approved
+venues, and V55 links notifications/outbox payloads to the exact registration.
+Registration and durable confirmation enqueueing share one transaction; the
+existing outbox delivers after commit and retries with a stable identity. See
+[AT03 contract](docs/registration-confirmation.md). Do not restore the earlier
+registration after-commit enqueue callback: it leaves a durability gap.
+
+AT04 registration history is implemented under `/api/attendee/registrations` and
+`/attendee/my-registrations`. Reads scope to the token subject and preserve stored
+registration history separately from event lifecycle. AT08 eligibility is shown
+without a withdrawal action. See [AT04 API and scope](docs/attendee-registration-status-api.md).
+Awaiting re-confirmation describes a previously confirmed event returned to
+planning/safety checks, not the initial processing of a new EO request. See the
+[manual workflow and current local demo caveats](docs/attendee-registration-status-manual-testing.md).
+
 ## Git Safety
 
 - Work on a feature branch, not `main`. `feature/event_request` currently exists with no commits ahead of `main` — check with the team before assuming it's still the intended branch for the next slice.

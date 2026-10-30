@@ -14,5 +14,6 @@ export function AttendeeHomePage() {
       </div>
       <Link className="button button--primary" to="/attendee/browse">Browse events<span aria-hidden="true">→</span></Link>
     </Card>
+    <Link className="button button--secondary" to="/attendee/my-registrations">My Registrations</Link>
   </main>
 }

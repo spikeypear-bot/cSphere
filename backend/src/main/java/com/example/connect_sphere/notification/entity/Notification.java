@@ -48,6 +48,10 @@ public class Notification {
     @Column(name = "event_id")
     private UUID eventId;
 
+    /** AT03: the exact registration, retained even after a later re-registration. */
+    @Column(name = "registration_id")
+    private UUID registrationId;
+
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private NotificationType type;
 
