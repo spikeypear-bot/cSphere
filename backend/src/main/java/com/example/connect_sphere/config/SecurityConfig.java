@@ -192,6 +192,7 @@ public class SecurityConfig{
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/arrangements").hasRole("EO")
 		    // EO10: registration information; the owning organisation is checked in the service.
 		    .requestMatchers(HttpMethod.GET, "/api/events/*/registrations").hasRole("EO")
+		    .requestMatchers(HttpMethod.PUT, "/api/events/*/registration-capacity").hasRole("EO")
 		    // EC03: venue shortlist and booking requests. Must precede the
 		    // GET /api/events/** rule below, which would otherwise let an
 		    // Organiser read the venue shortlist.
