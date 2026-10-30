@@ -209,12 +209,14 @@ class AttendeeRegistration <<Entity>>  {
 	{field} +registrationId : UUID {id}
 	{field} +registrationReference : String
 	{field} +status : String
+	{field} +withdrawnAt : OffsetDateTime
 }
 
 
 class AttendeeRegistrationController {
 	{method} +get ( registrationId : UUID , authentication : Authentication ) : AttendeeRegistrationDetailsDto
 	{method} +list ( authentication : Authentication ) : List
+	{method} +withdraw ( registrationId : UUID , authentication : Authentication ) : AttendeeRegistrationDetailsDto
 }
 
 
@@ -231,6 +233,7 @@ class AttendeeRegistrationDetailsDto {
 	{field} -startDatetime : OffsetDateTime
 	{field} -withdrawalAvailable : boolean
 	{field} -withdrawalReason : String
+	{field} -withdrawnAt : OffsetDateTime
 }
 
 
@@ -262,12 +265,15 @@ interface AttendeeRegistrationRepository {
 	{method}  {abstract} +findByEventIdAndAttendeeIdAndStatus ( eventId : UUID , attendeeId : UUID , status : String ) : Optional
 	{method}  {abstract} +findByRegistrationIdAndAttendeeId ( registrationId : UUID , attendeeId : UUID ) : Optional
 	{method}  {abstract} +findFirstByEventIdAndAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc ( eventId : UUID , attendeeId : UUID ) : Optional
+	{method}  {abstract} +findOwnedEventId ( registrationId : UUID , attendeeId : UUID ) : Optional
+	{method}  {abstract} +findOwnedForUpdate ( registrationId : UUID , attendeeId : UUID ) : Optional
 }
 
 
 class AttendeeRegistrationService {
 	{field} -clock : Clock
 	{method} +register ( eventId : UUID , attendeeId : UUID ) : AttendeeRegistrationDto
+	{method} +withdraw ( registrationId : UUID , attendeeId : UUID ) : AttendeeRegistrationDetailsDto
 }
 
 
@@ -2129,6 +2135,7 @@ class Notification <<Entity>>  {
 
 enum NotificationType {
 	{field} +attendee_registration_confirmed
+	{field} +attendee_registration_withdrawn
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn
@@ -2199,6 +2206,7 @@ class NotificationService {
 	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
 	{field} {static} -log : Logger
 	{method} +createAttendeeRegistrationConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String , registrationId : UUID ) : void
+	{method} +createAttendeeWithdrawalConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String , registrationId : UUID , withdrawnAt : OffsetDateTime ) : void
 	{method} +createChangeRequestNotifications ( recipientUserIds : List , type : NotificationType , eventRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRespondedNotification ( coordinatorUserId : UUID , eventRequestId : UUID , eventName : String , response : String ) : void
@@ -3388,6 +3396,7 @@ AttendeeEventDetailsService --> VenueRepository : venues
 AttendeeEventDetailsService --> AvailabilityService : availability
 AttendeeEventDetailsService --> VenueBookingRecordRepository : bookings
 AttendeeRegistrationController --> AttendeeRegistrationQueryService : registrations
+AttendeeRegistrationController --> AttendeeRegistrationService : commands
 AttendeeRegistrationQueryService --> AttendeeRegistrationRepository : registrations
 AttendeeRegistrationQueryService --> JourneyStatusResolver : statuses
 AttendeeRegistrationQueryService --> EventRepository : events

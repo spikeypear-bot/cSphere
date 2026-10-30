@@ -39,6 +39,7 @@ public class NotificationService {
      * there until Technical Support re-approves it.
      */
     private static final Set<NotificationType> SELF_NOTICES = Set.of(NotificationType.attendee_registration_confirmed,
+            NotificationType.attendee_registration_withdrawn,
             NotificationType.equipment_request_attention);
 
     public NotificationService(NotificationRepository repository) {
@@ -365,6 +366,20 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** AT08: the receipt commits with the withdrawal; delivery/retries happen after commit. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createAttendeeWithdrawalConfirmation(UUID recipientUserId, UUID eventId, String eventName,
+            String registrationReference, UUID registrationId, OffsetDateTime withdrawnAt) {
+        Notification notification = base(recipientUserId, NotificationType.attendee_registration_withdrawn, eventName);
+        notification.setNotificationId(UUID.nameUUIDFromBytes(("attendee_registration_withdrawn:" + registrationId)
+                .getBytes(java.nio.charset.StandardCharsets.UTF_8)));
+        notification.setRegistrationId(registrationId);
+        notification.setEventId(eventId);
+        notification.setOccurredAt(withdrawnAt);
+        notification.setMessage("Your registration has been withdrawn. Reference: " + registrationReference);
+        saveBestEffort(notification);
+    }
+
     /** TS09 AC16: tell the assigned coordinator the outcome for their event. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createEquipmentDamageOutcomeNotification(UUID coordinatorId, UUID eventId, String eventName,
@@ -573,7 +588,7 @@ public class NotificationService {
             // event page of its own yet, so the notification itself carries
             // the information and links nowhere.
             case event_confirmed, event_cancelled -> null;
-            case attendee_registration_confirmed -> n.getRegistrationId() == null
+            case attendee_registration_confirmed, attendee_registration_withdrawn -> n.getRegistrationId() == null
                     ? "/attendee/events/" + n.getEventId()
                     : "/attendee/my-registrations/" + n.getRegistrationId();
             case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();

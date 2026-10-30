@@ -164,6 +164,17 @@
 .attendee-registration__requirement { margin: 0 0 0.45rem; font-weight: 600; }
 .attendee-registration__requirement + .attendee-muted { margin-bottom: 0.9rem; }
 
+.attendee-withdrawal { display: flex; flex-direction: column; align-items: flex-start; gap: 0.75rem; }
+.attendee-withdrawal-dialog {
+  width: min(34rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); overflow: auto;
+  box-sizing: border-box; padding: 1.5rem; border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm); background: var(--panel); color: var(--ink);
+}
+.attendee-withdrawal-dialog::backdrop { background: rgb(0 0 0 / 50%); }
+.attendee-withdrawal-dialog h2 { margin-top: 0; font-size: 1.2rem; }
+.attendee-withdrawal-dialog p { line-height: 1.5; }
+.attendee-withdrawal-dialog__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
+
 @media (max-width: 640px) {
   .attendee-home-card { align-items: flex-start; }
   .attendee-home-card .button { width: 100%; }

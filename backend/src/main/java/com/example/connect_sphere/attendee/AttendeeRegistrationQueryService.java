@@ -58,24 +58,6 @@ public class AttendeeRegistrationQueryService {
 
     private AttendeeRegistrationDetailsDto dto(AttendeeRegistration registration, Event event) {
         if (event == null) throw new AttendeeRegistrationException(404, "Registration unavailable.");
-        String eventStatus = AttendeeEventStatus.of(statuses.journeyOf(event));
-        String reason = withdrawalReason(registration, event, eventStatus);
-        return new AttendeeRegistrationDetailsDto(registration.getRegistrationId(), registration.getRegistrationReference(),
-                registration.getRegisteredAt(), registration.getStatus(), event.getEventId(), event.getEventName(),
-                event.getStartDatetime(), event.getEndDatetime(), eventStatus, event.getFirstConfirmedAt() != null,
-                reason == null, reason == null ? "Withdrawal is available before the event starts." : reason);
-    }
-
-    /** AT08 eligibility only: AT04 never executes withdrawal or sends its confirmation. */
-    private String withdrawalReason(AttendeeRegistration registration, Event event, String eventStatus) {
-        if ("withdrawn".equals(registration.getStatus())) return "This registration has already been withdrawn.";
-        if ("cancelled".equals(eventStatus) || "event_cancelled".equals(registration.getStatus()))
-            return "Withdrawal is unavailable because the event has been cancelled.";
-        if ("completed".equals(eventStatus)) return "Withdrawal is unavailable because the event has completed.";
-        if (!"confirmed".equals(registration.getStatus())) return "This registration is not active.";
-        if (event.getStartDatetime() == null) return "Withdrawal availability cannot be determined without an event start time.";
-        if (!OffsetDateTime.now(clock).isBefore(event.getStartDatetime()))
-            return "Withdrawal is unavailable because the event has started.";
-        return null;
+        return AttendeeRegistrationDetailsDto.from(registration, event, statuses.journeyOf(event), OffsetDateTime.now(clock));
     }
 }

@@ -92,6 +92,7 @@ class AttendeeRegistration <<Entity>>  {
 	{field} +registrationId : UUID {id}
 	{field} +registrationReference : String
 	{field} +status : String
+	{field} +withdrawnAt : OffsetDateTime
 }
 
 
@@ -474,6 +475,7 @@ class Notification <<Entity>>  {
 
 enum NotificationType {
 	{field} +attendee_registration_confirmed
+	{field} +attendee_registration_withdrawn
 	{field} +change_request_decided
 	{field} +change_request_submitted
 	{field} +change_request_withdrawn

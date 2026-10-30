@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
 import type { NotificationDto } from '../../types/notification'
@@ -23,27 +23,30 @@ export function useNotifications() {
   // Bumped to re-trigger the effect below on demand (e.g. Try again)
   // without putting a fetch call inside the effect body itself.
   const [refreshToken, setRefreshToken] = useState(0)
+  const requestVersion = useRef(0)
+  const appliedRequest = useRef(0)
 
   useEffect(() => {
     if (!role) return
     let cancelled = false
-    let latestRequest = 0
 
     function poll() {
-      const request = ++latestRequest
+      const request = ++requestVersion.current
       Promise.all([
         apiClient.get<NotificationDto[]>('/notifications'),
         apiClient.get<{ count: number }>('/notifications/unread-count'),
       ])
         .then(([list, count]) => {
-          if (cancelled || request !== latestRequest) return
+          if (cancelled || request < appliedRequest.current) return
+          appliedRequest.current = request
           setNotifications(list)
           setUnreadCount(count.count)
           setLoaded(true)
           setError(null)
         })
         .catch((err: unknown) => {
-          if (cancelled || request !== latestRequest) return
+          if (cancelled || request < appliedRequest.current) return
+          appliedRequest.current = request
           // A failed refresh never breaks the page; the bell says so and offers Try again.
           setError(err instanceof ApiClientError ? err.message : 'Could not load notifications.')
         })
@@ -71,6 +74,7 @@ export function useNotifications() {
   const refresh = useCallback(() => setRefreshToken((n) => n + 1), [])
 
   const markRead = useCallback(async (notificationId: string) => {
+    appliedRequest.current = ++requestVersion.current
     // Optimistic: marking as read never changes anything else, so there is
     // nothing to roll back if it fails; the next poll re-syncs.
     setNotifications((prev) =>
@@ -81,13 +85,14 @@ export function useNotifications() {
       await apiClient.post<NotificationDto>(`/notifications/${notificationId}/read`)
     } catch {
       // Best-effort; the next poll reconciles either way.
-    }
+    } finally { appliedRequest.current = ++requestVersion.current }
   }, [])
 
   /** EC-NEW4: marks read everything up to the newest notice on screen; one
    * that arrives meanwhile stays unread. */
   const markAllRead = useCallback(async () => {
     if (notifications.length === 0) return
+    appliedRequest.current = ++requestVersion.current
     const newest = notifications.reduce((a, b) => (Date.parse(b.occurredAt) > Date.parse(a.occurredAt) ? b : a)).occurredAt
     setNotifications((prev) => prev.map((n) => (Date.parse(n.occurredAt) <= Date.parse(newest) ? { ...n, read: true } : n)))
     setUnreadCount(0)
@@ -95,7 +100,7 @@ export function useNotifications() {
       await apiClient.post('/notifications/read-all', { upTo: newest })
     } catch {
       // The next poll reconciles.
-    }
+    } finally { appliedRequest.current = ++requestVersion.current }
     setRefreshToken((n) => n + 1)
   }, [notifications])
 

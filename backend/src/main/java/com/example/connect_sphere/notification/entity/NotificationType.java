@@ -52,6 +52,7 @@ public enum NotificationType {
      * arrangements for is cancelled. */
     event_cancelled,
     attendee_registration_confirmed,
+    attendee_registration_withdrawn,
     /** TS09 (V38): the assigned coordinator told what Technical Support
      * decided for their event after equipment was reported damaged. */
     equipment_damage_outcome,

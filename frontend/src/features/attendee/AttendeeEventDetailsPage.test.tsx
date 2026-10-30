@@ -95,12 +95,12 @@ describe('AT02 attendee event details', () => {
   })
 
   it('AT01 AC10 (failure): explains a failed save and offers a safe retry', async () => {
-    const fetchMock = vi.fn()
-      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify(details) })
-      .mockRejectedValueOnce(new TypeError('offline'))
-      .mockResolvedValueOnce({ ok: true, status: 200, text: async () => JSON.stringify({
-        reference: 'CS-RETRY', registeredAt: '2027-01-01T12:00:00Z',
-      }) })
+    let attempts = 0
+    const fetchMock = vi.fn(async (_url: string, options: RequestInit) => {
+      if (options.method !== 'POST') return { ok: true, status: 200, text: async () => JSON.stringify(details) }
+      if (++attempts === 1) throw new TypeError('offline')
+      return { ok: true, status: 200, text: async () => JSON.stringify({ reference: 'CS-RETRY', registeredAt: '2027-01-01T12:00:00Z' }) }
+    })
     vi.stubGlobal('fetch', fetchMock)
     renderPage()
     const button = await screen.findByRole('button', { name: 'Register for this event' })

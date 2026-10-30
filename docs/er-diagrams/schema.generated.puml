@@ -159,6 +159,7 @@ entity event_registrations {
 	* status : text
 	attendee_id : uuid <<FK>>
 	attendee_email : text
+	withdrawn_at : timestamp with time zone
 }
 
 entity event_request_activity {
@@ -575,6 +576,7 @@ enum notification_type {
 	request_handed_over
 	equipment_request_decided
 	confirmed_venue_changed
+	attendee_registration_withdrawn
 }
 
 enum user_role {

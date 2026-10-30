@@ -31,4 +31,6 @@ public class AttendeeRegistration {
     private String status;
     @Column(name = "registered_at")
     private OffsetDateTime registeredAt;
+    @Column(name = "withdrawn_at")
+    private OffsetDateTime withdrawnAt;
 }
