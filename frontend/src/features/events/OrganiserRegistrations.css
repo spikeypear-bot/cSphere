@@ -75,19 +75,95 @@
   color: rgba(255, 255, 255, 0.55);
 }
 
-/* Progress bar */
+/* Progress bar (sits under the stat tiles; amber from 90%, red at 100%) */
 .registrations__bar {
   height: 0.5rem;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.1);
   overflow: hidden;
-  margin-bottom: 1rem;
+  margin: 0 0 1.25rem;
 }
 .registrations__bar div {
   height: 100%;
   background: #4ade80;
   border-radius: 999px;
   transition: width 0.3s ease;
+}
+.registrations__bar--near div {
+  background: #fbbf24;
+}
+.registrations__bar--full div {
+  background: #f87171;
+}
+
+/* Capacity form */
+.registrations__capacity {
+  margin: 0 0 1.25rem;
+  padding: 1rem 1.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+.registrations__capacity label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+.registrations__control {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.registrations__control input {
+  flex: 1 1 10rem;
+  max-width: 14rem;
+  padding: 0.55rem 0.8rem;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font: inherit;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.registrations__control input::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+.registrations__control input:hover {
+  border-color: rgba(255, 255, 255, 0.35);
+}
+.registrations__control input:focus-visible {
+  outline: none;
+  border-color: #60a5fa;
+  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+}
+.registrations__control input[aria-invalid='true'] {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+}
+.registrations__hint {
+  margin: 0.5rem 0 0;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* Error / success message (hidden while empty) */
+.registrations__msg {
+  margin: 0.75rem 0 0;
+  padding: 0.6rem 0.9rem;
+  border-radius: 0.5rem;
+  font-size: 0.875rem;
+}
+.registrations__msg:empty {
+  display: none;
+}
+.registrations__msg--error {
+  background: rgba(248, 113, 113, 0.15);
+  color: #f87171;
+}
+.registrations__msg--success {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
 }
 
 /* Attendee table */
@@ -140,5 +216,12 @@
 @media (max-width: 600px) {
   .registrations__stats {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .registrations__bar div,
+  .registrations__control input {
+    transition: none;
   }
 }
