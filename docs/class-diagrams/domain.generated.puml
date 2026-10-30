@@ -466,6 +466,7 @@ class Notification <<Entity>>  {
 	{field} +readAt : OffsetDateTime
 	{field} +reason : String
 	{field} +recipientUserId : UUID
+	{field} +registrationId : UUID
 	{field} +requirementReviewId : UUID
 	{field} +venueBookingId : UUID
 }
@@ -797,6 +798,7 @@ Event "0..*" --> "0..1" Venue : venueId
 Notification "0..*" --> "0..1" Event : eventId
 Notification "0..*" --> "0..1" EventRequest : eventRequestId
 Notification "0..*" --> "1" User : recipientUserId
+Notification "0..*" --> "0..1" EventRegistration : registrationId
 Notification "0..*" --> "0..1" VenueRequirementReview : requirementReviewId
 VenueBookingRecord "0..*" --> "0..1" Venue : alternativeVenueId
 VenueBookingRecord "0..*" --> "1" Event : eventId

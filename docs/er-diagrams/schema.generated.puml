@@ -275,6 +275,7 @@ entity notifications {
 	requirement_review_id : uuid <<FK>>
 	actor_name : text
 	actor_role : text
+	registration_id : uuid <<FK>>
 }
 
 entity refresh_tokens {
@@ -638,6 +639,7 @@ events }o--o| venues : venue_id
 notifications }o--o| events : event_id
 notifications }o--o| event_requests : event_request_id
 notifications }o--|| users : recipient_user_id
+notifications }o--o| event_registrations : registration_id
 notifications }o--o| venue_requirement_reviews : requirement_review_id
 refresh_tokens }o--|| users : user_id
 serialised_equipments }o--|| equipments : equipment_id
