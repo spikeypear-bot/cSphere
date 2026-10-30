@@ -212,6 +212,9 @@ until its Safety Officer readiness review is approved, then becomes `confirmed`.
 | `venue_id` | `UUID` | yes | FK → `venues` | Null until a venue is assigned |
 | `accessibility_needs` | `accessibilities[]` | no | | Required features, matched against `venues.venue_accessibilities`. Defaults to `{}` |
 | `registration_needs` | `BOOLEAN` | yes | | Whether attendees must register |
+| `registration_capacity` | `INTEGER` | yes | | V35. Maximum confirmed attendee registrations |
+| `registration_opens_at` | `TIMESTAMPTZ` | yes | | V35. Inclusive registration opening instant |
+| `registration_closes_at` | `TIMESTAMPTZ` | yes | | V56. Exclusive closing instant; no later than event start |
 | `organisation` | `VARCHAR(100)` | yes | | Owning organisation, free text |
 | `actual_attendance` | `INTEGER` | yes | | Recorded after the event |
 | `venue_requirements` | `TEXT` | no | | Free-text venue needs |
@@ -615,15 +618,20 @@ share a transaction, while delivery/retries stay after commit. No registration
 schema is duplicated. See [AT03 contract](../../../../../../docs/registration-confirmation.md).
 
 V35 creates `event_registrations` with the unique `reference` field and statuses
-`confirmed`, `withdrawn`, `event_cancelled`. V36 removes the separate event
-closing timestamp: registration closes exactly at `events.start_datetime`.
+`confirmed`, `withdrawn`, `event_cancelled`. V36 removed the separate event
+closing timestamp, so registration closed at `events.start_datetime`. EO12's
+V56 restores `events.registration_closes_at`, backfilled to each existing
+event's start time to preserve that behaviour. New periods are saved by the
+owning organisation, with changes recorded in the request timeline; attendee
+registration is accepted from `registration_opens_at` inclusive until
+`registration_closes_at` exclusive.
 
 V41 extends those tables without recreating them. Requests gain optional capacity,
 opening time and attendee instructions; events gain attendee instructions alongside
 their existing capacity/opening fields. Registration-required requests must supply
 a positive capacity and opening time before event start to submit or approve.
-Responses derive `registrationClosesAt` from event/request start; legacy input is
-normalised to start and never stored as a separate column.
+Request responses continue to derive `registrationClosesAt` from event/request
+start; event responses use the persisted registration closing time.
 
 Registrations gain nullable `attendee_id` (users FK) and `attendee_email` so old
 EO10 rows remain intact without fabricated identities. AT01 supplies both fields
