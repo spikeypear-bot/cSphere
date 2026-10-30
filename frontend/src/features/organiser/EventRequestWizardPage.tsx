@@ -464,7 +464,7 @@ export function EventRequestWizardPage() {
                 onChange={(value) => setFields({ registrationOpensAt: value })}
                 error={fieldError('registrationOpensAt')}
               />
-              <p className="field-hint">Registration closes when the event starts.</p>
+              <p className="field-hint">Registration initially closes when the event starts. The organiser can adjust the period after approval.</p>
               <TextField
                 id="attendeeInstructions"
                 label="Attendee instructions"

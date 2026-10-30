@@ -48,7 +48,8 @@ Without a registration, apply the following order:
 Missing/invalid registration settings or unknown remaining capacity show
 **Registration Unavailable**, rather than implying registration is possible.
 Dates are compared as instants; attendee-facing date/time text uses Singapore
-time. Registration opens inclusively and closes at event start exclusively.
+time. Registration opens inclusively and closes exclusively at the organiser-set
+closing time, which cannot be later than the event start.
 
 An active confirmed registration takes precedence over older withdrawn history
 on browse/event pages. If no active registration exists, the latest owned record
