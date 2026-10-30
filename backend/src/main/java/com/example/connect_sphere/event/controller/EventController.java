@@ -7,9 +7,9 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -142,6 +142,14 @@ public class EventController {
             @PathVariable("id") UUID id, @RequestBody RegistrationPeriodRequest request) {
         return registrationPeriodService.update(organisationOf(jwt), userIdOf(jwt), id, request);
     }
+
+    /** EO11: set the registration capacity. Body: {"capacity": 100}. Owning organiser only. */
+    @PutMapping("/{id}/registration-capacity")
+    public RegistrationInfoDto updateCapacity(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id,
+            @RequestBody(required = false) java.util.Map<String, Object> body) {
+        return registrationService.updateCapacity(organisationOf(jwt), id, body == null ? null : body.get("capacity"));
+    }
+    
 
     /** EC08: confirm once the Safety Officer has approved (SO-C4). Assigned coordinator only. */
     @PostMapping("/{id}/confirm")
