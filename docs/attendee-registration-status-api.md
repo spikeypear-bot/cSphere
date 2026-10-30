@@ -9,6 +9,11 @@ notification links. AT04's list/detail API contract is unchanged. See
 [AT03 delivery and confirmation contract](registration-confirmation.md) for its
 separate V55 notification migration and retry guarantees.
 
+AT08 now adds a withdrawal timestamp, shared eligibility and an authenticated
+command. This document's original read-only slice remains below; the current
+write contract, confirmation dialog and transactional receipt are described in the
+[AT08 API contract](attendee-withdrawal-api.md).
+
 ## Attendee workflow
 
 1. Sign in with an attendee account. Open **Browse events**, then an event's
@@ -16,17 +21,20 @@ separate V55 notification migration and retry guarantees.
    initial request still going through EC planning is not yet attendee-facing.
 2. Register from the event details page using the existing AT01 action. New
    registration requires a confirmed event, spare capacity, and an open period;
-   the owning organiser sets the open and close times, with the close no later
-   than event start. Registration is accepted from opening (inclusive) until
-   closing (exclusive). The separate `/attendee/register` route
-   is still scaffolding and is not the implemented registration entry point.
+   registration closes at event start. The owning organiser sets the open and
+   close times, with the close no later than event start. Registration is
+   accepted from opening (inclusive) until closing (exclusive). The legacy
+   `/attendee/register` route now redirects to `/attendee/browse`, where the
+   attendee selects an event.
 3. Open **My Registrations** from attendee navigation, the home page, or event
    details. The list shows event name, reference, event start/end, registration
    time, registration status and event status, including historical records.
 4. Select **View registration**. The details page keeps registration and event
    statuses separate, explains cancellation/re-confirmation/completion, and
-   reports withdrawal eligibility. Eligibility is informational; there is no
-   withdrawal button or command in AT04.
+   reports withdrawal eligibility. AT08 extends this same page with **Withdraw
+   Registration** below Approved venues, above View latest event details, when
+   eligible. Its confirmation dialog is required before the POST. If the button
+   is absent, the Withdrawal availability facts explain why.
 5. Select **View latest event details** to return to the existing AT02 view of
    the current approved event information. Unapproved change proposals are not
    a separate source of attendee details. If attendee-facing details are
@@ -43,6 +51,11 @@ record does not register again or change capacity.
   ordered by registration timestamp descending, then registration ID ascending.
 - `GET /api/attendee/registrations/{registrationId}`: one owned registration.
 
+AT08 adds `POST /api/attendee/registrations/{registrationId}/withdraw` under the
+same attendee namespace and token ownership. This is a separate mutation; the
+two GET routes and their query service remain read-only. Its errors, transaction
+and receipt semantics are documented in the [AT08 contract](attendee-withdrawal-api.md).
+
 Both routes use the existing `/api/attendee/**` attendee-only rule. Identity comes
 from the token subject, never a request parameter. Individual lookup includes
 both registration ID and attendee ID; missing and other-owned records return the
@@ -57,7 +70,7 @@ owning organisation may update the period; invalid periods return 422 and
 disallowed event states return 409. Successful changes are recorded in the
 event timeline with the organiser and timestamp and do not notify attendees.
 
-The response contains `registrationId`, `reference`, `registeredAt`,
+The response contains `registrationId`, `reference`, `registeredAt`, `withdrawnAt`,
 `registrationStatus`, `eventId`, `eventName`, `startDatetime`, `endDatetime`,
 `eventStatus`, `eventDetailsAvailable`, `withdrawalAvailable`, and
 `withdrawalReason`. Personal profile information and internal event fields are
@@ -117,9 +130,10 @@ AT04's separate registration/event fields.
 The user supplied AT08's criteria on 28 October 2026: an active confirmed
 registration can be withdrawn before event start, unless its event is Cancelled
 or Completed. At the exact start instant withdrawal is unavailable. These rules
-do not exclude an event awaiting re-confirmation. AT04 exposes only eligibility
-and its explanation. It does not implement withdrawal, confirmation dialogs,
-withdrawal timestamps, capacity release, or withdrawal notifications.
+do not exclude an event awaiting re-confirmation. AT04's GETs expose eligibility
+and its explanation without mutating state. The [AT08 implementation](attendee-withdrawal-api.md)
+adds a separate POST, timestamp, capacity release, confirmation dialog and
+transactional personal receipt to the same details page.
 
 Eligibility is false for a withdrawn or `event_cancelled` registration, a
 Cancelled/Completed event, or an event that has started. It is true for a
@@ -139,8 +153,11 @@ when attendee-facing details are available.
 
 AT04 list/detail reads bypass browser caching and refresh on route entry, window focus and the
 existing five-second live-refresh interval. This picks up new AT01 registrations
-and externally changed withdrawal statuses without implementing AT08. Obsolete
-responses are ignored after route changes, refreshes and unmounts.
+and changed withdrawal statuses. The attendee change signal also refreshes
+related reads after AT08 actions. The shared resource reader guards responses
+after route changes, newer applied results and saved mutations. Reconciliation
+uses that same reader; the [stale-response finding](at08-implementation-review.md)
+is fixed and covered by permanent tests in the [workflow audit](attendee-workflow-audit.md).
 An initial request shows loading text; empty lists show **No registrations yet**.
 A failed load or refresh shows an error rather than presenting the last result
 as current; **Try again** starts a fresh request and loading state. Missing or
@@ -175,4 +192,5 @@ For reproducible commands and manual scenarios, see the
 
 The live backlog could not be reached during implementation. Scope follows the
 user's AT04 requirements and supplied AT08 criteria; no acceptance-criterion
-numbers were invented. No AT03, AT08 or AT09 commands are added.
+numbers were invented. That original AT04 slice added no AT03, AT08 or AT09
+commands; the later AT08 API addition is documented above.

@@ -43,6 +43,30 @@ This manual API seeder creates a new labelled local batch with future booking
 dates and relative expiry deadlines. It prints staff/coordinator links and saves
 a local manifest under `logs/vsc3/`; it never runs at startup or resets old demos.
 
+### Attendee withdrawal (AT08)
+
+Sign in as an attendee and open **My Registrations → View registration**.
+On an eligible record, **Withdraw Registration** is below **Approved venues**,
+just above **View latest event details**. It opens a confirmation dialog;
+Keep registration or Escape leaves the registration unchanged.
+
+The button is hidden when the owned registration is not confirmed or the event
+is cancelled, completed or started. **Withdrawal availability** explains why.
+Future events awaiting re-confirmation remain eligible. Successful withdrawal
+keeps the reference/history, records an SGT-displayed date, releases one place
+and sends a personal in-app receipt linked to the original registration.
+
+Use the current frontend and backend together. Rebuild/restart a packaged
+backend after source changes so Flyway applies V56/V57; rebuild the frontend
+when serving a production preview. Updating source alone does not update an
+already-running jar or an older checkout's frontend.
+
+- [AT08 API, transaction and UI contract](docs/attendee-withdrawal-api.md)
+- [AT08 review and resolved reconciliation race](docs/at08-implementation-review.md)
+- [Attendee workflow audit and regression evidence](docs/attendee-workflow-audit.md)
+- [Attendee manual testing](docs/attendee-registration-status-manual-testing.md)
+- [Browser test setup](frontend/e2e/README.md#attendee-withdrawal-at08)
+
 ### Tests
 
 How we test, and how every test traces to a user story and AC: [docs/testing-strategy.md](docs/testing-strategy.md).

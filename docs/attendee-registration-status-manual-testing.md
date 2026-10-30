@@ -51,7 +51,7 @@ setup dependencies. Do not run them against shared or production data.
 | Ownership | As `att2`, open a registration-details URL belonging to `att1`. It shows unavailable, without another attendee's record. Direct API access must return 404 too. |
 | Empty history | Use an attendee account with no records. Expect No registrations yet and Browse events navigation. Do not delete registrations merely to create this case. |
 | API failure and retry | Make the backend unavailable or use browser request blocking for the registration GET. Expect an error. Restore access and select Try again; expect current data. |
-| External status refresh | With an authorised development fixture/status update made separately, return focus to the list/details or wait for the next five-second refresh. The new status appears without navigation. AT04 itself supplies no withdrawal action. |
+| External status refresh | With an authorised development fixture/status update made separately, return focus to the list/details or wait for the next five-second refresh. The new status appears without navigation. AT08's confirmed withdrawal also updates the saved details immediately. |
 | Re-registration history | Register for the event with an existing withdrawn row. Both the withdrawn reference and new confirmed reference remain visible. |
 
 The following require separate fixtures; the current open-registration batch
@@ -70,6 +70,48 @@ does not exercise them. Prefer the automated tests for repeatable boundaries.
 Do not change event/registration rows in a shared database to exercise these
 cases. Local fixture updates are test setup, not evidence that AT04 implements
 cancellation, re-confirmation or withdrawal commands.
+
+## AT08 withdrawal checks
+
+Use a fresh owned confirmed registration on a future event:
+
+The action is on **My Registrations → View registration**, below Approved venues
+and above View latest event details. Withdrawal availability explains a hidden
+button. The [implementation review](at08-implementation-review.md) records the
+now-fixed reconciliation race; the [workflow audit](attendee-workflow-audit.md)
+links the permanent ordering and lost-response regressions.
+
+1. Open details, select Withdraw Registration, then Keep registration or Escape.
+   Status, reference, capacity and notification count must remain unchanged.
+2. Confirm withdrawal once. The button becomes unavailable, Withdrawn and its
+   SGT date appear, and the original reference/registration date remain visible.
+3. Open the personal receipt in the bell. It returns to this exact historical
+   registration. My Registrations shows Withdrawn; event details show one more
+   place. Re-registering creates a new reference while keeping the withdrawn row.
+4. Verify cancelled/completed/started events show an explanation without the
+   withdrawal button. Re-confirming future events still allow withdrawal, while
+   new registration remains paused.
+5. Another attendee opening the URL sees an unavailable message with no details
+   or withdrawal action. Duplicate/concurrent API calls and delivery failures
+   are covered by the PostgreSQL integration tests in the
+   [AT08 contract](attendee-withdrawal-api.md).
+
+Focused AT08 checks, with Java 25 and the configured PostgreSQL test database:
+
+```powershell
+# From backend/
+.\mvnw.cmd '-Dtest=AttendeeWithdrawal*Test,WithdrawalNotificationTest' test
+
+# From frontend/
+npm test -- src/features/attendee/Withdrawal.test.tsx --maxWorkers=1
+npm run test:e2e -- e2e/attendee-withdrawal.spec.ts
+```
+
+The withdrawal tests now contain the delayed-reconciliation regression from the
+review, plus the case where an older read fails after a newer successful read.
+`AttendeeWorkflowAudit.test.tsx` covers route changes, error recovery, saved
+registration ordering, lost responses, full-event conflicts and slow polling.
+`AttendeeNotificationRace.test.tsx` covers unread-state ordering and slow reads.
 
 ## Automated verification
 
