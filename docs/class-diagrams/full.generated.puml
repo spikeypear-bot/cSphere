@@ -742,6 +742,7 @@ class EventController {
 	{method} +registrations ( jwt : Jwt , id : UUID ) : RegistrationInfoDto
 	{method} +sendForSafetyReview ( jwt : Jwt , id : UUID ) : EventReadinessDto
 	{method} +timeline ( jwt : Jwt , id : UUID ) : List
+	{method} +updateCapacity ( jwt : Jwt , id : UUID , body : Map ) : RegistrationInfoDto
 	{method} +withdrawFromSafetyReview ( jwt : Jwt , id : UUID , body : Map ) : EventReadinessDto
 }
 
@@ -1124,6 +1125,7 @@ class EventReassignmentStateException {
 
 class EventRegistrationService {
 	{method} +forOrganiser ( organisation : String , eventId : UUID ) : RegistrationInfoDto
+	{method} +updateCapacity ( organisation : String , eventId : UUID , requested : Object ) : RegistrationInfoDto
 }
 
 
