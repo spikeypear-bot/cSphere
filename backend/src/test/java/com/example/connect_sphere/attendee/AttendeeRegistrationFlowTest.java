@@ -97,6 +97,23 @@ class AttendeeRegistrationFlowTest {
     }
 
     @Test
+    @DisplayName("AT07 (edge): full refusal creates no registration or notification; a withdrawn place frees capacity")
+    void fullRefusalHasNoSideEffectsAndWithdrawalFreesPlace() throws Exception {
+        FlowSupport flow = new FlowSupport(mvc, users);
+        Event event = event(1);
+        String path = "/api/attendee/events/" + event.getEventId();
+        mvc.perform(post(path + "/registrations").with(flow.as("att1"))).andExpect(status().isOk());
+        mvc.perform(post(path + "/registrations").with(flow.as("att2")))
+                .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("This event is full."));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM event_registrations WHERE event_id = ?", Integer.class, event.getEventId())).isEqualTo(1);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE recipient_user_id = ? AND event_id = ?", Integer.class,
+                flow.idOf("att2"), event.getEventId())).isZero();
+        jdbc.update("UPDATE event_registrations SET status = 'withdrawn' WHERE event_id = ?", event.getEventId());
+        mvc.perform(get(path).with(flow.as("att2"))).andExpect(jsonPath("$.availablePlaces").value(1));
+        mvc.perform(post(path + "/registrations").with(flow.as("att2"))).andExpect(status().isOk());
+    }
+
+    @Test
     @DisplayName("AT01 EO10 (boundary): historical confirmed rows consume capacity without fabricated account identities")
     void legacyRegistrationsConsumeCapacity() throws Exception {
         FlowSupport flow = new FlowSupport(mvc, users);

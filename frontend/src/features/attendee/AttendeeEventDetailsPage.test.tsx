@@ -109,4 +109,12 @@ describe('AT02 attendee event details', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Register for this event' }))
     expect(await screen.findByText(/CS-RETRY/)).toBeInTheDocument()
   })
+
+  it('AT07 AC (edge): shows a full notice without a register button and refreshes when submit finds the event full', async () => {
+    const full = { ...details, availablePlaces: 0 }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, status: 200, text: async () => JSON.stringify(full) }))
+    renderPage()
+    expect(await screen.findByText(/registration is full/i)).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Register for this event' })).toBeNull()
+  })
 })
