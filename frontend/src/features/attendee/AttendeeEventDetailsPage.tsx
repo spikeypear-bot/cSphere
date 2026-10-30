@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -10,9 +10,8 @@ import { requestNotificationRefresh } from '../notifications/notificationRefresh
 import { AttendeeStatusBadges } from './AttendeeStatusBadges'
 import { registrationBadge, type AttendeeStatusInput } from './attendeeStatus'
 import { registrationDateTime as dateTime } from './registrationView'
-import { useLiveRefresh } from '../../lib/useLiveRefresh'
+import { useAttendeeResource } from './useAttendeeResource'
 import './AttendeePages.css'
-
 interface AttendeeEventDetails extends Omit<AttendeeStatusInput, 'eventStatus'> {
   eventId: string
   eventName: string
@@ -44,83 +43,147 @@ const mapLink = (address: string) => `https://www.google.com/maps/search/?api=1&
 
 export function AttendeeEventDetailsPage() {
   const { eventId = '' } = useParams()
-  const [event, setEvent] = useState<AttendeeEventDetails | null>(null)
-  const [unavailable, setUnavailable] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-  const [registration, setRegistration] = useState<{ reference: string; registeredAt: string; registrationId?: string } | null>(null)
+  return <AttendeeEventDetails key={eventId} eventId={eventId} />
+}
+
+function AttendeeEventDetails({ eventId }: { eventId: string }) {
+  const {
+    data: event,
+    error,
+    retry,
+    refresh,
+    replace,
+  } = useAttendeeResource<AttendeeEventDetails>(
+    `/attendee/events/${encodeURIComponent(eventId)}`
+  )
+
   const [registering, setRegistering] = useState(false)
   const [registrationError, setRegistrationError] = useState('')
   const [registrationFull, setRegistrationFull] = useState(false)
   const [justRegistered, setJustRegistered] = useState(false)
+
+  const [savedRegistration, setSavedRegistration] = useState<{
+    registrationId: string
+    reference: string
+    registeredAt: string
+  } | null>(null)
+
   const confirmationRef = useRef<HTMLDivElement>(null)
-  const revision = useLiveRefresh()
 
-  const load = useCallback(() => {
-    let active = true
-    apiClient.get<AttendeeEventDetails>(`/attendee/events/${encodeURIComponent(eventId)}`)
-      .then(value => {
-        if (active) {
-          setFailed(false)
-          setEvent(value)
-          setRegistration(value.registrationReference && value.registeredAt
-            ? { reference: value.registrationReference, registeredAt: value.registeredAt, registrationId: value.registrationId ?? undefined }
-            : null)
-        }
-      })
-      .catch(error => {
-        if (!active) return
-        if (error && typeof error === 'object' && 'status' in error && error.status === 404) setUnavailable(true)
-        else setFailed(true)
-      })
-    return () => { active = false }
-  }, [eventId])
+  const failed = Boolean(error && error.status !== 404)
 
-  useEffect(() => load(), [load, attempt, revision])
-
-  // After a successful registration, bring the confirmation into view and announce it.
+  const registration = savedRegistration ?? (
+    event?.registrationReference && event.registeredAt
+      ? {
+        reference: event.registrationReference,
+        registeredAt: event.registeredAt,
+        registrationId: event.registrationId ?? undefined,
+      }
+      : null
+  )
+  // After a successful registration, bring the confirmation into view.
   useEffect(() => {
     if (!justRegistered || !registration?.registrationId) return
+
     const node = confirmationRef.current
     if (!node) return
+
     node.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
     node.focus?.({ preventScroll: true })
   }, [justRegistered, registration?.registrationId])
 
-  const refreshEvent = useCallback(() => {
-    void apiClient.get<AttendeeEventDetails>(`/attendee/events/${encodeURIComponent(eventId)}`)
-      .then(value => { if (value) setEvent(value) })
-      .catch(() => { /* keep current view; user can retry */ })
-  }, [eventId])
+  function refreshEvent() {
+    void refresh().catch(() => {
+      // Keep the current view if the follow-up GET fails.
+    })
+  }
 
   async function handleRegister() {
-    setRegistering(true); setRegistrationError(''); setRegistrationFull(false)
+    setRegistering(true)
+    setRegistrationError('')
+    setRegistrationFull(false)
+
     try {
-      const result = await apiClient.post<{ registrationId: string; reference: string; registeredAt: string }>(`/attendee/events/${encodeURIComponent(eventId)}/registrations`)
-      setRegistration(result)
+      const result = await apiClient.post<{
+        registrationId: string
+        reference: string
+        registeredAt: string
+      }>(
+        `/attendee/events/${encodeURIComponent(eventId)}/registrations`
+      )
+
+      setSavedRegistration(result)
       setJustRegistered(true)
-      setEvent(current => current ? { ...current, registrationStatus: 'confirmed', registrationReference: result.reference,
-        registeredAt: result.registeredAt, registrationId: result.registrationId } : current)
+
+      if (event) {
+        replace({
+          ...event,
+          registrationStatus: 'confirmed',
+          registrationReference: result.reference,
+          registeredAt: result.registeredAt,
+          registrationId: result.registrationId,
+        })
+      }
+
       requestNotificationRefresh()
-      // An idempotent response need not consume another place. Refresh authoritative capacity.
+
+      // Refresh authoritative capacity after registration.
       if (result.registrationId) refreshEvent()
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Please try again.'
-      setRegistrationError(`Registration could not be saved: ${message}`)
-      // AT07: refresh so a registration that filled up meanwhile shows the latest "Full" status.
-      if (error && typeof error === 'object' && 'status' in error && error.status === 409) {
+      const message = error instanceof Error
+        ? error.message
+        : 'Please try again.'
+
+      const status =
+        error && typeof error === 'object' && 'status' in error
+          ? error.status
+          : undefined
+
+      // A conflict means registration was rejected.
+      if (status === 409) {
+        setRegistrationError(`Registration could not be saved: ${message}`)
         setRegistrationFull(/full/i.test(message))
         refreshEvent()
+        return
       }
-    } finally { setRegistering(false) }
+
+      // The POST may have succeeded even if its response was lost.
+      // Check the server before telling the attendee registration failed.
+      try {
+        const refreshedEvent = await refresh()
+
+        if (
+          refreshedEvent?.registrationId &&
+          refreshedEvent.registrationReference &&
+          refreshedEvent.registeredAt
+        ) {
+          setSavedRegistration({
+            registrationId: refreshedEvent.registrationId,
+            reference: refreshedEvent.registrationReference,
+            registeredAt: refreshedEvent.registeredAt,
+          })
+
+          setJustRegistered(true)
+          setRegistrationError('')
+          requestNotificationRefresh()
+          return
+        }
+      } catch {
+        // The registration status could not be confirmed.
+      }
+
+      setRegistrationError(`Registration could not be saved: ${message}`)
+    } finally {
+      setRegistering(false)
+    }
   }
 
   if (failed && !event) return <main className="page attendee-event-details">
     <PageHeader eyebrow="Attendee" title="Event details" />
     <Notice tone="danger">Event details could not be loaded. Check your connection and try again.</Notice>
-    <Button variant="secondary" onClick={() => { setFailed(false); setUnavailable(false); setAttempt(value => value + 1) }}>Try again</Button>
+    <Button variant="secondary" onClick={retry}>Try again</Button>
   </main>
-  if (unavailable) return <main className="page attendee-event-details">
+  if (error?.status === 404) return <main className="page attendee-event-details">
     <PageHeader eyebrow="Attendee" title="Event unavailable" />
     <Notice tone="info">This event is unavailable or does not have attendee-facing details.</Notice>
     <Link to="/attendee">Back to attendee home</Link>
@@ -143,11 +206,13 @@ export function AttendeeEventDetailsPage() {
 
   return <main className="page attendee-event-details">
     <PageHeader eyebrow={<Link to="/attendee/browse">Browse events</Link>} title={event.eventName}
-      description={<AttendeeStatusBadges value={{ ...event, eventStatus: event.status,
-        registrationStatus: event.registrationStatus ?? (event.registrationReference ? 'confirmed' : null) }} />}
+      description={<AttendeeStatusBadges value={{
+        ...event, eventStatus: event.status,
+        registrationStatus: event.registrationStatus ?? (event.registrationReference ? 'confirmed' : null)
+      }} />}
       actions={<Link className="button button--ghost" to="/attendee/my-registrations">My Registrations</Link>} />
     {failed && <Notice tone="danger">The latest registration availability could not be retrieved, so registration is not shown as available.{' '}
-      <Button variant="secondary" onClick={() => { setFailed(false); setAttempt(value => value + 1) }}>Try again</Button></Notice>}
+      <Button variant="secondary" onClick={retry}>Try again</Button></Notice>}
     {event.status === 'reconfirming' && <Notice tone="info">The event is being re-confirmed. Any venue marked unavailable is affected; other approved venue details remain current.</Notice>}
     {event.status === 'cancelled' && <Notice tone="danger">This event has been cancelled.</Notice>}
     {event.status === 'completed' && <Notice tone="info">This event has finished. These details are shown as a past record.</Notice>}
@@ -203,11 +268,23 @@ export function AttendeeEventDetailsPage() {
             {capacity !== null && <div><dt>Capacity</dt><dd>{capacity}</dd></div>}
           </dl>}
           {registration && !registration.registrationId && <p>Registration reference: <strong>{registration.reference}</strong></p>}
-          {!registration && availabilityNotice && <Notice tone={availabilityNotice.tone}>{availabilityNotice.text}</Notice>}
+          {!registration && !registrationFull && availabilityNotice && (
+            <Notice tone={availabilityNotice.tone}>
+              {availabilityNotice.text}
+            </Notice>
+          )}
           {canRegister && <div className="attendee-registration__action">
             <Button disabled={registering} aria-busy={registering} onClick={handleRegister}>{registering ? 'Registering…' : 'Register for this event'}</Button>
           </div>}
-          {registrationError && <Notice tone="danger">{registrationError}{registrationFull ? ' No places are currently available.' : ' You can retry without creating a duplicate.'}</Notice>}
+          {registrationError && (
+            <Notice tone="danger">
+              {registrationError}
+              {registrationFull
+                ? ' No places are currently available.'
+                : ' You can retry without creating a duplicate.'}
+            </Notice>
+          )}
+
         </Card>
 
         {registration?.registrationId && <div ref={confirmationRef} tabIndex={-1} className="attendee-event-details__confirmation">
@@ -218,8 +295,7 @@ export function AttendeeEventDetailsPage() {
   </main>
 }
 
-function registrationAvailabilityNotice(event: AttendeeEventDetails, failed: boolean, label: string):
-  { tone: 'danger' | 'info'; text: string } | null {
+function registrationAvailabilityNotice(event: AttendeeEventDetails, failed: boolean, label: string): { tone: 'danger' | 'info'; text: string } | null {
   if (failed || event.registrationRequired !== true) return null
   switch (label) {
     case 'Full': return { tone: 'danger', text: 'Registration is full. No places are available, so a normal registration cannot be completed.' }
