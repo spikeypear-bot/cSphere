@@ -150,33 +150,38 @@ export function OrganiserRegistrations({
     (data.registrationState !== 'not_yet_open' ||
       (now !== null && Date.parse(data.opensAt) <= now))
 
-  async function savePeriod(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setSaveError('')
-    setSaveSuccess('')
-    const opening = data.opensAt !== null &&
-      opensAtInput === toSingaporeInput(data.opensAt)
-      ? data.opensAt
-      : toSingaporeOffsetDateTime(opensAtInput)
+ async function savePeriod(event: FormEvent<HTMLFormElement>) {
+  event.preventDefault()
 
-    const closing = toSingaporeOffsetDateTime(closesAtInput)
+  if (!data) {
+    setSaveError('Registration information is unavailable. Please try again.')
+    return
+  }
+const currentData = data
+setSaveError('')
+setSaveSuccess('')
 
+const opening = currentData.opensAt !== null &&
+  opensAtInput === toSingaporeInput(currentData.opensAt)
+  ? currentData.opensAt
+  : toSingaporeOffsetDateTime(opensAtInput)
 
-    const submittedAt = Date.now()
+const closing = toSingaporeOffsetDateTime(closesAtInput)
 
-    if (!opening || !closing) {
-      setSaveError('Enter both a valid registration opening and closing date and time in Singapore time.')
-      return
-    }
+const submittedAt = Date.now()
 
-    if (data.opensAt !== null) {
-      const openingHasPassed = Date.parse(data.opensAt) <= submittedAt
+if (!opening || !closing) {
+  setSaveError('Enter both a valid registration opening and closing date and time in Singapore time.')
+  return
+}
 
-      if (openingHasPassed && Date.parse(opening) !== Date.parse(data.opensAt)) {
-        setSaveError('Registration has already opened; only the closing date and time can be changed.')
-        return
-      }
+if (currentData.opensAt !== null) {
+  const openingHasPassed = Date.parse(currentData.opensAt) <= submittedAt
 
+  if (openingHasPassed && Date.parse(opening) !== Date.parse(currentData.opensAt)) {
+    setSaveError('Registration has already opened; only the closing date and time can be changed.')
+    return
+  }
       if (!openingHasPassed && Date.parse(opening) < submittedAt) {
         setSaveError('The registration opening date and time cannot be in the past.')
         return

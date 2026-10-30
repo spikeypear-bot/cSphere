@@ -32,6 +32,7 @@ import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.service.EventArrangementsService;
 import com.example.connect_sphere.event.service.EventLifecycleService;
+import com.example.connect_sphere.event.service.EventRegistrationPeriodService;
 import com.example.connect_sphere.event.service.EventRegistrationService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
@@ -57,6 +58,9 @@ class AssignedEventsAccessTest {
 
     @Autowired
     private JwtAuthenticationConverter jwtAuthenticationConverter;
+
+    @MockitoBean
+    private EventRegistrationPeriodService eventRegistrationPeriodService;
 
     @MockitoBean
     private EventService service;

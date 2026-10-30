@@ -39,6 +39,7 @@ enum ActivityType {
 	{field} +event_reassignment_approved
 	{field} +event_reassignment_declined
 	{field} +event_reassignment_requested
+	{field} +registration_period_updated
 	{field} +rejected
 	{field} +request_cancelled
 	{field} +returned_to_planning
@@ -345,6 +346,7 @@ class Event <<Entity>>  {
 	{field} +organisation : String
 	{field} +purpose : String
 	{field} +registrationCapacity : Integer
+	{field} +registrationClosesAt : OffsetDateTime
 	{field} +registrationNeeds : Boolean
 	{field} +registrationOpensAt : OffsetDateTime
 	{field} +requiredFacilities : List<String>

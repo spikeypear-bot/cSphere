@@ -55,6 +55,7 @@ enum ActivityType {
 	{field} +event_reassignment_approved
 	{field} +event_reassignment_declined
 	{field} +event_reassignment_requested
+	{field} +registration_period_updated
 	{field} +rejected
 	{field} +request_cancelled
 	{field} +returned_to_planning
@@ -678,6 +679,7 @@ class ApiExceptionHandler {
 	{method} +handleNotFound ( ex : EventRequestNotFoundException ) : ResponseEntity
 	{method} +handleNotPending ( ex : EventRequestNotPendingException ) : ResponseEntity
 	{method} +handleNotificationNotFound ( ex : NotificationNotFoundException ) : ResponseEntity
+	{method} +handleRegistrationPeriod ( ex : RegistrationPeriodException ) : ResponseEntity
 	{method} +handleRequestState ( ex : EventRequestStateException ) : ResponseEntity
 	{method} +handleReservationLine ( ex : ReservationLineException ) : ResponseEntity
 	{method} +handleResponseStatus ( ex : ResponseStatusException ) : ResponseEntity
@@ -1417,6 +1419,7 @@ class EventController {
 	{method} +sendForSafetyReview ( jwt : Jwt , id : UUID ) : EventReadinessDto
 	{method} +timeline ( jwt : Jwt , id : UUID ) : List
 	{method} +updateCapacity ( jwt : Jwt , id : UUID , body : Map ) : RegistrationInfoDto
+	{method} +updateRegistrationPeriod ( jwt : Jwt , id : UUID , request : RegistrationPeriodRequest ) : RegistrationInfoDto
 	{method} +withdrawFromSafetyReview ( jwt : Jwt , id : UUID , body : Map ) : EventReadinessDto
 }
 
@@ -1594,6 +1597,12 @@ class RegistrationInfoDto.Attendee {
 }
 
 
+class RegistrationPeriodRequest {
+	{field} -closesAt : String
+	{field} -opensAt : String
+}
+
+
 class Event <<Entity>>  {
 	{field} +accessibilityNeeds : List<String>
 	{field} +actualAttendance : Integer
@@ -1611,6 +1620,7 @@ class Event <<Entity>>  {
 	{field} +organisation : String
 	{field} +purpose : String
 	{field} +registrationCapacity : Integer
+	{field} +registrationClosesAt : OffsetDateTime
 	{field} +registrationNeeds : Boolean
 	{field} +registrationOpensAt : OffsetDateTime
 	{field} +requiredFacilities : List<String>
@@ -1804,7 +1814,14 @@ class EventReassignmentStateException {
 }
 
 
+class EventRegistrationPeriodService {
+	{field} -clock : Clock
+	{method} +update ( organisation : String , organiserId : UUID , eventId : UUID , request : RegistrationPeriodRequest ) : RegistrationInfoDto
+}
+
+
 class EventRegistrationService {
+	{field} -clock : Clock
 	{method} +forOrganiser ( organisation : String , eventId : UUID ) : RegistrationInfoDto
 	{method} +updateCapacity ( organisation : String , eventId : UUID , requested : Object ) : RegistrationInfoDto
 }
@@ -1822,6 +1839,11 @@ class OrganiserVenueNotices {
 	{field} {static} -SINGAPORE : DateTimeFormatter
 	{method} +on ( change : VenueArrangementChanged ) : void
 	{method} +reconfirmed ( event : Event ) : void
+}
+
+
+class RegistrationPeriodException {
+	{field} -status : HttpStatus
 }
 
 
@@ -3572,6 +3594,7 @@ SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
 EventCancellationController --> EventCancellationService : service
 EventController --> EventArrangementsService : arrangements
 EventController --> EventLifecycleService : lifecycle
+EventController --> EventRegistrationPeriodService : registrationPeriodService
 EventController --> EventRegistrationService : registrationService
 EventController --> EventService : service
 EventController --> EventRequestService : eventRequestService
@@ -3632,6 +3655,10 @@ EventReassignmentService --> EventRepository : events
 EventReassignmentService --> EventRequestRepository : eventRequests
 EventReassignmentService --> NotificationService : notifications
 EventReassignmentService --> UserRepository : users
+EventRegistrationPeriodService --> ActivityService : activity
+EventRegistrationPeriodService --> EventRepository : events
+EventRegistrationPeriodService --> EventRegistrationService : registrationInfo
+EventRegistrationPeriodService --> EventRequestRepository : eventRequests
 EventRegistrationService --> EventRegistrationRepository : registrations
 EventRegistrationService --> EventRepository : events
 EventService --> "0..*" EventStatus : ACTIVE_STATUSES
