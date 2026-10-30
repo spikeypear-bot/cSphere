@@ -69,7 +69,9 @@ public class AttendeeRegistrationService {
         if (!Boolean.TRUE.equals(event.getRegistrationNeeds())) refuse("This event does not require registration.");
         if (event.getRegistrationCapacity() == null || event.getRegistrationCapacity() < 1
                 || event.getRegistrationOpensAt() == null || event.getStartDatetime() == null
-                || !event.getStartDatetime().isAfter(event.getRegistrationOpensAt())) {
+                || registrationClosesAt(event) == null
+                || !registrationClosesAt(event).isAfter(event.getRegistrationOpensAt())
+                || registrationClosesAt(event).isAfter(event.getStartDatetime())) {
             throw new AttendeeRegistrationException(422, "Registration settings are incomplete or invalid. Please contact the event organiser.");
         }
         if (attendee.getUsername() == null || attendee.getUsername().isBlank()
@@ -78,7 +80,7 @@ public class AttendeeRegistrationService {
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
-        if (!now.isBefore(event.getStartDatetime())) refuse("Registration is closed.");
+        if (!now.isBefore(registrationClosesAt(event))) refuse("Registration is closed.");
         if (now.isBefore(event.getRegistrationOpensAt())) refuse("Registration has not opened yet.");
         if (registrations.countByEventIdAndStatus(eventId, "confirmed") >= event.getRegistrationCapacity()) {
             refuse("This event is full.");
@@ -101,6 +103,10 @@ public class AttendeeRegistrationService {
     }
 
     private static void refuse(String message) { throw new AttendeeRegistrationException(409, message); }
+
+    private static OffsetDateTime registrationClosesAt(Event event) {
+        return event.getRegistrationClosesAt() == null ? event.getStartDatetime() : event.getRegistrationClosesAt();
+    }
 
     private static AttendeeRegistrationDto dto(AttendeeRegistration registration, Event event) {
         String status = event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.cancelled

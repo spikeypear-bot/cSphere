@@ -58,7 +58,7 @@ public class AttendeeEventDetailsService {
         return events.findByFirstConfirmedAtIsNotNullOrderByStartDatetimeAsc().stream()
                 .map(event -> new AttendeeEventListItemDto(event.getEventId(), event.getEventName(),
                         event.getStartDatetime(), event.getEndDatetime(), attendeeStatus(event),
-                        event.getRegistrationNeeds(), event.getRegistrationOpensAt(), event.getStartDatetime(),
+                        event.getRegistrationNeeds(), event.getRegistrationOpensAt(), registrationClosesAt(event),
                         event.getRegistrationCapacity(), remainingPlaces(event),
                         owned.containsKey(event.getEventId()) ? owned.get(event.getEventId()).getStatus() : null))
                 .toList();
@@ -91,7 +91,7 @@ public class AttendeeEventDetailsService {
         return new AttendeeEventDetailsDto(event.getEventId(), event.getEventName(), event.getDescription(),
                 event.getStartDatetime(), event.getEndDatetime(), view, event.getConfirmedAt(),
                 event.getAccessibilityNeeds() == null ? List.of() : List.copyOf(event.getAccessibilityNeeds()),
-                event.getRegistrationNeeds(), event.getRegistrationOpensAt(), event.getStartDatetime(),
+                event.getRegistrationNeeds(), event.getRegistrationOpensAt(), registrationClosesAt(event),
                 event.getRegistrationCapacity(), remainingPlaces(event),
                 event.getAttendeeInstructions(), myRegistration == null ? null : myRegistration.getRegistrationReference(),
                 myRegistration == null ? null : myRegistration.getRegisteredAt(), attendeeVenues,
@@ -102,6 +102,10 @@ public class AttendeeEventDetailsService {
     private Integer remainingPlaces(Event event) {
         return event.getRegistrationCapacity() == null ? null : Math.max(0,
                 event.getRegistrationCapacity() - (int) registrations.countByEventIdAndStatus(event.getEventId(), "confirmed"));
+    }
+
+    private static java.time.OffsetDateTime registrationClosesAt(Event event) {
+        return event.getRegistrationClosesAt() == null ? event.getStartDatetime() : event.getRegistrationClosesAt();
     }
 
     private String attendeeStatus(Event event) {
