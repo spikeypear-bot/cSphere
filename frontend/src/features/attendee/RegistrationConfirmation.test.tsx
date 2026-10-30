@@ -99,7 +99,11 @@ describe('AT03 registration confirmation', () => {
     vi.stubGlobal('fetch', vi.fn(async (url: string, options: RequestInit) => {
       if (options.method === 'POST') { saved = true; return response({ ...record, status: 'confirmed' }) }
       if (url.includes('/registrations/')) return response(record)
-      return response({ ...event, availablePlaces: saved ? 4 : 5 })
+      return response({ ...event, availablePlaces: saved ? 4 : 5,
+        registrationReference: saved ? record.reference : null,
+        registeredAt: saved ? record.registeredAt : null,
+        registrationId: saved ? record.registrationId : null,
+        registrationStatus: saved ? 'confirmed' : null })
     }))
     render(<MemoryRouter initialEntries={['/attendee/events/event-1']}><Routes>
       <Route path="/attendee/events/:eventId" element={<AttendeeEventDetailsPage />} />

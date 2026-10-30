@@ -4,6 +4,10 @@ AT03 extends AT01's saved registration and AT04's owned history with a complete,
 reopenable confirmation. It uses the existing attendee APIs, notification bell,
 transactional outbox and retry worker. It adds no registration table, delivery
 channel, withdrawal command or event-change notification.
+AT08 now extends the saved registration details page with withdrawal. From an
+inline confirmation, use **View registration confirmation**, then scroll below
+Approved venues to the action. See the [AT08 contract](attendee-withdrawal-api.md)
+and [current implementation review](at08-implementation-review.md).
 The confirmation now uses the shared [two-badge display](attendee-status-badges.md).
 Inline confirmations do not duplicate the badges already shown in event details.
 Registration status text remains separate from the current event lifecycle.
@@ -34,8 +38,9 @@ client-side. Delivery outages still use the outbox retry path. The bell retains
 automatic polling as a fallback (five seconds for attendees, thirty seconds
 for other roles), and also refreshes when the window regains focus or becomes
 visible. This discovers later outbox delivery and registrations made in another
-tab without a manual reload. Stale in-flight responses are ignored when a newer
-refresh has started. AT04 confirmation data
+tab without a manual reload. Stale in-flight responses cannot replace a newer
+applied result or read-state mutation. Valid slow responses remain usable while
+a later poll is pending. AT04 confirmation data
 and approved venue reads refresh on focus and its existing five-second interval.
 
 ## Current information and ownership

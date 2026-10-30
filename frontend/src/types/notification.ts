@@ -34,6 +34,7 @@ export type NotificationTypeName =
   | 'event_cancellation_declined'
   | 'event_cancelled'
   | 'attendee_registration_confirmed'
+  | 'attendee_registration_withdrawn'
   // TS09
   | 'equipment_damage_outcome'
   // EC-NEW3 (D37)

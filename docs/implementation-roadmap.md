@@ -112,14 +112,31 @@ AT01/AT02 were merged through PR #82. The current AT04 implementation reuses
 their registration model and attendee event projection: authenticated read-only
 list/detail endpoints, My Registrations and registration details routes, separate
 registration/event status, retained history, retry and live refresh. Ownership
-is enforced server-side. AT08 withdrawal eligibility is shown without executing
-withdrawal; AT03/AT08/AT09 commands are outside this slice.
+is enforced server-side. The original AT04 slice exposed withdrawal eligibility
+without executing withdrawal. AT03/AT08 now extend that same details page as
+described below; AT09 remains separate.
 
 Implementation verification on 28 October 2026 passed 48 focused backend tests,
 836 frontend tests with two workers, one real browser journey, builds/lint and
 traceability. This records local implementation evidence, not merge/review or
 backlog Done status. See the [API/workflow contract](attendee-registration-status-api.md)
 and [manual testing guide](attendee-registration-status-manual-testing.md).
+
+### AT08 — withdrawal
+
+AT08 adds V56's nullable withdrawal timestamp, shared
+AT04/AT08 eligibility and an authenticated withdrawal POST. Original references
+and history remain intact; the endpoint serializes mutations using the event
+and owned registration locks. Its confirmation dialog updates saved status
+immediately and reconciles uncertain responses. V57 adds a stable personal
+receipt in the same transaction through the outbox, with delivery/retry after
+commit. See [AT08 API contract](attendee-withdrawal-api.md).
+
+The [29 October implementation review](at08-implementation-review.md) found a
+P2 reconciliation race, now fixed with permanent tests by the
+[attendee workflow audit](attendee-workflow-audit.md). That audit also corrects
+event navigation/refresh, registration recovery, slow polling, notification read
+state and the legacy registration route. Backend idempotency remains intact.
 
 ## Build now vs. defer unless required (recap)
 

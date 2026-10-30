@@ -26,6 +26,43 @@ public class EventRegistrationService {
         this.registrations = registrations;
     }
 
+    /** EO11: set the capacity. Owner only; must be a positive whole number not below the confirmed count. */
+    @Transactional
+    public RegistrationInfoDto updateCapacity(String organisation, UUID eventId, Object requested) {
+        Event event = events.findForUpdate(eventId)
+                .filter(e -> organisation != null && organisation.equals(e.getOrganisation()))
+                .orElseThrow(() -> new EventNotFoundException(eventId));
+        if (!Boolean.TRUE.equals(event.getRegistrationNeeds())) {
+            throw new EventLifecycleException("Registration is not required for this event, so capacity cannot be set.");
+        }
+        long capacity = parseCapacity(requested);
+        if (event.getStatus() == EventStatus.cancelled) {
+            throw new EventLifecycleException("This event is cancelled, so its capacity cannot be changed.");
+        }
+        long confirmed = registrations.findByEventIdOrderByRegisteredAtAsc(eventId).stream()
+        .filter(r -> "confirmed".equals(r.getStatus())).count();
+        
+        if (capacity < confirmed) {
+            throw new EventLifecycleValidationException("Capacity cannot be lower than the " + confirmed
+                    + " active confirmed registration(s).");
+        }
+        event.setRegistrationCapacity((int) capacity);
+        events.save(event);
+        return forOrganiser(organisation, eventId);
+    }
+
+    private static long parseCapacity(Object v) {
+        String msg = "Capacity must be a positive whole number.";
+        if (!(v instanceof Integer || v instanceof Long)) {
+            throw new EventLifecycleValidationException(msg);
+        }
+        long n = ((Number) v).longValue();
+        if (n <= 0 || n > Integer.MAX_VALUE) {
+            throw new EventLifecycleValidationException(msg);
+        }
+        return n;
+    }
+
     /** Other organisations' events are reported as not found (same rule as EO04). */
     @Transactional(readOnly = true)
     public RegistrationInfoDto forOrganiser(String organisation, UUID eventId) {

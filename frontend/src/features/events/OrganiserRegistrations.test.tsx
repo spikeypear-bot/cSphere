@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '../../lib/apiClient'
 import { OrganiserRegistrations } from './OrganiserRegistrations'
 
-vi.mock('../../lib/apiClient', () => ({ apiClient: { get: vi.fn() } }))
+vi.mock('../../lib/apiClient', () => ({ apiClient: { get: vi.fn(), put: vi.fn() }, ApiClientError: class extends Error {} }))
 
 const base = {
   eventId: 'e1', eventName: 'Fair', registrationRequired: true, registrationState: 'open', capacity: 5,
@@ -44,5 +44,38 @@ describe('OrganiserRegistrations (EO10)', () => {
     expect(await screen.findByRole('alert')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Try again' }))
     await waitFor(() => expect(screen.getByText('Ann')).toBeInTheDocument())
+  })
+
+  it('EO11: rejects invalid capacity without calling the API', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(base)
+    render(<OrganiserRegistrations eventId="e1" />)
+    const input = await screen.findByLabelText('Registration capacity')
+    for (const bad of ['0', '-2', '2.5', 'abc', '']) {
+      await userEvent.clear(input)
+      if (bad) await userEvent.type(input, bad)
+      await userEvent.click(screen.getByRole('button', { name: 'Save capacity' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent('positive whole number')
+    }
+    expect(apiClient.put).not.toHaveBeenCalled()
+  })
+
+  it('EO11: saves and shows the updated capacity', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(base)
+    vi.mocked(apiClient.put).mockResolvedValue({ ...base, capacity: 9, placesRemaining: 8 })
+    render(<OrganiserRegistrations eventId="e1" />)
+    await userEvent.type(await screen.findByLabelText('Registration capacity'), '9')
+    await userEvent.click(screen.getByRole('button', { name: 'Save capacity' }))
+    expect(apiClient.put).toHaveBeenCalledWith('/events/e1/registration-capacity', { capacity: 9 })
+    expect(await screen.findByText('Capacity saved: 9 places.')).toBeInTheDocument()
+  })
+
+  it('EO11: shows an error and keeps the old capacity when saving fails', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(base)
+    vi.mocked(apiClient.put).mockRejectedValue(new Error('boom'))
+    render(<OrganiserRegistrations eventId="e1" />)
+    await userEvent.type(await screen.findByLabelText('Registration capacity'), '9')
+    await userEvent.click(screen.getByRole('button', { name: 'Save capacity' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('existing capacity is unchanged')
+    expect(screen.getByText('Places remaining').previousSibling).toHaveTextContent('4')
   })
 })

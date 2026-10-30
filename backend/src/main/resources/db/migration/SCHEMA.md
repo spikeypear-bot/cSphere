@@ -636,6 +636,22 @@ V41 adds `attendee_registration_confirmed` while retaining V38's full notificati
 shape constraint, including `equipment_damage_outcome`; both require event and
 message. Venues gain a public display name, initialised from their saved address.
 
+## V56 update — withdrawal timestamp (AT08)
+
+`event_registrations.withdrawn_at` is nullable `timestamptz`. New AT08 withdrawals
+persist it with the confirmed-to-withdrawn transition; existing withdrawn rows
+remain null when the original withdrawal time is unknown. Registration ID,
+reference and registered timestamp remain intact. Capacity continues to count
+only confirmed rows. See [AT08 API](../../../../../../docs/attendee-withdrawal-api.md).
+
+## V57 update — withdrawal receipt (AT08)
+
+`attendee_registration_withdrawn` extends `notification_type` and the live
+notification shape constraint, preserving existing types. A receipt requires
+`event_id`, `registration_id` and `message`. Withdrawal and the stable-ID outbox
+intent commit together; delivery/retries happen after commit. The existing V55
+registration link is reused. See [AT08 workflow](../../../../../../docs/attendee-withdrawal-api.md).
+
 ## V37 update — serial number length (TS09)
 
 `serialised_equipments.serial_number`, `equipment_logs.serial_number` and

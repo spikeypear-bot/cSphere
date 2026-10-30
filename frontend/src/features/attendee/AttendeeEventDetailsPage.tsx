@@ -10,7 +10,7 @@ import { requestNotificationRefresh } from '../notifications/notificationRefresh
 import { AttendeeStatusBadges } from './AttendeeStatusBadges'
 import { registrationBadge, type AttendeeStatusInput } from './attendeeStatus'
 import { registrationDateTime as dateTime } from './registrationView'
-import { useLiveRefresh } from '../../lib/useLiveRefresh'
+import { useAttendeeResource } from './useAttendeeResource'
 import './AttendeePages.css'
 
 interface AttendeeEventDetails extends Omit<AttendeeStatusInput, 'eventStatus'> {
@@ -44,11 +44,11 @@ const mapLink = (address: string) => `https://www.google.com/maps/search/?api=1&
 
 export function AttendeeEventDetailsPage() {
   const { eventId = '' } = useParams()
-  const [event, setEvent] = useState<AttendeeEventDetails | null>(null)
-  const [unavailable, setUnavailable] = useState(false)
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
-  const [registration, setRegistration] = useState<{ reference: string; registeredAt: string; registrationId?: string } | null>(null)
+  return <AttendeeEventDetails key={eventId} eventId={eventId} />
+}
+
+function AttendeeEventDetails({ eventId }: { eventId: string }) {
+  const { data: event, error, retry, replace, refresh } = useAttendeeResource<AttendeeEventDetails>(`/attendee/events/${encodeURIComponent(eventId)}`)
   const [registering, setRegistering] = useState(false)
   const [registrationError, setRegistrationError] = useState('')
   const [registrationFull, setRegistrationFull] = useState(false)
@@ -118,9 +118,9 @@ export function AttendeeEventDetailsPage() {
   if (failed && !event) return <main className="page attendee-event-details">
     <PageHeader eyebrow="Attendee" title="Event details" />
     <Notice tone="danger">Event details could not be loaded. Check your connection and try again.</Notice>
-    <Button variant="secondary" onClick={() => { setFailed(false); setUnavailable(false); setAttempt(value => value + 1) }}>Try again</Button>
+    <Button variant="secondary" onClick={retry}>Try again</Button>
   </main>
-  if (unavailable) return <main className="page attendee-event-details">
+  if (error?.status === 404) return <main className="page attendee-event-details">
     <PageHeader eyebrow="Attendee" title="Event unavailable" />
     <Notice tone="info">This event is unavailable or does not have attendee-facing details.</Notice>
     <Link to="/attendee">Back to attendee home</Link>
