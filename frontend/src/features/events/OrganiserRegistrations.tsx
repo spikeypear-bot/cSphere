@@ -1,7 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
-import { apiClient } from '../../lib/apiClient'
+import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './OrganiserRegistrations.css'
 import type { EventStatus, RegistrationInfoDto, RegistrationState, RegistrationStatus } from '../../types/event'
@@ -27,18 +27,60 @@ interface OrganiserRegistrationsProps {
   eventStatus?: EventStatus
 }
 
-/** EO10/EO12: the organiser's registration information and period editor. */
+/** EO10/EO11/EO12: organiser registration information, capacity management and registration period editor. */
 export function OrganiserRegistrations({
   eventId, eventStartDatetime, eventEndDatetime, eventStatus,
 }: OrganiserRegistrationsProps) {
   const [data, setData] = useState<RegistrationInfoDto | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+
+  // EO11: Registration capacity
+  const [capacityInput, setCapacityInput] = useState('')
+  const [capacityError, setCapacityError] = useState<string | null>(null)
+  const [capacitySaved, setCapacitySaved] = useState(false)
+
+  // EO12: Registration period
   const [periodDraft, setPeriodDraft] = useState<{ opensAt: string; closesAt: string } | null>(null)
-  const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState('')
   const [saveSuccess, setSaveSuccess] = useState('')
   const [now, setNow] = useState<number | null>(null)
+
+  const [saving, setSaving] = useState(false)
+
+  async function saveCapacity(e: FormEvent) {
+    e.preventDefault()
+    setCapacitySaved(false)
+
+    const text = capacityInput.trim()
+
+    if (!/^\d+$/.test(text) || Number(text) < 1 || !Number.isSafeInteger(Number(text))) {
+      setCapacityError('Capacity must be a positive whole number.')
+      return
+    }
+
+    setSaving(true)
+    setCapacityError(null)
+
+    try {
+      const updated = await apiClient.put<RegistrationInfoDto>(
+        `/events/${eventId}/registration-capacity`,
+        { capacity: Number(text) },
+      )
+
+      setData(updated)
+      setCapacityInput('')
+      setCapacitySaved(true)
+    } catch (err) {
+      setCapacityError(
+        err instanceof ApiClientError && err.message
+          ? err.message
+          : 'We could not save the capacity. The existing capacity is unchanged.',
+      )
+    } finally {
+      setSaving(false)
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -77,37 +119,64 @@ export function OrganiserRegistrations({
   }
   if (!data) return null
 
-  const savedRegistration = data
+  //const savedRegistration = data
   const pct = data.capacity ? Math.min(100, Math.round((data.confirmedCount / data.capacity) * 100)) : 0
   const opensAtInput = periodDraft?.opensAt ?? toSingaporeInput(data.opensAt)
   const closesAtInput = periodDraft?.closesAt ?? toSingaporeInput(data.closesAt)
-  const hasEventDetails = eventStartDatetime !== undefined && eventEndDatetime !== undefined && eventStatus !== undefined
-  const eventEnded = now !== null && eventEndDatetime !== undefined && Date.parse(eventEndDatetime) <= now
-  const eventUnavailable = eventStatus === 'cancelled' || eventStatus === 'completed' || eventEnded
-  const canEditPeriod = now !== null && hasEventDetails && !eventUnavailable && data.registrationRequired
-  const openingLocked = data.opensAt !== null && (data.registrationState !== 'not_yet_open'
-    || (now !== null && Date.parse(data.opensAt) <= now))
+
+  const hasEventDetails =
+    eventStartDatetime !== undefined &&
+    eventEndDatetime !== undefined &&
+    eventStatus !== undefined
+
+  const eventEnded =
+    now !== null &&
+    eventEndDatetime !== undefined &&
+    Date.parse(eventEndDatetime) <= now
+
+  const eventUnavailable =
+    eventStatus === 'cancelled' ||
+    eventStatus === 'completed' ||
+    eventEnded
+
+  const canEditPeriod =
+    now !== null &&
+    hasEventDetails &&
+    !eventUnavailable &&
+    data.registrationRequired
+
+  const openingLocked =
+    data.opensAt !== null &&
+    (data.registrationState !== 'not_yet_open' ||
+      (now !== null && Date.parse(data.opensAt) <= now))
 
   async function savePeriod(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setSaveError('')
     setSaveSuccess('')
-    // The picker has minute precision; keep the stored instant (with seconds) when the field is untouched.
-    const opening = savedRegistration.opensAt !== null && opensAtInput === toSingaporeInput(savedRegistration.opensAt)
-      ? savedRegistration.opensAt
+    const opening = data.opensAt !== null &&
+      opensAtInput === toSingaporeInput(data.opensAt)
+      ? data.opensAt
       : toSingaporeOffsetDateTime(opensAtInput)
+
     const closing = toSingaporeOffsetDateTime(closesAtInput)
+
+
     const submittedAt = Date.now()
+
     if (!opening || !closing) {
       setSaveError('Enter both a valid registration opening and closing date and time in Singapore time.')
       return
     }
-    if (savedRegistration.opensAt !== null) {
-      const openingHasPassed = Date.parse(savedRegistration.opensAt) <= submittedAt
-      if (openingHasPassed && Date.parse(opening) !== Date.parse(savedRegistration.opensAt)) {
+
+    if (data.opensAt !== null) {
+      const openingHasPassed = Date.parse(data.opensAt) <= submittedAt
+
+      if (openingHasPassed && Date.parse(opening) !== Date.parse(data.opensAt)) {
         setSaveError('Registration has already opened; only the closing date and time can be changed.')
         return
       }
+
       if (!openingHasPassed && Date.parse(opening) < submittedAt) {
         setSaveError('The registration opening date and time cannot be in the past.')
         return
@@ -116,34 +185,51 @@ export function OrganiserRegistrations({
       setSaveError('The registration opening date and time cannot be in the past.')
       return
     }
+
     if (Date.parse(closing) <= Date.parse(opening)) {
       setSaveError('The registration closing date and time must be after the opening date and time.')
       return
     }
+
     if (!eventStartDatetime || Date.parse(closing) > Date.parse(eventStartDatetime)) {
       setSaveError('Registration must close no later than the event start date and time.')
       return
     }
 
+
     setSaving(true)
+
     try {
-      const updated = await apiClient.put<RegistrationInfoDto>(`/events/${eventId}/registration-period`, {
-        opensAt: opening,
-        closesAt: closing,
-      })
+      const updated = await apiClient.put<RegistrationInfoDto>(
+        `/events/${eventId}/registration-period`,
+        {
+          opensAt: opening,
+          closesAt: closing,
+        },
+      )
+
       if (!updated || typeof updated.registrationState !== 'string') {
         throw new Error('The saved registration period could not be confirmed. Please reload and try again.')
       }
+
       setData(updated)
       setPeriodDraft(null)
       setSaveSuccess(`Registration period saved. Status: ${STATE_LABELS[updated.registrationState]}.`)
+
     } catch (error) {
-      setSaveError(error instanceof Error ? error.message : 'Could not save the registration period. Nothing was changed.')
+      setSaveError(
+        error instanceof Error
+          ? error.message
+          : 'Could not save the registration period. Nothing was changed.',
+      )
     } finally {
       setSaving(false)
     }
+    // Keep the existing registration period validation here.
+    // Retain your complete original savePeriod implementation.
   }
 
+  const barState = pct >= 100 ? 'full' : pct >= 90 ? 'near' : 'ok'
   return (
     <Card className="registrations" role="region" aria-labelledby="registrations-heading">
       <div className="registrations__head">
@@ -165,10 +251,40 @@ export function OrganiserRegistrations({
             <div><strong>{data.placesRemaining ?? '∞'}</strong><span>Places remaining</span></div>
           </div>
           {data.capacity ? (
-            <div className="registrations__bar" role="img" aria-label={`${pct}% of places taken`}>
+            <div
+              className={`registrations__bar registrations__bar--${barState}`}
+              role="img"
+              aria-label={`${pct}% of places taken`}
+            >
               <div style={{ width: `${pct}%` }} />
             </div>
           ) : null}
+          <form className="registrations__capacity" onSubmit={saveCapacity} noValidate>
+            <label htmlFor="registration-capacity">Registration capacity</label>
+            <div className="registrations__control">
+              <input
+                id="registration-capacity"
+                inputMode="numeric"
+                autoComplete="off"
+                placeholder={data.capacity ? `Currently ${data.capacity}` : 'e.g. 50'}
+                value={capacityInput}
+                onChange={(ev) => { setCapacityInput(ev.target.value); setCapacitySaved(false) }}
+                aria-invalid={capacityError ? true : undefined}
+                aria-describedby="registration-capacity-hint registration-capacity-msg"
+              />
+              <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save capacity'}</Button>
+            </div>
+            <p id="registration-capacity-hint" className="registrations__hint">
+              Whole number, at least {Math.max(1, data.confirmedCount)} (the current confirmed count).
+            </p>
+            <p
+              id="registration-capacity-msg"
+              className={`registrations__msg ${capacityError ? 'registrations__msg--error' : 'registrations__msg--success'}`}
+              role={capacityError ? 'alert' : 'status'}
+            >
+              {capacityError ?? (capacitySaved ? `Capacity saved: ${data.capacity ?? ''} places.` : '')}
+            </p>
+          </form>
           <p className="field-hint">
             Opens: {data.opensAt ? formatEventDateTime(data.opensAt) : 'Not set'} · Closes:{' '}
             {data.closesAt ? formatEventDateTime(data.closesAt) : 'Not set'} (Singapore time). Only confirmed
@@ -275,7 +391,7 @@ function toSingaporeOffsetDateTime(value: string): string | null {
   instant.setUTCHours(hour - 8, minute, 0, 0)
   const singapore = new Date(instant.getTime() + 8 * 60 * 60 * 1000)
   if (singapore.getUTCFullYear() !== year || singapore.getUTCMonth() !== month - 1
-      || singapore.getUTCDate() !== day || singapore.getUTCHours() !== hour
-      || singapore.getUTCMinutes() !== minute) return null
+    || singapore.getUTCDate() !== day || singapore.getUTCHours() !== hour
+    || singapore.getUTCMinutes() !== minute) return null
   return `${value}:00+08:00`
 }
