@@ -190,7 +190,7 @@ export function ChangeRequestFormPage() {
             <DateTimeField id="cr-registrationOpensAt" label="Registration opens"
               value={details.registrationOpensAt ?? null} error={errorFor('registrationOpensAt')}
               onChange={(value) => set({ registrationOpensAt: value })} />
-            <p className="field-hint">Registration closes when the event starts.</p>
+            <p className="field-hint">Registration initially closes when the event starts. The organiser can adjust the period on the event page.</p>
             <TextField id="cr-attendeeInstructions" label="Attendee instructions" multiline
               value={details.attendeeInstructions ?? ''} onChange={(value) => set({ attendeeInstructions: value || null })} />
           </>}

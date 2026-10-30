@@ -157,7 +157,8 @@ export function EventDetailsPage() {
         <EventReadinessPanel key={`readiness-${bookingReloadToken}`} eventId={event.eventId} onChanged={() => setReloadToken((n) => n + 1)} />
       ) : null}
       {role === 'organiser' ? <OrganiserArrangements key={`arrangements-${reloadToken}`} eventId={event.eventId} /> : null}
-      {role === 'organiser' ? <OrganiserRegistrations key={`registrations-${reloadToken}`} eventId={event.eventId} /> : null}
+      {role === 'organiser' ? <OrganiserRegistrations key={`registrations-${reloadToken}`} eventId={event.eventId}
+        eventStartDatetime={event.startDatetime} eventEndDatetime={event.endDatetime} eventStatus={event.status} /> : null}
       {/* EO07: the organiser asks for cancellation; the assigned coordinator decides. */}
       <EventCancellationPanel event={event} role={role} onChanged={() => setReloadToken((n) => n + 1)} />
 

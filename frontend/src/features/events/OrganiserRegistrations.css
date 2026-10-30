@@ -90,6 +90,27 @@
   transition: width 0.3s ease;
 }
 
+.registrations__period {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+.registrations__period h3,
+.registrations__period p {
+  margin: 0;
+}
+.registrations__period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.registrations__period input {
+  width: 100%;
+}
+
 /* Attendee table */
 .registrations__scroll {
   overflow-x: auto;
@@ -139,6 +160,9 @@
 /* Small screens: stack the stat tiles */
 @media (max-width: 600px) {
   .registrations__stats {
+    grid-template-columns: 1fr;
+  }
+  .registrations__period-fields {
     grid-template-columns: 1fr;
   }
 }
