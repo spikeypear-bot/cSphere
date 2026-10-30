@@ -18,9 +18,11 @@ import com.example.connect_sphere.event.dto.EventDto;
 import com.example.connect_sphere.event.dto.EventReadinessDto;
 import com.example.connect_sphere.event.dto.OrganiserArrangementsDto;
 import com.example.connect_sphere.event.dto.RegistrationInfoDto;
+import com.example.connect_sphere.event.dto.RegistrationPeriodRequest;
 import com.example.connect_sphere.event.service.EventArrangementsService;
 import com.example.connect_sphere.event.service.EventLifecycleService;
 import com.example.connect_sphere.event.service.EventRegistrationService;
+import com.example.connect_sphere.event.service.EventRegistrationPeriodService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 import com.example.connect_sphere.user.entity.UserRole;
@@ -39,11 +41,13 @@ public class EventController {
     private final EventLifecycleService lifecycle;
     private final EventArrangementsService arrangements;
     private final EventRegistrationService registrationService;
+    private final EventRegistrationPeriodService registrationPeriodService;
 
     public EventController(EventService service, EventRequestService eventRequestService,
             EventLifecycleService lifecycle, EventArrangementsService arrangements,
-            EventRegistrationService registrationService) {
+            EventRegistrationService registrationService, EventRegistrationPeriodService registrationPeriodService) {
         this.registrationService = registrationService;
+        this.registrationPeriodService = registrationPeriodService;
         this.service = service;
         this.eventRequestService = eventRequestService;
         this.lifecycle = lifecycle;
@@ -132,12 +136,20 @@ public class EventController {
         return registrationService.forOrganiser(organisationOf(jwt), id);
     }
 
+    /** EO12: update the registration period for the owning organisation's event. */
+    @PutMapping("/{id}/registration-period")
+    public RegistrationInfoDto updateRegistrationPeriod(@AuthenticationPrincipal Jwt jwt,
+            @PathVariable("id") UUID id, @RequestBody RegistrationPeriodRequest request) {
+        return registrationPeriodService.update(organisationOf(jwt), userIdOf(jwt), id, request);
+    }
+
     /** EO11: set the registration capacity. Body: {"capacity": 100}. Owning organiser only. */
     @PutMapping("/{id}/registration-capacity")
     public RegistrationInfoDto updateCapacity(@AuthenticationPrincipal Jwt jwt, @PathVariable("id") UUID id,
             @RequestBody(required = false) java.util.Map<String, Object> body) {
         return registrationService.updateCapacity(organisationOf(jwt), id, body == null ? null : body.get("capacity"));
     }
+    
 
     /** EC08: confirm once the Safety Officer has approved (SO-C4). Assigned coordinator only. */
     @PostMapping("/{id}/confirm")

@@ -14,6 +14,7 @@ import com.example.connect_sphere.event.service.EventCancellationStateException;
 import com.example.connect_sphere.event.service.EventLifecycleException;
 import com.example.connect_sphere.event.service.EventLifecycleValidationException;
 import com.example.connect_sphere.event.service.EventNotFoundException;
+import com.example.connect_sphere.event.service.RegistrationPeriodException;
 import com.example.connect_sphere.attendee.AttendeeRegistrationException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
@@ -51,6 +52,11 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler(AttendeeRegistrationException.class)
     public ResponseEntity<ApiError> handleAttendeeRegistration(AttendeeRegistrationException ex) {
+        return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler(RegistrationPeriodException.class)
+    public ResponseEntity<ApiError> handleRegistrationPeriod(RegistrationPeriodException ex) {
         return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getMessage()));
     }
 

@@ -166,6 +166,27 @@
   color: #4ade80;
 }
 
+.registrations__period {
+  display: grid;
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 0.75rem;
+}
+.registrations__period h3,
+.registrations__period p {
+  margin: 0;
+}
+.registrations__period-fields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+.registrations__period input {
+  width: 100%;
+}
+
 /* Attendee table */
 .registrations__scroll {
   overflow-x: auto;
@@ -211,17 +232,13 @@
 .registrations__table tbody tr:hover {
   background: rgba(255, 255, 255, 0.03);
 }
-
-/* Small screens: stack the stat tiles */
+/* Small screens: stack the stat tiles and period fields */
 @media (max-width: 600px) {
   .registrations__stats {
     grid-template-columns: 1fr;
   }
-}
 
-@media (prefers-reduced-motion: reduce) {
-  .registrations__bar div,
-  .registrations__control input {
-    transition: none;
+  .registrations__period-fields {
+    grid-template-columns: 1fr;
   }
 }

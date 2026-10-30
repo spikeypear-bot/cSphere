@@ -21,8 +21,11 @@ write contract, confirmation dialog and transactional receipt are described in t
    initial request still going through EC planning is not yet attendee-facing.
 2. Register from the event details page using the existing AT01 action. New
    registration requires a confirmed event, spare capacity, and an open period;
-   registration closes at event start. The legacy `/attendee/register` route
-   now redirects to `/attendee/browse`, where the attendee selects an event.
+   registration closes at event start. The owning organiser sets the open and
+   close times, with the close no later than event start. Registration is
+   accepted from opening (inclusive) until closing (exclusive). The legacy
+   `/attendee/register` route now redirects to `/attendee/browse`, where the
+   attendee selects an event.
 3. Open **My Registrations** from attendee navigation, the home page, or event
    details. The list shows event name, reference, event start/end, registration
    time, registration status and event status, including historical records.
@@ -59,6 +62,13 @@ both registration ID and attendee ID; missing and other-owned records return the
 same 404. Legacy rows without an attendee ID are not attributed by name or email.
 Unauthenticated requests return 401; authenticated non-attendee roles return 403.
 Passing another attendee's ID as a query parameter does not select their history.
+
+EO12 period changes use `PUT /api/events/{eventId}/registration-period` with
+`opensAt` and `closesAt` ISO-8601 offset date-times. The organiser picker
+captures and displays Singapore time (`+08:00`). Only an EO in the event's
+owning organisation may update the period; invalid periods return 422 and
+disallowed event states return 409. Successful changes are recorded in the
+event timeline with the organiser and timestamp and do not notify attendees.
 
 The response contains `registrationId`, `reference`, `registeredAt`, `withdrawnAt`,
 `registrationStatus`, `eventId`, `eventName`, `startDatetime`, `endDatetime`,

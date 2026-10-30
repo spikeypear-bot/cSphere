@@ -1,11 +1,13 @@
 package com.example.connect_sphere.event.service;
 
 import java.time.OffsetDateTime;
+import java.time.Clock;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.connect_sphere.event.dto.RegistrationInfoDto;
 import com.example.connect_sphere.event.entity.Event;
@@ -20,10 +22,17 @@ public class EventRegistrationService {
 
     private final EventRepository events;
     private final EventRegistrationRepository registrations;
+    private final Clock clock;
 
+    @Autowired
     public EventRegistrationService(EventRepository events, EventRegistrationRepository registrations) {
+        this(events, registrations, Clock.systemUTC());
+    }
+
+    EventRegistrationService(EventRepository events, EventRegistrationRepository registrations, Clock clock) {
         this.events = events;
         this.registrations = registrations;
+        this.clock = clock;
     }
 
     /** EO11: set the capacity. Owner only; must be a positive whole number not below the confirmed count. */
@@ -84,12 +93,15 @@ public class EventRegistrationService {
         Integer capacity = event.getRegistrationCapacity();
         Integer remaining = capacity == null ? null : Math.max(0, capacity - confirmed);
 
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         OffsetDateTime opens = event.getRegistrationOpensAt();
-        // Registration closes when the event starts.
-        OffsetDateTime closes = event.getStartDatetime();
+        // Preserve the EO10 event-start cutoff for legacy rows without a saved close time.
+        OffsetDateTime closes = event.getRegistrationClosesAt() == null
+                ? event.getStartDatetime() : event.getRegistrationClosesAt();
         String state;
-        if (opens != null && now.isBefore(opens)) {
+        if (event.getStatus() == EventStatus.cancelled || event.getStatus() == EventStatus.completed) {
+            state = "closed";
+        } else if (opens != null && now.isBefore(opens)) {
             state = "not_yet_open";
         } else if (closes != null && !now.isBefore(closes)) {
             state = "closed";

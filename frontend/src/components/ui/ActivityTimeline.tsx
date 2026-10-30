@@ -68,6 +68,7 @@ const TITLES: Record<ActivityTypeName, string> = {
   safety_rejected: 'rejected the safety arrangement',
   returned_to_planning: 'returned the event to Planning',
   event_confirmed: 'confirmed the event',
+  registration_period_updated: 'updated the registration period',
   event_completed: 'recorded that the event took place',
   event_reassignment_requested: 'requested event reassignment',
   event_reassignment_approved: 'approved event reassignment',
@@ -165,6 +166,13 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
         const questions = entry.fieldQuestions ? Object.entries(entry.fieldQuestions) : []
         const changes = entry.type === 'clarification_responded'
           ? changedFields(askedValues(entries, index), entry.fieldValues) : []
+        const registrationPeriod = entry.type === 'registration_period_updated' && entry.fieldValues
+          ? [
+            ['Registration opens', entry.fieldValues.registrationOpensAt],
+            ['Registration closes', entry.fieldValues.registrationClosesAt],
+          ].filter((field): field is [string, string] => typeof field[1] === 'string'
+            && Number.isFinite(Date.parse(field[1])))
+          : []
         return (
         <li key={entry.activityId ?? `${entry.type}-${entry.occurredAt}`} className="activity-timeline__entry"
           data-type={entry.type} data-significance={entry.significance ?? 'normal'}
@@ -202,6 +210,16 @@ export function ActivityTimeline({ entries, emptyText = 'Nothing has happened ye
               CONVERSATIONAL.includes(entry.type)
                 ? <blockquote className="activity-timeline__message">{entry.message}</blockquote>
                 : <p className="activity-timeline__note">{entry.message}</p>
+            ) : null}
+            {registrationPeriod.length > 0 ? (
+              <dl className="activity-timeline__questions" aria-label="Updated registration period">
+                {registrationPeriod.map(([label, value]) => (
+                  <div key={label}>
+                    <dt>{label}</dt>
+                    <dd>{exactTime(value)} (Singapore time)</dd>
+                  </div>
+                ))}
+              </dl>
             ) : null}
             {changes.length > 0 ? (
               <ul className="activity-timeline__changes" aria-label="What changed">

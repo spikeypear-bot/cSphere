@@ -36,6 +36,7 @@ export type ActivityTypeName =
   | 'safety_rejected'
   | 'returned_to_planning'
   | 'event_confirmed'
+  | 'registration_period_updated'
   | 'event_completed'
   | 'event_reassignment_requested'
   | 'event_reassignment_approved'

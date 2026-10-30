@@ -58,7 +58,7 @@ function AttendeeEventDetails({ eventId }: { eventId: string }) {
   const [registrationError, setRegistrationError] = useState('')
   const [justRegistered, setJustRegistered] = useState(false)
   const confirmationRef = useRef<HTMLDivElement>(null)
-  
+
 
   // After a successful registration, bring the confirmation into view and announce it.
   useEffect(() => {

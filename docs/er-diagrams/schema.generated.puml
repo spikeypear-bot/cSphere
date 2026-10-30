@@ -246,6 +246,7 @@ entity events {
 	registration_capacity : integer
 	registration_opens_at : timestamp with time zone
 	attendee_instructions : text
+	registration_closes_at : timestamp with time zone
 }
 
 entity notification_outbox {

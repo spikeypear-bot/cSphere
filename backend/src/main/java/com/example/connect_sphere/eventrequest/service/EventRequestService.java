@@ -389,6 +389,7 @@ public class EventRequestService {
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
         event.setRegistrationCapacity(entity.getRegistrationCapacity());
         event.setRegistrationOpensAt(entity.getRegistrationOpensAt());
+        event.setRegistrationClosesAt(entity.getStartDatetime());
         event.setAttendeeInstructions(entity.getAttendeeInstructions());
         event.setOrganisation(entity.getOrganisation());
         event.setCoordinatorId(actingCoordinatorId);
@@ -876,6 +877,10 @@ public class EventRequestService {
             event.setRegistrationNeeds(request.getRegistrationNeeds());
             event.setRegistrationCapacity(request.getRegistrationCapacity());
             event.setRegistrationOpensAt(request.getRegistrationOpensAt());
+            if (event.getRegistrationClosesAt() == null
+                    || event.getRegistrationClosesAt().isAfter(request.getStartDatetime())) {
+                event.setRegistrationClosesAt(request.getStartDatetime());
+            }
             event.setAttendeeInstructions(request.getAttendeeInstructions());
             eventRepository.save(event);
         }

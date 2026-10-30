@@ -107,6 +107,8 @@ public enum ActivityType {
     returned_to_planning(Set.of(UserRole.eo, UserRole.ec), true),
     /** EC08: the coordinator confirmed the event. */
     event_confirmed(Set.of(UserRole.eo, UserRole.ec, UserRole.vs)),
+    /** EO12: the organiser changed the event's registration period. */
+    registration_period_updated(Set.of(UserRole.eo, UserRole.ec)),
     /** EO07: the organiser cancelled their request before it was approved,
      * with the reason. Major: whoever was reviewing it stops. */
     request_cancelled(Set.of(UserRole.eo, UserRole.ec), true),

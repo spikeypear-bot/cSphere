@@ -21,12 +21,13 @@ import org.springframework.jdbc.datasource.SingleConnectionDataSource;
 @Tag("AT01")
 @Tag("AT02")
 @Tag("EO10")
+@Tag("EO12")
 @Tag("TS09")
 class AttendeeRegistrationMigrationTest {
     @Autowired DataSource dataSource;
 
     @Test
-    @DisplayName("AT01 AT02 EO10 TS09 (cross-cutting): upgrading populated V40 preserves registrations and notification constraints")
+    @DisplayName("EO12 (cross-cutting): migration restores the event closing time and preserves registration history")
     void upgradesPopulatedV40() throws Exception {
         String schema = "pr82_" + UUID.randomUUID().toString().replace("-", "");
         JdbcTemplate admin = new JdbcTemplate(dataSource);
@@ -63,7 +64,9 @@ class AttendeeRegistrationMigrationTest {
                     assertThat(db.queryForObject("SELECT count(*) FROM event_registrations WHERE attendee_id IS NULL AND attendee_email IS NULL", Integer.class)).isEqualTo(3);
                     assertThat(db.queryForObject("SELECT venue_name FROM venues WHERE venue_id = ?", String.class, venue)).isEqualTo("Legacy address");
                     assertThat(db.queryForObject("SELECT registration_capacity FROM events WHERE event_id = ?", Integer.class, event)).isEqualTo(10);
-                    assertThat(db.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name IN ('events', 'event_requests') AND column_name = 'registration_closes_at'", Integer.class, schema)).isZero();
+                    assertThat(db.queryForObject("SELECT count(*) FROM information_schema.columns WHERE table_schema = ? AND table_name = 'events' AND column_name = 'registration_closes_at'", Integer.class, schema)).isEqualTo(1);
+                    assertThat(db.queryForObject("SELECT registration_closes_at FROM events WHERE event_id = ?", java.time.OffsetDateTime.class, event))
+                            .isEqualTo(db.queryForObject("SELECT start_datetime FROM events WHERE event_id = ?", java.time.OffsetDateTime.class, event));
                     assertThat(db.queryForObject("SELECT count(*) FROM notifications", Integer.class)).isEqualTo(1);
 
                     for (String type : new String[] {"equipment_damage_outcome", "attendee_registration_confirmed"}) {
