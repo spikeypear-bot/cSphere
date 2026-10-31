@@ -228,7 +228,10 @@ export async function awaitingSafetyReviewByApi(request: APIRequestContext, even
 /** A date (YYYY-MM-DD) in 2028–2029 that differs from run to run, for test
  * data that shares finite stock such as seeded equipment, so reruns never
  * compete with the reservations an earlier run left behind. */
+const firstDay = Date.now() % 700
+let daysGiven = 0
 export function uniqueDay(): string {
-  const day = new Date(Date.UTC(2028, 0, 1) + (Date.now() % 700) * 86_400_000)
+  // Counting on from one start keeps the days in a run distinct; a fresh Date.now() per call could repeat one.
+  const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + daysGiven++) % 700) * 86_400_000)
   return day.toISOString().slice(0, 10)
 }
