@@ -395,7 +395,9 @@ class VenueUnavailabilityTest {
                                         org.hamcrest.Matchers.containsString("Affected booking at " + venueAddress),
                                         org.hamcrest.Matchers.containsString("2027-04-01"),
                                         org.hamcrest.Matchers.containsString("10:00"),
-                                        org.hamcrest.Matchers.containsString("12:00")))));
+                                        org.hamcrest.Matchers.containsString("12:00"),
+                                        // EC-C4 AC3: the window is labelled as Singapore time.
+                                        org.hamcrest.Matchers.containsString("Singapore time")))));
     }
     @Test void stalePreviewRequiresAnotherConfirmation() {
         UUID v = venue(); booking(v,"approved"); Request r=period("10:00","11:00");
