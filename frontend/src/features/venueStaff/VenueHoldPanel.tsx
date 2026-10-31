@@ -22,6 +22,7 @@ interface HoldPanelProps {
   onCreated?: () => void
   onConflicts?: (bookings: VenueBookingConflict[], periods: VenueUnavailabilityConflict[]) => void
 }
+type HoldAction = { kind: 'create' } | { kind: 'release' | 'convert'; hold: VenueHold }
 export function VenueHoldPanel(props: HoldPanelProps) {
   return props.initialHolds ? <HoldContent {...props} holds={props.initialHolds} /> : <LoadedHoldPanel {...props} />
 }
@@ -51,31 +52,31 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
     try { await onChanged(updated) }
     catch { setError('The hold action completed, but booking details could not be refreshed. Try again before making another decision.') }
   }
-  async function act(action: 'create' | 'release' | 'convert') {
+  async function act(action: HoldAction) {
     if (busy) return
     const instant = `${expiry.length === 16 ? `${expiry}:00` : expiry}+08:00`
-    if (action === 'create' && (!expiry || !Number.isFinite(Date.parse(instant)) || Date.parse(instant) <= Date.now())) {
+    if (action.kind === 'create' && (!expiry || !Number.isFinite(Date.parse(instant)) || Date.parse(instant) <= Date.now())) {
       setError('Choose an expiry later than the current time (Singapore time).'); return
     }
     setBusy(true); setError(''); setSuccess(''); setConflicts([]); setPeriods([]); onConflicts?.([], [])
     try {
       let updated: VenueBookingDto | undefined
-      if (action === 'create') {
+      if (action.kind === 'create') {
         const created = await apiClient.post<VenueHold>(`/venue-bookings/${bookingId}/holds`, { expiresAt: instant })
         const next = [created, ...currentHolds]
         setSaved({ source: holds, holds: next, approved: false })
         if (booking) updated = { ...booking, holds: next }
         setExpiry(''); onCreated?.()
-      } else if (active && action === 'release') {
-        const released = await apiClient.patch<VenueHold>(`/venue-holds/${active.holdId}/release`)
-        const next = currentHolds.map(h => h.holdId === active.holdId ? released : h)
+      } else if (action.kind === 'release') {
+        const released = await apiClient.patch<VenueHold>(`/venue-holds/${action.hold.holdId}/release`)
+        const next = currentHolds.map(h => h.holdId === action.hold.holdId ? released : h)
         setSaved({ source: holds, holds: next, approved: false })
         if (booking) updated = { ...booking, holds: next }
-      } else if (active) {
-        updated = await apiClient.patch<VenueBookingDto>(`/venue-holds/${active.holdId}/convert`)
-        setSaved({ source: holds, holds: updated.holds ?? currentHolds.map(h => h.holdId === active.holdId ? { ...h, status: 'converted' } : h), approved: true })
-      } else return
-      setSuccess(action === 'create' ? 'Tentative hold created.' : action === 'release' ? 'Hold released.' : 'Hold converted into an approved booking.')
+      } else {
+        updated = await apiClient.patch<VenueBookingDto>(`/venue-holds/${action.hold.holdId}/convert`)
+        setSaved({ source: holds, holds: updated.holds ?? currentHolds.map(h => h.holdId === action.hold.holdId ? { ...h, status: 'converted' } : h), approved: true })
+      }
+      setSuccess(action.kind === 'create' ? 'Tentative hold created.' : action.kind === 'release' ? 'Hold released.' : 'Hold converted into an approved booking.')
       await refresh(updated)
     } catch (cause) {
       setError(cause instanceof ApiClientError ? cause.message : 'Could not update the hold. Check the latest booking details before retrying.')
@@ -100,7 +101,7 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
         {request && periods.map(period => <UnavailabilityConflictCard key={period.unavailabilityId} period={period} request={request} />)}
       </Notice>}
       {success && <Notice>{success}</Notice>}
-      {currentPending && !active && creationOpen && <form className="venue-hold-panel__form" onSubmit={event => { event.preventDefault(); void act('create') }}>
+      {currentPending && !active && creationOpen && <form className="venue-hold-panel__form" onSubmit={event => { event.preventDefault(); void act({ kind: 'create' }) }}>
         <div className="field">
           <label htmlFor={`hold-expiry-${bookingId}`}>Hold expiry (Singapore time)</label>
           <input id={`hold-expiry-${bookingId}`} type="datetime-local" required value={expiry}
@@ -113,8 +114,8 @@ function HoldContent({ bookingId, pending, booking, onChanged, holds, creationOp
         </div>
       </form>}
       {active && currentPending && <div className="booking-approval__actions venue-hold-panel__actions">
-        <Button variant="secondary" disabled={busy} onClick={() => void act('release')}>Release Hold</Button>
-        <Button disabled={busy} onClick={() => void act('convert')}>Convert Hold to Approved Booking</Button>
+        <Button variant="secondary" disabled={busy} onClick={() => void act({ kind: 'release', hold: active })}>Release Hold</Button>
+        <Button disabled={busy} onClick={() => void act({ kind: 'convert', hold: active })}>Convert Hold to Approved Booking</Button>
       </div>}
     </BookingDecisionPanel>}
     {!showConfirmation && success && <Notice>{success}</Notice>}

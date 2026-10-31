@@ -1,5 +1,5 @@
-// @stories VS-C4 VS17
-import { afterEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS-C4 VS17
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { TimingConflictReview } from './TimingConflictReview'
@@ -63,4 +63,40 @@ it('VS17 (boundary): hides conflict sections and actions when no timing conflict
   await waitFor(() => expect(screen.queryByRole('region', { name: 'Existing timing conflicts' })).not.toBeInTheDocument())
   expect(screen.queryByRole('region', { name: 'Booking Conflicts' })).not.toBeInTheDocument()
   expect(screen.queryByRole('button', { name: 'Refresh conflicts' })).not.toBeInTheDocument()
+})
+
+describe('DEV16 timing conflict workflow coverage', () => {
+  it('DEV16 (happy): scanning replaces the visible conflicts and confirms coordinator notification', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue([{ first, second }])
+    vi.mocked(apiClient.post).mockResolvedValue([{ first, second: { ...second, eventName: 'Newly detected event' } }])
+    render(<MemoryRouter><TimingConflictReview venueId="v" /></MemoryRouter>)
+    await screen.findByRole('link', { name: 'Second event' })
+    fireEvent.click(screen.getByRole('button', { name: 'Check conflicts and notify coordinators' }))
+    expect(await screen.findByRole('link', { name: 'Newly detected event' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Second event' })).not.toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Coordinators are notified of newly detected or changed overlaps.')
+    expect(apiClient.post).toHaveBeenCalledExactlyOnceWith('/venues/v/timing-conflicts/scan')
+  })
+  it('DEV16 (boundary): a scan with no remaining overlaps confirms the result instead of disappearing', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue([{ first, second }])
+    vi.mocked(apiClient.post).mockResolvedValue([])
+    render(<MemoryRouter><TimingConflictReview venueId="v" /></MemoryRouter>)
+    await screen.findByRole('link', { name: 'First event' })
+    fireEvent.click(screen.getByRole('button', { name: 'Check conflicts and notify coordinators' }))
+    expect(await screen.findByRole('status')).toHaveTextContent('No overlaps between reserved booking periods.')
+    expect(screen.queryByRole('link', { name: 'First event' })).not.toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh conflicts' }))
+    expect(await screen.findByRole('link', { name: 'First event' })).toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
+  })
+  it.each([new Error('Conflict service unavailable'), 'offline'])('DEV16 (failure): a failed scan retains the saved conflicts and permits retry (%s)', async cause => {
+    vi.mocked(apiClient.get).mockResolvedValue([{ first, second }])
+    vi.mocked(apiClient.post).mockRejectedValue(cause)
+    render(<MemoryRouter><TimingConflictReview venueId="v" /></MemoryRouter>)
+    await screen.findByRole('link', { name: 'First event' })
+    fireEvent.click(screen.getByRole('button', { name: 'Check conflicts and notify coordinators' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(cause instanceof Error ? cause.message : 'Could not check conflicts. Please try again.')
+    expect(screen.getByRole('link', { name: 'First event' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Check conflicts and notify coordinators' })).toBeEnabled()
+  })
 })

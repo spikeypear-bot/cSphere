@@ -1,5 +1,5 @@
-// @stories VS-C3 VS03 VS15 VS17
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS-C3 VS03 VS15 VS17
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, renderHook, screen, waitFor, within } from '@testing-library/react'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { VenueHoldPanel } from './VenueHoldPanel'
@@ -119,4 +119,97 @@ it.each(['converted','released','expired'] as const)('VS-C3 (cross-cutting): %s 
  expect(screen.queryByRole('button',{name:'Release Hold'})).not.toBeInTheDocument()
  expect(screen.queryByRole('button',{name:'Convert Hold to Approved Booking'})).not.toBeInTheDocument()
  expect(apiClient.patch).not.toHaveBeenCalled()
+})
+
+describe('DEV16 hold recovery coverage', () => {
+  it('DEV16 (boundary): malformed hold history cannot create occupancy or remove the creation form', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ unexpected: true })
+    render(<VenueHoldPanel bookingId="b1" pending onChanged={vi.fn()} />)
+    expect(await screen.findByLabelText('Hold expiry (Singapore time)')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Hold history' })).not.toBeInTheDocument()
+  })
+  it('DEV16 (failure): a committed hold with failed refresh keeps its saved state and warns staff', async () => {
+    vi.mocked(apiClient.post).mockResolvedValue(hold)
+    render(<VenueHoldPanel bookingId="b1" pending initialHolds={[]} onChanged={vi.fn().mockRejectedValue(new Error('Offline'))} />)
+    const input = screen.getByLabelText('Hold expiry (Singapore time)')
+    fireEvent.change(input, { target: { value: '2099-03-01T10:00' } })
+    fireEvent.submit(input.closest('form')!)
+    expect(await screen.findByRole('alert')).toHaveTextContent('The hold action completed, but booking details could not be refreshed.')
+    expect(screen.getByRole('button', { name: 'Release Hold' })).toBeInTheDocument()
+    expect(apiClient.post).toHaveBeenCalledTimes(1)
+  })
+  it('DEV16 (failure): unexpected mutation and recovery failures retain the proposed expiry without claiming success', async () => {
+    vi.mocked(apiClient.post).mockRejectedValue(new Error('Offline'))
+    render(<VenueHoldPanel bookingId="b1" pending initialHolds={[]} onChanged={vi.fn().mockRejectedValue(new Error('Offline'))} />)
+    const input = screen.getByLabelText('Hold expiry (Singapore time)')
+    fireEvent.change(input, { target: { value: '2099-03-01T10:00' } })
+    fireEvent.submit(input.closest('form')!)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Latest booking details could not be retrieved.')
+    expect(screen.getByLabelText('Hold expiry (Singapore time)')).toHaveValue('2099-03-01T10:00')
+    expect(screen.queryByText('Tentative hold created.')).not.toBeInTheDocument()
+  })
+  it('DEV16 (conflict): repeated submission while creating a hold sends only one request', () => {
+    vi.mocked(apiClient.post).mockReturnValue(new Promise(() => {}))
+    render(<VenueHoldPanel bookingId="b1" pending initialHolds={[]} onChanged={vi.fn()} />)
+    const input = screen.getByLabelText('Hold expiry (Singapore time)')
+    fireEvent.change(input, { target: { value: '2099-03-01T10:00' } })
+    fireEvent.submit(input.closest('form')!); fireEvent.submit(input.closest('form')!)
+    expect(apiClient.post).toHaveBeenCalledTimes(1)
+  })
+  it('DEV16 (happy): conversion without returned history updates only the active hold and stops pending decisions', async () => {
+    const approved = { bookingId: 'b1', status: 'approved' } as VenueBookingDto
+    vi.mocked(apiClient.patch).mockResolvedValue(approved)
+    const changed = vi.fn()
+    render(<VenueHoldPanel bookingId="b1" pending initialHolds={[hold, { ...hold, holdId: 'old', status: 'released' }]} onChanged={changed} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Convert Hold to Approved Booking' }))
+    expect(await screen.findByText('Hold converted into an approved booking.')).toBeInTheDocument()
+    expect(screen.getByText('Converted')).toHaveAttribute('data-booking-status', 'approved')
+    expect(screen.getByText('Released')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Release Hold' })).not.toBeInTheDocument()
+    expect(changed).toHaveBeenCalledWith(approved)
+  })
+  it('DEV16 (boundary): an unswept active hold changes to expired at its server-derived deadline', async () => {
+    vi.useFakeTimers()
+    const changed = vi.fn()
+    render(<VenueHoldPanel bookingId="b1" pending={false} initialHolds={[hold]} onChanged={changed} />)
+    expect(screen.getByText('Active')).toHaveAttribute('data-booking-status', 'tentative')
+    await act(async () => { await vi.advanceTimersByTimeAsync(3600000) })
+    expect(screen.getByText('Expired')).not.toHaveAttribute('data-booking-status')
+    expect(changed).toHaveBeenCalledTimes(1)
+  })
+  it('DEV16 (boundary): long hold deadlines reschedule without expiring immediately at the browser timer limit', () => {
+    vi.useFakeTimers()
+    const long = { ...hold, serverTime: '2027-03-01T00:00:00Z', expiresAt: '2027-04-01T00:00:00Z' }
+    const holds = [long]
+    const { result } = renderHook(() => useHoldDeadline(holds))
+    act(() => vi.advanceTimersByTime(2147483647))
+    expect(result.current.has('h1')).toBe(false)
+    act(() => vi.advanceTimersByTime(31 * 86400000 - 2147483647))
+    expect(result.current.has('h1')).toBe(true)
+  })
+  it('DEV16 (happy): releasing the active hold preserves older history rows', async () => {
+    vi.mocked(apiClient.patch).mockResolvedValue({ ...hold, status: 'released' })
+    render(<VenueHoldPanel bookingId="b1" pending initialHolds={[hold, { ...hold, holdId: 'old', status: 'expired' }]} onChanged={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Release Hold' }))
+    expect(await screen.findByText('Hold released.')).toBeInTheDocument()
+    expect(screen.getByText('Released')).toBeInTheDocument()
+    expect(screen.getByText('Expired')).toBeInTheDocument()
+  })
+  it('DEV16 (conflict): unavailable-period conflicts are shown alongside the unchanged requested hold', async () => {
+    const request: VenueBookingDto = { bookingId: 'b1', status: 'pending',
+      venue: { venueId: 'v1', venueAddress: 'Hall', venueCapacity: 100, supportedLayouts: [], venueAccessibilities: [],
+        venueFacilities: [], operatingInformation: '', additionalInformation: null },
+      event: { eventId: 'e1', eventName: 'Workshop', expectedAttendance: 50, accessibilityNeeds: [], venueRequirements: '', equipmentRequirements: null,
+        startDatetime: '2027-04-01T10:00:00+08:00', endDatetime: '2027-04-01T12:00:00+08:00' } }
+    vi.mocked(apiClient.post).mockRejectedValue(new ApiClientError('Maintenance blocks this hold.', 409, null, [], [{
+      unavailabilityId: 'u1', reason: 'Repairs', startDatetime: '2027-04-01T10:00:00+08:00', endDatetime: '2027-04-01T12:00:00+08:00',
+    }]))
+    render(<VenueHoldPanel bookingId="b1" booking={request} pending initialHolds={[]} onChanged={vi.fn()} />)
+    const input = screen.getByLabelText('Hold expiry (Singapore time)')
+    fireEvent.change(input, { target: { value: '2099-03-01T10:00' } })
+    fireEvent.submit(input.closest('form')!)
+    expect(await screen.findByRole('group', { name: 'Unavailable period: Repairs' })).toBeInTheDocument()
+    expect(screen.getByRole('alert')).toHaveTextContent('Maintenance blocks this hold.')
+    expect(screen.getByLabelText('Hold expiry (Singapore time)')).toHaveValue('2099-03-01T10:00')
+  })
 })

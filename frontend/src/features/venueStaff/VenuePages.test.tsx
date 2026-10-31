@@ -1,24 +1,25 @@
-// @stories VS07 VS06A VS06B VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS07 VS06A VS06B VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { VenueEditPage } from './VenueEditPage'
 import { VenueCreatePage } from './VenueCreatePage'
 import { VenueCataloguePage } from './VenueCataloguePage'
+import { apiClient } from '../../lib/apiClient'
 
 const venue = { venueId: '123', venueAddress: 'Example Road', venueCapacity: 50,
   supportedLayouts: ['theatre'], operatingInformation: 'Monday 9-5', additionalInformation: null,
   venueAccessibilities: [], venueFacilities: [], operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'17:00'}] }
 const response = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 function page(path = '/venue-staff/catalogue/new') {
-  render(<MemoryRouter initialEntries={[path]}><Routes>
+  return render(<MemoryRouter initialEntries={[path]}><Routes>
     <Route path="/venue-staff/catalogue/:venueId/edit" element={<VenueEditPage />} />
     <Route path="/venue-staff/catalogue/new" element={<VenueCreatePage />} />
     <Route path="/venue-staff/catalogue" element={<VenueCataloguePage />} />
   </Routes></MemoryRouter>)
 }
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 it('defaults capacity to 50 and rejects missing fields without POST', async () => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); page()
@@ -68,6 +69,72 @@ async function fillForm() {
   fireEvent.change(screen.getByLabelText('Monday closes'), {target:{value:'17:00'}})
   return user
 }
+
+describe('DEV16 venue form coverage', () => {
+  it('DEV16 (boundary): a legacy empty address is labelled and cannot be saved as a valid venue', () => {
+    const put = vi.spyOn(apiClient, 'put')
+    render(<MemoryRouter><VenueCreatePage initialVenue={{ ...venue, supportedLayouts: ['theatre'], venueAddress: '' }} /></MemoryRouter>)
+    expect(screen.getByText('Not recorded')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Save venue' }))
+    expect(put).not.toHaveBeenCalled()
+  })
+  it.each([false, true])('DEV16 (cross-cutting): leaving the venue editor ignores late read results (%s)', async failed => {
+    let resolve!: (value: unknown) => void, reject!: (cause: unknown) => void
+    const read = vi.spyOn(apiClient, 'get').mockReturnValue(new Promise((done, fail) => { resolve = done; reject = fail }))
+    const pageView = page('/venue-staff/catalogue/123/edit')
+    expect(screen.getByRole('status')).toHaveTextContent('Loading venue…')
+    pageView.unmount()
+    if (failed) reject(new Error('Offline')); else resolve(venue)
+    await Promise.resolve()
+    expect(read).toHaveBeenCalledExactlyOnceWith('/venues/123')
+    expect(screen.queryByRole('button', { name: 'Save venue' })).not.toBeInTheDocument()
+  })
+  it('DEV16 (negative): overlong identity fields and invalid default durations prevent writing', async () => {
+    const post = vi.spyOn(apiClient, 'post')
+    page(); await fillForm()
+    fireEvent.change(screen.getByLabelText('Venue name'), { target: { value: 'x'.repeat(201) } })
+    fireEvent.change(screen.getByLabelText('Venue address'), { target: { value: 'x'.repeat(501) } })
+    fireEvent.change(screen.getByLabelText('Default setup (minutes)'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Default turnaround (minutes)'), { target: { value: '-1' } })
+    fireEvent.submit(screen.getByRole('button', { name: 'Save venue' }).closest('form')!)
+    expect(screen.getByText('Use 200 characters or fewer.')).toBeInTheDocument()
+    expect(screen.getByText('Use 500 characters or fewer.')).toBeInTheDocument()
+    expect(screen.getAllByText('Enter whole minutes from 0 to 10,080.')).toHaveLength(2)
+    expect(post).not.toHaveBeenCalled()
+  })
+  it('DEV16 (happy): editing one of several operating days preserves the other and a closed day is removed', async () => {
+    const post = vi.spyOn(apiClient, 'post').mockReturnValue(new Promise(() => {}))
+    page(); await fillForm()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Tuesday' }))
+    fireEvent.change(screen.getByLabelText('Monday opens'), { target: { value: '08:30' } })
+    fireEvent.change(screen.getByLabelText('Monday closes'), { target: { value: '19:00' } })
+    expect(screen.getByLabelText('Tuesday opens')).toHaveValue('09:00')
+    expect(screen.getByLabelText('Tuesday closes')).toHaveValue('18:00')
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Tuesday' }))
+    expect(screen.queryByLabelText('Tuesday opens')).not.toBeInTheDocument()
+    const form = screen.getByRole('button', { name: 'Save venue' }).closest('form')!
+    fireEvent.submit(form); fireEvent.submit(form)
+    expect(post).toHaveBeenCalledExactlyOnceWith('/venues', expect.objectContaining({
+      operatingHours: [{ dayOfWeek: 1, openTime: '08:30', closeTime: '19:00' }],
+    }))
+  })
+  it('DEV16 (failure): unexpected creation failures preserve the completed form', async () => {
+    vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('Offline'))
+    page(); await fillForm()
+    fireEvent.click(screen.getByRole('button', { name: 'Save venue' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not save the venue. Please try again.')
+    expect(screen.getByLabelText('Venue name')).toHaveValue('Example Hall')
+    expect(screen.getByRole('button', { name: 'Save venue' })).toBeEnabled()
+  })
+  it('DEV16 (failure): unexpected edit-load failures offer retry and recover the saved venue', async () => {
+    vi.spyOn(apiClient, 'get').mockRejectedValueOnce(new Error('Offline')).mockResolvedValue(venue)
+    page('/venue-staff/catalogue/123/edit')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load the venue. Please try again.')
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('heading', { name: 'Edit Venue' })).toBeInTheDocument()
+    expect(screen.getByLabelText('Overall capacity')).toHaveValue(50)
+  })
+})
 it('POSTs trimmed input then GETs the catalogue and displays success', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(response(venue, 201)).mockResolvedValueOnce(response([venue]))
   vi.stubGlobal('fetch', fetch); page(); const user = await fillForm()
@@ -149,7 +216,7 @@ it('distinguishes empty selections from explicitly no accessibility provisions',
   page('/venue-staff/catalogue')
   expect(await screen.findByText('No accessibility provisions')).toBeInTheDocument()
   expect(screen.getAllByText('Not recorded')).toHaveLength(3)
-  expect(screen.getAllByText('No Additional Information')).toHaveLength(2)
+  expect(screen.getAllByText('No additional information recorded.')).toHaveLength(2)
 })
 it('handles network failure and retries catalogue loading', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(response([])))
@@ -295,7 +362,7 @@ it('saves multiple changes together, clears additional information and reopens c
   expect(await screen.findByText('Venue updated successfully.')).toBeInTheDocument()
   expect(await screen.findByText('150 people')).toBeInTheDocument()
   expect(screen.getByText('9am \u2013 6pm')).toBeInTheDocument()
-  expect(screen.getByText('No Additional Information')).toBeInTheDocument()
+  expect(screen.getByText('No additional information recorded.')).toBeInTheDocument()
   expect(JSON.parse(fetch.mock.calls.find(call => call[1].method === 'PUT')![1].body)).toEqual({
     venueCapacity: 150, operatingHours: [{dayOfWeek:1,openTime:'09:00',closeTime:'18:00'}], additionalInformation: '',
   })

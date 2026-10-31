@@ -4,7 +4,8 @@ export function singaporeToday(now = new Date()): string {
 }
 
 function validCalendarTime(value: string): boolean {
-  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2}))?$/.exec(value)
+  // datetime-local may normalise second-precision input with a millisecond suffix.
+  const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d{1,3})?)?$/.exec(value)
   if (!parts) return false
   const [, y, m, d, h, min, sec = '0'] = parts
   const year = Number(y), month = Number(m), day = Number(d)

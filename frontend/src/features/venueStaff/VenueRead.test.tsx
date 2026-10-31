@@ -1,6 +1,6 @@
-// @stories VS16 VS18 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+// @stories DEV16 VS16 VS18 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { VenueCataloguePage } from './VenueCataloguePage'
@@ -22,6 +22,42 @@ function page(path = '/venue-staff/catalogue') {
   </Routes></MemoryRouter>)
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+
+describe('DEV16 venue details workflow coverage', () => {
+  it('DEV16 (happy): recording an unavailable period refreshes the associated booking list', async () => {
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST') return response(url.endsWith('/preview') ? { affectedBookings: [], previewToken: 'reviewed' } : {})
+      if (url.endsWith('/occupancy-settings')) return response({ setupMinutes: 0, turnaroundMinutes: 0 })
+      return response(url === '/api/venues/room-1' ? venue : [])
+    })
+    vi.stubGlobal('fetch', fetch)
+    page('/venue-staff/catalogue/room-1')
+    await screen.findByText('No associated bookings.')
+    const reads = () => fetch.mock.calls.filter(c => c[0] === '/api/venues/room-1/bookings').length
+    expect(reads()).toBe(1)
+    fireEvent.change(screen.getByLabelText('Start date/time'), { target: { value: '2099-04-01T10:00' } })
+    fireEvent.change(screen.getByLabelText('End date/time'), { target: { value: '2099-04-01T12:00' } })
+    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'Maintenance' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
+    await screen.findByText('Unavailability recorded. Affected bookings remain intact and assigned coordinators have been notified.')
+    await waitFor(() => expect(reads()).toBe(2))
+    expect(fetch.mock.calls.filter(c => c[1]?.method === 'POST')).toHaveLength(2)
+  })
+  it('DEV16 (boundary): legacy associated bookings retain pending status and show saved occupied windows and impact', async () => {
+    const timing = { startDatetime: '2027-04-01T02:00:00Z', endDatetime: '2027-04-01T04:00:00Z',
+      effectiveStart: '2027-04-01T01:30:00Z', effectiveEnd: '2027-04-01T04:45:00Z' }
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/bookings') ? [{
+      bookingId: 'legacy', event: { eventId: 'event', eventName: 'Legacy workshop', ...timing },
+      timing, requiresAlternative: true,
+    }] : url.endsWith('/occupancy-settings') ? { setupMinutes: 0, turnaroundMinutes: 0 }
+      : url === '/api/venues/room-1' ? venue : [])))
+    page('/venue-staff/catalogue/room-1')
+    expect(await screen.findByText('Legacy workshop')).toBeInTheDocument()
+    expect(screen.getByText('Pending')).toBeInTheDocument()
+    expect(screen.getByText('Alternative arrangements required')).toBeInTheDocument()
+    expect(screen.getByText('Venue Occupied (SGT):').parentElement).toHaveTextContent('09:30 am')
+  })
+})
 
 it('opens venue panels without duplicate sibling keys', async () => {
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -64,7 +100,7 @@ it('reads full characteristics and latest values on refresh and reopening withou
   await user.click(await screen.findByRole('link', { name: 'View venue details' }))
   await screen.findByText('No associated bookings.')
   expect(screen.getAllByText('Not recorded')).toHaveLength(2)
-  expect(screen.getByText('No Additional Information')).toBeInTheDocument()
+  expect(screen.getByText('No additional information recorded.')).toBeInTheDocument()
   expect(screen.getByText('9am – 6pm')).toBeInTheDocument()
   expect(screen.getByText('Classroom')).toBeInTheDocument()
   expect(screen.getByText('Boardroom')).toBeInTheDocument()

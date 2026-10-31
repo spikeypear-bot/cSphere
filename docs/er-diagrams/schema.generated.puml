@@ -484,6 +484,8 @@ entity venues {
 	* setup_minutes : integer
 	* turnaround_minutes : integer
 	* venue_name : text
+	latitude : double precision
+	longitude : double precision
 }
 
 enum accessibilities {

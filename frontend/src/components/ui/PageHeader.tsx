@@ -6,16 +6,19 @@ interface PageHeaderProps {
   eyebrow?: ReactNode
   description?: ReactNode
   actions?: ReactNode
+  headingLevel?: 1 | 2
+  headingId?: string
 }
 
 /** The title row at the top of a page: heading and supporting text on the
  * left, actions on the right, wrapping underneath on narrow screens. */
-export function PageHeader({ title, eyebrow, description, actions }: PageHeaderProps) {
+export function PageHeader({ title, eyebrow, description, actions, headingLevel = 1, headingId }: PageHeaderProps) {
+  const Heading = headingLevel === 2 ? 'h2' : 'h1'
   return (
     <header className="page-header">
       <div className="page-header__text">
         {eyebrow ? <p className="field-hint">{eyebrow}</p> : null}
-        <h1>{title}</h1>
+        <Heading id={headingId}>{title}</Heading>
         {typeof description === 'string'
           ? <p className="page-header__description">{description}</p>
           : description}

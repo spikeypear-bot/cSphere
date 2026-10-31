@@ -22,8 +22,9 @@ export function VenueSchedulePage() {
   // Keep the document tall enough while replacing a calendar with loading/empty content.
   // Otherwise the browser clamps the scroll position before the new data arrives.
   const preserveScheduleHeight = () => {
-    const frame = scheduleFrame.current
-    if (frame) frame.style.minHeight = `${frame.getBoundingClientRect().height}px`
+    // Every interactive calendar state renders this frame before handlers run.
+    const frame = scheduleFrame.current!
+    frame.style.minHeight = `${frame.getBoundingClientRect().height}px`
   }
   const changeMonth = (next: string) => { preserveScheduleHeight(); setMonth(next) }
   const title = new Intl.DateTimeFormat('en-SG', { month: 'long', year: 'numeric', timeZone: 'UTC' }).format(new Date(`${month}-01T00:00:00Z`))

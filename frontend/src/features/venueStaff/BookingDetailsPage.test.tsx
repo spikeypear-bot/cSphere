@@ -1,5 +1,5 @@
-// @stories VS17 VS02 VS03 VS04 VS09 VS-C3 VS-C4  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS17 VS02 VS03 VS04 VS09 VS-C3 VS-C4
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -28,7 +28,92 @@ function page(path = '/venue-staff/catalogue') {
     <Route path="/venue-staff/bookings/:bookingId" element={<BookingDetailsPage />} />
   </Routes></MemoryRouter>)
 }
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+describe('DEV16 booking detail coverage', () => {
+  it('DEV16 (boundary): previous on the first booking cannot navigate to an undefined record', async () => {
+    const fetch = vi.fn(async (url: string) => response(url.endsWith('/bookings') ? [booking] : booking))
+    vi.stubGlobal('fetch', fetch)
+    page('/venue-staff/bookings/b1')
+    const previous = await screen.findByRole('button', { name: 'Previous' })
+    expect(previous).toHaveAttribute('aria-disabled', 'true')
+    fireEvent.click(previous)
+    expect(screen.getByRole('region', { name: 'Booking identity' })).toHaveTextContent('Booking ID: b1')
+    expect(fetch.mock.calls.filter(c => c[0] === '/api/venue-bookings/b1')).toHaveLength(1)
+    expect(fetch.mock.calls.some(c => c[0].includes('undefined'))).toBe(false)
+  })
+  it('DEV16 (failure): a lost hold response refreshes the saved booking and exposes its actual active hold', async () => {
+    let current = { ...booking, holds: [] as NonNullable<VenueBookingDto['holds']> }
+    const fetch = vi.fn(async (url: string, init?: RequestInit) => {
+      if (init?.method === 'POST' && url === '/api/venue-bookings/b1/holds') {
+        current = { ...booking, holds: [{ holdId: 'saved-hold', bookingId: 'b1', venueId: 'v1', eventId: 'e1', eventName: 'Workshop',
+          status: 'active', reservedStart: booking.event.startDatetime, reservedEnd: booking.event.endDatetime,
+          expiresAt: '2099-04-01T00:00:00Z', serverTime: new Date().toISOString(), createdAt: new Date().toISOString(), createdBy: 'vs1', endedAt: null }] }
+        return response({ message: 'Response lost. Refreshing details.' }, 503)
+      }
+      return response(current)
+    })
+    vi.stubGlobal('fetch', fetch)
+    page('/venue-staff/bookings/b1?from=booking-approvals')
+    fireEvent.click(await screen.findByRole('button', { name: 'Put on Tentative Hold' }))
+    fireEvent.change(screen.getByLabelText('Hold expiry (Singapore time)'), { target: { value: '2099-04-01T08:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Place tentative hold' }))
+    expect(await screen.findByRole('button', { name: 'Release Hold' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Place tentative hold' })).not.toBeInTheDocument()
+    expect(fetch.mock.calls.filter(c => c[1]?.method === 'GET')).toHaveLength(2)
+    expect(fetch.mock.calls.filter(c => c[1]?.method === 'POST')).toHaveLength(1)
+  })
+  it('DEV16 (cross-cutting): shrinking content preserves document height and disconnects observation on leaving', async () => {
+    let resized!: () => void
+    const disconnect = vi.fn()
+    vi.stubGlobal('ResizeObserver', class {
+      constructor(callback: () => void) { resized = callback }
+      observe = vi.fn()
+      disconnect = disconnect
+    })
+    let height = 800
+    vi.spyOn(HTMLElement.prototype, 'getBoundingClientRect').mockImplementation(() => ({ height }) as DOMRect)
+    vi.stubGlobal('fetch', vi.fn(async () => response(booking)))
+    page('/venue-staff/bookings/b1?from=booking-approvals')
+    await screen.findByRole('region', { name: 'Booking identity' })
+    const container = screen.getByRole('heading', { name: 'Booking details' }).closest('.booking-details-page')! as HTMLElement
+    expect(container.style.minHeight).toBe('800px')
+    height = 600; resized()
+    expect(container.style.minHeight).toBe('800px')
+    height = 1000; resized()
+    expect(container.style.minHeight).toBe('1000px')
+    cleanup()
+    expect(disconnect).toHaveBeenCalledTimes(1)
+    expect(container.style.minHeight).toBe('')
+  })
+  it.each([
+    { bookingNotes: 'Use the side entrance', suitabilityNote: null },
+    { bookingNotes: null, suitabilityNote: 'Portable ramp arranged with staff' },
+  ])('DEV16 (happy): displays coordinator notes and replacement identity without changing the request (%j)', async notes => {
+    const current = { ...booking, ...notes, requiresAlternative: true, replacesBookingId: 'original',
+      currentCoordinatorName: 'Coordinator Lee', currentCoordinatorEmail: 'lee@example.test' }
+    const fetch = vi.fn<(url: string, init?: RequestInit) => Promise<Response>>().mockImplementation(async () => response(current))
+    vi.stubGlobal('fetch', fetch)
+    page('/venue-staff/bookings/b1?from=booking-approvals')
+    const identity = await screen.findByRole('region', { name: 'Booking identity' })
+    expect(identity).toHaveTextContent('Coordinator Lee (lee@example.test)')
+    expect(screen.getByRole('link', { name: 'View original booking' })).toHaveAttribute('href', '/venue-staff/bookings/original')
+    expect(screen.getByText(/Alternative arrangements required/)).toBeInTheDocument()
+    expect(screen.getByText(notes.bookingNotes ?? /Portable ramp arranged with staff/)).toBeInTheDocument()
+    expect(fetch.mock.calls.every(call => call[1]?.method === 'GET')).toBe(true)
+  })
+  it('DEV16 (failure): pagination errors can be retried and a removed list entry never exposes broken navigation', async () => {
+    let fail = true
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => url.endsWith('/bookings')
+      ? fail ? response({ message: 'List unavailable' }, 503) : response([]) : response(booking)))
+    page('/venue-staff/bookings/b1')
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load other bookings for this venue.')
+    fail = false
+    fireEvent.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText('This booking is no longer in the venue’s booking list.')).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Venue bookings' })).not.toBeInTheDocument()
+  })
+})
 
 it('VS-C4 AC9 (regression): staff requirements link conflicts without duplicating the timing summary or editor', async () => {
   const current = { ...booking, status: 'approved', timing: { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,

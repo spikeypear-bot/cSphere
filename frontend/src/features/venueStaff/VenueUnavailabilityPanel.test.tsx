@@ -1,16 +1,16 @@
-// @stories VS01 VS-C1 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS01 VS-C1 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { VenueUnavailabilityPanel } from './VenueUnavailabilityPanel'
+import { VenueUnavailabilityPanel, VenueOccupancySettings } from './VenueUnavailabilityPanel'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { singaporeToday } from './unavailabilityValidation'
 
 vi.mock('../../lib/apiClient', async importOriginal => {
   const actual = await importOriginal<typeof import('../../lib/apiClient')>()
-  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }
+  return { ...actual, apiClient: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } }
 })
-afterEach(() => { cleanup(); vi.resetAllMocks() })
+afterEach(() => { cleanup(); vi.resetAllMocks(); vi.useRealTimers() })
 const booking = { bookingId: 'b1', eventName: 'Workshop', status: 'approved',
   startDateTime: '2027-04-01T10:00:00+08:00', endDateTime: '2027-04-01T12:00:00+08:00',
   effectiveStart: '2027-04-01T09:30:00+08:00', effectiveEnd: '2027-04-01T12:45:00+08:00' }
@@ -158,7 +158,7 @@ it('VS17 VS01 (happy): release requires a reason, preserves status semantics, an
   await userEvent.click(screen.getByRole('button', { name: 'Confirm release' }))
   await waitFor(() => expect(recorded).toHaveBeenCalledOnce())
   expect(apiClient.patch).toHaveBeenCalledWith('/venues/v1/unavailability/u1/release', { reason: 'Reopened' })
-  expect(screen.getByText(/Booking statuses and reservations are unchanged/)).toBeInTheDocument()
+  expect(screen.getByText(/Existing bookings remain reserved/)).toBeInTheDocument()
 })
 
 it('VS17 VS01 (failure): release failure retains the entered reason for retry', async () => {
@@ -184,4 +184,92 @@ it('VS17 VS01 (happy): staff can inspect retained release history', async () => 
   expect(await screen.findByText('Released: Repairs complete')).toBeInTheDocument()
   await userEvent.click(screen.getByRole('button', { name: 'Hide unavailability history' }))
   expect(screen.queryByText('Released: Repairs complete')).not.toBeInTheDocument()
+})
+
+describe('DEV16 unavailability workflow coverage', () => {
+  it('DEV16 (boundary): second-precision periods preserve their exact instants and unknown preview statuses remain visible', async () => {
+    mount(); fill()
+    fireEvent.change(screen.getByLabelText('Start date/time'), { target: { value: '2027-04-01T09:20:30' } })
+    fireEvent.change(screen.getByLabelText('End date/time'), { target: { value: '2027-04-01T10:00:45' } })
+    vi.mocked(apiClient.post).mockResolvedValue({ previewToken: 'token', affectedBookings: [{ ...booking, status: 'legacy' }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
+    expect(await screen.findByText('Unknown status')).toBeInTheDocument()
+    expect(apiClient.post).toHaveBeenCalledExactlyOnceWith('/venues/v1/unavailability/preview', {
+      startDateTime: '2027-04-01T09:20:30.000+08:00', endDateTime: '2027-04-01T10:00:45.000+08:00', reason: 'Maintenance',
+    })
+  })
+  it('DEV16 (boundary): confirmation after Singapore midnight revalidates dates without saving', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2027-04-01T15:59:00Z'))
+    mount(); fill()
+    vi.mocked(apiClient.post).mockResolvedValue({ previewToken: 'token', affectedBookings: [booking] })
+    fireEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
+    await screen.findByRole('button', { name: 'Confirm recording unavailability' })
+    vi.setSystemTime(new Date('2027-04-01T16:01:00Z'))
+    fireEvent.click(screen.getByRole('button', { name: 'Confirm recording unavailability' }))
+    expect(await screen.findByText('Start date cannot be before today (Singapore time).')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Confirm recording unavailability' })).not.toBeInTheDocument()
+    expect(apiClient.post).toHaveBeenCalledTimes(1)
+  })
+  it('DEV16 (negative): an overlong reason is rejected without a preview request', async () => {
+    mount(); fill()
+    fireEvent.change(screen.getByLabelText('Reason'), { target: { value: 'x'.repeat(2001) } })
+    fireEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
+    expect(screen.getByText('Reason must be at most 2000 characters.')).toBeInTheDocument()
+    expect(apiClient.post).not.toHaveBeenCalled()
+  })
+  it('DEV16 (failure): history and active-period read errors can be retried independently', async () => {
+    vi.mocked(apiClient.get).mockRejectedValue(new Error('Offline'))
+    render(<VenueUnavailabilityPanel venueId="v1" onRecorded={vi.fn()} />)
+    await screen.findByRole('button', { name: 'Retry unavailability' })
+    vi.mocked(apiClient.get).mockResolvedValue([])
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailability' }))
+    await screen.findByText('No unavailable periods recorded.')
+    vi.mocked(apiClient.get).mockRejectedValue(new Error('Offline'))
+    fireEvent.click(screen.getByRole('button', { name: 'View unavailability history' }))
+    await screen.findByRole('button', { name: 'Retry unavailability history' })
+    vi.mocked(apiClient.get).mockResolvedValue([{ unavailabilityId: 'u1', reason: 'Maintenance',
+      startDateTime: booking.startDateTime, endDateTime: booking.endDateTime }])
+    fireEvent.click(screen.getByRole('button', { name: 'Retry unavailability history' }))
+    expect(await screen.findByText('Active')).toBeInTheDocument()
+  })
+  it('DEV16 (boundary): empty history and cancelling a release retain the active period', async () => {
+    vi.mocked(apiClient.get).mockImplementation(async path => path.endsWith('/history') ? [] : [{
+      unavailabilityId: 'u1', reason: 'Maintenance', startDateTime: booking.startDateTime, endDateTime: booking.endDateTime }])
+    render(<VenueUnavailabilityPanel venueId="v1" onRecorded={vi.fn()} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Release unavailable period' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel release' }))
+    expect(screen.queryByLabelText('Reason for releasing this period')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Release unavailable period' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'View unavailability history' }))
+    expect(await screen.findByText('No unavailable periods recorded.')).toBeInTheDocument()
+    expect(apiClient.patch).not.toHaveBeenCalled()
+  })
+  it('DEV16 (happy): occupancy settings load, save both durations and refresh the caller', async () => {
+    vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('Offline')).mockResolvedValue({ setupMinutes: 30, turnaroundMinutes: 15 })
+    vi.mocked(apiClient.put).mockResolvedValue({})
+    const saved = vi.fn()
+    render(<VenueOccupancySettings venueId="v1" onSaved={saved} />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry setup settings' }))
+    await screen.findByText('Setup and turnaround settings')
+    fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '45' } })
+    fireEvent.change(screen.getByLabelText('Turnaround (minutes)'), { target: { value: '60' } })
+    fireEvent.submit(screen.getByRole('button', { name: 'Save setup and turnaround' }).closest('form')!)
+    expect(await screen.findByRole('status')).toHaveTextContent('Setup and turnaround saved.')
+    expect(apiClient.put).toHaveBeenCalledExactlyOnceWith('/venues/v1/occupancy-settings', { setupMinutes: 45, turnaroundMinutes: 60 })
+    expect(saved).toHaveBeenCalledTimes(1)
+  })
+  it('DEV16 (failure): failed settings save preserves the proposed durations for a retry without a callback', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ setupMinutes: 30, turnaroundMinutes: 15 })
+    vi.mocked(apiClient.put).mockRejectedValueOnce(new Error('Offline')).mockResolvedValue({})
+    render(<VenueOccupancySettings venueId="v1" />)
+    await screen.findByText('Setup and turnaround settings')
+    fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '90' } })
+    const form = screen.getByRole('button', { name: 'Save setup and turnaround' }).closest('form')!
+    fireEvent.submit(form)
+    expect(await screen.findByRole('status')).toHaveTextContent('Could not save settings.')
+    expect(screen.getByLabelText('Setup (minutes)')).toHaveValue(90)
+    fireEvent.submit(form)
+    expect(await screen.findByRole('status')).toHaveTextContent('Setup and turnaround saved.')
+  })
 })

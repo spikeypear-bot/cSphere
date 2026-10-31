@@ -1,9 +1,10 @@
-// @stories VS17
+// @stories DEV16 VS17
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { VenueRequirementReviews } from './VenueRequirementReviews'
 import type { VenueRequirementReviewView } from '../../types/venueRequirementReview'
+import { apiClient } from '../../lib/apiClient'
 
 function view(id = 'r1', bookingId = 'b1'): VenueRequirementReviewView {
   return { review: { reviewId: id, bookingId, changeRequestId: 'c1', eventId: 'e1', eventName: 'Conference',
@@ -39,7 +40,98 @@ function decided(v: VenueRequirementReviewView, outcome: 'suitable' | 'action_re
   return { ...v, canReview: false, review: { ...v.review, status: outcome, reviewerName: 'vs1', reviewedAt: '2027-03-02T01:00:00Z', reviewNote: note, reviewedChecks: v.checks } }
 }
 beforeEach(() => { localStorage.setItem('connectsphere.auth', JSON.stringify({ accessToken: 'access', refreshToken: 'refresh', userId: 'vs1', username: 'vs1', role: 'venue-staff', organisation: 'ConnectSphere' })) })
-afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clear() })
+
+describe('DEV16 review display and recovery coverage', () => {
+  it('DEV16 (negative): a review without an outcome cannot be submitted', async () => {
+    const fetch = vi.fn(async () => json([view()]))
+    vi.stubGlobal('fetch', fetch)
+    render(<VenueRequirementReviews bookingId="b1" />)
+    fireEvent.click(await screen.findByRole('button', { name: 'Save review' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a review outcome.')
+    expect(fetch).toHaveBeenCalledTimes(1)
+  })
+  it.each(['attention', 'cancelled'])('DEV16 (boundary): inactive pending reviews explain why staff cannot decide (%s)', async bookingStatus => {
+    const v = { ...view(), bookingStatus, canReview: false }
+    vi.stubGlobal('fetch', vi.fn(async () => json([v])))
+    render(<VenueRequirementReviews bookingId="b1" />)
+    expect(await screen.findByText(bookingStatus === 'attention'
+      ? 'Resolve the booking suitability issues before recording this review. Its history is retained.'
+      : 'This booking is no longer active. Its review history is retained.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Save review' })).not.toBeInTheDocument()
+  })
+  it('DEV16 (conflict): an invalidated completed review keeps its previous decision and current attention label', async () => {
+    const v: VenueRequirementReviewView = { ...decided(view()), bookingStatus: 'attention' }
+    v.review.reviewedAt = null
+    vi.stubGlobal('fetch', vi.fn(async () => json([v])))
+    render(<VenueRequirementReviews bookingId="b1" />)
+    expect(await screen.findByRole('heading', { name: 'Main Hall — Requires attention' })).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Previous decision: Remains suitable.')
+    expect(screen.queryByRole('button', { name: 'Save review' })).not.toBeInTheDocument()
+  })
+  it('DEV16 (conflict): an actionable review with failed checks requires coordinator action', async () => {
+    const v = view()
+    v.checks = [{ key: 'capacity', title: 'Capacity', status: 'attention', detail: 'Capacity exceeded' }]
+    vi.stubGlobal('fetch', vi.fn(async () => json([v])))
+    render(<VenueRequirementReviews bookingId="b1" />)
+    expect(await screen.findByText('Current checks require attention. Record coordinator action required, or refresh after arrangements are resolved.')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Remains suitable' })).toBeDisabled()
+    expect(screen.getByRole('option', { name: 'Coordinator action required' })).toBeEnabled()
+  })
+  it('DEV16 (boundary): history displays absent, dated, list and legacy requirement values without dropping information', async () => {
+    const v = view()
+    v.review.coordinatorName = null; v.review.coordinatorEmail = null
+    v.reservedEnd = '2027-03-10T05:00:00Z'; v.turnaroundDurationMinutes = 60
+    v.suitability!.supportedLayouts = []
+    v.changes = [
+      { field: 'startDatetime', label: 'Start', before: '2027-03-10T01:00:00Z', after: '2027-03-10T02:00:00Z' },
+      { field: 'accessibilityNeeds', label: 'Accessibility', before: ['step_free_access', 'legacy_access'], after: [] },
+      { field: 'requiredFacilities', label: 'Facilities', before: ['projection', 'legacy_facility'], after: [] },
+      { field: 'legacyList', label: 'Legacy values', before: [123], after: [] },
+      { field: 'venueRequirements', label: 'Written requirements', before: null, after: '' },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => json([v])))
+    render(<VenueRequirementReviews bookingId="b1" />)
+    await screen.findByRole('heading', { name: 'Main Hall — Review Required' })
+    expect(screen.getByText('Step-free access, legacy_access')).toBeInTheDocument()
+    expect(screen.getByText('Projection, legacy_facility')).toBeInTheDocument()
+    expect(screen.getByText('123')).toBeInTheDocument()
+    expect(screen.getAllByText('None specified').length).toBeGreaterThanOrEqual(4)
+    expect(screen.getByText('Venue supports: Not recorded')).toBeInTheDocument()
+    expect(screen.getByText('Reserved when the change was approved')).toBeInTheDocument()
+    expect(screen.getByText('Setup / Turnaround at approval')).toBeInTheDocument()
+    expect(screen.getByText('Coordinator at approval: Unassigned', { exact: false })).toBeInTheDocument()
+  })
+  it('DEV16 (negative): comments over the limit are refused before a write, and unexpected save errors retain the decision', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => json([view()])))
+    const post = vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('Offline'))
+    render(<VenueRequirementReviews bookingId="b1" />)
+    await screen.findByLabelText('Outcome')
+    fireEvent.change(screen.getByLabelText('Outcome'), { target: { value: 'suitable' } })
+    fireEvent.change(screen.getByLabelText('Review comment (optional)'), { target: { value: 'x'.repeat(2001) } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save review' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('at most 2000 characters')
+    expect(post).not.toHaveBeenCalled()
+    fireEvent.change(screen.getByLabelText('Review comment (optional)'), { target: { value: 'Still suitable' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save review' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The review could not be saved. Please try again.')
+    expect(screen.getByLabelText('Outcome')).toHaveValue('suitable')
+    expect(screen.getByLabelText('Review comment (optional)')).toHaveValue('Still suitable')
+  })
+  it('DEV16 (happy): saving one review preserves its sibling review and labels unmapped supported layouts', async () => {
+    const one = view(), two = view('r2', 'b2')
+    one.suitability!.supportedLayouts = ['legacy_layout']
+    const saved = decided(one)
+    vi.stubGlobal('fetch', vi.fn(async (_: unknown, init?: RequestInit) => json(init?.method === 'POST' ? saved : [one, two])))
+    render(<VenueRequirementReviews bookingId="b1" />)
+    const first = await screen.findByRole('article', { name: 'Requirement review for Main Hall' })
+    expect(within(first).getByText('Venue supports: legacy_layout')).toBeInTheDocument()
+    fireEvent.change(within(first).getByLabelText('Outcome'), { target: { value: 'suitable' } })
+    fireEvent.click(within(first).getByRole('button', { name: 'Save review' }))
+    expect(await within(first).findByText('Reviewed by vs1')).toBeInTheDocument()
+    expect(screen.getByRole('article', { name: 'Requirement review for Second Hall' })).toHaveTextContent('Review Required')
+  })
+})
 
 describe('VS17 booking requirement review workflow', () => {
   it('VS17 (happy): shows historical requirements, actual reservations and an independent Review Required indicator', async () => {
@@ -55,7 +147,7 @@ describe('VS17 booking requirement review workflow', () => {
     expect(screen.getByRole('table', { name: 'Venue suitability results' })).toHaveTextContent('Fits 200 attendees')
     expect(screen.getByText('No issues detected')).toBeInTheDocument()
     expect(screen.getByRole('table', { name: 'Approved Requirement Changes' })).toHaveTextContent('Theatre, Classroom')
-    expect(screen.getByText('Staff assessment needed for written requirements and layout.')).toBeInTheDocument()
+    expect(screen.getByText('Review the requested room layout and any written requirements.')).toBeInTheDocument()
     expect(screen.queryByText(/Checked against current approved requirements/)).not.toBeInTheDocument()
   })
   it('VS17 (happy): records suitable without changing booking state and replaces the pending indicator with the audited outcome', async () => {
@@ -178,7 +270,7 @@ describe('VS17 booking requirement review workflow', () => {
     render(<VenueRequirementReviews bookingId="b1" />)
     await screen.findByRole('heading', { name: 'Main Hall — Review Required' })
     expect(screen.queryByText(/Venue supports:/)).not.toBeInTheDocument()
-    expect(screen.queryByText('Staff assessment needed for written requirements and layout.')).not.toBeInTheDocument()
+    expect(screen.queryByText('Review the requested room layout and any written requirements.')).not.toBeInTheDocument()
     expect(screen.queryByRole('table', { name: 'Venue requirement and supported layouts' })).not.toBeInTheDocument()
     const setupRow = screen.getByText('Setup / Turnaround').parentElement!
     expect(setupRow.nextElementSibling).toHaveTextContent('Occupied period')

@@ -2580,6 +2580,8 @@ class UpdateVenueDto {
 
 class VenueDto {
 	{field} -additionalInformation : String
+	{field} -latitude : Double
+	{field} -longitude : Double
 	{field} -operatingInformation : String
 	{field} -setupMinutes : int
 	{field} -turnaroundMinutes : int
@@ -2599,6 +2601,8 @@ class VenueOperatingHourDto {
 
 class Venue <<Entity>>  {
 	{field} +additionalInformation : String
+	{field} +latitude : Double
+	{field} +longitude : Double
 	{field} +operatingInformation : String
 	{field} +setupMinutes : int
 	{field} +supportedLayouts : List<String>
@@ -3417,6 +3421,53 @@ class VenueOperationalIssueService {
 }
 
 
+class VenueMapController {
+	{method} +activity ( date : LocalDate ) : List
+	{method} +bookings ( venueId : UUID , date : LocalDate , includePast : boolean ) : List
+	{method} +invalid ( e : MethodArgumentTypeMismatchException ) : ResponseEntity
+	{method} +missing ( e : VenueNotFoundException ) : ResponseEntity
+}
+
+
+class VenueMapDto {
+}
+
+
+class VenueMapDto.Activity {
+	{field} -eventCount : int
+	{field} -matchingBookingCount : int
+	{field} -pendingBookingCount : int
+	{field} -venueId : UUID
+}
+
+
+class VenueMapDto.Booking {
+	{field} -bookingId : UUID
+	{field} -endDatetime : OffsetDateTime
+	{field} -eventId : UUID
+	{field} -eventName : String
+	{field} -holdExpiresAt : OffsetDateTime
+	{field} -past : boolean
+	{field} -serverTime : OffsetDateTime
+	{field} -startDatetime : OffsetDateTime
+}
+
+
+class VenueMapRepository {
+	{field} {static} -VISIBLE : String
+	{field} -jdbc : JdbcTemplate
+	{method} +activity ( now : OffsetDateTime , dayStart : OffsetDateTime , dayEnd : OffsetDateTime ) : List
+	{method} +bookings ( venueId : UUID , now : OffsetDateTime , dayStart : OffsetDateTime , dayEnd : OffsetDateTime , includePast : boolean ) : List
+}
+
+
+class VenueMapService {
+	{field} {static} -SINGAPORE : ZoneId
+	{method} +activity ( date : LocalDate ) : List
+	{method} +bookings ( venueId : UUID , date : LocalDate , includePast : boolean ) : List
+}
+
+
 
 
 RequestActivity --> ActivityType : activityType
@@ -3878,6 +3929,10 @@ VenueOperationalIssueService --> VenueRepository : venues
 VenueOperationalIssueService --> VenueBookingRecordRepository : bookings
 VenueOperationalIssueService --> VenueOperationalIssueRepository : issues
 VenueOperationalIssueService --> AvailabilityRepository : availability
+VenueMapController --> VenueMapService : service
+VenueMapDto.Booking --> VenueBookingStatus : status
+VenueMapService --> VenueRepository : venues
+VenueMapService --> VenueMapRepository : map
 
 
 @enduml

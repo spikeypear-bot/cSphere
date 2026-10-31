@@ -1,5 +1,10 @@
 # Venue booking API and review workflows
 
+The [EC map extension](dev16-coordinator-map.md) adds a filtered map above the
+request page's existing search/list. It uses assigned-event venue options and the
+same selection/timing/request logic as the cards. Marker browsing never submits
+a request; the existing booking endpoints and decision rules are unchanged.
+
 ## Current timing and multi-venue contract (14 October 2026)
 
 Each booking has its own start/end window and saved setup/turnaround durations. Occupied time is `[booking start − setup, booking end + turnaround)`. Legacy nullable booking timestamps fall back to event timestamps. Advertised event requirements remain available separately in the staff response's `event` object.

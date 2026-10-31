@@ -1,14 +1,48 @@
-// @stories VS17 VS07 EC08
+// @stories DEV16 VS17 VS07 EC08
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { BookingAssessment } from './BookingAssessment'
+import { apiClient } from '../../lib/apiClient'
 const json = (body: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(body) }) as Response
 const assessment = (failed = false) => ({ bookingId: 'b1', status: 'attention', checks: failed ? [{ key: 'capacity', status: 'attention', detail: '200 expected; capacity 150.' }] : [],
  history: [{ assessmentId: 'a1', outcome: 'attention', source: 'Venue details changed', reason: 'Capacity was reduced.', actorName: 'vs1', createdAt: '2027-03-01T01:00:00Z' }] })
 function page(staff = true) { render(<MemoryRouter><BookingAssessment {...(staff ? { bookingId: 'b1' } : { eventId: 'e1' })} /></MemoryRouter>) }
-afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
+
+describe('DEV16 assessment boundary coverage', () => {
+ it.each([{}, { history: [] }, null])('DEV16 (failure): malformed assessment rows show retry rather than a decision (%j)', async value => {
+  vi.stubGlobal('fetch', vi.fn(async () => json([value])))
+  page()
+  expect(await screen.findByRole('alert')).toHaveTextContent('Could not load venue assessments.')
+  expect(screen.queryByRole('button', { name: 'Restore approval' })).not.toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Retry assessments' })).toBeEnabled()
+ })
+ it('DEV16 (boundary): a retained assessment on a non-approved booking uses its actual booking status', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json({ ...assessment(), status: 'rejected' })))
+  page()
+  expect(await screen.findByText('Rejected', { selector: 'span' })).toBeInTheDocument()
+  expect(screen.queryByRole('button', { name: 'Restore approval' })).not.toBeInTheDocument()
+ })
+ it('DEV16 (conflict): changed supported layouts require staff to review the room arrangement', async () => {
+  const value = assessment(true)
+  value.history[0].reason = 'Supported layouts changed: theatre removed.'
+  vi.stubGlobal('fetch', vi.fn(async () => json(value)))
+  page()
+  expect(await screen.findByText('Supported layouts changed. Review the requested room layout and written venue requirements.')).toBeInTheDocument()
+  expect(screen.getByRole('button', { name: 'Restore approval' })).toBeDisabled()
+ })
+ it('DEV16 (failure): a non-error save failure retains the comment and refreshes the assessment', async () => {
+  vi.stubGlobal('fetch', vi.fn(async () => json(assessment())))
+  vi.spyOn(apiClient, 'post').mockRejectedValue('offline')
+  page()
+  fireEvent.change(await screen.findByLabelText('Reassessment comment'), { target: { value: 'Checked arrangements' } })
+  fireEvent.submit(screen.getByLabelText('Reassessment comment').closest('form')!)
+  expect(await screen.findByText('Could not save reassessment. Please retry.')).toBeInTheDocument()
+  expect(screen.getByLabelText('Reassessment comment')).toHaveValue('Checked arrangements')
+ })
+})
 describe('VS17 booking suitability reassessment', () => {
  it('VS17 (happy): current venue changes appear on focus without navigation and block approval', async () => {
   let current = assessment()
