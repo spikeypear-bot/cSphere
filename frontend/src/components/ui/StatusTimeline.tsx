@@ -38,8 +38,12 @@ function stepsFor(status: EventRequestStatus): TimelineStep[] {
 
 export function StatusTimeline({ status }: { status: EventRequestStatus }) {
   const steps = stepsFor(status)
+  // The step the request is at, not the last one drawn: a draft is "Draft",
+  // not "Under review", for someone who hears the list rather than sees it.
+  const at = steps.find((s) => s.state === 'current' || s.state === 'attention' || s.state === 'rejected')
+    ?? [...steps].reverse().find((s) => s.state === 'done') ?? steps[0]
   return (
-    <ol className="status-timeline" aria-label={`Status: ${steps[steps.length - 1].label}`}>
+    <ol className="status-timeline" aria-label={`Status: ${at.label}`}>
       {steps.map((step) => (
         <li key={step.label} data-state={step.state}>
           {step.label}

@@ -47,6 +47,7 @@ import jakarta.persistence.EntityManager;
 @Tag("SO-C6")
 @Tag("EC08")
 @Tag("VS17")
+@Tag("EC-NEW2")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -124,6 +125,22 @@ class SafetyDecisionFlowTest {
         sync();
         return jdbc.queryForList("SELECT unnest(flagged_fields) FROM event_request_activity "
                 + "WHERE event_id = ? AND activity_type = ?", String.class, eventId, type);
+    }
+
+    @Test
+    @DisplayName("EC-NEW2 (cross-cutting): the Safety Officer reads the same resolved status for an event as its coordinator")
+    void theSafetyOfficerReadsTheSameStatusAsTheCoordinator() throws Exception {
+        UUID eventId = eventAwaitingReview();
+        sync();
+
+        String coordinator = mvc.perform(get("/api/events/" + eventId).with(flow.as("ec1")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        String officer = mvc.perform(get("/api/safety/events/" + eventId).with(flow.as("so1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.journeyStatus.code").value("AWAITING_SAFETY_REVIEW"))
+                .andExpect(jsonPath("$.journeyStatus.label").value("Awaiting Safety Review"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(flow.read(officer).get("journeyStatus")).isEqualTo(flow.read(coordinator).get("journeyStatus"));
     }
 
     @Test
