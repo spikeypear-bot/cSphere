@@ -23,6 +23,17 @@
   outline-offset: 1px;
 }
 
+.venue-search-field input::placeholder {
+  color: var(--ink-faint);
+  opacity: 1;
+  font-weight: 400;
+}
+
+.venue-search-field input:is([type='date'], [type='datetime-local'])[data-empty='true'] {
+  color: var(--ink-faint);
+  font-weight: 400;
+}
+
 .venue-search-field input[aria-invalid='true'] {
   border-color: var(--danger);
 }

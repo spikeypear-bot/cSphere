@@ -1,0 +1,27 @@
+.venue-map-popup button:focus-visible { outline: 2px solid var(--map-accent, var(--role-venue)); outline-offset: 2px; }
+.venue-map-surface { position: relative; overflow: hidden; isolation: isolate; }
+.venue-map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .75rem 1rem; color: var(--ink-soft); font-size: .8rem; }
+.venue-map-canvas { width: 100%; height: 540px; background: var(--hairline); font-family: var(--sans); }
+.venue-map-caption { padding: .75rem 1rem; }
+.venue-map-marker { display: grid; place-items: center; background: var(--panel); border: 2px solid var(--map-accent, var(--role-venue)); border-radius: 50%; color: var(--map-accent, var(--role-venue)); box-shadow: 0 2px 6px #0003; font-size: 1rem; font-weight: 700; }
+.venue-map-marker--selected { background: var(--map-accent, var(--role-venue)); color: var(--paper); outline: 3px solid var(--panel); }
+.venue-map-popup { display: grid; gap: .4rem; max-height: 180px; overflow-y: auto; min-width: 160px; }
+.venue-map-popup button { border: 1px solid var(--hairline); padding: .45rem .6rem; border-radius: var(--radius-sm); text-align: left; background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; }
+.venue-map-popup button[aria-pressed='true'], .venue-map-popup button[aria-checked='true'] { border-color: var(--map-accent, var(--role-venue)); background: var(--map-selection-background, var(--success-soft)); }
+.venue-map-surface .leaflet-popup-content-wrapper, .venue-map-surface .leaflet-popup-tip { background: var(--panel); color: var(--ink); }
+.venue-map-tile-error { padding: .7rem; background: var(--warning-soft); color: var(--ink); font-size: .85rem; }
+.venue-map-state { display: grid; gap: .75rem; }
+@media (max-width: 900px) {
+  .venue-map-canvas { height: 420px; }
+}
+.venue-map-spacing {
+  --venue-map-section-gap: 1.25rem;
+  --venue-map-content-gap: 1rem;
+  --venue-map-panel-padding: 1.5rem;
+  --venue-map-field-gap: .4rem;
+  --venue-map-input-padding: .6rem .7rem;
+}
+.venue-map-spacing.page { gap: var(--venue-map-section-gap); }
+@media (max-width: 640px) {
+  .venue-map-spacing { --venue-map-panel-padding: 1rem; }
+}

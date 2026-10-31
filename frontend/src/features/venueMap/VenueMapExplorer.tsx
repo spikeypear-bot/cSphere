@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
@@ -7,10 +7,10 @@ import type { Facility, VenueDto } from '../../types/venue'
 import { VenueFacilitiesFilter, VenueSearchField } from '../../components/venue/VenueSearchFilters'
 import { useVenueRead } from '../venueStaff/useVenueRead'
 import { VenueMapDetails } from './VenueMapDetails'
+import { VenueMapPanel } from './VenueMapPanel'
 import { filterVenues, hasCoordinates, venueName, type VenueMapActivity } from './mapData'
 import './VenueMapExplorer.css'
 
-const VenueMap = lazy(() => import('./VenueMap'))
 const EMPTY_ACTIVITY: VenueMapActivity[] = []
 
 export function VenueMapExplorer() {
@@ -45,7 +45,7 @@ export function VenueMapExplorer() {
   const ready = !!venues.data && !!activity.data
   const failed = venues.error || activity.error
   const results = ready && !failed && !capacityInvalid ? filtered : []
-  return <section className="venue-map-explorer" aria-labelledby="explore-map-heading">
+  return <section className="venue-map-explorer venue-map-spacing" aria-labelledby="explore-map-heading">
     <PageHeader title="Explore venues" headingLevel={2} headingId="explore-map-heading"
       description="Find a venue and review its upcoming events and bookings."
       actions={<Button className="venue-refresh-button" variant="ghost" onClick={refresh} aria-label="Refresh venues"><RefreshIcon /> Refresh</Button>} />
@@ -88,9 +88,7 @@ export function VenueMapExplorer() {
         {ready && !failed && results.length === 0 && <Card className="feature-skeleton__body venue-map-state"><h3>{venues.data?.length === 0 ? 'No venues yet' : 'No matching venues'}</h3><p>Try another search or clear the filters.</p></Card>}
       </div>
       <div className="venue-map-map-panel">
-        <Suspense fallback={<Card className="feature-skeleton__body venue-map-state" role="status">Loading map…</Card>}>
-          <VenueMap venues={results} selectedId={activeId} onSelect={select} />
-        </Suspense>
+        <VenueMapPanel venues={results} selectedId={activeId} onSelect={select} />
       </div>
     </div>
     {selected && ready && !failed && !capacityInvalid && <VenueMapDetails key={`${selected.venueId}:${date}`} venue={selected} date={date} onClose={() => setSelectedId(undefined)} />}

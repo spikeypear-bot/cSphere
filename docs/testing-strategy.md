@@ -88,6 +88,11 @@ test counts are historical execution records.
 - **Target:** 100% for the classes behind a story, or stated why not (below). Uncovered branches found this way are either a missing boundary/failure test or dead code to delete. Examples:
   - `formatDate(null)`, a Confirmed-check that could never be false, and a "no approved venue" branch that confirmation makes impossible were all removed rather than tested.
 
+The [1 November EC map extension](dev16-coordinator-map.md) also gates
+`CoordinatorVenueMap.tsx` at 100% on all four frontend metrics. New shared map/text
+modules remain covered by the existing map and `components/venue` gates. General
+EC page coverage remains diagnostic; the shared staff/map thresholds are unchanged.
+
 ### Stated coverage exclusions
 
 | Code | Why it is not covered |

@@ -1,5 +1,9 @@
 # Venue Staff workflow and coverage audit — 31 October 2026
 
+The later [EC map extension](dev16-coordinator-map.md) adds coordinator consumers
+and additional shared map/filter source files. Counts below record this dated
+staff audit; the existing 100% gates also cover the new shared modules.
+
 The audit covers the `/venue-staff` console/map, catalogue, create/edit/details,
 booking decisions, holds, assessments, requirement reviews, timing conflicts,
 calendar, operational issues, unavailability and release/history. Related backend

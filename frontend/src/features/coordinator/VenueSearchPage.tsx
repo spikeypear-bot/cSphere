@@ -1,6 +1,6 @@
 import { OperatingHours } from '../../components/OperatingHours'
 import { useLiveRefresh } from '../../lib/useLiveRefresh'
-import { useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
@@ -10,6 +10,9 @@ import { VenueFacilitiesFilter, VenueSearchField } from '../../components/venue/
 import './VenueSearchPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { occupiedPeriod } from '../../lib/bookingTiming'
+import { CoordinatorVenueMap } from './CoordinatorVenueMap'
+import { venueMatchesSearch } from '../../components/venue/venueMatchesSearch'
+import { hasCoordinates } from '../venueMap/mapData'
 
 function parseLocalDateTime(value: string): Date | null {
   const parts = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(value)
@@ -37,6 +40,9 @@ export function VenueSearchPage() {
   const [validationError, setValidationError] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
+  const [textQuery, setTextQuery] = useState('')
+  const [mapFocusId, setMapFocusId] = useState<string>()
+  const visible = useMemo(() => (venues ?? []).filter(venue => venueMatchesSearch(venue, textQuery)), [venues, textQuery])
 
   useEffect(() => {
     if (!searchQuery || liveRevision === 0) return
@@ -50,6 +56,7 @@ export function VenueSearchPage() {
     setVenues(null)
     setValidationError(null)
     setSearchError(null)
+    setMapFocusId(undefined)
   }
 
   function updateFacilities(facility: Facility, checked: boolean) {
@@ -99,7 +106,7 @@ export function VenueSearchPage() {
   }
 
   return (
-    <section className="page page--compact venue-search">
+    <section className="page page--compact venue-search venue-map-spacing">
       <PageHeader title="Search venues"
         description="Find venues that are available for the event and meet its requirements." />
 
@@ -109,6 +116,7 @@ export function VenueSearchPage() {
             <VenueSearchField label="Event starts"
               type="datetime-local"
               value={startDatetime}
+              data-empty={!startDatetime}
               aria-label="Event starts"
               disabled={searching}
               onChange={event => { setStartDatetime(event.target.value); clearSearch() }}
@@ -116,6 +124,7 @@ export function VenueSearchPage() {
             <VenueSearchField label="Event ends"
               type="datetime-local"
               value={endDatetime}
+              data-empty={!endDatetime}
               aria-label="Event ends"
               disabled={searching}
               onChange={event => { setEndDatetime(event.target.value); clearSearch() }}
@@ -127,12 +136,16 @@ export function VenueSearchPage() {
             min="1"
             step="1"
             value={capacity}
+            placeholder="e.g. 100"
             aria-label="Required capacity"
             disabled={searching}
             onChange={event => { setCapacity(event.target.value); clearSearch() }}
           />
 
           <VenueFacilitiesFilter selected={facilities} disabled={searching} onChange={updateFacilities} />
+
+          <VenueSearchField label="Search by address or details" type="search" value={textQuery}
+            placeholder="Venue name, address or details" onChange={event => setTextQuery(event.target.value)} />
 
           {validationError ? <p role="alert">{validationError}</p> : null}
           {searchError ? <p role="alert">{searchError}</p> : null}
@@ -143,16 +156,18 @@ export function VenueSearchPage() {
       </Card>
 
       {searching ? <p role="status">Searching available venues…</p> : null}
+      <CoordinatorVenueMap venues={visible} selectedId={visible.some(venue => venue.venueId === mapFocusId) ? mapFocusId : undefined}
+        onSelect={setMapFocusId} />
       {venues !== null ? (
         <section className="venue-search__results" aria-labelledby="venue-search-results">
           <h2 id="venue-search-results">Search results</h2>
-          {venues.length === 0 ? (
+          {visible.length === 0 ? (
             <Card><p role="status">No matching venues found.</p></Card>
           ) : (
             <ul>
-              {venues.map(venue => (
+              {visible.map(venue => (
                 <li key={venue.venueId}>
-                  <Card>
+                  <Card data-map-focused={venue.venueId === mapFocusId}>
                     <h3>{venue.venueAddress}</h3>
                     <p>{venue.venueCapacity === null
                       ? 'Capacity not recorded'
@@ -167,6 +182,9 @@ export function VenueSearchPage() {
                       ...occupiedPeriod(parseLocalDateTime(startDatetime)!.toISOString(), parseLocalDateTime(endDatetime)!.toISOString(),
                         venue.setupMinutes ?? 0, venue.turnaroundMinutes ?? 0), timingNote: null, conflicts: [],
                     }} />}
+                    {hasCoordinates(venue) ? <Button variant="ghost" aria-pressed={venue.venueId === mapFocusId}
+                      onClick={() => setMapFocusId(venue.venueId)}>Show on map</Button>
+                      : <p className="field-hint">Map location unavailable</p>}
                   </Card>
                 </li>
               ))}

@@ -2,6 +2,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import type { ReactNode } from 'react'
+import type { DivIcon } from 'leaflet'
 import type { VenueDto } from '../../types/venue'
 import VenueMap from './VenueMap'
 
@@ -14,10 +15,10 @@ vi.mock('react-leaflet', () => ({
     leaflet.tilesMounted()
     return <button onClick={eventHandlers.tileerror}>Simulate unavailable tiles</button>
   },
-  Marker: ({ children, title, eventHandlers, ref }: { children: ReactNode; title: string;
+  Marker: ({ children, title, eventHandlers, ref, icon }: { children: ReactNode; title: string; icon: DivIcon;
     ref: { current: unknown }; eventHandlers: { click: () => void; keydown: (event: unknown) => void } }) => {
     ref.current = { openPopup: leaflet.openPopup }
-    return <div><button title={title} onClick={eventHandlers.click}
+    return <div><button title={title} data-icon-class={icon.options.className} data-icon-html={icon.options.html} onClick={eventHandlers.click}
       onKeyDown={event => eventHandlers.keydown({ originalEvent: { key: event.key, preventDefault: leaflet.preventDefault } })}>{title}</button>{children}</div>
   },
   Popup: ({ children }: { children: ReactNode }) => <div>{children}</div>, useMap: () => map,
@@ -95,5 +96,30 @@ describe('DEV16 map viewport', () => {
     await act(async () => fireEvent.click(screen.getByRole('button', { name: 'Retry map tiles' })))
     expect(screen.queryByRole('status')).not.toBeInTheDocument()
     expect(leaflet.tilesMounted.mock.calls.length).toBeGreaterThan(before)
+  })
+  it('DEV16 (happy): a shared marker highlights selected rooms independently from browsing focus', () => {
+    const rooms = [{ ...venue, latitude: 1.3, longitude: 103.8 },
+      { ...venue, venueId: 'second', venueName: 'Second room', latitude: 1.3, longitude: 103.8 },
+      { ...venue, venueId: 'third', venueName: 'Other location', latitude: 1.4, longitude: 103.9 }]
+    const onSelect = vi.fn(), onToggleVenue = vi.fn()
+    const page = render(<VenueMap venues={rooms} selectedIds={['second', 'third']} onSelect={onSelect} onToggleVenue={onToggleVenue} caption="Choose rooms individually." />)
+    const marker = screen.getByTitle('2 venues near Room')
+    expect(marker).toHaveAttribute('data-icon-html', '<span>2</span>')
+    expect(marker.getAttribute('data-icon-class')).toContain('venue-map-marker--selected')
+    expect(screen.getByTitle('Other location').getAttribute('data-icon-class')).toContain('venue-map-marker--selected')
+    expect(screen.getByRole('checkbox', { name: 'Room' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Second room' })).toBeChecked()
+    fireEvent.click(marker)
+    expect(onSelect).toHaveBeenLastCalledWith('second')
+    expect(onToggleVenue).not.toHaveBeenCalled()
+    page.rerender(<VenueMap venues={rooms} selectedId="room" selectedIds={['second']} onSelect={onSelect} onToggleVenue={onToggleVenue} />)
+    expect(screen.getByRole('checkbox', { name: 'Room' })).not.toBeChecked()
+    expect(screen.getByRole('checkbox', { name: 'Second room' })).toBeChecked()
+    expect(screen.getByTitle('Other location').getAttribute('data-icon-class')).not.toContain('venue-map-marker--selected')
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Second room' }))
+    expect(onToggleVenue).toHaveBeenCalledExactlyOnceWith('second')
+    page.rerender(<VenueMap venues={rooms} selectedId="room" selectedIds={[]} onSelect={onSelect} onToggleVenue={onToggleVenue} />)
+    expect(marker.getAttribute('data-icon-class')).not.toContain('venue-map-marker--selected')
+    expect(screen.getByRole('checkbox', { name: 'Second room' })).not.toBeChecked()
   })
 })

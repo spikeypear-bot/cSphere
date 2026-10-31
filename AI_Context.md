@@ -606,3 +606,14 @@ instructions, branches, lines and methods for the `venuemap` package. Other shar
 backend/role modules remain diagnostic; do not claim repository-wide 100% coverage.
 Keep the existing test-quality rules and story tags. No coverage-ignore comments
 were added. See `docs/venue-staff-coverage-audit.md` for scope, fixes and evidence.
+
+## EC venue maps (1 November 2026)
+
+User-authorised DEV16 extension: EC venue search and per-event venue requests reuse
+the shared lazy map. Request layout keeps needs on the left and map/search/choices
+on the right. The map and list share filtered options; multi-room selections and
+grouped marker/popup highlights stay in sync. Opening a marker only browses;
+individual popup toggles use the existing request selection logic. EC reads only
+its existing search/assigned-event options, never the VS map-summary endpoints.
+No backend permissions or booking rules change. Shared map/filter coverage and
+the EC map adapter are gated at 100%; see `docs/dev16-coordinator-map.md`.

@@ -1,5 +1,9 @@
 # DEV16 — Venue Staff map, first release
 
+The subsequent [EC map extension](dev16-coordinator-map.md) reuses this renderer
+inside coordinator search and per-event requests, using existing EC-scoped data.
+The first-release behaviour and results below remain the staff implementation record.
+
 For the later staff-facing copy, placeholder, card/spacing and seeded-note review,
 see [Venue Staff presentation and notes](dev16-venue-staff-notes.md).
 For the subsequent full workflow/test review, see the
@@ -66,10 +70,10 @@ failed/denied reads hide affected old results and offer retry. Responses for an 
 selection or filter cannot replace the current view. A hold deadline removes the
 tentative display even if the subsequent refresh fails.
 
-Future coordinator, lead or attendee access needs an explicit server-side scope and
-field policy before exposing these endpoints. The presentation map is reusable and
-contains no role-specific API calls; the first-release map is mounted only by the
-existing gated Venue Staff home.
+The staff booking-summary endpoints remain VS-only. Exposing those summaries to
+another role would require an explicit server-side scope and field policy. The
+presentation map contains no role-specific API calls; the EC extension uses existing
+venue-search and assigned-event venue options instead of staff summaries.
 
 ## Dependencies and tiles
 

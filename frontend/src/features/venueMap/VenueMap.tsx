@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { divIcon, type Marker as LeafletMarker } from 'leaflet'
 import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import type { VenueDto } from '../../types/venue'
 import { groupVenues, hasCoordinates, venueName } from './mapData'
+import './VenueMap.css'
 
 const SINGAPORE: [number, number] = [1.3521, 103.8198]
 const TILE_URL = import.meta.env.VITE_MAP_TILE_URL || 'https://tile.openstreetmap.org/{z}/{x}/{y}.png'
@@ -28,25 +29,28 @@ function MapViewport({ selected, reset }: { selected?: VenueDto; reset: number }
   return null
 }
 
-function VenueMarker({ group, selectedId, onSelect }: {
-  group: ReturnType<typeof groupVenues>[number]; selectedId?: string; onSelect: (id: string) => void
+function VenueMarker({ group, selectedId, selectedIds, onSelect, onToggleVenue }: {
+  group: ReturnType<typeof groupVenues>[number]; selectedId?: string; selectedIds: readonly string[];
+  onSelect: (id: string) => void; onToggleVenue?: (id: string) => void
 }) {
   const marker = useRef<LeafletMarker>(null)
-  const selected = group.venues.some(v => v.venueId === selectedId)
+  const selected = group.venues.some(v => selectedIds.includes(v.venueId))
+  const focused = group.venues.some(v => v.venueId === selectedId)
+  const preferredId = focused ? selectedId! : group.venues.find(v => selectedIds.includes(v.venueId))?.venueId ?? group.venues[0].venueId
   const icon = useMemo(() => divIcon({
     className: `venue-map-marker${selected ? ' venue-map-marker--selected' : ''}`,
     html: `<span>${group.venues.length}</span>`,
     iconSize: [34, 34], iconAnchor: [17, 17], popupAnchor: [0, -20],
   }), [group.venues.length, selected])
-  useEffect(() => { if (selected) marker.current?.openPopup() }, [selected, selectedId])
+  useEffect(() => { if (focused) marker.current?.openPopup() }, [focused, selectedId])
   const label = group.venues.length === 1 ? venueName(group.venues[0]) : `${group.venues.length} venues near ${group.venues[0].venueAddress}`
   return <Marker ref={marker} position={group.position} icon={icon} title={label} alt={label}
     eventHandlers={{
-      click: () => onSelect(selectedId && selected ? selectedId : group.venues[0].venueId),
+      click: () => onSelect(preferredId),
       keydown: event => {
         if (event.originalEvent.key === 'Enter' || event.originalEvent.key === ' ') {
           event.originalEvent.preventDefault()
-          onSelect(selectedId && selected ? selectedId : group.venues[0].venueId)
+          onSelect(preferredId)
           marker.current?.openPopup()
         }
       },
@@ -55,16 +59,29 @@ function VenueMarker({ group, selectedId, onSelect }: {
       <div className="venue-map-popup">
         {group.venues.length > 1 && <strong>Choose a venue at this location</strong>}
         {group.venues.map(venue => <button type="button" key={venue.venueId}
-          aria-pressed={venue.venueId === selectedId} onClick={() => onSelect(venue.venueId)}>{venueName(venue)}</button>)}
+          role={onToggleVenue ? 'checkbox' : undefined}
+          aria-checked={onToggleVenue ? selectedIds.includes(venue.venueId) : undefined}
+          aria-pressed={onToggleVenue ? undefined : selectedIds.includes(venue.venueId)}
+          onClick={() => { onSelect(venue.venueId); onToggleVenue?.(venue.venueId) }}>{venueName(venue)}</button>)}
       </div>
     </Popup>
   </Marker>
 }
 
+export interface VenueMapProps {
+  venues: VenueDto[]
+  /** Focus determines the viewport/popup; selectedIds independently tracks a multi-venue request. */
+  selectedId?: string
+  selectedIds?: readonly string[]
+  onSelect: (id: string) => void
+  onToggleVenue?: (id: string) => void
+  caption?: ReactNode
+}
+
 /** Presentation only: role permissions and data loading belong to the caller. */
-export default function VenueMap({ venues, selectedId, onSelect }: {
-  venues: VenueDto[]; selectedId?: string; onSelect: (id: string) => void
-}) {
+export default function VenueMap({ venues, selectedId, selectedIds, onSelect, onToggleVenue,
+  caption = 'Select a location to view its venues.' }: VenueMapProps) {
+  const selection = selectedIds ?? (selectedId ? [selectedId] : [])
   const groups = useMemo(() => groupVenues(venues), [venues])
   const [reset, setReset] = useState(0)
   const [tileFailed, setTileFailed] = useState(false)
@@ -82,8 +99,8 @@ export default function VenueMap({ venues, selectedId, onSelect }: {
         eventHandlers={{ tileerror: () => setTileFailed(true) }} />
       <MapViewport selected={venues.find(v => v.venueId === selectedId)} reset={reset} />
       {groups.map(group => <VenueMarker key={group.venues[0].venueId} group={group}
-        selectedId={selectedId} onSelect={onSelect} />)}
+        selectedId={selectedId} selectedIds={selection} onSelect={onSelect} onToggleVenue={onToggleVenue} />)}
     </MapContainer>
-    <p className="field-hint venue-map-caption">Select a location to view its venues. <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">Report a map issue</a></p>
+    <p className="field-hint venue-map-caption">{caption} <a href="https://www.openstreetmap.org/fixthemap" target="_blank" rel="noreferrer">Report a map issue</a></p>
   </Card>
 }

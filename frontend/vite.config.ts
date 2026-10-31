@@ -39,6 +39,7 @@ export default defineConfig({
         'src/features/venueStaff/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/features/venueMap/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
         'src/components/venue/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/features/coordinator/CoordinatorVenueMap.tsx': { statements: 100, branches: 100, functions: 100, lines: 100 },
       },
     },
   },

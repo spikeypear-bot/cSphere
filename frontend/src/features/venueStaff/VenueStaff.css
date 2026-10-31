@@ -5,9 +5,9 @@
   font-weight: 400;
 }
 
-.venue-staff-home .venue-search-field { gap: .4rem; font-size: .85rem; font-weight: 600; color: var(--ink-soft); }
+.venue-staff-home .venue-search-field { gap: var(--venue-map-field-gap); font-size: .85rem; font-weight: 600; color: var(--ink-soft); }
 .venue-staff-home .venue-search-field input {
-  padding: .6rem .7rem;
+  padding: var(--venue-map-input-padding);
   background: var(--paper);
   color: var(--ink);
   font: inherit;

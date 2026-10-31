@@ -1,0 +1,7 @@
+.coordinator-venue-map { --map-accent: var(--role-coordinator); --map-selection-background: color-mix(in srgb, var(--role-coordinator) 10%, var(--panel)); min-width: 0; }
+.coordinator-venue-map .venue-map-surface,
+.venue-request .coordinator-venue-map .venue-map-surface { padding: 0; }
+.coordinator-venue-map .venue-map-canvas { height: 340px; }
+@media (max-width: 640px) {
+  .coordinator-venue-map .venue-map-canvas { height: 280px; }
+}
