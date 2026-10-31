@@ -264,6 +264,7 @@ interface AttendeeRegistrationRepository {
 	{method}  {abstract} +countByEventIdAndStatus ( eventId : UUID , status : String ) : long
 	{method}  {abstract} +findByAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc ( attendeeId : UUID ) : List
 	{method}  {abstract} +findByEventIdAndAttendeeIdAndStatus ( eventId : UUID , attendeeId : UUID , status : String ) : Optional
+	{method}  {abstract} +findByEventIdAndStatusAndAttendeeIdIsNotNull ( eventId : UUID , status : String ) : List
 	{method}  {abstract} +findByRegistrationIdAndAttendeeId ( registrationId : UUID , attendeeId : UUID ) : Optional
 	{method}  {abstract} +findFirstByEventIdAndAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc ( eventId : UUID , attendeeId : UUID ) : Optional
 	{method}  {abstract} +findOwnedEventId ( registrationId : UUID , attendeeId : UUID ) : Optional
@@ -457,6 +458,7 @@ interface ChangeRequestRepository {
 
 
 class ChangeRequestService {
+	{field} {static} -ATTENDEE_NOTIFICATION_FIELDS : Set<String>
 	{field} {static} ~MAX_TEXT : int
 	{field} {static} ~REQUEST_CHANGED_SINCE : String
 	{field} -clock : Clock
@@ -2128,6 +2130,8 @@ class NotificationDto {
 	{field} -newStatus : String
 	{field} -notificationId : UUID
 	{field} -occurredAt : OffsetDateTime
+	{field} -originalEventEndDatetime : OffsetDateTime
+	{field} -originalEventStartDatetime : OffsetDateTime
 	{field} -read : boolean
 	{field} -reason : String
 	{field} -type : String
@@ -2148,6 +2152,8 @@ class Notification <<Entity>>  {
 	{field} +newStatus : String
 	{field} +notificationId : UUID {id}
 	{field} +occurredAt : OffsetDateTime
+	{field} +originalEventEndDatetime : OffsetDateTime
+	{field} +originalEventStartDatetime : OffsetDateTime
 	{field} +readAt : OffsetDateTime
 	{field} +reason : String
 	{field} +recipientUserId : UUID
@@ -2157,7 +2163,17 @@ class Notification <<Entity>>  {
 }
 
 
+class NotificationChange {
+	{field} -field : String
+	{field} -label : String
+	{field} -previousValue : String
+	{field} -updatedValue : String
+}
+
+
 enum NotificationType {
+	{field} +attendee_event_cancelled
+	{field} +attendee_event_changed
 	{field} +attendee_registration_confirmed
 	{field} +attendee_registration_withdrawn
 	{field} +change_request_decided
@@ -2229,6 +2245,8 @@ class NotificationOutbox {
 class NotificationService {
 	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
 	{field} {static} -log : Logger
+	{method} +createAttendeeEventCancellationNotifications ( eventId : UUID , eventName : String , originalStart : OffsetDateTime , originalEnd : OffsetDateTime , reason : String , cancelledAt : OffsetDateTime ) : void
+	{method} +createAttendeeEventChangeNotifications ( changeRequestId : UUID , eventId : UUID , eventName : String , changes : List , committedAt : OffsetDateTime ) : void
 	{method} +createAttendeeRegistrationConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String , registrationId : UUID ) : void
 	{method} +createAttendeeWithdrawalConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String , registrationId : UUID , withdrawnAt : OffsetDateTime ) : void
 	{method} +createChangeRequestNotifications ( recipientUserIds : List , type : NotificationType , eventRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
@@ -3696,10 +3714,13 @@ EventRequestService --> EventRequestRepository : repository
 EventRequestService --> NotificationService : notificationService
 EventRequestService --> UserRepository : userRepository
 NotificationController --> NotificationService : service
+NotificationDto --> "0..*" NotificationChange : changes
+Notification --> "0..*" NotificationChange : notificationChanges
 Notification --> NotificationType : type
 NotificationOutbox --> NotificationDelivery : delivery
 NotificationService --> "0..*" NotificationType : SELF_NOTICES
 NotificationService --> NotificationRepository : repository
+NotificationService --> AttendeeRegistrationRepository : attendeeRegistrations
 NotificationService --> NotificationOutbox : outbox
 NotificationService --> UserRepository : users
 EventReadinessController --> ReadinessService : readiness
