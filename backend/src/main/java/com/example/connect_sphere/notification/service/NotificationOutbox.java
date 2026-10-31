@@ -35,6 +35,9 @@ public class NotificationOutbox {
         payload.put("venue_booking_id",n.getVenueBookingId()); payload.put("requirement_review_id",n.getRequirementReviewId());
         // EC-NEW4 (V54): who did it travels with the queued notice.
         payload.put("actor_name",n.getActorName()); payload.put("actor_role",n.getActorRole());
+        payload.put("notification_changes",n.getNotificationChanges());
+        payload.put("original_event_start_datetime",n.getOriginalEventStartDatetime());
+        payload.put("original_event_end_datetime",n.getOriginalEventEndDatetime());
         jdbc.update("INSERT INTO notification_outbox(notification_id,payload) VALUES (?,?::jsonb) ON CONFLICT (notification_id) DO NOTHING",
             n.getNotificationId(),json.writeValueAsString(payload));
         TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
