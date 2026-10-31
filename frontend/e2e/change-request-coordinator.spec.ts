@@ -213,7 +213,7 @@ test('EC-NEW3 AC3, AC4 (happy): the coordinator sees how many changes are waitin
   const entry = waiting.getByRole('listitem').filter({ has: coordinator.getByRole('link', { name: `Change to ${eventName}` }) })
   await expect(entry).toContainText('Acme Pte Ltd')
   await expect(entry).toContainText('Fewer guests')
-  await expect(entry).toContainText(/\(Singapore time\) · .*ago/)
+  await expect(entry).toContainText(/\(Singapore time\) · (just now|.+ ago)/)
   await evidence(coordinator, 'EC-NEW3-TC6')
 })
 

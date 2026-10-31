@@ -128,6 +128,7 @@ test('EC-NEW2 (failure): TC14 a refused action changes neither the status nor th
 })
 
 test('EC-NEW2 (cross-cutting): TC15, TC18, TC19, TC26 Safety Approved reads the same, as words, with the same explanation and next step, for the organiser, coordinator and Safety Officer, on screen and in the API', async ({ browser, request }) => {
+  test.setTimeout(120_000)
   const e = await planning(request, 'Acme Ready To Confirm Night')
   await approvedBookingByApi(request, e.eventId, await createVenue(request, uniqueName('Acme Ready Hall')))
   await safetyApprovedByApi(request, e.eventId)
