@@ -33,4 +33,17 @@ describe('StatusTimeline — EO15 visual status stepper', () => {
     render(<StatusTimeline status="cancelled" />)
     expect(screen.getByText('Cancelled').closest('li')).toHaveAttribute('data-state', 'rejected')
   })
+
+  it('EO15 (cross-cutting): the list is announced with the step the request is at, not the last step drawn', () => {
+    const expected: [Parameters<typeof StatusTimeline>[0]['status'], string][] = [
+      ['draft', 'Status: Draft'], ['pending', 'Status: Submitted'],
+      ['clarification_required', 'Status: Clarification required'], ['approved', 'Status: Approved'],
+      ['rejected', 'Status: Rejected'], ['cancelled', 'Status: Cancelled'],
+    ]
+    for (const [status, label] of expected) {
+      render(<StatusTimeline status={status} />)
+      expect(screen.getByRole('list', { name: label })).toBeInTheDocument()
+      cleanup()
+    }
+  })
 })
