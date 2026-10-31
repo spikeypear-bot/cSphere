@@ -825,3 +825,21 @@ request (D36, which supersedes it) or by
 note, which returns it to `approved`. Technical-Support-facing reads treat
 `attention` as approved, since the reservations are still held (including
 the queue's `?status=approved` filter); readiness treats it as outstanding.
+
+## V59 update — attendee event-change notices (AT09)
+
+`notification_type` adds `attendee_event_changed` and
+`attendee_event_cancelled`. `notifications.notification_changes` stores the
+immutable before/after field list for one approved change; cancellation rows
+store the event's original start/end in dedicated columns. Both shapes require
+the event, the attendee's exact registration and a message. The outbox payload
+contains the same snapshots so retrying delivery cannot recompute them from
+later event state. Change/cancellation processing uses stable notification IDs
+per change-or-event and attendee.
+
+Cancellation keeps registration history but the attendee read model exposes
+confirmed registrations for cancelled events as `event_cancelled`; capacity
+reads already exclude this status. Active identified registrations only are
+notified. Email is intentionally not configured for this project; in-app
+delivery reuses V48's post-commit outbox and 30-second retry schedule. See the
+[AT09 contract](../../../../../../docs/attendee-event-change-notifications.md).
