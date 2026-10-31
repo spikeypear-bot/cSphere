@@ -67,7 +67,7 @@ export function AssignedEventsPage() {
                     <Card className="assigned-events__change">
                       <Link to={`/coordinator/change-requests/${change.changeRequestId}`}>Change to {change.eventName}</Link>
                       <p className="field-hint">{change.organisation} · asked by {change.requestedByName}, <When iso={change.requestedAt} /></p>
-                      <p><strong>Reason:</strong> {change.reason}</p>
+                      <p className="assigned-events__change-reason"><strong>Reason:</strong> {change.reason}</p>
                     </Card>
                   </li>
                 ))}

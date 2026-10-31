@@ -79,3 +79,12 @@
 .assigned-events__change p {
   margin: 4px 0 0;
 }
+
+/* A reason can be 2,000 characters; the review page shows it in full. */
+.assigned-events__change-reason {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
