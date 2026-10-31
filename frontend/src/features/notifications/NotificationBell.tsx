@@ -27,7 +27,8 @@ const ROLE_LABELS: Record<string, string> = {
 
 /** EC-NEW4: the messages these types carry are the substance, so they are always shown. */
 const MESSAGE_TYPES = new Set(['request_submitted', 'request_assigned', 'request_handed_over', 'equipment_request_decided',
-  'venue_booking_rejected', 'venue_booking_approved', 'confirmed_venue_changed'])
+  'venue_booking_rejected', 'venue_booking_approved', 'confirmed_venue_changed',
+  'event_reassignment_approved', 'event_reassignment_declined'])
 
 function describe(n: NotificationDto): string {
   if (n.type === 'confirmed_venue_changed') return `Venue update for your confirmed event "${n.eventName}"`
@@ -41,12 +42,10 @@ function describe(n: NotificationDto): string {
   if (n.type === 'venue_hold_expired') return `Tentative venue hold expired for "${n.eventName}"`
   if (n.type === 'venue_hold_expiring') return `Tentative venue hold expiring soon for "${n.eventName}"`
   if (n.type === 'event_reassignment_requested') return `Reassignment requested for "${n.eventName}"`
-  if (n.type === 'event_reassignment_approved') {
-    return n.message ?? `"${n.eventName}" has been reassigned`
-  }
-  if (n.type === 'event_reassignment_declined') {
-    return n.message ?? `Reassignment declined for "${n.eventName}"`
-  }
+  // EC-NEW4 AC17: the title always names the event; the message (who it moved
+  // between, or why it was declined) is shown underneath.
+  if (n.type === 'event_reassignment_approved') return `"${n.eventName}" has been reassigned`
+  if (n.type === 'event_reassignment_declined') return `Reassignment declined for "${n.eventName}"`
   if (n.type === 'change_request_submitted') return `Change requested for "${n.eventName}"`
   if (n.type === 'change_request_withdrawn') return `Change request withdrawn for "${n.eventName}"`
   if (n.type === 'change_request_decided') return n.message ?? `Your change request for "${n.eventName}" was decided`
@@ -174,6 +173,10 @@ export function NotificationBell() {
                         <span className="notification-bell__item-reason">{n.message}</span>
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>
+                      ) : null}
+                      {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
+                      {n.type === 'venue_unavailable' && n.reason ? (
+                        <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
                       {n.actorName ? (
                         <span className="notification-bell__actor">
