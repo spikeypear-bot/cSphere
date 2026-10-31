@@ -125,7 +125,7 @@ public class Event {
     @Column(name = "confirmed_at")
     private OffsetDateTime confirmedAt;
 
-    /** V60, AT09: venue addresses at the latest confirmation ("; "-separated). */
+    /** V61, AT09: venue addresses at the latest confirmation ("; "-separated). */
     @Column(name = "confirmed_venues")
     private String confirmedVenues;
 
