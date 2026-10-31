@@ -1,4 +1,4 @@
-// @stories EC-NEW4 EO-C1 EC-C4 EC-C1
+// @stories EC-NEW4 EO-C1 EC-C4 EC-C1 EO03
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -259,5 +259,29 @@ describe('EC-NEW4 NotificationBell — what a coordinator is told, and how', () 
     })
 
     await waitFor(() => expect(listCalls(fetchMock)).toBe(before + 1))
+  })
+})
+
+describe('EO03 NotificationBell — the organiser is told a change request was decided', () => {
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EO03 AC37 (happy): the title names the event and the outcome with its reason is shown once, underneath', async () => {
+    window.localStorage.setItem('connectsphere.auth', JSON.stringify({
+      accessToken: 'a', refreshToken: 'r', userId: 'eo-1', username: 'eo1', role: 'eo', organisation: 'Acme Pte Ltd',
+    }))
+    const outcome = 'Your change request was rejected. Reason: No venue holds 400 people.'
+    stubApi([{ ...BASE, notificationId: 'd1', type: 'change_request_decided', occurredAt: '2026-10-28T02:00:00Z',
+      message: outcome, actorName: 'ec1', actorRole: 'ec', linkPath: '/change-requests/req-1' }], 1)
+    const user = userEvent.setup()
+    renderBell()
+
+    await user.click(await screen.findByRole('button', { name: /^Notifications/ }))
+    expect(await screen.findByText('Decision on your change request for "Town Hall"')).toBeInTheDocument()
+    // Shown once, as plain text: not quoted like a person's words.
+    expect(screen.getAllByText(outcome)).toHaveLength(1)
   })
 })

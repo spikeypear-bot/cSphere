@@ -28,7 +28,7 @@ const ROLE_LABELS: Record<string, string> = {
 /** EC-NEW4: the messages these types carry are the substance, so they are always shown. */
 const MESSAGE_TYPES = new Set(['request_submitted', 'request_assigned', 'request_handed_over', 'equipment_request_decided',
   'venue_booking_rejected', 'venue_booking_approved', 'confirmed_venue_changed',
-  'event_reassignment_approved', 'event_reassignment_declined'])
+  'event_reassignment_approved', 'event_reassignment_declined', 'change_request_decided'])
 
 function describe(n: NotificationDto): string {
   if (n.type === 'attendee_event_changed') return `Important updates for "${n.eventName}"`
@@ -50,7 +50,8 @@ function describe(n: NotificationDto): string {
   if (n.type === 'event_reassignment_declined') return `Reassignment declined for "${n.eventName}"`
   if (n.type === 'change_request_submitted') return `Change requested for "${n.eventName}"`
   if (n.type === 'change_request_withdrawn') return `Change request withdrawn for "${n.eventName}"`
-  if (n.type === 'change_request_decided') return n.message ?? `Your change request for "${n.eventName}" was decided`
+  // EO03 AC37: the title names the event; the outcome and reason are the message underneath.
+  if (n.type === 'change_request_decided') return `Decision on your change request for "${n.eventName}"`
   if (n.type === 'request_cancelled') return `The organiser cancelled the request "${n.eventName}"`
   if (n.type === 'event_cancellation_requested') return `Cancellation requested for "${n.eventName}"`
   if (n.type === 'event_cancellation_approved') return `"${n.eventName}" has been cancelled`
