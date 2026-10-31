@@ -28,7 +28,7 @@ const ROLE_LABELS: Record<string, string> = {
 /** EC-NEW4: the messages these types carry are the substance, so they are always shown. */
 const MESSAGE_TYPES = new Set(['request_submitted', 'request_assigned', 'request_handed_over', 'equipment_request_decided',
   'venue_booking_rejected', 'venue_booking_approved', 'confirmed_venue_changed',
-  'event_reassignment_approved', 'event_reassignment_declined'])
+  'event_reassignment_approved', 'event_reassignment_declined', 'change_request_decided'])
 
 function describe(n: NotificationDto): string {
   if (n.type === 'attendee_event_changed') return `Important updates for "${n.eventName}"`
