@@ -1,7 +1,10 @@
 package com.example.connect_sphere.notification.dto;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
+
+import com.example.connect_sphere.notification.entity.NotificationChange;
 
 /** Read shape for EO09/EO19. Deliberately carries only what those stories'
  * ACs say the recipient may see: an event reference, what happened, when —
@@ -27,5 +30,8 @@ public record NotificationDto(
         String message,
         /** EC-NEW4: who did it ("ecl1") and their role ("ecl"); null when the system did. */
         String actorName,
-        String actorRole) {
+        String actorRole,
+        List<NotificationChange> changes,
+        OffsetDateTime originalEventStartDatetime,
+        OffsetDateTime originalEventEndDatetime) {
 }

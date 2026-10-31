@@ -142,7 +142,7 @@ describe('AT08 withdrawal', () => {
     }
     page()
     fireEvent.click(within(await openDialog()).getByRole('button', { name: 'Confirm withdrawal' }))
-    expect(await screen.findByText('Affected by Cancellation')).toBeInTheDocument()
+    expect(await screen.findByText('Cancelled', { selector: '[data-attendee-badge="registration"]' })).toBeInTheDocument()
     expect(screen.queryByText('Your registration has been withdrawn.')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Withdraw Registration' })).not.toBeInTheDocument()
     expect(posts()).toHaveLength(1)

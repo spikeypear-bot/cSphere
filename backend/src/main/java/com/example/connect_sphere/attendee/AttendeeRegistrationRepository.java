@@ -21,6 +21,7 @@ public interface AttendeeRegistrationRepository extends JpaRepository<AttendeeRe
     Optional<AttendeeRegistration> findOwnedForUpdate(@Param("id") UUID registrationId, @Param("owner") UUID attendeeId);
 
     List<AttendeeRegistration> findByAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(UUID attendeeId);
+    List<AttendeeRegistration> findByEventIdAndStatusAndAttendeeIdIsNotNull(UUID eventId, String status);
     Optional<AttendeeRegistration> findByRegistrationIdAndAttendeeId(UUID registrationId, UUID attendeeId);
     Optional<AttendeeRegistration> findFirstByEventIdAndAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(UUID eventId, UUID attendeeId);
     Optional<AttendeeRegistration> findByEventIdAndAttendeeIdAndStatus(UUID eventId, UUID attendeeId, String status);

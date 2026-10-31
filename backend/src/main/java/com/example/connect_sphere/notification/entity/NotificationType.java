@@ -68,5 +68,9 @@ public enum NotificationType {
     /** EC-NEW4 (V54): Technical Support approved or rejected the coordinator's equipment request. */
     equipment_request_decided,
     /** EO-C1 (V54): a confirmed event's venue changed, or it is confirmed again; for its organisers. */
-    confirmed_venue_changed
+    confirmed_venue_changed,
+    /** AT09 (V59): an approved important event change, snapshotted for an attendee. */
+    attendee_event_changed,
+    /** AT09 (V59): an event cancellation and its original date/time, for an attendee. */
+    attendee_event_cancelled
 }
