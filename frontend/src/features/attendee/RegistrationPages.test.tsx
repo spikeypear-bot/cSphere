@@ -86,11 +86,11 @@ describe('AT04 registration pages', () => {
   })
 
   it.each([
-    ['cancelled', 'confirmed', 'This event has been cancelled.', 'Affected by Cancellation', 'Cancelled'],
+    ['cancelled', 'confirmed', 'This event has been cancelled.', 'Cancelled', 'Cancelled'],
     ['completed', 'confirmed', 'This event has completed.', 'Registration Confirmed', 'Past Event'],
     ['reconfirming', 'confirmed', 'Existing registrations have not been automatically withdrawn.', 'Registration Confirmed', 'Awaiting Re-confirmation'],
     ['cancelled', 'withdrawn', 'This event has been cancelled.', 'Withdrawn', 'Cancelled'],
-    ['cancelled', 'event_cancelled', 'This event has been cancelled.', 'Affected by Cancellation', 'Cancelled'],
+    ['cancelled', 'event_cancelled', 'This event has been cancelled.', 'Cancelled', 'Cancelled'],
   ] as const)('AT04 (cross-cutting): %s event preserves %s registration history', async (eventStatus, registrationStatus, message, registrationLabel, eventLabel) => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...registration, eventStatus, registrationStatus,
       withdrawalAvailable: false, withdrawalReason: 'Withdrawal is unavailable.' })))

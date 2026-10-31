@@ -33,6 +33,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 import com.example.connect_sphere.eventrequest.service.InvalidMessageException;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
 import com.example.connect_sphere.notification.entity.NotificationType;
+import com.example.connect_sphere.notification.entity.NotificationChange;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
@@ -54,6 +55,9 @@ import com.example.connect_sphere.user.repository.UserRepository;
 public class ChangeRequestService {
 
     static final int MAX_TEXT = 2000;
+    private static final Set<String> ATTENDEE_NOTIFICATION_FIELDS = Set.of("startDatetime", "endDatetime",
+            "expectedAttendance", "venueRequirements", "equipmentRequirements", "accessibilityNeeds",
+            "requiredFacilities", "attendeeInstructions");
     static final String REQUEST_CHANGED_SINCE = "This request has changed since the change was asked for. "
             + "The organiser needs to withdraw it and ask again.";
 
@@ -229,10 +233,14 @@ public class ChangeRequestService {
                 && changed.stream().anyMatch(ChangeFields.AFFECTS_ARRANGEMENTS::contains);
         OffsetDateTime oldStart = event == null ? null : event.getStartDatetime();
         OffsetDateTime oldEnd = event == null ? null : event.getEndDatetime();
+        OffsetDateTime decidedAt = now();
+        boolean eventWasUpcoming = event != null && event.getStartDatetime() != null
+                && event.getStartDatetime().isAfter(decidedAt)
+                && event.getStatus() != EventStatus.cancelled && event.getStatus() != EventStatus.completed;
         requestRules.applyApprovedDetails(origin, event, proposed);
         change.setStatus(ChangeRequestStatus.approved);
         change.setDecidedBy(coordinator.userId());
-        change.setDecidedAt(now());
+        change.setDecidedAt(decidedAt);
         change.setAcknowledgedImpacts(current.stream().filter(i -> ChangeImpactService.ATTENTION.equals(i.status()))
                 .map(i -> Map.of("key", i.key(), "area", i.area(), "title", i.title(), "detail", i.detail()))
                 .toList());
@@ -249,6 +257,16 @@ public class ChangeRequestService {
         }
 
         String name = nameOf(origin, event);
+        List<NotificationChange> attendeeChanges = changes.stream()
+                .filter(changeField -> ATTENDEE_NOTIFICATION_FIELDS.contains(changeField.field()))
+                .map(changeField -> new NotificationChange(changeField.field(), changeField.label(),
+                        ChangeFields.show(changeField.field(), changeField.before()),
+                        ChangeFields.show(changeField.field(), changeField.after())))
+                .toList();
+        if (eventWasUpcoming && !attendeeChanges.isEmpty()) {
+            notifications.createAttendeeEventChangeNotifications(change.getChangeRequestId(), event.getEventId(),
+                    name, attendeeChanges, decidedAt);
+        }
         notifications.createChangeRequestNotifications(List.of(change.getRequestedBy()),
                 NotificationType.change_request_decided, origin.getRequestId(), origin.getEventId(), name,
                 "Your change request was approved: " + summary

@@ -1,4 +1,4 @@
-// @stories AT01 AT02 AT03 AT04
+// @stories AT09 AT01 AT02 AT03 AT04
 import { afterEach, describe, expect, it } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { AttendeeStatusBadges } from './AttendeeStatusBadges'
@@ -10,7 +10,7 @@ const open: AttendeeStatusInput = { eventStatus: 'confirmed', registrationRequir
   registrationCapacity: 10, availablePlaces: 5 }
 afterEach(cleanup)
 
-describe('AT03 AT04 attendee badge priorities', () => {
+describe('AT09 AT03 AT04 attendee badge priorities', () => {
   it.each([
     ['open event', {}, 'Open for Registration', 'success'],
     ['full event', { availablePlaces: 0 }, 'Full', 'danger'],
@@ -28,8 +28,8 @@ describe('AT03 AT04 attendee badge priorities', () => {
     ['paused', { eventStatus: 'reconfirming' }, 'Registration Paused', 'warning'],
     ['confirmed during reconfirmation', { eventStatus: 'reconfirming', registrationStatus: 'confirmed' }, 'Registration Confirmed', 'success'],
     ['cancelled without registration', { eventStatus: 'cancelled' }, 'Registration Unavailable', 'neutral'],
-    ['cancelled with registration', { eventStatus: 'cancelled', registrationStatus: 'confirmed' }, 'Affected by Cancellation', 'danger'],
-    ['cancelled record', { registrationStatus: 'event_cancelled' }, 'Affected by Cancellation', 'danger'],
+    ['cancelled with registration', { eventStatus: 'cancelled', registrationStatus: 'event_cancelled' }, 'Cancelled', 'danger'],
+    ['cancelled record', { registrationStatus: 'event_cancelled' }, 'Cancelled', 'danger'],
     ['past without registration', { eventStatus: 'completed' }, 'Registration Closed', 'neutral'],
     ['past with registration', { eventStatus: 'completed', registrationStatus: 'confirmed' }, 'Registration Confirmed', 'success'],
     ['not required', { registrationRequired: false }, 'Registration Not Required', 'neutral'],
@@ -43,6 +43,11 @@ describe('AT03 AT04 attendee badge priorities', () => {
       expect(registrationBadge({ ...open, ...patch }, now)).toEqual({ label, tone })
     },
   )
+
+  it('AT09 AC14 (happy): a registration for a cancelled event is shown as Cancelled', () => {
+    expect(registrationBadge({ ...open, eventStatus: 'cancelled', registrationStatus: 'event_cancelled' }, now))
+      .toEqual({ label: 'Cancelled', tone: 'danger' })
+  })
 
   it.each(['confirmed', 'reconfirming', 'cancelled', 'completed'] as const)(
     'AT02 AT04 (happy): %s uses two labelled badges in event-first order and the shared palette', eventStatus => {

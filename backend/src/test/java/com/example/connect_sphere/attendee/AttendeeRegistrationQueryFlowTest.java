@@ -34,6 +34,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("AT04")
 @Tag("AT01")
 @Tag("AT02")
+@Tag("AT09")
 class AttendeeRegistrationQueryFlowTest {
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
@@ -100,7 +101,7 @@ class AttendeeRegistrationQueryFlowTest {
     }
 
     @Test
-    @DisplayName("AT04 (happy): live event updates and withdrawn history are visible without rewriting registrations")
+    @DisplayName("AT09 AC14, AT04 (happy): a cancelled event releases active registration status while live event updates and withdrawn history remain visible")
     void liveStatusAndHistory() throws Exception {
         FlowSupport flow = new FlowSupport(mvc, users);
         Event event = event();
@@ -114,7 +115,8 @@ class AttendeeRegistrationQueryFlowTest {
             event.setEventName("Latest approved event name");
             events.saveAndFlush(event);
             mvc.perform(get("/api/attendee/registrations/" + active).with(flow.as("att1")))
-                    .andExpect(status().isOk()).andExpect(jsonPath("$.registrationStatus").value("confirmed"))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.registrationStatus")
+                            .value(state == EventStatus.cancelled ? "event_cancelled" : "confirmed"))
                     .andExpect(jsonPath("$.eventName").value("Latest approved event name"))
                     .andExpect(jsonPath("$.eventStatus").value(state == EventStatus.pending ? "reconfirming" : state.name()));
         }

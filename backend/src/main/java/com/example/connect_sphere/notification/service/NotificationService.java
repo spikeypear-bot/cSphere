@@ -13,8 +13,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.notification.dto.NotificationDto;
 import com.example.connect_sphere.notification.entity.Notification;
+import com.example.connect_sphere.notification.entity.NotificationChange;
 import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
+import com.example.connect_sphere.attendee.AttendeeRegistration;
+import com.example.connect_sphere.attendee.AttendeeRegistrationRepository;
 
 /** Database notices join the triggering transaction through a durable outbox.
  * Delivery retries after commit; transactional requirement and hold notices remain atomic. */
@@ -31,6 +34,9 @@ public class NotificationService {
      * plain unit tests need nothing extra. */
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     private com.example.connect_sphere.user.repository.UserRepository users;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    private AttendeeRegistrationRepository attendeeRegistrations;
 
     /**
      * EC-NEW4: the only notices someone receives about their own action. An
@@ -380,6 +386,56 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** AT09: one immutable, consolidated notice per active attendee and approved change. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createAttendeeEventChangeNotifications(UUID changeRequestId, UUID eventId, String eventName,
+            List<NotificationChange> changes, OffsetDateTime committedAt) {
+        if (changes.isEmpty()) return;
+        for (AttendeeRegistration registration : confirmedAttendees(eventId)) {
+            Notification notification = base(registration.getAttendeeId(),
+                    NotificationType.attendee_event_changed, eventName);
+            notification.setNotificationId(stableAttendeeNoticeId(
+                    "change:" + changeRequestId + ":" + registration.getAttendeeId()));
+            notification.setRegistrationId(registration.getRegistrationId());
+            notification.setEventId(eventId);
+            notification.setOccurredAt(committedAt);
+            notification.setMessage("Important event arrangements have changed.");
+            notification.setNotificationChanges(List.copyOf(changes));
+            saveBestEffort(notification);
+        }
+    }
+
+    /** AT09: cancellation notices snapshot the original event times and optional reason. */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createAttendeeEventCancellationNotifications(UUID eventId, String eventName,
+            OffsetDateTime originalStart, OffsetDateTime originalEnd, String reason, OffsetDateTime cancelledAt) {
+        for (AttendeeRegistration registration : confirmedAttendees(eventId)) {
+            Notification notification = base(registration.getAttendeeId(),
+                    NotificationType.attendee_event_cancelled, eventName);
+            notification.setNotificationId(stableAttendeeNoticeId(
+                    "cancelled:" + eventId + ":" + registration.getAttendeeId()));
+            notification.setRegistrationId(registration.getRegistrationId());
+            notification.setEventId(eventId);
+            notification.setOccurredAt(cancelledAt);
+            notification.setReason(reason);
+            notification.setMessage("This event has been cancelled.");
+            notification.setOriginalEventStartDatetime(originalStart);
+            notification.setOriginalEventEndDatetime(originalEnd);
+            saveBestEffort(notification);
+        }
+    }
+
+    private List<AttendeeRegistration> confirmedAttendees(UUID eventId) {
+        if (attendeeRegistrations == null) {
+            throw new IllegalStateException("Attendee notifications need the registration repository.");
+        }
+        return attendeeRegistrations.findByEventIdAndStatusAndAttendeeIdIsNotNull(eventId, "confirmed");
+    }
+
+    private static UUID stableAttendeeNoticeId(String key) {
+        return UUID.nameUUIDFromBytes(("at09:" + key).getBytes(java.nio.charset.StandardCharsets.UTF_8));
+    }
+
     /** TS09 AC16: tell the assigned coordinator the outcome for their event. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createEquipmentDamageOutcomeNotification(UUID coordinatorId, UUID eventId, String eventName,
@@ -561,7 +617,10 @@ public class NotificationService {
                 linkPath,
                 n.getMessage(),
                 n.getActorName(),
-                n.getActorRole());
+                n.getActorRole(),
+                n.getNotificationChanges(),
+                n.getOriginalEventStartDatetime(),
+                n.getOriginalEventEndDatetime());
     }
 
     /** Each type is only ever sent to one role, so the type alone decides
@@ -591,6 +650,7 @@ public class NotificationService {
             case attendee_registration_confirmed, attendee_registration_withdrawn -> n.getRegistrationId() == null
                     ? "/attendee/events/" + n.getEventId()
                     : "/attendee/my-registrations/" + n.getRegistrationId();
+            case attendee_event_changed, attendee_event_cancelled -> "/attendee/events/" + n.getEventId();
             case event_cancellation_approved, event_cancellation_declined -> "/organiser/events/" + n.getEventId();
             // EO03/EC-NEW3: the coordinator, or the Lead while unassigned, gets the
             // same link; the page sends each reader to their own console.

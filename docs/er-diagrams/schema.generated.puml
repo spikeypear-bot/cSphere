@@ -278,6 +278,9 @@ entity notifications {
 	actor_name : text
 	actor_role : text
 	registration_id : uuid <<FK>>
+	notification_changes : jsonb
+	original_event_start_datetime : timestamp with time zone
+	original_event_end_datetime : timestamp with time zone
 }
 
 entity refresh_tokens {
@@ -578,6 +581,8 @@ enum notification_type {
 	equipment_request_decided
 	confirmed_venue_changed
 	attendee_registration_withdrawn
+	attendee_event_changed
+	attendee_event_cancelled
 }
 
 enum user_role {
