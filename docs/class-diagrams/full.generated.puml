@@ -2580,6 +2580,8 @@ class UpdateVenueDto {
 
 class VenueDto {
 	{field} -additionalInformation : String
+	{field} -latitude : Double
+	{field} -longitude : Double
 	{field} -operatingInformation : String
 	{field} -setupMinutes : int
 	{field} -turnaroundMinutes : int
@@ -2599,6 +2601,8 @@ class VenueOperatingHourDto {
 
 class Venue <<Entity>>  {
 	{field} +additionalInformation : String
+	{field} +latitude : Double
+	{field} +longitude : Double
 	{field} +operatingInformation : String
 	{field} +setupMinutes : int
 	{field} +supportedLayouts : List<String>

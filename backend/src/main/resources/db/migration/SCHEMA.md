@@ -150,6 +150,8 @@ Bookable spaces, with the accessibility and facility attributes used to match th
 | `venue_id` | `UUID` | no | PK | Identifier |
 | `venue_address` | `TEXT` | no | | Full address |
 | `venue_name` | `TEXT` | no | | Public display name (V35; legacy values start as the address) |
+| `latitude` | `DOUBLE PRECISION` | yes | | Optional verified degrees, -90..90 inclusive (V60); unknown stays NULL |
+| `longitude` | `DOUBLE PRECISION` | yes | | Optional verified degrees, -180..180 inclusive (V60); unknown stays NULL |
 | `supported_layouts` | `TEXT[]` | no | | One-dimensional, nonempty array of supported layouts; null and whitespace-only elements are rejected (V6) |
 | `venue_capacity` | `INTEGER` | no | | Overall venue capacity shared by all layouts; 1-50,000 inclusive (V6) |
 | `venue_accessibilities` | `accessibilities[]` | no | | Features present. Defaults to `{}` |

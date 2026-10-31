@@ -1,0 +1,182 @@
+[
+  {
+    "venueId": "46be4c26-2ba7-57c8-80cb-f52f608e43d2",
+    "venueName": "SMU Yong Pung How School of Law – Seminar Room 3-09, Level 3",
+    "venueAddress": "SMU Yong Pung How School of Law – Seminar Room 3-09, Level 3, 55 Armenian Street, Singapore 179943",
+    "latitude": 1.29505,
+    "longitude": 103.84906,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "bc3f56c5-6a2a-5283-a977-fbf102f0f71c",
+    "venueName": "SMU Yong Pung How School of Law – SMU Hall 3, Basement 1",
+    "venueAddress": "SMU Yong Pung How School of Law – SMU Hall 3, Basement 1, 55 Armenian Street, Singapore 179943",
+    "latitude": 1.29505,
+    "longitude": 103.84906,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "036adc01-b7d8-5fc9-9d97-c5299a933d2d",
+    "venueName": "NUS University Cultural Centre – Ho Bee Auditorium",
+    "venueAddress": "NUS University Cultural Centre – Ho Bee Auditorium, 50 Kent Ridge Crescent, Singapore 119279",
+    "latitude": 1.30172864,
+    "longitude": 103.7721489,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "62479f09-2111-5391-8a8f-fc510e166fbc",
+    "venueName": "NUS University Cultural Centre – Theatre",
+    "venueAddress": "NUS University Cultural Centre – Theatre, 50 Kent Ridge Crescent, Singapore 119279",
+    "latitude": 1.30172864,
+    "longitude": 103.7721489,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "6dd9f923-7f22-5ac7-87ac-6f2f7e935972",
+    "venueName": "NUS University Cultural Centre – Function Room 1, Level 1",
+    "venueAddress": "NUS University Cultural Centre – Function Room 1, Level 1, 50 Kent Ridge Crescent, Singapore 119279",
+    "latitude": 1.30172864,
+    "longitude": 103.7721489,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "d077d8be-4446-5b3a-9990-7c01ab97d8d8",
+    "venueName": "NTU – Nanyang Auditorium Theatre",
+    "venueAddress": "NTU – Nanyang Auditorium Theatre, 50 Nanyang Avenue, Singapore 639798",
+    "latitude": 1.34413459,
+    "longitude": 103.68009328,
+    "locationGranularity": "named-building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "31cc055b-3c23-5957-a8b8-035055d3a6d1",
+    "venueName": "Lifelong Learning Institute – Training Room 1-1, Level 1",
+    "venueAddress": "Lifelong Learning Institute – Training Room 1-1, Level 1, 11 Eunos Road 8, Singapore 408601",
+    "latitude": 1.31963,
+    "longitude": 103.89281,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "f61189c6-500a-5ed8-adb4-79c8781421f4",
+    "venueName": "Lifelong Learning Institute – Event Hall 1-1, Level 1",
+    "venueAddress": "Lifelong Learning Institute – Event Hall 1-1, Level 1, 11 Eunos Road 8, Singapore 408601",
+    "latitude": 1.31963,
+    "longitude": 103.89281,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "06eab6fa-a842-5c76-81e8-dff35e7936c2",
+    "venueName": "Lifelong Learning Institute – Lecture Theatre",
+    "venueAddress": "Lifelong Learning Institute – Lecture Theatre, 11 Eunos Road 8, Singapore 408601",
+    "latitude": 1.31963,
+    "longitude": 103.89281,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "c94f126a-199c-5613-9007-00afefd8ff74",
+    "venueName": "Singapore Chinese Cultural Centre – Auditorium, Levels 9–10",
+    "venueAddress": "Singapore Chinese Cultural Centre – Auditorium, Levels 9–10, 1 Straits Boulevard, Singapore 018906",
+    "latitude": 1.27582919,
+    "longitude": 103.84957639,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "08ef8aae-a75c-5629-9e92-04973d87cda2",
+    "venueName": "Singapore Chinese Cultural Centre – Multi-Purpose Hall, Level 7",
+    "venueAddress": "Singapore Chinese Cultural Centre – Multi-Purpose Hall, Level 7, 1 Straits Boulevard, Singapore 018906",
+    "latitude": 1.27582919,
+    "longitude": 103.84957639,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "a58c2a81-72b4-5859-8c20-860d39ba1def",
+    "venueName": "Singapore Chinese Cultural Centre – Creative Box, Level 6",
+    "venueAddress": "Singapore Chinese Cultural Centre – Creative Box, Level 6, 1 Straits Boulevard, Singapore 018906",
+    "latitude": 1.27582919,
+    "longitude": 103.84957639,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "67084cb8-b2ee-5908-9b99-010d43119e00",
+    "venueName": "Esplanade – Concert Hall",
+    "venueAddress": "Esplanade – Concert Hall, 1 Esplanade Drive, Singapore 038981",
+    "latitude": 1.28937,
+    "longitude": 103.85518,
+    "locationGranularity": "venue-building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "69ed6970-c0b8-5559-801d-2cf4b3e5b0fe",
+    "venueName": "Esplanade – Recital Studio, Level 2",
+    "venueAddress": "Esplanade – Recital Studio, Level 2, 1 Esplanade Drive, Singapore 038981",
+    "latitude": 1.28915389,
+    "longitude": 103.85561056,
+    "locationGranularity": "venue-space",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "1537e784-29ce-55b1-911e-9f06464fca41",
+    "venueName": "The Star Performing Arts Centre – The Star Theatre",
+    "venueAddress": "The Star Performing Arts Centre – The Star Theatre, 1 Vista Exchange Green, Singapore 138617",
+    "latitude": 1.306895,
+    "longitude": 103.788483,
+    "locationGranularity": "venue-POI",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "a3ce78ee-ceaa-54e2-8bec-94d0f81c04b6",
+    "venueName": "Singapore EXPO – Exhibition Hall 1",
+    "venueAddress": "Singapore EXPO – Exhibition Hall 1, 1 Expo Drive, Singapore 486150",
+    "latitude": 1.334402,
+    "longitude": 103.96036,
+    "locationGranularity": "complex-only",
+    "verificationNote": "Map marker is the EXPO complex address point, not a measured Hall 1 coordinate; manually pin Hall 1 for room-level precision."
+  },
+  {
+    "venueId": "683a8a3b-40bc-54d5-9aaf-f626ce15b145",
+    "venueName": "Sands Expo & Convention Centre – Sands Grand Ballroom",
+    "venueAddress": "Sands Expo & Convention Centre – Sands Grand Ballroom, 10 Bayfront Avenue, Singapore 018956",
+    "latitude": 1.28239714,
+    "longitude": 103.85840539,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "d14ca2e7-27f5-5910-9962-7a8cbe53da66",
+    "venueName": "Suntec Singapore Convention & Exhibition Centre – Hall 401, Level 4",
+    "venueAddress": "Suntec Singapore Convention & Exhibition Centre – Hall 401, Level 4, 1 Raffles Boulevard, Singapore 039593",
+    "latitude": 1.29350362,
+    "longitude": 103.85719484,
+    "locationGranularity": "building",
+    "verificationNote": ""
+  },
+  {
+    "venueId": "90429ced-61d8-5926-aeed-5e7a7807be3c",
+    "venueName": "Victoria Theatre & Concert Hall – Victoria Concert Hall",
+    "venueAddress": "Victoria Theatre & Concert Hall – Victoria Concert Hall, 9 Empress Place, Singapore 179556",
+    "latitude": 1.28838167,
+    "longitude": 103.85167833,
+    "locationGranularity": "venue-space",
+    "verificationNote": "The original JSON uses the complex mailing address 9 Empress Place 179556; the concert hall is also individually listed at 11 Empress Place 179558. Coordinate is for Concert Hall."
+  },
+  {
+    "venueId": "b590ea20-590f-5fc8-a1ca-22d76537dd9d",
+    "venueName": "The Arts House at the Old Parliament – Chamber",
+    "venueAddress": "The Arts House at the Old Parliament – Chamber, 1 Old Parliament Lane, Singapore 179429",
+    "latitude": 1.28868361,
+    "longitude": 103.85106389,
+    "locationGranularity": "venue-space",
+    "verificationNote": ""
+  }
+]

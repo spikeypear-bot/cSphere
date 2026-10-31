@@ -17,7 +17,16 @@ public record VenueDto(
         String additionalInformation,
         List<AccessibilityFeature> venueAccessibilities,
         List<Facility> venueFacilities,
-        List<VenueOperatingHourDto> operatingHours, int setupMinutes, int turnaroundMinutes, String venueName) {
+        List<VenueOperatingHourDto> operatingHours, int setupMinutes, int turnaroundMinutes, String venueName,
+        Double latitude, Double longitude) {
+    public VenueDto(UUID venueId, String venueAddress, Integer venueCapacity,
+            List<VenueLayout> supportedLayouts, String operatingInformation, String additionalInformation,
+            List<AccessibilityFeature> venueAccessibilities, List<Facility> venueFacilities,
+            List<VenueOperatingHourDto> operatingHours, int setupMinutes, int turnaroundMinutes, String venueName) {
+        this(venueId, venueAddress, venueCapacity, supportedLayouts, operatingInformation,
+                additionalInformation, venueAccessibilities, venueFacilities, operatingHours,
+                setupMinutes, turnaroundMinutes, venueName, null, null);
+    }
     public VenueDto(UUID venueId, String venueAddress, Integer venueCapacity,
             List<VenueLayout> supportedLayouts, String operatingInformation,
             String additionalInformation, List<AccessibilityFeature> venueAccessibilities,

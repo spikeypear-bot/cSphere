@@ -180,7 +180,8 @@ public class VenueService {
         VenueDto base = mapper.toDto(venue);
         return new VenueDto(base.venueId(), base.venueAddress(), base.venueCapacity(), base.supportedLayouts(),
                 VenueHoursService.summary(values), base.additionalInformation(), base.venueAccessibilities(),
-                base.venueFacilities(), values, venue.getSetupMinutes(), venue.getTurnaroundMinutes(), venue.getVenueName());
+                base.venueFacilities(), values, venue.getSetupMinutes(), venue.getTurnaroundMinutes(), venue.getVenueName(),
+                venue.getLatitude(), venue.getLongitude());
     }
 
     private static String summarizeHours(List<VenueOperatingHourDto> values) {

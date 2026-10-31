@@ -1,0 +1,94 @@
+-- DEV16: map supplied coordinates onto existing rooms, never create/re-identify rooms.
+-- Generated from backend/dev/seed/venue_coordinates.json, SHA-256: @SOURCE_HASH@
+-- Source URLs intentionally omitted. Building/complex precision is recorded in
+-- the mapping JSON; shared coordinates do not imply a shared bookable identity.
+-- Flyway owns the transaction. Never edit an applied V60, V61 or V62.
+LOCK TABLE venues IN SHARE ROW EXCLUSIVE MODE;
+
+CREATE TEMP TABLE dev16_coordinate_source (
+    venue_id uuid PRIMARY KEY,
+    venue_name text NOT NULL,
+    venue_address text NOT NULL,
+    latitude double precision NOT NULL CHECK (latitude BETWEEN -90 AND 90),
+    longitude double precision NOT NULL CHECK (longitude BETWEEN -180 AND 180),
+    UNIQUE (venue_name, venue_address)
+) ON COMMIT DROP;
+INSERT INTO dev16_coordinate_source (venue_id, venue_name, venue_address, latitude, longitude)
+VALUES
+@COORDINATES@;
+
+-- Recognise V61 deterministic IDs, exact normalised room identities and legacy
+-- address-as-name records, including rows V61 preserved under another UUID.
+CREATE TEMP TABLE dev16_coordinate_matches ON COMMIT DROP AS
+SELECT s.venue_id AS seed_id, v.venue_id AS target_id,
+       lower(regexp_replace(btrim(v.venue_address), '[[:space:]]+', ' ', 'g')) =
+       lower(regexp_replace(btrim(s.venue_address), '[[:space:]]+', ' ', 'g')) AS same_address,
+       (lower(regexp_replace(btrim(v.venue_name), '[[:space:]]+', ' ', 'g')) =
+        lower(regexp_replace(btrim(s.venue_name), '[[:space:]]+', ' ', 'g'))
+        OR lower(regexp_replace(btrim(v.venue_name), '[[:space:]]+', ' ', 'g')) =
+           lower(regexp_replace(btrim(v.venue_address), '[[:space:]]+', ' ', 'g'))) AS same_name
+FROM dev16_coordinate_source s JOIN venues v ON
+    v.venue_id = s.venue_id
+    OR (lower(regexp_replace(btrim(v.venue_address), '[[:space:]]+', ' ', 'g')) =
+        lower(regexp_replace(btrim(s.venue_address), '[[:space:]]+', ' ', 'g'))
+        AND (lower(regexp_replace(btrim(v.venue_name), '[[:space:]]+', ' ', 'g')) =
+             lower(regexp_replace(btrim(s.venue_name), '[[:space:]]+', ' ', 'g'))
+             OR lower(regexp_replace(btrim(v.venue_name), '[[:space:]]+', ' ', 'g')) =
+                lower(regexp_replace(btrim(v.venue_address), '[[:space:]]+', ' ', 'g'))));
+
+DO $$
+DECLARE
+    problems text;
+    rejected integer;
+    matched integer;
+    filled integer;
+    missing integer;
+    detail record;
+BEGIN
+    SELECT string_agg(reason, E'\n' ORDER BY reason), count(DISTINCT seed_id)
+    INTO problems, rejected FROM (
+        SELECT seed_id, 'Coordinate identity/UUID conflict: seed ' || seed_id || ', existing ' || target_id AS reason
+        FROM dev16_coordinate_matches WHERE NOT same_address OR NOT same_name
+        UNION ALL
+        SELECT seed_id, 'Ambiguous coordinate targets for seed ' || seed_id
+        FROM dev16_coordinate_matches GROUP BY seed_id HAVING count(*) > 1
+        UNION ALL
+        SELECT m.seed_id, 'Existing venue matches multiple coordinate mappings: ' || m.target_id
+        FROM dev16_coordinate_matches m WHERE m.target_id IN (
+            SELECT target_id FROM dev16_coordinate_matches GROUP BY target_id HAVING count(DISTINCT seed_id) > 1
+        )
+    ) conflicts;
+    IF problems IS NOT NULL THEN
+        RAISE EXCEPTION 'DEV16 coordinates aborted: filled=0, rejected=%; all coordinate writes rolled back.% %',
+            rejected, E'\n', problems;
+    END IF;
+    SELECT count(*) INTO matched FROM dev16_coordinate_matches;
+    SELECT count(*) - matched INTO missing FROM dev16_coordinate_source;
+    FOR detail IN
+        SELECT s.venue_id FROM dev16_coordinate_source s
+        WHERE NOT EXISTS (SELECT 1 FROM dev16_coordinate_matches m WHERE m.seed_id = s.venue_id)
+    LOOP
+        RAISE NOTICE 'DEV16 coordinates skipped missing venue %; no venue created', detail.venue_id;
+    END LOOP;
+    FOR detail IN
+        SELECT v.venue_id FROM venues v
+        JOIN dev16_coordinate_matches m ON m.target_id = v.venue_id
+        JOIN dev16_coordinate_source s ON s.venue_id = m.seed_id
+        WHERE (v.latitude IS NOT NULL AND v.latitude <> s.latitude)
+           OR (v.longitude IS NOT NULL AND v.longitude <> s.longitude)
+    LOOP
+        RAISE NOTICE 'DEV16 coordinates preserved existing values for venue %; supplied pair not applied', detail.venue_id;
+    END LOOP;
+
+    -- Fill compatible missing components only. Never combine a reference value
+    -- with a conflicting existing component or overwrite any saved coordinate.
+    UPDATE venues v
+    SET latitude = coalesce(v.latitude, s.latitude), longitude = coalesce(v.longitude, s.longitude)
+    FROM dev16_coordinate_source s JOIN dev16_coordinate_matches m ON m.seed_id = s.venue_id
+    WHERE v.venue_id = m.target_id
+      AND (v.latitude IS NULL OR v.longitude IS NULL)
+      AND (v.latitude IS NULL OR v.latitude = s.latitude)
+      AND (v.longitude IS NULL OR v.longitude = s.longitude);
+    GET DIAGNOSTICS filled = ROW_COUNT;
+    RAISE NOTICE 'DEV16 coordinates complete: filled=%, preserved=%, missing=%, rejected=0', filled, matched-filled, missing;
+END $$;
