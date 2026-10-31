@@ -97,6 +97,35 @@ public class OrganiserVenueNotices {
                         + String.join("; ", names) + ". You can share these arrangements with participants.");
     }
 
+    /**
+     * AT09 AC2: called on every confirmation. Records the venues the event is
+     * confirmed with; when they differ from the last confirmation, its
+     * registered attendees are told, old venues to new. Only a confirmation
+     * counts, so a pending or unapproved replacement never reaches attendees
+     * (EO-C1 AC20); an event that has already started is not announced (AT09 AC5).
+     */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void confirmed(Event event, OffsetDateTime at) {
+        String current = String.join("; ", bookings.findForEvent(event.getEventId()).stream()
+                .filter(b -> b.getStatus() == VenueBookingStatus.approved)
+                .map(VenueBookingRecord::getBookingId).map(this::venueOf)
+                .filter(Objects::nonNull).distinct().sorted().toList());
+        String previous = event.getConfirmedVenues();
+        boolean changed = previous != null && !current.isEmpty() && !venueSet(previous).equals(venueSet(current));
+        if (changed && event.getStartDatetime() != null && event.getStartDatetime().isAfter(OffsetDateTime.now())) {
+            notifications.createAttendeeVenueChangeNotifications(event.getEventId(), event.getEventName(),
+                    previous, current, at);
+        }
+        if (!current.isEmpty()) {
+            event.setConfirmedVenues(current);
+            events.save(event);
+        }
+    }
+
+    private static java.util.Set<String> venueSet(String joined) {
+        return new java.util.TreeSet<>(List.of(joined.split("; ")));
+    }
+
     /** EC-C2: an event with several venues keeps the ones not affected. */
     private boolean othersStillConfirmed(Event event, List<UUID> affected) {
         return bookings.findForEvent(event.getEventId()).stream()

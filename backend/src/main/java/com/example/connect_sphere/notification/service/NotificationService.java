@@ -405,6 +405,19 @@ public class NotificationService {
         }
     }
 
+    /** AT09 AC2: the event was confirmed again with different venues. One
+     * notice per active attendee per confirmation; a retry of the same
+     * confirmation is the same notice (AC20), a later one is new (AC21). */
+    @Transactional(propagation = Propagation.MANDATORY)
+    public void createAttendeeVenueChangeNotifications(UUID eventId, String eventName, String previousVenues,
+            String updatedVenues, OffsetDateTime confirmedAt) {
+        createAttendeeEventChangeNotifications(
+                UUID.nameUUIDFromBytes(("venue:" + eventId + ":" + confirmedAt.toInstant())
+                        .getBytes(java.nio.charset.StandardCharsets.UTF_8)),
+                eventId, eventName, List.of(new NotificationChange("venue", "Venue", previousVenues, updatedVenues)),
+                confirmedAt);
+    }
+
     /** AT09: cancellation notices snapshot the original event times and optional reason. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void createAttendeeEventCancellationNotifications(UUID eventId, String eventName,
