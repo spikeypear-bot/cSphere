@@ -36,6 +36,15 @@ main ACs plus a negative, boundary or conflict case. Run `python
 | `access-messages.spec.ts` | AU06 |
 | `attendee-event-changes.spec.ts` | AT09 (with EO03, EO07) |
 | `notifications.spec.ts` | EC-NEW4, EO-C1 |
+| `change-request-organiser.spec.ts` | EO03 (Sheet EO03-TC1–TC7) |
+| `change-request-coordinator.spec.ts` | EC-NEW3 (Sheet EC-NEW3-TC1–TC7, EO03-TC8) |
+| `request-rules-cases.spec.ts` | EO-C2 (with `request-rules.spec.ts`) |
+| `notification-cases.spec.ts` | EC-NEW4, EO-C1 (with `notifications.spec.ts`) |
+
+**Sheet screenshots.** Specs that back a functional test case call
+`evidence(page, '<test case ID>')`. It does nothing unless `E2E_EVIDENCE_DIR`
+is set, so to refresh the Sheet's screenshots run, for example,
+`$env:E2E_EVIDENCE_DIR="$env:TEMP\evidence"; npm run test:e2e -- e2e/change-request-organiser.spec.ts`.
 
 Rules these specs follow (Week 9):
 - **Fixtures through the API, decisions in the browser.** Use the `support.ts`

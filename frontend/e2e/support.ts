@@ -228,10 +228,138 @@ export async function awaitingSafetyReviewByApi(request: APIRequestContext, even
 /** A date (YYYY-MM-DD) in 2028–2029 that differs from run to run, for test
  * data that shares finite stock such as seeded equipment, so reruns never
  * compete with the reservations an earlier run left behind. */
-const firstDay = Date.now() % 700
+const firstDay = Number(process.env.E2E_FIRST_DAY ?? Date.now() % 700)
 let daysGiven = 0
 export function uniqueDay(): string {
-  // Counting on from one start keeps the days in a run distinct; a fresh Date.now() per call could repeat one.
-  const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + daysGiven++) % 700) * 86_400_000)
+  // Each parallel worker counts on through its own 100-day block from the run's one start day, so no two calls share a day.
+  const block = Number(process.env.TEST_PARALLEL_INDEX ?? 0) * 100
+  const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + block + daysGiven++) % 700) * 86_400_000)
   return day.toISOString().slice(0, 10)
+}
+
+/** Functional test-case evidence: a full-page screenshot named after the
+ * Sheet's test case ID (e.g. "EO03-TC1a"). Only taken when E2E_EVIDENCE_DIR
+ * is set, so CI runs are unchanged. */
+export async function evidence(page: Page, id: string) {
+  const dir = process.env.E2E_EVIDENCE_DIR
+  if (dir) await page.screenshot({ path: `${dir}/${id}.png`, fullPage: true })
+}
+
+/** The request behind an event of eo1's, as the organiser's own list shows it. */
+export async function requestOfEvent(request: APIRequestContext, eventId: string): Promise<string> {
+  const token = await apiToken(request, 'eo1')
+  const requests = await apiGet<{ requestId: string; eventId: string | null }[]>(request, token, '/api/event-requests')
+  const found = requests.find((r) => r.eventId === eventId)
+  expect(found, `request of event ${eventId} not found`).toBeTruthy()
+  return found!.requestId
+}
+
+/** Test data: eo1 asks for a change through the API, starting from the
+ * request's current details exactly as the EO03 form does. Returns its id. */
+export async function changeRequestByApi(request: APIRequestContext, requestId: string,
+  patch: Record<string, unknown>, reason = 'Circumstances changed'): Promise<string> {
+  const headers = { Authorization: `Bearer ${await apiToken(request, 'eo1')}` }
+  const r = await apiGet<Record<string, unknown>>(request, headers.Authorization.slice(7), `/api/event-requests/${requestId}`)
+  const details = {
+    eventName: r.eventName, purpose: r.purpose, description: r.description,
+    startDatetime: r.startDatetime, endDatetime: r.endDatetime, expectedAttendance: r.expectedAttendance,
+    venueRequirements: r.venueRequirements, equipmentRequirements: r.equipmentRequirements,
+    accessibilityNeeds: r.accessibilityNeeds ?? [], requiredFacilities: r.requiredFacilities ?? [],
+    registrationNeeds: r.registrationNeeds, registrationCapacity: r.registrationCapacity ?? null,
+    registrationOpensAt: r.registrationOpensAt ?? null, attendeeInstructions: r.attendeeInstructions ?? null,
+    ...patch,
+  }
+  const sent = await request.post('/api/change-requests', { headers, data: { requestId, reason, details } })
+  expect(sent.ok(), `change request: ${sent.status()} ${await sent.text()}`).toBeTruthy()
+  return (await sent.json()).changeRequestId as string
+}
+
+/** Test data: ec1 books a venue for the whole event and vs1 approves it. Returns the booking's id. */
+export async function approvedBookingByApi(request: APIRequestContext, eventId: string, venueId: string): Promise<string> {
+  const booking = await request.post(`/api/events/${eventId}/venue-bookings`, {
+    headers: { Authorization: `Bearer ${await apiToken(request, 'ec1')}` }, data: { venueId } })
+  expect(booking.ok(), `book venue: ${booking.status()} ${await booking.text()}`).toBeTruthy()
+  const bookingId = (await booking.json()).bookingId as string
+  const approved = await request.patch(`/api/venue-bookings/${bookingId}/approve`, {
+    headers: { Authorization: `Bearer ${await apiToken(request, 'vs1')}` } })
+  expect(approved.ok(), `approve booking: ${approved.status()} ${await approved.text()}`).toBeTruthy()
+  return bookingId
+}
+
+const bearer = async (request: APIRequestContext, username: string) =>
+  ({ Authorization: `Bearer ${await apiToken(request, username)}` })
+
+async function okJson(response: import('@playwright/test').APIResponse, what: string) {
+  expect(response.ok(), `${what}: ${response.status()} ${await response.text()}`).toBeTruthy()
+  return response.json()
+}
+
+/** Test data: eo1's request with the needs a case is about, submitted,
+ * assigned to ec1 and approved, so it is an event in Planning. */
+export async function planningEventWithNeeds(request: APIRequestContext, eventName: string, startDatetime: string,
+  endDatetime: string, needs: { expectedAttendance?: number; requiredFacilities?: string[]; accessibilityNeeds?: string[]
+    equipmentRequirements?: string | null } = {}): Promise<{ eventId: string; requestId: string }> {
+  const eo = await bearer(request, 'eo1')
+  const draft = await okJson(await request.post('/api/event-requests', { headers: eo, data: { eventName, purpose: 'E2E journey',
+    startDatetime, endDatetime, expectedAttendance: needs.expectedAttendance ?? 120, venueRequirements: 'Theatre seating',
+    equipmentRequirements: needs.equipmentRequirements ?? null, accessibilityNeeds: needs.accessibilityNeeds ?? ['none'],
+    requiredFacilities: needs.requiredFacilities ?? [], registrationNeeds: false } }), 'create request')
+  await okJson(await request.post(`/api/event-requests/${draft.requestId}/submit`, { headers: eo }), 'submit')
+  await assignedByApi(request, draft.requestId)
+  const event = await okJson(await request.post(`/api/event-requests/${draft.requestId}/approve`,
+    { headers: await bearer(request, 'ec1') }), 'approve')
+  return { eventId: event.eventId as string, requestId: draft.requestId as string }
+}
+
+/** Test data: ec1 asks for `quantity` of a catalogue item, ts1 reserves and approves it. */
+export async function approvedEquipmentByApi(request: APIRequestContext, eventId: string, start: string, end: string,
+  equipmentName = 'Projection Screen', quantity = 2): Promise<string> {
+  const catalogue = await apiGet<{ equipmentId: string; equipmentName: string }[]>(request, await apiToken(request, 'ec1'),
+    '/api/equipment/catalogue')
+  const item = catalogue.find((e) => e.equipmentName === equipmentName)!
+  const created = await okJson(await request.post(`/api/events/${eventId}/equipment-request`, { headers: await bearer(request, 'ec1'),
+    data: { technicalRequirement: `${quantity} × ${equipmentName}.`, items: [{ equipmentId: item.equipmentId, quantity }] } }),
+  'request equipment')
+  const ts = await bearer(request, 'ts1')
+  await okJson(await request.post('/api/equipment/reservations', { headers: ts,
+    data: { eventId, equipmentId: item.equipmentId, quantity, start, end } }), 'reserve equipment')
+  await okJson(await request.patch(`/api/equipment-requests/${created.requestId}/status`, { headers: ts,
+    data: { status: 'approved' } }), 'approve equipment')
+  return created.requestId as string
+}
+
+/** Test data: ec1 sends the event for its safety check; so1 ticks every item and approves. */
+export async function safetyApprovedByApi(request: APIRequestContext, eventId: string) {
+  await okJson(await request.post(`/api/events/${eventId}/safety-review`, { headers: await bearer(request, 'ec1') }), 'send')
+  const so = await bearer(request, 'so1')
+  const readiness = await apiGet<{ items: { itemKey: string }[] }>(request, so.Authorization.slice(7),
+    `/api/safety/events/${eventId}/readiness`)
+  for (const item of readiness.items) {
+    await okJson(await request.patch(`/api/safety/events/${eventId}/readiness/items/${item.itemKey}`,
+      { headers: so, data: { checked: true } }), 'tick')
+  }
+  await okJson(await request.post(`/api/safety/events/${eventId}/approval`, { headers: so, data: { decision: 'approve' } }), 'approve')
+}
+
+export async function confirmByApi(request: APIRequestContext, eventId: string) {
+  await okJson(await request.post(`/api/events/${eventId}/confirm`, { headers: await bearer(request, 'ec1') }), 'confirm')
+}
+
+/** Test data (EO07): eo1 asks to cancel and ec1 approves, so the event is Cancelled. */
+export async function cancelledByApi(request: APIRequestContext, eventId: string, requestId: string) {
+  const asked = await okJson(await request.post(`/api/event-requests/${requestId}/cancellation-request`, {
+    headers: await bearer(request, 'eo1'), data: { reason: 'The event is no longer needed.' } }), 'ask to cancel')
+  await okJson(await request.post(`/api/events/${eventId}/cancellation-requests/${asked.cancellationRequestId}/approve`, {
+    headers: await bearer(request, 'ec1'), data: {} }), 'approve cancellation')
+}
+
+/** Test data (VS-C1): vs1 records the venue unavailable, acknowledging every booking it affects. */
+export async function venueUnavailableByApi(request: APIRequestContext, venueId: string, startDateTime: string,
+  endDateTime: string, reason: string) {
+  const vs = await bearer(request, 'vs1')
+  const period = { startDateTime, endDateTime, reason }
+  const preview = await okJson(await request.post(`/api/venues/${venueId}/unavailability/preview`, { headers: vs, data: period }), 'preview')
+  await okJson(await request.post(`/api/venues/${venueId}/unavailability`, { headers: vs, data: { ...period,
+    previewToken: preview.previewToken,
+    acknowledgedBookingIds: preview.affectedBookings.map((b: { bookingId: string }) => b.bookingId) } }), 'record unavailability')
 }
