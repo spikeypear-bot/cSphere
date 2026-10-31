@@ -20,7 +20,8 @@ const PROJECTOR_DETAIL = {
   ],
 }
 const PERIODS_URL = 'POST /api/equipment/eq-proj/units/PJ-2/periods'
-const iso = (local: string) => new Date(local).toISOString()
+// Entered times are Singapore time on every machine.
+const iso = (local: string) => new Date(`${local}:00+08:00`).toISOString()
 
 function renderAt(path: string) {
   return render(

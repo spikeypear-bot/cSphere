@@ -86,8 +86,16 @@ class AttendeeEventChangeNotificationFlowTest {
                   AND payload->'notification_changes'->0->>'updatedValue' = '10 Mar 2027, 10:00 AM'
                   AND payload->'notification_changes'->1->>'previousValue' = '10 Mar 2027, 12:00 PM'
                   AND payload->'notification_changes'->1->>'updatedValue' = '10 Mar 2027, 1:00 PM'
-                  AND payload->'notification_changes'->4->>'updatedValue' = 'Join online at the event link.'
+                  AND payload->'notification_changes'->2->>'updatedValue' = 'Join online at the event link.'
+                  AND jsonb_array_length(payload->'notification_changes') = 3
                 """, Long.class, eventId.toString())).isEqualTo(2);
+        // AT09 AC2: attendance and venue requirements also changed, but they are
+        // planning details for staff, so attendees are not shown them.
+        assertThat(jdbc.queryForObject("""
+                SELECT count(*) FROM notification_outbox o, jsonb_array_elements(o.payload->'notification_changes') c
+                WHERE o.payload->>'event_id' = ? AND o.payload->>'type' = 'attendee_event_changed'
+                  AND c->>'field' IN ('expectedAttendance', 'venueRequirements', 'equipmentRequirements')
+                """, Long.class, eventId.toString())).isZero();
         assertThat(notices).allSatisfy(row -> {
             assertThat(row.get("registration_id")).isNotNull();
             assertThat(row.get("message")).isEqualTo("Important event arrangements have changed.");
