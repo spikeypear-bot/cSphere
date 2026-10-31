@@ -281,6 +281,7 @@ describe('EO03 NotificationBell — the organiser is told a change request was d
 
     await user.click(await screen.findByRole('button', { name: /^Notifications/ }))
     expect(await screen.findByText('Decision on your change request for "Town Hall"')).toBeInTheDocument()
-    expect(screen.getAllByText(outcome, { exact: false })).toHaveLength(1)
+    // Shown once, as plain text: not quoted like a person's words.
+    expect(screen.getAllByText(outcome)).toHaveLength(1)
   })
 })

@@ -28,7 +28,7 @@ const ROLE_LABELS: Record<string, string> = {
 /** EC-NEW4: the messages these types carry are the substance, so they are always shown. */
 const MESSAGE_TYPES = new Set(['request_submitted', 'request_assigned', 'request_handed_over', 'equipment_request_decided',
   'venue_booking_rejected', 'venue_booking_approved', 'confirmed_venue_changed',
-  'event_reassignment_approved', 'event_reassignment_declined'])
+  'event_reassignment_approved', 'event_reassignment_declined', 'change_request_decided'])
 
 function describe(n: NotificationDto): string {
   if (n.type === 'attendee_event_changed') return `Important updates for "${n.eventName}"`
@@ -177,6 +177,10 @@ export function NotificationBell() {
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>
                       ) : null}
+                      {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
+                      {n.type === 'venue_unavailable' && n.reason ? (
+                        <span className="notification-bell__item-reason">Reason: {n.reason}</span>
+                      ) : null}
                       {n.type === 'attendee_event_changed' && n.changes?.length ? (
                         <ul className="notification-bell__item-reason">
                           {n.changes.map((change) => (
@@ -192,10 +196,6 @@ export function NotificationBell() {
                         </span>
                       ) : null}
                       {n.type === 'attendee_event_cancelled' && n.reason ? (
-                        <span className="notification-bell__item-reason">Reason: {n.reason}</span>
-                      ) : null}
-                      {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
-                      {n.type === 'venue_unavailable' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
                       {n.actorName ? (

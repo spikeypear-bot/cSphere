@@ -54,3 +54,6 @@ materials/
 **/course-materials/
 **/CourseMaterials/
 **/Course Materials/
+
+# Python bytecode from .github/scripts
+__pycache__/

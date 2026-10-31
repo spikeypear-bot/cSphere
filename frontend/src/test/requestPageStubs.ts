@@ -1,11 +1,12 @@
 import { jsonResponse } from './apiStubs'
 import { toLocalInputValue } from '../features/technicalSupport/reservations/reservationUtils'
+import { toIso } from '../features/technicalSupport/reservations/reservationApi'
 
 /** The loan window the request page starts with (the event's times), as
- * the page sends it: local input values turned back into ISO instants. */
+ * the page sends it: Singapore-time input values turned back into ISO instants. */
 export function eventWindow(eventStart: string, eventEnd: string) {
-  const from = new Date(toLocalInputValue(eventStart)).toISOString()
-  const to = new Date(toLocalInputValue(eventEnd)).toISOString()
+  const from = toIso(toLocalInputValue(eventStart))
+  const to = toIso(toLocalInputValue(eventEnd))
   return {
     from,
     to,
