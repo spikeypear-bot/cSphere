@@ -176,6 +176,10 @@ export function NotificationBell() {
                       ) : (
                         <span className="notification-bell__item-reason">“{n.message}”</span>
                       ) : null}
+                      {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
+                      {n.type === 'venue_unavailable' && n.reason ? (
+                        <span className="notification-bell__item-reason">Reason: {n.reason}</span>
+                      ) : null}
                       {n.type === 'attendee_event_changed' && n.changes?.length ? (
                         <ul className="notification-bell__item-reason">
                           {n.changes.map((change) => (
@@ -191,10 +195,6 @@ export function NotificationBell() {
                         </span>
                       ) : null}
                       {n.type === 'attendee_event_cancelled' && n.reason ? (
-                        <span className="notification-bell__item-reason">Reason: {n.reason}</span>
-                      ) : null}
-                      {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
-                      {n.type === 'venue_unavailable' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
                       {n.actorName ? (
