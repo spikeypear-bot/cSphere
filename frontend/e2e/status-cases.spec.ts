@@ -88,7 +88,7 @@ test('EC-NEW2 (happy): TC5, TC6, TC7, TC8, TC9, TC20 an event moves Planning →
     expect((await request.patch(`/api/safety/events/${e.eventId}/readiness/items/${item.itemKey}`, { headers: so, data: { checked: true } })).ok()).toBeTruthy()
   }
   expect((await request.post(`/api/safety/events/${e.eventId}/approval`, { headers: so, data: { decision: 'approve' } })).ok()).toBeTruthy()
-  await expect(coordinator.locator(STATUS.badge).first()).toHaveText('Awaiting Safety Review')
+  // No check that the open page still shows the old status: it refreshes itself every 5 s, so that raced the refresh.
   await coordinator.reload()
   await expect(coordinator.locator(STATUS.badge).first()).toHaveText('Safety Approved')
   await coordinator.getByRole('button', { name: 'Confirm event' }).click()
