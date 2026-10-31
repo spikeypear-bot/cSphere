@@ -1,5 +1,5 @@
-// @stories VS15 VS-C2 VS-C3 VS-C4 VS17  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS15 VS-C2 VS-C3 VS-C4 VS17
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { apiClient } from '../../lib/apiClient'
 import { VenueSchedulePage } from './VenueSchedulePage'
@@ -21,6 +21,23 @@ async function mount() {
   fireEvent.change(await screen.findByLabelText('Venue'), { target: { value: 'v1' } })
   await screen.findByRole('table')
 }
+
+describe('DEV16 calendar loading and catalogue changes', () => {
+  it('DEV16 (failure): venue loading errors can be retried to an honest empty catalogue', async () => {
+    vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('Offline')).mockResolvedValue([])
+    render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>)
+    fireEvent.click(await screen.findByRole('button', { name: 'Retry venues' }))
+    expect(await screen.findByText('No venues available.')).toBeInTheDocument()
+    expect(screen.queryByRole('table')).not.toBeInTheDocument()
+  })
+  it('DEV16 (boundary): a selected venue removed on refresh retains its identity while its schedule refreshes', async () => {
+    await mount()
+    vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{ venueId: 'v2', venueAddress: 'Other Hall' }] : schedule)
+    fireEvent.focus(window)
+    await waitFor(() => expect(screen.queryByRole('option', { name: 'Main Hall' })).not.toBeInTheDocument())
+    expect(await screen.findByRole('table')).toBeInTheDocument()
+  })
+})
 it('VS17 (conflict): displays a timed operational issue and explains its setup-only booking conflict', async () => {
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
     ? [{ venueId: 'v1', venueAddress: 'Main Hall' }]

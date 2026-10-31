@@ -89,7 +89,7 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
     setBusy(true); setReleaseError('')
     try {
       await apiClient.patch(`/venues/${venueId}/unavailability/${release}/release`, { reason: releaseReason.trim() })
-      setRelease(null); setReleaseReason(''); setReleaseSuccess('Unavailable period released. Booking statuses and reservations are unchanged.')
+      setRelease(null); setReleaseReason(''); setReleaseSuccess('Unavailable period released. Existing bookings remain reserved.')
       periods.retry(); onRecorded()
     } catch (e) { setReleaseError(message(e, 'Could not release this period. Please try again.')) }
     finally { setBusy(false) }
@@ -157,7 +157,7 @@ export function VenueUnavailabilityPanel({ venueId, onRecorded }: { venueId: str
               <textarea id="unavailability-release-reason" maxLength={2000} value={releaseReason} disabled={busy}
                 onChange={e => setReleaseReason(e.target.value)} />
             </div>
-            <p>Releasing this period makes its time available again. Existing booking statuses and reservations stay unchanged.</p>
+            <p>This period will be available for new requests. Existing bookings will remain reserved.</p>
             {releaseError && <p role="alert" className="field-error">{releaseError}</p>}
             <div className="venue-unavailability__actions">
               <Button type="submit" disabled={busy}>{busy ? 'Releasing…' : 'Confirm release'}</Button>
@@ -196,7 +196,7 @@ function SettingsForm({ venueId, settings, onSaved }: { venueId: string; setting
   const [busy, setBusy] = useState(false)
   const [feedback, setFeedback] = useState('')
   return <details className="venue-unavailability"><summary>Setup and turnaround settings</summary>
-    <p>These defaults apply to new requests. Existing bookings retain their saved setup and turnaround durations.</p>
+    <p>These times apply to new bookings. Changing them will not change the setup or turnaround time for existing bookings.</p>
     <form onSubmit={async e => {
       e.preventDefault(); setBusy(true); setFeedback('')
       try {

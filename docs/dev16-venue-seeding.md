@@ -1,5 +1,9 @@
 # DEV16 shared venue catalogue
 
+**Staff notes follow-up:** user-authorised V64 replaces unchanged original note
+wording with [venue-facing planning notes](dev16-venue-staff-notes.md), preserving
+staff edits and all other venue data. The source JSON and V60/V61/V62 stay unchanged.
+
 **Coordinate follow-up:** V62 now maps the later supplied coordinate references
 onto these existing rooms. The original JSON and V60/V61 stay unchanged. Details
 and current verification are in [coordinate mapping](dev16-venue-coordinate-mapping.md).

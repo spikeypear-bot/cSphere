@@ -37,6 +37,9 @@ class VenueSeedApiTest {
         var json = JsonMapper.builder().build();
         var source = json.readTree(Files.readString(Path.of("dev/seed/venues.json")));
         var coordinates = json.readTree(Files.readString(Path.of("dev/seed/venue_coordinates.json")));
+        var staffNotes = new java.util.HashMap<String, tools.jackson.databind.JsonNode>();
+        json.readTree(Files.readString(Path.of("dev/seed/venue_staff_notes.json")))
+                .forEach(note -> staffNotes.put(note.get("venueName").asString(), note.get("additionalInformation")));
         var response = mvc.perform(get("/api/venues")).andExpect(status().isOk()).andReturn().getResponse();
         var catalogue = json.readTree(response.getContentAsString(java.nio.charset.StandardCharsets.UTF_8));
         for (var expected : source) {
@@ -49,7 +52,8 @@ class VenueSeedApiTest {
             var actual = matches.getFirst();
             for (String field : java.util.List.of("venueName", "venueAddress", "venueCapacity", "supportedLayouts",
                     "venueAccessibilities", "venueFacilities", "setupMinutes", "turnaroundMinutes", "additionalInformation"))
-                assertThat(actual.get(field)).isEqualTo(expected.get(field));
+                assertThat(actual.get(field)).isEqualTo(field.equals("additionalInformation")
+                        ? staffNotes.get(expected.get("venueName").asString()) : expected.get(field));
             var coordinateMatches = new java.util.ArrayList<tools.jackson.databind.JsonNode>();
             coordinates.forEach(c -> {
                 if (c.get("venueName").equals(expected.get("venueName"))

@@ -24,6 +24,7 @@ import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 
 @Tag("unit")
+@Tag("DEV16")
 @Tag("VS07")
 @Tag("VS17")
 class VenueServiceTest {
@@ -32,6 +33,18 @@ class VenueServiceTest {
 
     private static List<com.example.connect_sphere.venue.dto.VenueOperatingHourDto> schedule() {
         return List.of(new com.example.connect_sphere.venue.dto.VenueOperatingHourDto(1, java.time.LocalTime.of(9,0), java.time.LocalTime.of(17,0)));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings={" ","x"})
+    @org.junit.jupiter.api.DisplayName("DEV16 (negative): blank or overlong venue names are refused before saving")
+    void invalidVenueNames(String value) {
+        String name=value.equals("x") ? value.repeat(201) : value;
+        var input=new CreateVenueDto("Hall address",100,List.of(VenueLayout.theatre),"",null,List.of(),List.of(),schedule(),null,null,name);
+        assertThatThrownBy(() -> service.createVenue(input)).isInstanceOf(InvalidVenueException.class)
+                .hasMessageContaining("venueName must contain 1 to 200 characters");
+        verify(repository,never()).save(any());
+        verify(hours,never()).deleteByVenueId(any());
     }
     private final com.example.connect_sphere.venue.repository.VenueOperatingHourRepository hours = mock(com.example.connect_sphere.venue.repository.VenueOperatingHourRepository.class);
     private final java.util.List<com.example.connect_sphere.venue.entity.VenueOperatingHour> storedHours = new java.util.ArrayList<>();

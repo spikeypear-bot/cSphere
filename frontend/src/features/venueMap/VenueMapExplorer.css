@@ -1,0 +1,58 @@
+.venue-map-explorer {
+  --map-accent: var(--role-venue);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  min-width: 0;
+}
+.venue-map-heading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: .75rem; }
+.venue-map-heading > div { min-width: 0; }
+.venue-map-filters { display: grid; gap: 1rem; }
+.venue-map-filter-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.venue-map-clear { justify-self: start; }
+.venue-map-filters [role='alert'] { color: var(--danger); }
+.venue-map-check { display: flex; align-items: center; gap: .5rem; font-size: .85rem; }
+.venue-map-check input { width: auto; accent-color: var(--map-accent); }
+.venue-map-split { display: grid; grid-template-columns: minmax(0, 38fr) minmax(0, 62fr); gap: 1.25rem; align-items: stretch; }
+.venue-map-split > * { min-width: 0; }
+/* Let the map determine the grid row height; scroll the catalogue inside that row. */
+.venue-map-catalogue { position: relative; min-height: 0; }
+.venue-map-list { position: absolute; inset: 0; list-style: none; margin: 0; padding: 2px; display: flex; flex-direction: column; gap: 1rem; overflow-y: auto; scroll-padding: .5rem; }
+.venue-map-list > li { flex-shrink: 0; }
+.venue-map-card { width: 100%; text-align: left; display: grid; gap: .5rem; padding: 1rem; border: 1px solid var(--hairline); border-radius: var(--radius-md); background: var(--panel); box-shadow: var(--shadow-panel); cursor: pointer; color: var(--ink); overflow-wrap: anywhere; }
+.venue-map-card > span { color: var(--ink-soft); font-size: .8rem; }
+.venue-map-card:hover { border-color: var(--map-accent); }
+.venue-map-card[aria-pressed='true'] { border-color: var(--map-accent); box-shadow: inset 3px 0 var(--map-accent); background: var(--success-soft); }
+.venue-map-card:focus-visible, .venue-map-popup button:focus-visible { outline: 2px solid var(--map-accent); outline-offset: 2px; }
+.venue-map-card .venue-map-location-missing { font-style: italic; }
+.venue-map-surface { position: relative; overflow: hidden; isolation: isolate; }
+.venue-map-toolbar { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .75rem 1rem; color: var(--ink-soft); font-size: .8rem; }
+.venue-map-canvas { width: 100%; height: 540px; background: var(--hairline); font-family: var(--sans); }
+.venue-map-caption { padding: .75rem 1rem; }
+.venue-map-marker { display: grid; place-items: center; background: var(--panel); border: 2px solid var(--map-accent); border-radius: 50%; color: var(--map-accent); box-shadow: 0 2px 6px #0003; font-size: 1rem; font-weight: 700; }
+.venue-map-marker--selected { background: var(--map-accent); color: var(--paper); outline: 3px solid var(--panel); }
+.venue-map-popup { display: grid; gap: .4rem; max-height: 180px; overflow-y: auto; min-width: 160px; }
+.venue-map-popup button { border: 1px solid var(--hairline); padding: .45rem .6rem; border-radius: var(--radius-sm); text-align: left; background: var(--panel); color: var(--ink); cursor: pointer; font: inherit; }
+.venue-map-popup button[aria-pressed='true'] { border-color: var(--map-accent); background: var(--success-soft); }
+.venue-map-surface .leaflet-popup-content-wrapper, .venue-map-surface .leaflet-popup-tip { background: var(--panel); color: var(--ink); }
+.venue-map-tile-error { padding: .7rem; background: var(--warning-soft); color: var(--ink); font-size: .85rem; }
+.venue-map-state { display: grid; gap: .75rem; }
+.venue-map-details { min-width: 0; display: grid; gap: 1.25rem; }
+.venue-map-details > .venue-card-preview { min-width: 0; }
+.venue-map-bookings { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 1rem; }
+.venue-map-booking { display: flex; flex-wrap: wrap; align-content: start; gap: .75rem; height: 100%; }
+.venue-map-booking p { flex-basis: 100%; color: var(--ink-soft); font-size: .85rem; }
+.venue-map-booking a { font-size: .85rem; }
+.venue-map-mobile-switch { display: none; }
+.venue-map-mobile-switch .button[aria-pressed='true'] { background: var(--map-accent); color: var(--paper); border-color: var(--map-accent); }
+@media (max-width: 900px) {
+  .venue-map-split { grid-template-columns: minmax(0, 1fr); }
+  .venue-map-mobile-switch { display: flex; gap: .5rem; }
+  .venue-map-split[data-mobile-view='map'] .venue-map-catalogue,
+  .venue-map-split[data-mobile-view='list'] .venue-map-map-panel { display: none; }
+  .venue-map-canvas { height: 420px; }
+  .venue-map-list { position: relative; inset: auto; max-height: 460px; }
+}
+@media (max-width: 640px) {
+  .venue-map-filter-row { grid-template-columns: minmax(0, 1fr); }
+}

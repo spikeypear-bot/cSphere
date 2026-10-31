@@ -5,7 +5,8 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { venueFacilities, venueFacilityLabels, type Facility, type VenueDto } from '../../types/venue'
+import { venueFacilityLabels, type Facility, type VenueDto } from '../../types/venue'
+import { VenueFacilitiesFilter, VenueSearchField } from '../../components/venue/VenueSearchFilters'
 import './VenueSearchPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { occupiedPeriod } from '../../lib/bookingTiming'
@@ -105,55 +106,33 @@ export function VenueSearchPage() {
       <Card>
         <form className="venue-search__form" onSubmit={search} noValidate>
           <div className="venue-search__dates">
-            <label>
-              <span>Event starts</span>
-              <input
-                type="datetime-local"
-                value={startDatetime}
-                aria-label="Event starts"
-                disabled={searching}
-                onChange={event => { setStartDatetime(event.target.value); clearSearch() }}
-              />
-            </label>
-            <label>
-              <span>Event ends</span>
-              <input
-                type="datetime-local"
-                value={endDatetime}
-                aria-label="Event ends"
-                disabled={searching}
-                onChange={event => { setEndDatetime(event.target.value); clearSearch() }}
-              />
-            </label>
+            <VenueSearchField label="Event starts"
+              type="datetime-local"
+              value={startDatetime}
+              aria-label="Event starts"
+              disabled={searching}
+              onChange={event => { setStartDatetime(event.target.value); clearSearch() }}
+            />
+            <VenueSearchField label="Event ends"
+              type="datetime-local"
+              value={endDatetime}
+              aria-label="Event ends"
+              disabled={searching}
+              onChange={event => { setEndDatetime(event.target.value); clearSearch() }}
+            />
           </div>
 
-          <label className="venue-search__capacity">
-            <span>Required capacity (optional)</span>
-            <input
-              type="number"
-              min="1"
-              step="1"
-              value={capacity}
-              aria-label="Required capacity"
-              disabled={searching}
-              onChange={event => { setCapacity(event.target.value); clearSearch() }}
-            />
-          </label>
+          <VenueSearchField label="Required capacity (optional)" className="venue-search__capacity"
+            type="number"
+            min="1"
+            step="1"
+            value={capacity}
+            aria-label="Required capacity"
+            disabled={searching}
+            onChange={event => { setCapacity(event.target.value); clearSearch() }}
+          />
 
-          <fieldset className="venue-search__facilities">
-            <legend>Required facilities (optional)</legend>
-            {venueFacilities.map(facility => (
-              <label key={facility}>
-                <input
-                  type="checkbox"
-                  checked={facilities.includes(facility)}
-                  disabled={searching}
-                  onChange={event => updateFacilities(facility, event.target.checked)}
-                />
-                {venueFacilityLabels[facility]}
-              </label>
-            ))}
-          </fieldset>
+          <VenueFacilitiesFilter selected={facilities} disabled={searching} onChange={updateFacilities} />
 
           {validationError ? <p role="alert">{validationError}</p> : null}
           {searchError ? <p role="alert">{searchError}</p> : null}

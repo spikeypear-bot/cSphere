@@ -148,8 +148,8 @@ function CoordinatorNotes({ booking }: { booking: VenueBookingDto }) {
 function BookingPagination({ venueId, bookingId, busy }: { venueId: string; bookingId: string; busy: boolean }) {
   const navigate = useNavigate()
   const { data, error, retry } = useVenueRead<VenueBookingDto[]>(`/venues/${venueId}/bookings`)
-  if (error) return <div><p role="alert">Could not load booking navigation: {error}</p><Button onClick={retry}>Retry booking navigation</Button></div>
-  if (!data) return <p role="status">Loading booking navigation…</p>
+  if (error) return <div><p role="alert">Could not load other bookings for this venue. {error}</p><Button onClick={retry}>Try again</Button></div>
+  if (!data) return <p role="status">Loading other bookings…</p>
   const index = data.findIndex(booking => booking.bookingId === bookingId)
   if (index < 0) return <p>This booking is no longer in the venue’s booking list.</p>
   const previousDisabled = busy || index === 0

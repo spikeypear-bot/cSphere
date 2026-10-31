@@ -1,6 +1,8 @@
 # Venue catalogue API
 
 DEV16 adds nullable `latitude` and `longitude` to catalogue/search/detail responses.
+The Venue Staff console now uses these fields for its [interactive map](dev16-interactive-map.md),
+with separate staff-only booking summaries and counts.
 These expose saved coordinates; existing creation/update input contracts stay the
 same. V62 maps the supplied coordinates onto the 20 existing shared venues; other
 venues may still have null coordinates. Saved coordinates are preserved. Database

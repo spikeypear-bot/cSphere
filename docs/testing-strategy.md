@@ -78,8 +78,13 @@ After both fixes, 18 of 18 runs passed (`--repeat-each=3`) on a fresh packaged b
 
 ## 6. Coverage
 
+The [Venue Staff coverage audit](venue-staff-coverage-audit.md) records the current
+scope, added evidence, corrections and measured results. Earlier presentation-audit
+test counts are historical execution records.
+
 - **Where to see it:** every CI run publishes backend (JaCoCo) and frontend (Vitest V8) line and branch coverage on its summary page, with the HTML reports as artifacts (`.github/scripts/coverage-summary.py`).
-- **It's a diagnostic, not a target:** coverage shows code no test executes, and says nothing about whether a test checks the right thing. It does not fail the build.
+- **General reporting is diagnostic:** coverage shows code no test executes, and says nothing about whether a test checks the right thing. Modules without explicit thresholds do not fail the build on coverage.
+- **Venue Staff/DEV16 gate (user-requested, 31 October 2026):** `frontend/vite.config.ts` requires 100% statements, branches, functions and lines for `src/features/venueStaff/**`, `src/features/venueMap/**` and `src/components/venue/**`. `backend/pom.xml` requires 100% instructions, branches, lines and methods for the `venuemap` package during `verify`. Other backend/shared and role modules retain diagnostic reporting. No new coverage-ignore comments or package exclusions were added.
 - **Target:** 100% for the classes behind a story, or stated why not (below). Uncovered branches found this way are either a missing boundary/failure test or dead code to delete. Examples:
   - `formatDate(null)`, a Confirmed-check that could never be false, and a "no approved venue" branch that confirmation makes impossible were all removed rather than tested.
 

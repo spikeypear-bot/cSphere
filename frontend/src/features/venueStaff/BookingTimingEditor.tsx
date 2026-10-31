@@ -73,7 +73,7 @@ export function BookingTimingEditor({ booking, onSaved, disabled }: {
           <TextField id="timing-reason" label="Reason for booking timings" multiline value={note}
             placeholder="e.g. Allow extra setup time for stage equipment and teardown after the event."
             error={noteError} onChange={value => { setNote(value); setNoteError('') }} />
-          <p>New conflicts are blocked. Reducing an existing occupied period is allowed so conflicts can be resolved.</p>
+          <p>Allow enough time for setup and turnaround without overlapping other reservations.</p>
           <Button type="submit" disabled={!valid}>{busy ? 'Saving…' : 'Save booking timings'}</Button>
         </fieldset>
       </form>

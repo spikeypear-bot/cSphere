@@ -56,6 +56,9 @@
   font-size: 1rem;
 }
 
+.venue-card-preview__address { margin-top: .5rem; color: var(--ink-soft); font-size: .9rem; }
+.venue-card-preview__actions { margin-left: auto; }
+
 .venue-card-preview__information {
   display: grid;
   gap: 1.1rem;

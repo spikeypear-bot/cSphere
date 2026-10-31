@@ -16,7 +16,7 @@ export function VenueCataloguePage() {
   return <div className="feature-skeleton">
     <PageHeader
       title="Venue Catalogue"
-      description="Each venue is an independently bookable room or space, identified by its address and room details."
+      description="Browse venue details, facilities and operating hours."
       actions={<>
         <Button className="venue-refresh-button" variant="ghost" onClick={retry}
           disabled={loading} aria-label="Refresh venues" title="Refresh venues">

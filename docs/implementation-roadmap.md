@@ -7,7 +7,7 @@ Status: living document, sequenced from the live backlog's Sprint 1–4 assignme
 The team has already planned 4 sprints (`Estimation` sheet: 310 total points, ~2 weeks each, 2026-09-07 → 2026-11-01) — well ahead of the Week 12 deadline. This roadmap sequences **within** that plan by dependency, and separates "build now" from "defer unless required," per Week 4 grading emphasis on coherent end-to-end workflows over isolated features.
 
 **Build now (Release 1, matches the 20 core features):** everything currently `Within Scope, Included` or `Added` on the `User Stories` sheet.
-**Defer unless the team/customer explicitly brings it in scope:** everything listed as `Out of Scope` in `AI_Context.md` § "Explicit Out-of-Scope / Deferred" (event programme/sessions, document attachments, comments, tentative holds, dashboards, most reporting, appeals/user guides, waiting lists, on-site staff assignment, recurring-event reuse, event categories).
+**Defer unless the team/customer explicitly brings it in scope:** everything listed as `Out of Scope` in `AI_Context.md` § "Explicit Out-of-Scope / Deferred" (event programme/sessions, document attachments, comments, generic dashboards, most reporting, appeals/user guides, waiting lists, on-site staff assignment, recurring-event reuse, event categories). Tentative venue holds are required by the Week 7 changes and are implemented; see [the hold workflow](tentative-venue-holds.md). The Venue Staff console/map is the authorised DEV16 extension.
 
 ## Slice 0 — Foundations (Sprint 1, in progress)
 

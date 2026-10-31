@@ -1,0 +1,46 @@
+.venue-search-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.venue-search-field input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.5rem;
+  padding: 0.4rem 0.6rem;
+  font: inherit;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--hairline-strong);
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.venue-search-field input:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.venue-search-field input[aria-invalid='true'] {
+  border-color: var(--danger);
+}
+
+.venue-facility-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  padding: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+}
+
+.venue-facility-filter label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}

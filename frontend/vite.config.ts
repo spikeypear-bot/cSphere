@@ -33,6 +33,13 @@ export default defineConfig({
       reportsDirectory: './coverage',
       include: ['src/**/*.{ts,tsx}'],
       exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/main.tsx', 'src/**/*.d.ts'],
+      // DEV16: every Venue Staff/map source file must retain complete coverage.
+      // Other role modules continue to use diagnostic coverage reporting.
+      thresholds: {
+        'src/features/venueStaff/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/features/venueMap/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+        'src/components/venue/**': { statements: 100, branches: 100, functions: 100, lines: 100 },
+      },
     },
   },
 })

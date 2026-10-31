@@ -27,7 +27,7 @@ export function AppShell({ children }: { children: ReactNode }) {
   const deniedPath = role ? new URLSearchParams(location.search).get('access-denied') : null
 
   return (
-    <div className="app-shell">
+    <div className="app-shell" data-role={role ?? undefined}>
       <header className="app-shell__header">
         <Link to="/" className="app-shell__brand">
           ConnectSphere
