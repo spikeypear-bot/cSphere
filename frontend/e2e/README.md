@@ -34,6 +34,7 @@ main ACs plus a negative, boundary or conflict case. Run `python
 | `equipment.spec.ts` | EC07, TS01, TS02, TS06, TS03, TS09 |
 | `registration-management.spec.ts` | EO10, EO11, EO12, AT07 |
 | `access-messages.spec.ts` | AU06 |
+| `attendee-event-changes.spec.ts` | AT09 (with EO03, EO07) |
 | `notifications.spec.ts` | EC-NEW4, EO-C1 |
 
 Rules these specs follow (Week 9):
