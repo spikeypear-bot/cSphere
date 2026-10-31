@@ -219,7 +219,9 @@ test('EO03 AC1 (negative): another organisation cannot ask to change the event, 
   const outsider = await signedIn(browser, 'eo3')
 
   await outsider.goto(`/organiser/requests/${requestId}/change`)
-  await expect(outsider.getByRole('alert')).toBeVisible()
+  await expect(outsider.getByRole('alert')).toHaveText(
+    /You can't request a change to this event\. It belongs to another organisation, or it no longer exists\./)
+  await expect(outsider.getByRole('button', { name: 'Try again' })).toHaveCount(0)
   await expect(outsider.getByLabel('Event name')).toHaveCount(0)
   await evidence(outsider, 'EO03-TC6')
 

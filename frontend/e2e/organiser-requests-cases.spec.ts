@@ -223,7 +223,7 @@ test('EO15 (happy): TC6 each request shows its progress as a timeline, with a re
   const page = await signedIn(browser, 'eo1')
   await page.goto('/organiser')
   const card = (name: string) => page.getByRole('listitem').filter({ has: page.getByRole('heading', { name }) })
-  await expect(card(draftName).getByText('Draft', { exact: true }).first()).toBeVisible()
+  await expect(card(draftName).getByRole('list', { name: 'Status: Draft' })).toBeVisible()
   await expect(card(submittedName).getByText('Request', { exact: true })).toBeVisible()
   await expect(card(submittedName).getByText('Under review', { exact: true })).toBeVisible()
 })

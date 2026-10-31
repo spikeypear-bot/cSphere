@@ -395,6 +395,7 @@ test('EC02 (negative): TC11, TC13 rejecting needs a reason, and the organiser se
   const organiser = await signedIn(browser, 'eo1')
   const card = organiser.getByRole('listitem').filter({ has: organiser.getByRole('heading', { name }) })
   await expect(card.getByText('Rejected', { exact: true }).first()).toBeVisible()
+  await expect(card.getByText('Not a corporate event.')).toBeVisible()
   await expect((await openBell(organiser)).getByText('Not a corporate event.').first()).toBeVisible()
 })
 
