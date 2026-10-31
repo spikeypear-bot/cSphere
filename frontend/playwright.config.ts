@@ -19,6 +19,12 @@ export default defineConfig({
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4173',
     // On failure, keep a step-by-step trace to replay in the trace viewer.
     trace: 'retain-on-failure',
+    // ConnectSphere's users are in Singapore. Pin the browser's timezone so a
+    // run behaves the same on every machine: CI runners are UTC, and a
+    // datetime-local field the app reads as browser-local time would
+    // otherwise mean a different moment there (Week 9: environment-dependent
+    // tests are flaky tests).
+    timezoneId: 'Asia/Singapore',
   },
   projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
 })
