@@ -116,11 +116,13 @@ public class SafetyOfficerController {
         return venues.findAllById(ids).stream().map(Venue::getVenueAddress).sorted().collect(java.util.stream.Collectors.joining("; "));
     }
 
-    private static EventDto toDto(Event event) {
+    /** EC-NEW2: the same resolved status (label, explanation, next actor) every other role reads. */
+    private EventDto toDto(Event event) {
         return new EventDto(event.getEventId(), event.getEventName(), event.getPurpose(), event.getDescription(),
                 event.getStartDatetime(), event.getEndDatetime(), event.getExpectedAttendance(), event.getVenueId(),
                 event.getAccessibilityNeeds(), event.getRequiredFacilities(), event.getRegistrationNeeds(),
                 event.getOrganisation(), event.getVenueRequirements(), event.getEquipmentRequirements(),
-                event.getStatus().name(), null, null);
+                event.getStatus().name(), null, null, statuses.forEvent(event), event.getSafetyFeedback(),
+                event.getSafetyApprovedAt(), event.getConfirmedAt());
     }
 }
