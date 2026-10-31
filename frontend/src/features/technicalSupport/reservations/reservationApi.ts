@@ -34,9 +34,14 @@ async function call<T>(request: () => Promise<T>): Promise<T> {
   }
 }
 
-// "2026-09-25T09:00" (local time) -> "2026-09-25T01:00:00.000Z"
+// "2026-09-25T09:00" (Singapore time) -> "2026-09-25T01:00:00.000Z". Every
+// time in ConnectSphere is entered in Singapore time, whatever timezone the
+// browser happens to be in.
 export function toIso(localValue: string): string {
-  return new Date(localValue).toISOString()
+  // Already an instant (ends in Z or an offset): keep it.
+  if (/(Z|[+-]\d{2}:\d{2})$/.test(localValue)) return new Date(localValue).toISOString()
+  const withSeconds = localValue.length === 16 ? `${localValue}:00` : localValue
+  return new Date(`${withSeconds}+08:00`).toISOString()
 }
 
 /** D32: requests by status, soonest event first (the server's order). */

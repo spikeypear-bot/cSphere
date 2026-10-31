@@ -36,7 +36,8 @@ const BULK_REPORT: DamageReport = {
   affectedEvents: [{ ...EVENT, outcomeId: 'out-2', requestedQuantity: 10, reservedQuantity: 10, affectedQuantity: 10 }],
 }
 
-const iso = (local: string) => new Date(local).toISOString()
+// Entered times are Singapore time on every machine (TS09 / AU rule: all times in SGT).
+const iso = (local: string) => new Date(/(Z|[+-]\d{2}:\d{2})$/.test(local) ? local : `${local}:00+08:00`).toISOString()
 const BLOCKS = 'GET /api/equipment/status-periods?current=true'
 const COMMITTED = 'This unit is already committed to an event during that time.'
 // Units of a kind come from its detail read (D32), with their status now.
