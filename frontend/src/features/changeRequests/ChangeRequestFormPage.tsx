@@ -34,6 +34,7 @@ export function ChangeRequestFormPage() {
   const [request, setRequest] = useState<EventRequestDto | null>(null)
   const [pending, setPending] = useState<ChangeRequestView | null>(null)
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [denied, setDenied] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [details, setDetails] = useState<ChangeDetails | null>(null)
   const [step, setStep] = useState<'edit' | 'review'>('edit')
@@ -57,11 +58,25 @@ export function ChangeRequestFormPage() {
       setLoadError(null)
     }
     load().catch((err: unknown) => {
-      if (!cancelled) setLoadError(err instanceof ApiClientError ? err.message : 'Your event could not be loaded.')
+      if (cancelled) return
+      // EO03 AC1: another organisation's request is refused (the server says
+      // "not found" either way, so ids cannot be probed); retrying cannot help.
+      setDenied(err instanceof ApiClientError && (err.status === 403 || err.status === 404))
+      setLoadError(err instanceof ApiClientError ? err.message : 'Your event could not be loaded.')
     })
     return () => { cancelled = true }
   }, [requestParam, eventId, attempt])
 
+  if (denied) {
+    return (
+      <div className="page">
+        <div role="alert" className="change-request__error">
+          <p>You can't request a change to this event. It belongs to another organisation, or it no longer exists.</p>
+          <Link className="button button--secondary" to="/organiser">Back to your event requests</Link>
+        </div>
+      </div>
+    )
+  }
   if (loadError) {
     return (
       <div className="page">

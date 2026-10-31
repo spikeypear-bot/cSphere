@@ -52,3 +52,8 @@
 .organiser-home__cancel { display: flex; flex-direction: column; gap: 0.4rem; flex-basis: 100%; }
 .organiser-home__cancel textarea { width: 100%; }
 .organiser-home__cancel-actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* EO09: the recorded reason for a rejected request. */
+.organiser-home__reason {
+  margin: 8px 0 0;
+}
