@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +45,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
  */
 @Tag("unit")
 @Tag("EO-C1")
+@Tag("AT09")
 class OrganiserVenueNoticesTest {
 
     private final EventRepository events = mock(EventRepository.class);
@@ -186,5 +188,60 @@ class OrganiserVenueNoticesTest {
         notices.reconfirmed(event);
 
         verifyNoInteractions(notifications);
+    }
+
+    @Test
+    @DisplayName("AT09 AC2 (boundary): the first confirmation records the venues and tells attendees nothing")
+    void theFirstConfirmationOnlyRecords() {
+        event.setConfirmedVenues(null);
+        event.setStartDatetime(OffsetDateTime.now().plusDays(7));
+        booked("1 Harbour Road", VenueBookingStatus.approved);
+
+        notices.confirmed(event, OffsetDateTime.now());
+
+        assertThat(event.getConfirmedVenues()).isEqualTo("1 Harbour Road");
+        verify(notifications, never()).createAttendeeVenueChangeNotifications(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("AT09 AC1, AC2, AC9 (happy): confirmed again with a different venue, attendees are told the old and new venues")
+    void aNewVenueIsAnnouncedOnReconfirmation() {
+        event.setConfirmedVenues("1 Harbour Road");
+        event.setStartDatetime(OffsetDateTime.now().plusDays(7));
+        booked("1 Harbour Road", VenueBookingStatus.changed);
+        booked("2 Marina Way", VenueBookingStatus.approved);
+        OffsetDateTime at = OffsetDateTime.now();
+
+        notices.confirmed(event, at);
+
+        verify(notifications).createAttendeeVenueChangeNotifications(event.getEventId(), "Town Hall",
+                "1 Harbour Road", "2 Marina Way", at);
+        assertThat(event.getConfirmedVenues()).isEqualTo("2 Marina Way");
+    }
+
+    @Test
+    @DisplayName("AT09 AC2 (negative): the same venues, recorded in a different order, are not a change")
+    void theSameVenuesAreNotAChange() {
+        event.setConfirmedVenues("2 Marina Way; 1 Harbour Road");
+        event.setStartDatetime(OffsetDateTime.now().plusDays(7));
+        booked("1 Harbour Road", VenueBookingStatus.approved);
+        booked("2 Marina Way", VenueBookingStatus.approved);
+
+        notices.confirmed(event, OffsetDateTime.now());
+
+        verify(notifications, never()).createAttendeeVenueChangeNotifications(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("AT09 AC5 (boundary): an event that has already started is not announced, though its venues are recorded")
+    void aStartedEventIsNotAnnounced() {
+        event.setConfirmedVenues("1 Harbour Road");
+        event.setStartDatetime(OffsetDateTime.now().minusMinutes(1));
+        booked("2 Marina Way", VenueBookingStatus.approved);
+
+        notices.confirmed(event, OffsetDateTime.now());
+
+        verify(notifications, never()).createAttendeeVenueChangeNotifications(any(), any(), any(), any(), any());
+        assertThat(event.getConfirmedVenues()).isEqualTo("2 Marina Way");
     }
 }

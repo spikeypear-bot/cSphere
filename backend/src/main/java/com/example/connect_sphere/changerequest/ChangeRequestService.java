@@ -55,9 +55,12 @@ import com.example.connect_sphere.user.repository.UserRepository;
 public class ChangeRequestService {
 
     static final int MAX_TEXT = 2000;
+    /** AT09 AC2: what attendees act on (date/time and joining details). Venue
+     * changes reach them on re-confirmation (OrganiserVenueNotices); attendance,
+     * venue/equipment requirements, accessibility and facilities are planning
+     * details for staff, not news for attendees. */
     private static final Set<String> ATTENDEE_NOTIFICATION_FIELDS = Set.of("startDatetime", "endDatetime",
-            "expectedAttendance", "venueRequirements", "equipmentRequirements", "accessibilityNeeds",
-            "requiredFacilities", "attendeeInstructions");
+            "attendeeInstructions");
     static final String REQUEST_CHANGED_SINCE = "This request has changed since the change was asked for. "
             + "The organiser needs to withdraw it and ask again.";
 

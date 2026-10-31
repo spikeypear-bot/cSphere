@@ -251,7 +251,7 @@ export function ReportProblemPage() {
               <input type="datetime-local" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)}
                 aria-invalid={Boolean(show('periodEnd'))} />
             </label>
-            <p className="field-hint">Leave the end empty if it is out of action until further notice.</p>
+            <p className="field-hint">Times are in Singapore time (SGT). Leave the end empty if it is out of action until further notice.</p>
             {show('periodEnd') ? <p className="field-error">{show('periodEnd')}</p> : null}
 
             {error ? <p role="alert">{error}</p> : null}

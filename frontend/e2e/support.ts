@@ -37,18 +37,19 @@ export async function apiGet<T>(request: APIRequestContext, token: string, path:
 }
 
 /** Test data, not the journey: a venue open all week that fits the event. */
-export async function createVenue(request: APIRequestContext, name: string): Promise<string> {
+export async function createVenue(request: APIRequestContext, name: string,
+  venueCapacity = 300, venueFacilities: string[] = ['projection']): Promise<string> {
   const token = await apiToken(request, 'vs1')
   const response = await request.post('/api/venues', {
     headers: { Authorization: `Bearer ${token}` },
     data: {
       venueAddress: name,
-      venueCapacity: 300,
+      venueCapacity,
       supportedLayouts: ['theatre'],
       operatingInformation: 'Loading bay at the back.',
       additionalInformation: null,
       venueAccessibilities: ['step_free_access'],
-      venueFacilities: ['projection'],
+      venueFacilities,
       operatingHours: [1, 2, 3, 4, 5, 6, 7].map((dayOfWeek) => ({ dayOfWeek, openTime: '00:00', closeTime: '23:59' })),
     },
   })
@@ -162,4 +163,75 @@ export async function confirmedEventByApi(request: APIRequestContext, eventName:
   await call('post', `/api/safety/events/${event.eventId}/approval`, tokens.so, { decision: 'approve' })
   await call('post', `/api/events/${event.eventId}/confirm`, tokens.ec)
   return event.eventId as string
+}
+
+/** Test data: a request of eo1's (Acme Pte Ltd) submitted through the API, as
+ * the organiser's own wizard would. Returns its id. */
+export async function submittedRequestByApi(request: APIRequestContext, eventName: string,
+  startDatetime: string, endDatetime: string, expectedAttendance = 150): Promise<string> {
+  const headers = { Authorization: `Bearer ${await apiToken(request, 'eo1')}` }
+  const draft = await request.post('/api/event-requests', { headers, data: { eventName, purpose: 'E2E journey',
+    startDatetime, endDatetime, expectedAttendance, venueRequirements: 'Theatre seating',
+    accessibilityNeeds: ['none'], requiredFacilities: [], registrationNeeds: false } })
+  expect(draft.ok(), `create request: ${draft.status()} ${await draft.text()}`).toBeTruthy()
+  const requestId = (await draft.json()).requestId as string
+  const submitted = await request.post(`/api/event-requests/${requestId}/submit`, { headers })
+  expect(submitted.ok(), `submit request: ${submitted.status()} ${await submitted.text()}`).toBeTruthy()
+  return requestId
+}
+
+/** Test data: the Lead assigns a request to a coordinator through the API. */
+export async function assignedByApi(request: APIRequestContext, requestId: string, coordinator = 'ec1') {
+  const token = await apiToken(request, 'ecl1')
+  const people = await apiGet<{ userId: string; username: string }[]>(request, token,
+    '/api/event-requests/unassigned/coordinators')
+  const result = await request.post(`/api/event-requests/unassigned/${requestId}/assign`, {
+    headers: { Authorization: `Bearer ${token}` },
+    data: { coordinatorUserId: people.find((p) => p.username === coordinator)!.userId } })
+  expect(result.ok(), `assign: ${result.status()} ${await result.text()}`).toBeTruthy()
+}
+
+/** Test data: a request submitted, assigned to ec1 and approved, so it is an
+ * event in Planning. Returns the event's id. */
+export async function planningEventByApi(request: APIRequestContext, eventName: string,
+  startDatetime: string, endDatetime: string): Promise<string> {
+  const requestId = await submittedRequestByApi(request, eventName, startDatetime, endDatetime)
+  await assignedByApi(request, requestId)
+  const approved = await request.post(`/api/event-requests/${requestId}/approve`, {
+    headers: { Authorization: `Bearer ${await apiToken(request, 'ec1')}` } })
+  expect(approved.ok(), `approve: ${approved.status()} ${await approved.text()}`).toBeTruthy()
+  return (await approved.json()).eventId as string
+}
+
+/** Opens the signed-in user's notification bell; returns the panel. */
+export async function openBell(page: Page): Promise<Locator> {
+  await page.getByRole('button', { name: /^Notifications/ }).click()
+  return page.locator('.notification-bell__panel')
+}
+
+/** Test data: an event in Planning with one approved venue booking, sent by
+ * ec1 for safety review (Awaiting Safety Review). Returns the event's id. */
+export async function awaitingSafetyReviewByApi(request: APIRequestContext, eventName: string, venueId: string,
+  startDatetime: string, endDatetime: string): Promise<string> {
+  const eventId = await planningEventByApi(request, eventName, startDatetime, endDatetime)
+  const ec = { Authorization: `Bearer ${await apiToken(request, 'ec1')}` }
+  const booking = await request.post(`/api/events/${eventId}/venue-bookings`, { headers: ec, data: { venueId } })
+  expect(booking.ok(), `book venue: ${booking.status()} ${await booking.text()}`).toBeTruthy()
+  const approved = await request.patch(`/api/venue-bookings/${(await booking.json()).bookingId}/approve`, {
+    headers: { Authorization: `Bearer ${await apiToken(request, 'vs1')}` } })
+  expect(approved.ok(), `approve booking: ${approved.status()} ${await approved.text()}`).toBeTruthy()
+  const sent = await request.post(`/api/events/${eventId}/safety-review`, { headers: ec })
+  expect(sent.ok(), `send for safety review: ${sent.status()} ${await sent.text()}`).toBeTruthy()
+  return eventId
+}
+
+/** A date (YYYY-MM-DD) in 2028–2029 that differs from run to run, for test
+ * data that shares finite stock such as seeded equipment, so reruns never
+ * compete with the reservations an earlier run left behind. */
+const firstDay = Date.now() % 700
+let daysGiven = 0
+export function uniqueDay(): string {
+  // Counting on from one start keeps the days in a run distinct; a fresh Date.now() per call could repeat one.
+  const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + daysGiven++) % 700) * 86_400_000)
+  return day.toISOString().slice(0, 10)
 }
