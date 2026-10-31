@@ -139,7 +139,7 @@ class EventReassignmentServiceTest {
                 NotificationType.event_reassignment_approved, "Reassigned from ec1 to ec2.");
         verify(notifications).createEventReassignmentDecisionNotifications(
                 List.of(NEXT_COORDINATOR_ID), EVENT_ID, "Annual Summit",
-                NotificationType.event_reassignment_approved, "You are now coordinating this event.");
+                NotificationType.event_reassignment_approved, "Transferred to you from ec1. You are now coordinating this event.");
         verify(notifications).createCoordinatorAssignmentNotification(
                 ORGANISER_ID, REQUEST_ID, EVENT_ID, "Annual Summit", "ec2", "ec2@example.test", true);
     }

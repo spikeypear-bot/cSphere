@@ -123,7 +123,7 @@ public class AvailabilityRepository {
             if (b.coordinatorId() != null) {
                 String message = "Affected booking at " + venueAddress + " ("
                         + sgt(b.startDateTime()) + " to " + sgt(b.endDateTime())
-                        + "). Alternative venue arrangements required. The original booking and event have not been cancelled.";
+                        + ", Singapore time). Alternative venue arrangements required. The original booking and event have not been cancelled.";
                 jdbc.update("""
                         INSERT INTO notifications(notification_id,recipient_user_id,event_id,type,event_name,reason,message,venue_booking_id)
                         VALUES (?,?,?,'venue_unavailable',?,?,?,?)
