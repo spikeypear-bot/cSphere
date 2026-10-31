@@ -22,7 +22,7 @@ export const EVENT_BADGES: Record<AttendeeEventStatus, Badge> = {
 export function registrationBadge(value: AttendeeStatusInput, now = Date.now()): Badge {
   if (value.registrationStatus === 'withdrawn') return { label: 'Withdrawn', tone: 'neutral' }
   if (value.registrationStatus === 'event_cancelled' || (value.registrationStatus && value.eventStatus === 'cancelled'))
-    return { label: 'Affected by Cancellation', tone: 'danger' }
+    return { label: 'Cancelled', tone: 'danger' }
   if (value.registrationStatus === 'confirmed') return { label: 'Registration Confirmed', tone: 'success' }
   if (value.eventStatus === 'cancelled') return { label: 'Registration Unavailable', tone: 'neutral' }
   if (value.eventStatus === 'completed') return { label: 'Registration Closed', tone: 'neutral' }
