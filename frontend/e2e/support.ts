@@ -232,3 +232,52 @@ export function uniqueDay(): string {
   const day = new Date(Date.UTC(2028, 0, 1) + (Date.now() % 700) * 86_400_000)
   return day.toISOString().slice(0, 10)
 }
+
+/** Functional test-case evidence: a full-page screenshot named after the
+ * Sheet's test case ID (e.g. "EO03-TC1a"). Only taken when E2E_EVIDENCE_DIR
+ * is set, so CI runs are unchanged. */
+export async function evidence(page: Page, id: string) {
+  const dir = process.env.E2E_EVIDENCE_DIR
+  if (dir) await page.screenshot({ path: `${dir}/${id}.png`, fullPage: true })
+}
+
+/** The request behind an event of eo1's, as the organiser's own list shows it. */
+export async function requestOfEvent(request: APIRequestContext, eventId: string): Promise<string> {
+  const token = await apiToken(request, 'eo1')
+  const requests = await apiGet<{ requestId: string; eventId: string | null }[]>(request, token, '/api/event-requests')
+  const found = requests.find((r) => r.eventId === eventId)
+  expect(found, `request of event ${eventId} not found`).toBeTruthy()
+  return found!.requestId
+}
+
+/** Test data: eo1 asks for a change through the API, starting from the
+ * request's current details exactly as the EO03 form does. Returns its id. */
+export async function changeRequestByApi(request: APIRequestContext, requestId: string,
+  patch: Record<string, unknown>, reason = 'Circumstances changed'): Promise<string> {
+  const headers = { Authorization: `Bearer ${await apiToken(request, 'eo1')}` }
+  const r = await apiGet<Record<string, unknown>>(request, headers.Authorization.slice(7), `/api/event-requests/${requestId}`)
+  const details = {
+    eventName: r.eventName, purpose: r.purpose, description: r.description,
+    startDatetime: r.startDatetime, endDatetime: r.endDatetime, expectedAttendance: r.expectedAttendance,
+    venueRequirements: r.venueRequirements, equipmentRequirements: r.equipmentRequirements,
+    accessibilityNeeds: r.accessibilityNeeds ?? [], requiredFacilities: r.requiredFacilities ?? [],
+    registrationNeeds: r.registrationNeeds, registrationCapacity: r.registrationCapacity ?? null,
+    registrationOpensAt: r.registrationOpensAt ?? null, attendeeInstructions: r.attendeeInstructions ?? null,
+    ...patch,
+  }
+  const sent = await request.post('/api/change-requests', { headers, data: { requestId, reason, details } })
+  expect(sent.ok(), `change request: ${sent.status()} ${await sent.text()}`).toBeTruthy()
+  return (await sent.json()).changeRequestId as string
+}
+
+/** Test data: ec1 books a venue for the whole event and vs1 approves it. Returns the booking's id. */
+export async function approvedBookingByApi(request: APIRequestContext, eventId: string, venueId: string): Promise<string> {
+  const booking = await request.post(`/api/events/${eventId}/venue-bookings`, {
+    headers: { Authorization: `Bearer ${await apiToken(request, 'ec1')}` }, data: { venueId } })
+  expect(booking.ok(), `book venue: ${booking.status()} ${await booking.text()}`).toBeTruthy()
+  const bookingId = (await booking.json()).bookingId as string
+  const approved = await request.patch(`/api/venue-bookings/${bookingId}/approve`, {
+    headers: { Authorization: `Bearer ${await apiToken(request, 'vs1')}` } })
+  expect(approved.ok(), `approve booking: ${approved.status()} ${await approved.text()}`).toBeTruthy()
+  return bookingId
+}
