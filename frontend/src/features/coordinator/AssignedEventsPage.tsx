@@ -9,6 +9,7 @@ import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
 import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { useVenueRead } from '../venueStaff/useVenueRead'
 import type { ChangeRequestView } from '../../types/changeRequest'
+import { When } from '../changeRequests/ChangeRequestsPage'
 import './AssignedEventsPage.css'
 
 /** EC09: the signed-in coordinator's active events, in the server's order (soonest first). */
@@ -54,6 +55,24 @@ export function AssignedEventsPage() {
             <p className="field-hint" role="status">
               {changeByEvent.size === 1 ? '1 change request is' : `${changeByEvent.size} change requests are`} waiting for your decision.
             </p>
+          ) : null}
+          {changes && changes.length > 0 ? (
+            // EC-NEW3 AC3: the pending changes themselves, oldest first (the
+            // server's order), with how long each has been waiting.
+            <section aria-labelledby="changes-waiting-heading" className="assigned-events__changes">
+              <h2 id="changes-waiting-heading">Change requests waiting for you</h2>
+              <ol className="plain-list">
+                {changes.map((change) => (
+                  <li key={change.changeRequestId}>
+                    <Card className="assigned-events__change">
+                      <Link to={`/coordinator/change-requests/${change.changeRequestId}`}>Change to {change.eventName}</Link>
+                      <p className="field-hint">{change.organisation} · asked by {change.requestedByName}, <When iso={change.requestedAt} /></p>
+                      <p className="assigned-events__change-reason"><strong>Reason:</strong> {change.reason}</p>
+                    </Card>
+                  </li>
+                ))}
+              </ol>
+            </section>
           ) : null}
           <StatusFilter statuses={statuses} selected={filter} onChange={setFilter} label="Filter my events by status" />
           <ul className="assigned-events__grid">

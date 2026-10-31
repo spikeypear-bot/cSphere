@@ -130,6 +130,10 @@ export function OrganiserHomePage() {
                   ? <JourneyStepper status={request.journeyStatus} />
                   : <StatusTimeline status={request.status} />}
                 {request.status === 'clarification_required' ? <LatestQuestion requestId={request.requestId} /> : null}
+                {/* EO09: the recorded reason stays visible, not only in the notification. */}
+                {request.status === 'rejected' && request.rejectionReason ? (
+                  <p className="organiser-home__reason"><strong>Reason for rejection:</strong> {request.rejectionReason}</p>
+                ) : null}
               </div>
               <StatusBadge status={request.status} journey={request.journeyStatus} />
               {pendingChanges.has(request.requestId) ? (

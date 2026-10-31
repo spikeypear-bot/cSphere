@@ -181,7 +181,8 @@ public class EventReassignmentService {
         notifications.createEventReassignmentDecisionNotifications(
                 List.of(nextCoordinator.getUserId()), eventId, eventName,
                 NotificationType.event_reassignment_approved,
-                "You are now coordinating this event.");
+                // EC-NEW4 AC3: a transfer names who had the event before.
+                "Transferred to you from " + previousCoordinator.getUsername() + ". You are now coordinating this event.");
         if (origin.getCreatedBy() != null) {
             notifications.createCoordinatorAssignmentNotification(
                     origin.getCreatedBy(), origin.getRequestId(), eventId, eventName,

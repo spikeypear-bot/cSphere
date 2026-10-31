@@ -1,6 +1,6 @@
 // @stories EC-NEW4 EO-C1 ELC-C6 VS-C1
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
-import { apiToken, confirmedEventByApi, createVenue, leadAssigns, requestIdOf, signedIn, uniqueName } from './support.ts'
+import { apiToken, confirmedEventByApi, createVenue, evidence, leadAssigns, requestIdOf, signedIn, uniqueName } from './support.ts'
 
 // IS212 Week 9: the notifications each role gets, through the real bell in the
 // browser. Expected wording comes from the EC-NEW4 and EO-C1 ACs.
@@ -34,6 +34,7 @@ test('EC-NEW4 (happy): the Lead is told of a new request, the coordinator of its
     await expect(item.getByText(/Acme Pte Ltd submitted a request for 12 Aug 2027, 9:00 AM/)).toBeVisible()
     await expect(item.getByText('By eo1 (Event Organiser)')).toBeVisible()
     await expect(item.locator('.notification-bell__item-time')).toContainText('(Singapore time)')
+    await evidence(lead, 'EC-NEW4-TC1a')
   })
 
   await test.step('ELC-C6: the Lead assigns it to ec1', async () => {
@@ -48,11 +49,13 @@ test('EC-NEW4 (happy): the Lead is told of a new request, the coordinator of its
     await expect(item.getByText(/^Assigned to you: Acme Pte Ltd, 12 Aug 2027, 9:00 AM to 12 Aug 2027, 12:00 PM \(Singapore time\), 150 expected\.$/)).toBeVisible()
     await expect(item.getByText('By ecl1 (Event Coordinator Lead)')).toBeVisible()
     await expect(item.getByText('Unread')).toBeVisible()
+    await evidence(coordinator, 'EC-NEW4-TC1b')
   })
 
   await test.step('EC-NEW4 AC25: Mark all as read clears the Unread marker', async () => {
     await panel.getByRole('button', { name: 'Mark all as read' }).click()
     await expect(item.getByText('Unread')).toHaveCount(0)
+    await evidence(coordinator, 'EC-NEW4-TC5')
   })
 
   await test.step('EC-NEW4 AC19: the notice opens the request, where the coordinator acts on it', async () => {
@@ -88,16 +91,19 @@ test('EO-C1 (happy): the organiser of a confirmed event is told at once when its
     await expect(message).toContainText(`Affected venue: ${venueName}`)
     await expect(message).toContainText('Reason: Flooding.')
     await expect(message).toContainText('being re-confirmed')
+    await evidence(organiser, 'EO-C1-TC1a')
   })
 
   await test.step('EO-C1 AC15: it opens the event\'s arrangements', async () => {
     await item.getByRole('button').click()
     await expect(organiser).toHaveURL(new RegExp(`/organiser/events/${eventId}$`))
+    await evidence(organiser, 'EO-C1-TC1b')
   })
 
   await test.step('EO-C1 AC16, AC17: another organisation is not told, and cannot open the event by API', async () => {
     const outsider = await signedIn(browser, 'eo3')
     await expect((await openBell(outsider)).getByRole('listitem').filter({ hasText: eventName })).toHaveCount(0)
+    await evidence(outsider, 'EO-C1-TC4')
     const opened = await request.get(`/api/events/${eventId}`, {
       headers: { Authorization: `Bearer ${await apiToken(request, 'eo3')}` } })
     expect(opened.ok()).toBeFalsy()

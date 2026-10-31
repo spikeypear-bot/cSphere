@@ -246,6 +246,31 @@ describe('EO03 — the organiser requests a change', () => {
   })
 })
 
+describe("EO03 — another organisation's request", () => {
+  it('EO03 AC1 (negative): opening the change form for a request that is not theirs says they cannot, with no Try again', async () => {
+    seedSession('organiser')
+    stubApi({
+      [`GET /api/event-requests/${REQ}`]: () => jsonResponse(404, { message: `Event request not found: ${REQ}` }),
+    })
+    renderAt(`/organiser/requests/${REQ}/change`)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      "You can't request a change to this event. It belongs to another organisation, or it no longer exists.")
+    expect(screen.queryByText(REQ, { exact: false })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Event name')).not.toBeInTheDocument()
+  })
+
+  it("EO03 AC1 (negative): another organisation's change requests are refused with a plain message, not a retry", async () => {
+    seedSession('organiser')
+    stubApi({ [`GET /api/change-requests?requestId=${REQ}`]: () => jsonResponse(404, { message: 'Not found' }) })
+    renderAt(`/organiser/requests/${REQ}/changes`)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent("You can't view these change requests.")
+    expect(screen.queryByRole('button', { name: 'Try again' })).not.toBeInTheDocument()
+  })
+})
+
 describe('EO03 — the organiser follows their change requests', () => {
   it('EO03 AC36, AC37 (happy): each change request shows its status, what it changes, the reason and the decision', async () => {
     seedSession('organiser')
@@ -501,5 +526,30 @@ describe('EO03 / EC-NEW3 — where a waiting change is visible', () => {
     expect(within(card).getByRole('link', { name: 'Change requested · review' })).toHaveAttribute('href', `/coordinator/change-requests/${CR}`)
     const quiet = screen.getByRole('heading', { name: 'Quiet Fair' }).closest('.assigned-events__card') as HTMLElement
     expect(within(quiet).queryByText(/Change requested/)).not.toBeInTheDocument()
+  })
+
+  it("EC-NEW3 AC3 (happy): the coordinator's events list shows each waiting change, oldest first, with organisation, reason and how long it has waited", async () => {
+    seedSession('coordinator')
+    const base = { purpose: 'Update', description: null, startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z',
+      expectedAttendance: 150, venueId: null, accessibilityNeeds: [], requiredFacilities: [], registrationNeeds: false,
+      organisation: 'Acme Pte Ltd', venueRequirements: 'Theatre', equipmentRequirements: null, status: 'pending',
+      coordinatorName: 'ec1', coordinatorEmail: null }
+    const older = view({ changeRequestId: 'cr-old', eventId: 'other', eventName: 'Quiet Fair', organisation: 'Globex Holdings',
+      reason: 'Fewer guests', requestedAt: '2026-10-18T02:00:00Z' })
+    stubApi({
+      'GET /api/events/assigned': () => jsonResponse(200, [
+        { ...base, eventId: EVENT, eventName: 'Town Hall' }, { ...base, eventId: 'other', eventName: 'Quiet Fair' }]),
+      // The server sends pending changes oldest first; the page keeps that order.
+      'GET /api/change-requests': () => jsonResponse(200, [older, view()]),
+    })
+    render(<MemoryRouter><SessionProvider><AssignedEventsPage /></SessionProvider></MemoryRouter>)
+
+    const list = within(await screen.findByRole('region', { name: 'Change requests waiting for you' }))
+    const links = list.getAllByRole('link')
+    expect(links.map((l) => l.textContent)).toEqual(['Change to Quiet Fair', 'Change to Town Hall'])
+    expect(links[0]).toHaveAttribute('href', '/coordinator/change-requests/cr-old')
+    expect(list.getByText(/Globex Holdings · asked by eo1/)).toBeInTheDocument()
+    expect(list.getByText('Fewer guests')).toBeInTheDocument()
+    expect(list.getAllByText(/\(Singapore time\) · .+ ago/)).toHaveLength(2)
   })
 })
