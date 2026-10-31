@@ -46,6 +46,15 @@ export type NotificationTypeName =
   | 'equipment_request_decided'
   // EO-C1 (V54)
   | 'confirmed_venue_changed'
+  | 'attendee_event_changed'
+  | 'attendee_event_cancelled'
+
+export interface NotificationChange {
+  field: string
+  label: string
+  previousValue: string
+  updatedValue: string
+}
 
 export interface NotificationDto {
   notificationId: string
@@ -66,4 +75,9 @@ export interface NotificationDto {
   /** EC-NEW4: who did it, and their role claim; null when the system did. */
   actorName?: string | null
   actorRole?: string | null
+  /** AT09: the approved comparison, captured when the change was committed. */
+  changes?: NotificationChange[] | null
+  /** AT09: event times before cancellation, not a live event lookup. */
+  originalEventStartDatetime?: string | null
+  originalEventEndDatetime?: string | null
 }

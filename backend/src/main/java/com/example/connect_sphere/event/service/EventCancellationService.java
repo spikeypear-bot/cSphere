@@ -232,18 +232,21 @@ public class EventCancellationService {
         EventCancellationRequest request = pendingRequest(event, cancellationRequestId);
         requireCancellable(event);
         String coordinatorNote = optionalReason(note);
+        OffsetDateTime cancelledAt = now();
 
         String message = "Cancelled at the organiser's request: " + request.getReason()
                 + (coordinatorNote == null ? "" : " Coordinator's note: " + coordinatorNote);
         lifecycle.cancel(coordinatorId, eventId, message);
         request.setStatus(EventCancellationStatus.approved);
         request.setDecidedBy(coordinatorId);
-        request.setDecidedAt(now());
+        request.setDecidedAt(cancelledAt);
         request.setDecisionReason(coordinatorNote);
         EventCancellationRequest saved = cancellations.save(request);
 
         UUID organiserId = saved.getRequesterUserId();
         String name = event.getEventName();
+        notifications.createAttendeeEventCancellationNotifications(eventId, name, event.getStartDatetime(),
+                event.getEndDatetime(), request.getReason(), cancelledAt);
         String outcome = name + " has been cancelled as you asked." + (coordinatorNote == null ? ""
                 : " Coordinator's note: " + coordinatorNote);
         notifications.createEventCancellationDecisionNotification(organiserId, eventId, name,

@@ -53,6 +53,7 @@ class DomainClassDiagramTest {
     // or leave it out of the diagram with ClassDiagrams.NOT_DOMAIN.
     private static final Set<String> DOMAIN_VALUE_TYPES = Set.of(
             "EffectivePeriod",
+            "NotificationChange",
             "EquipmentRequestLineId",
             "SerialisedEquipmentId",
             "VenueBecameUnavailable",

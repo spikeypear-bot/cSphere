@@ -37,33 +37,38 @@ class AttendeeRegistrationQueryServiceTest {
 
     @ParameterizedTest(name = "{0}, {1}, start {2}: event {4}, withdrawal {5}")
     @CsvSource({
-        "confirmed, confirmed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, confirmed, true",
-        "confirmed, pending, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
-        "confirmed, awaiting_safety_review, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
-        "confirmed, safety_changes_requested, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
-        "confirmed, safety_approved, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
-        "confirmed, cancelled, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, cancelled, false",
-        "confirmed, completed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, completed, false",
-        "confirmed, confirmed, 2026-12-30T00:00:00Z, 2026-12-31T00:00:00Z, completed, false",
-        "confirmed, confirmed, 2027-01-01T00:00:00Z, 2027-01-02T00:00:00Z, confirmed, false",
-        "confirmed, pending, 2026-12-31T00:00:00Z, 2027-01-02T00:00:00Z, reconfirming, false",
-        "withdrawn, confirmed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, confirmed, false",
-        "withdrawn, cancelled, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, cancelled, false",
-        "withdrawn, completed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, completed, false",
-        "event_cancelled, confirmed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, confirmed, false"
+            "confirmed, confirmed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, confirmed, true",
+            "confirmed, pending, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
+            "confirmed, awaiting_safety_review, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
+            "confirmed, safety_changes_requested, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
+            "confirmed, safety_approved, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, reconfirming, true",
+            "confirmed, cancelled, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, cancelled, false",
+            "confirmed, completed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, completed, false",
+            "confirmed, confirmed, 2026-12-30T00:00:00Z, 2026-12-31T00:00:00Z, completed, false",
+            "confirmed, confirmed, 2027-01-01T00:00:00Z, 2027-01-02T00:00:00Z, confirmed, false",
+            "confirmed, pending, 2026-12-31T00:00:00Z, 2027-01-02T00:00:00Z, reconfirming, false",
+            "withdrawn, confirmed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, confirmed, false",
+            "withdrawn, cancelled, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, cancelled, false",
+            "withdrawn, completed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, completed, false",
+            "event_cancelled, confirmed, 2027-01-02T00:00:00Z, 2027-01-03T00:00:00Z, confirmed, false"
     })
     @DisplayName("AT04 (boundary): registration history stays separate from lifecycle and AT08 eligibility")
-    void statusesAndEligibility(String stored, String lifecycle, String start, String end, String expected, boolean available) {
+    void statusesAndEligibility(String stored, String lifecycle, String start, String end, String expected,
+            boolean available) {
         Event event = event();
         event.setStatus(EventStatus.valueOf(lifecycle));
         event.setStartDatetime(OffsetDateTime.parse(start));
         event.setEndDatetime(OffsetDateTime.parse(end));
         AttendeeRegistration registration = registration(event, stored);
-        when(registrations.findByRegistrationIdAndAttendeeId(registrationId, owner)).thenReturn(Optional.of(registration));
+        when(registrations.findByRegistrationIdAndAttendeeId(registrationId, owner))
+                .thenReturn(Optional.of(registration));
         when(events.findById(event.getEventId())).thenReturn(Optional.of(event));
 
         var result = service.get(owner, registrationId);
-        assertThat(result.registrationStatus()).isEqualTo(stored);
+        String expectedRegistrationStatus = "confirmed".equals(stored) && "cancelled".equals(lifecycle)
+                ? "event_cancelled"
+                : stored;
+        assertThat(result.registrationStatus()).isEqualTo(expectedRegistrationStatus);
         assertThat(result.eventStatus()).isEqualTo(expected);
         assertThat(result.withdrawalAvailable()).isEqualTo(available);
         assertThat(result.withdrawalReason()).isNotBlank();
@@ -82,7 +87,8 @@ class AttendeeRegistrationQueryServiceTest {
                 .thenReturn(List.of(registration(event, "withdrawn"), registration(event, "confirmed")));
         when(events.findAllById(List.of(event.getEventId()))).thenReturn(List.of(event));
         var result = service.list(owner);
-        assertThat(result).extracting(AttendeeRegistrationDetailsDto::registrationStatus).containsExactly("withdrawn", "confirmed");
+        assertThat(result).extracting(AttendeeRegistrationDetailsDto::registrationStatus).containsExactly("withdrawn",
+                "confirmed");
         assertThat(result.getFirst().eventName()).isEqualTo("Current approved name");
         assertThat(result.getFirst().reference()).isEqualTo("CS-HISTORY");
         assertThat(result.getFirst().registeredAt()).isEqualTo(OffsetDateTime.parse("2026-12-01T00:00:00Z"));
@@ -96,7 +102,8 @@ class AttendeeRegistrationQueryServiceTest {
     @DisplayName("AT04 (negative): another attendee's or missing registration is unavailable before reading its event")
     void ownershipIsRequired() {
         assertThatThrownBy(() -> service.get(owner, registrationId))
-                .isInstanceOfSatisfying(AttendeeRegistrationException.class, ex -> assertThat(ex.getStatus()).isEqualTo(404));
+                .isInstanceOfSatisfying(AttendeeRegistrationException.class,
+                        ex -> assertThat(ex.getStatus()).isEqualTo(404));
         verify(registrations).findByRegistrationIdAndAttendeeId(registrationId, owner);
         verifyNoInteractions(events);
     }
@@ -110,7 +117,8 @@ class AttendeeRegistrationQueryServiceTest {
     @Test
     @DisplayName("AT04 (failure): a read failure propagates without changing history")
     void readFailure() {
-        when(registrations.findByAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(owner)).thenThrow(new IllegalStateException("offline"));
+        when(registrations.findByAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(owner))
+                .thenThrow(new IllegalStateException("offline"));
         assertThatThrownBy(() -> service.list(owner)).hasMessage("offline");
         verify(registrations).findByAttendeeIdOrderByRegisteredAtDescRegistrationIdAsc(owner);
         verifyNoMoreInteractions(registrations);

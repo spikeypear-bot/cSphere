@@ -1,4 +1,4 @@
-// @stories AT03 AT01 AT02 AT04
+// @stories AT09 AT03 AT01 AT02 AT04
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -25,7 +25,7 @@ const event = { eventId: 'event-1', eventName: record.eventName, startDatetime: 
 const response = (data: unknown, status = 200) => ({ ok: status < 400, status, text: async () => JSON.stringify(data) })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
-describe('AT03 registration confirmation', () => {
+describe('AT09 AT03 registration confirmation', () => {
   it('AT03 (happy): shows the saved record, dates, separate statuses and all approved venues', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ venues })))
     render(<MemoryRouter><RegistrationConfirmation registration={record} /></MemoryRouter>)
@@ -62,10 +62,10 @@ describe('AT03 registration confirmation', () => {
     expect(screen.queryByRole('button', { name: 'Register for this event' })).not.toBeInTheDocument()
   })
 
-  it.each(['withdrawn', 'event_cancelled'] as const)('AT03 (cross-cutting): old %s confirmations show history, not active success', async registrationStatus => {
+  it.each(['withdrawn', 'event_cancelled'] as const)('AT09 AC14, AT03 (cross-cutting): old %s confirmations show history, not active success', async registrationStatus => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ venues })))
     render(<MemoryRouter><RegistrationConfirmation registration={{ ...record, registrationStatus, withdrawalAvailable: false }} /></MemoryRouter>)
-    expect(screen.getByText(registrationStatus === 'withdrawn' ? 'Withdrawn' : 'Affected by Cancellation')).toBeInTheDocument()
+    expect(screen.getByText(registrationStatus === 'withdrawn' ? 'Withdrawn' : 'Cancelled')).toBeInTheDocument()
     expect(screen.queryByText(/Registration Confirmed/)).not.toBeInTheDocument()
     expect(screen.getByText('CS-AT03')).toBeInTheDocument()
     expect(await screen.findByText('Main Hall')).toBeInTheDocument()

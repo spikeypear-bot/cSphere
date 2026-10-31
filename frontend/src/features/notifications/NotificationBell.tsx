@@ -31,6 +31,8 @@ const MESSAGE_TYPES = new Set(['request_submitted', 'request_assigned', 'request
   'event_reassignment_approved', 'event_reassignment_declined'])
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'attendee_event_changed') return `Important updates for "${n.eventName}"`
+  if (n.type === 'attendee_event_cancelled') return `"${n.eventName}" has been cancelled`
   if (n.type === 'confirmed_venue_changed') return `Venue update for your confirmed event "${n.eventName}"`
   if (n.type === 'request_submitted') return `New request "${n.eventName}" is waiting to be assigned`
   if (n.type === 'request_assigned') return n.isReassignment ? `"${n.eventName}" was transferred to you` : `"${n.eventName}" was assigned to you`
@@ -176,6 +178,31 @@ export function NotificationBell() {
                       ) : null}
                       {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
                       {n.type === 'venue_unavailable' && n.reason ? (
+                        <span className="notification-bell__item-reason">
+                          Reason: {n.reason}
+                        </span>
+                      ) : null}
+
+                      {n.type === 'attendee_event_changed' && n.changes?.length ? (
+                        <ul className="notification-bell__item-reason">
+                          {n.changes.map((change) => (
+                            <li key={change.field}>
+                              {change.label}: {change.previousValue} → {change.updatedValue}
+                            </li>
+                          ))}
+                        </ul>
+                      ) : null}
+
+                      {n.type === 'attendee_event_cancelled' &&
+                       n.originalEventStartDatetime &&
+                       n.originalEventEndDatetime ? (
+                        <span className="notification-bell__item-reason">
+                          Original date/time: {formatEventDateTime(n.originalEventStartDatetime)} to {formatEventDateTime(n.originalEventEndDatetime)} (Singapore time)
+                        </span>
+                      ) : null}
+
+                      {n.type === 'attendee_event_cancelled' && n.reason ? (
+                      >>>>>>> main
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
                       {n.actorName ? (

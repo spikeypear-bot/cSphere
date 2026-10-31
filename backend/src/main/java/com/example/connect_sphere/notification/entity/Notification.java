@@ -1,6 +1,7 @@
 package com.example.connect_sphere.notification.entity;
 
 import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 import org.hibernate.annotations.JdbcTypeCode;
@@ -106,6 +107,18 @@ public class Notification {
     /** EC-NEW4 (V54): their role, as the token's role claim (e.g. "ecl"). */
     @Column(name = "actor_role")
     private String actorRole;
+
+    /** AT09: immutable values from the approved change, not a live event join. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "notification_changes", columnDefinition = "jsonb")
+    private List<NotificationChange> notificationChanges;
+
+    /** AT09: the event time as it stood when cancellation was committed. */
+    @Column(name = "original_event_start_datetime")
+    private OffsetDateTime originalEventStartDatetime;
+
+    @Column(name = "original_event_end_datetime")
+    private OffsetDateTime originalEventEndDatetime;
 
     public Notification() {
     }
