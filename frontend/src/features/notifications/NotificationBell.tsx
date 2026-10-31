@@ -202,7 +202,6 @@ export function NotificationBell() {
                       ) : null}
 
                       {n.type === 'attendee_event_cancelled' && n.reason ? (
-                      >>>>>>> main
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
                       {n.actorName ? (
