@@ -178,11 +178,8 @@ export function NotificationBell() {
                       ) : null}
                       {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
                       {n.type === 'venue_unavailable' && n.reason ? (
-                        <span className="notification-bell__item-reason">
-                          Reason: {n.reason}
-                        </span>
+                        <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
-
                       {n.type === 'attendee_event_changed' && n.changes?.length ? (
                         <ul className="notification-bell__item-reason">
                           {n.changes.map((change) => (
@@ -192,15 +189,11 @@ export function NotificationBell() {
                           ))}
                         </ul>
                       ) : null}
-
-                      {n.type === 'attendee_event_cancelled' &&
-                       n.originalEventStartDatetime &&
-                       n.originalEventEndDatetime ? (
+                      {n.type === 'attendee_event_cancelled' && n.originalEventStartDatetime && n.originalEventEndDatetime ? (
                         <span className="notification-bell__item-reason">
                           Original date/time: {formatEventDateTime(n.originalEventStartDatetime)} to {formatEventDateTime(n.originalEventEndDatetime)} (Singapore time)
                         </span>
                       ) : null}
-
                       {n.type === 'attendee_event_cancelled' && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
