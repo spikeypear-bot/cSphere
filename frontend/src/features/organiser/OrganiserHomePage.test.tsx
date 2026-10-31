@@ -153,3 +153,30 @@ describe('OrganiserHomePage — EO04 opening the arrangements', () => {
     expect(await screen.findByRole('link', { name: 'View event' })).toHaveAttribute('href', '/organiser/events/ev-9')
   })
 })
+
+describe('EO09 — the organiser can see why a request was rejected', () => {
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EO09 (happy): a rejected request shows the recorded reason on its card; other requests show none', async () => {
+    window.localStorage.clear()
+    seedSession()
+    const base = { organisation: 'Acme Conferences', createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(), accessibilityNeeds: [] }
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [
+      { ...base, requestId: 'req-1', status: 'rejected', eventName: 'Charity Run', rejectionReason: 'Not a corporate event.' },
+      { ...base, requestId: 'req-2', status: 'pending', eventName: 'Partner Summit', rejectionReason: null },
+    ])))
+
+    renderHome()
+
+    const rejected = (await screen.findByText('Charity Run')).closest('li') as HTMLElement
+    expect(within(rejected).getByText('Not a corporate event.')).toBeInTheDocument()
+    expect(within(rejected).getByText('Reason for rejection:')).toBeInTheDocument()
+    const pending = screen.getByText('Partner Summit').closest('li') as HTMLElement
+    expect(within(pending).queryByText('Reason for rejection:')).not.toBeInTheDocument()
+  })
+})
