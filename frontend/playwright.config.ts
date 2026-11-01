@@ -6,10 +6,6 @@ import { defineConfig, devices } from '@playwright/test'
  * backend) against a real backend and database, so they need both running:
  * see e2e/README.md. CI starts them in the `e2e` job.
  */
-// One start day for the whole run (see uniqueDay in e2e/support.ts). Set here,
-// in the runner, so every worker inherits the same value.
-process.env.E2E_FIRST_DAY ??= String(Date.now() % 700)
-
 export default defineConfig({
   testDir: './e2e',
   // A real browser and a real backend are slower than unit tests; fail fast
@@ -17,9 +13,7 @@ export default defineConfig({
   // until green hides flakiness instead of fixing it).
   timeout: 30_000,
   retries: 0,
-  // Spec files run side by side; the tests inside one file still run in order.
-  // Every test makes its own uniquely named data, so they do not collide.
-  workers: 3,
+  workers: 1,
   reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : 'list',
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:4173',

@@ -314,6 +314,8 @@ jobs:
   e2e:
     needs: package
     runs-on: ubuntu-latest
+    # A hung step (e.g. apt stuck on an unreachable mirror) fails in 10 min, not GitHub's default 6 h.
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:latest
