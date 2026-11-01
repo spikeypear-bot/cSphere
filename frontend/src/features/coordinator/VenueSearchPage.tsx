@@ -167,7 +167,7 @@ export function VenueSearchPage() {
         <section className="venue-search__results" aria-labelledby="venue-search-results">
           <h2 id="venue-search-results">Search results</h2>
           {visible.length === 0 ? (
-            <Card><p role="status">No matching venues found.</p></Card>
+            <Card className="dash-row-card"><p role="status">No matching venues found.</p></Card>
           ) : (
             <ul>
               {visible.map(venue => (
