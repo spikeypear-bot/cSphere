@@ -1,4 +1,4 @@
-// @stories ECL-C4 TS09 EC09 AT04 EO15 ECL-C1
+// @stories ECL-C4 TS09 EC09 AT04 EO15 ECL-C1 VS02
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -82,7 +82,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
   it.each([
     ['coordinator', 'ec1', /^Good \w+, ec1$/],
     ['organiser', 'eo1', /^Good \w+, eo1$/],
-    ['venue-staff', 'vs1', /Venue Staff console/i],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /^Good \w+, att1$/],
   ] as const)('ECL-C4 AC1 (negative): a signed-in %s opening the URL directly is sent to their own console, told why, and no events are read', async (role, username, ownConsole) => {

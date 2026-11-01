@@ -1,4 +1,4 @@
-// @stories DEV16 AU04
+// @stories DEV16 AU04 VS02
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, signedIn } from './support.ts'
 
@@ -19,7 +19,7 @@ test('DEV16 (cross-cutting): persisted rooms, shared markers and mobile layout w
   const explorer = page.getByRole('region', { name: 'Explore venues' })
   const card = explorer.getByRole('button', { name: new RegExp(room.venueName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).filter({ has: page.locator('strong') })
   await expect(card).toBeVisible()
-  const home = await page.getByRole('heading', { name: 'Venue Staff console' }).boundingBox()
+  const home = await page.getByRole('heading', { level: 1, name: /^Good \w+, vs1$/ }).boundingBox()
   const heading = await explorer.getByRole('heading', { name: 'Explore venues' }).boundingBox()
   expect(heading!.y).toBeGreaterThan(home!.y)
   await expect(explorer.getByRole('region', { name: 'Interactive venue map' })).toBeVisible()

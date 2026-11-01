@@ -1,4 +1,4 @@
-// @stories AU04 DEV05 TS09 EC09 AT04 EO15 ECL-C1  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories AU04 DEV05 TS09 EC09 AT04 EO15 ECL-C1 VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -182,7 +182,7 @@ describe('App routing — role consoles', () => {
   it.each([
     ['coordinator', 'ec1', /^Good \w+, ec1$/],
     ['organiser', 'eo1', /^Good \w+, eo1$/],
-    ['venue-staff', 'vs1', /Venue Staff console/i],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /^Good \w+, att1$/],
   ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {

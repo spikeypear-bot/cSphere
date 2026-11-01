@@ -6,14 +6,14 @@ import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { useVenueRead } from './useVenueRead'
 import type { VenueDto } from '../../types/venue'
 import { VenueDetailsPanel } from './VenueDetailsPanel'
-import '../../components/skeleton.css'
+import '../../components/ui/dashboard.css'
 import './VenueCataloguePage.css'
 
 export function VenueCataloguePage() {
   const location = useLocation()
   const navigate = useNavigate()
   const { data: venues, error, retry, loading } = useVenueRead<VenueDto[]>('/venues', false, 5000, true)
-  return <div className="feature-skeleton">
+  return <div className="page">
     <PageHeader
       title="Venue Catalogue"
       description="Browse venue details, facilities and operating hours."
@@ -26,11 +26,11 @@ export function VenueCataloguePage() {
         <Link className="button button--primary" to="/venue-staff/catalogue/new">Add a venue</Link>
       </>}
     />
-    {location.state?.venueSaved && <Card className="feature-skeleton__body venue-success-banner"><p role="status">{location.state?.venueUpdated ? 'Venue updated successfully.' : 'Venue saved successfully.'}</p>
+    {location.state?.venueSaved && <Card className="dash-row-card venue-success-banner"><p role="status">{location.state?.venueUpdated ? 'Venue updated successfully.' : 'Venue saved successfully.'}</p>
       <Button variant="ghost" onClick={() => navigate(location.pathname, { replace: true, state: null })}>Dismiss</Button></Card>}
-    {error ? <Card className="feature-skeleton__body"><p role="alert">{error}</p><Button variant="secondary" onClick={retry}>Try again</Button></Card>
+    {error ? <Card className="dash-row-card"><p role="alert">{error}</p><Button variant="secondary" onClick={retry}>Try again</Button></Card>
       : !venues ? <p role="status">Loading venues…</p>
-      : venues.length === 0 ? <Card className="feature-skeleton__body"><h2>No venues yet</h2><p>Add your first venue to start the catalogue.</p></Card>
+      : venues.length === 0 ? <Card className="dash-row-card"><h2>No venues yet</h2><p>Add your first venue to start the catalogue.</p></Card>
       : venues.map(venue => <VenueDetailsPanel key={venue.venueId} venue={venue} linkToDetails />)}
   </div>
 }

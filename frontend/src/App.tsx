@@ -38,7 +38,7 @@ import { BookingDetailsPage } from './features/venueStaff/BookingDetailsPage'
 import { BookingApprovalsPage } from './features/venueStaff/BookingApprovalsPage'
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
-import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
+import { venueStaffNav } from './features/venueStaff/venueStaffNav'
 import { AppShell as ConsoleShell } from './components/layout/AppShell'
 import { coordinatorNav } from './features/coordinator/coordinatorNav'
 import { attendeeNav } from './features/attendee/attendeeNav'
@@ -174,17 +174,20 @@ function VenueStaffRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<VenueStaffHomePage />} />
-      <Route path="catalogue" element={<VenueCataloguePage />} />
-      <Route path="catalogue/new" element={<VenueCreatePage />} />
-      <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
-      <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
-      <Route path="booking-approvals" element={<BookingApprovalsPage />} />
-      <Route path="availability-calendar" element={<VenueSchedulePage />} />
-      <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
-      {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue') && feature.path !== 'booking-approvals' && feature.path !== 'availability-calendar'))}
-    </Routes>
+    <ConsoleShell navLabel="Venue Staff" items={venueStaffNav}>
+      <Routes>
+        <Route index element={<VenueStaffHomePage />} />
+        <Route path="catalogue" element={<VenueCataloguePage />} />
+        <Route path="catalogue/new" element={<VenueCreatePage />} />
+        <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
+        <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
+        <Route path="booking-approvals" element={<BookingApprovalsPage />} />
+        <Route path="availability-calendar" element={<VenueSchedulePage />} />
+        <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
+        {/* Unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/venue-staff" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

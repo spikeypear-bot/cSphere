@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { StatusFilter } from '../../components/ui/JourneyStatus'
 import { BOOKING_STATUS_LABELS, bookingDisplayStatus } from '../../types/venueBookingStatus'
 import { useHoldDeadline } from './useHoldDeadline'
@@ -10,7 +10,6 @@ import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import type { VenueBookingDto } from '../../types/venueBooking'
 import { formatEventDateTime, formatEventTimeRange } from './formatEventDateTime'
 import { useVenueRead } from './useVenueRead'
-import '../../components/skeleton.css'
 import './BookingApprovalsPage.css'
 import { venueFacilityLabels, venueAccessibilityLabels, type Facility } from '../../types/venue'
 import type { AccessibilityFeature } from '../../types/eventRequest'
@@ -34,7 +33,7 @@ export function BookingApprovalsPage() {
   const tentative = requests.filter(b => status(b) === 'tentative')
   const refresh = () => { setRefreshRequested(true); retry() }
 
-  return <div className="feature-skeleton booking-approvals-page">
+  return <div className="page booking-approvals-page">
     <PageHeader
       title="Booking approvals"
       description="Review the requested venue and event requirements before opening the full booking details."
@@ -45,7 +44,7 @@ export function BookingApprovalsPage() {
       }
     />
     {loading ? <p role="status">{refreshRequested ? 'Refreshing pending booking requests…' : 'Loading pending booking requests…'}</p>
-      : error ? <Card className="feature-skeleton__body">
+      : error ? <Card className="dash-row-card">
         <p role="alert">Could not load pending booking requests. {error}</p>
         <Button variant="secondary" onClick={retry}>Try again</Button>
       </Card>
@@ -58,13 +57,13 @@ export function BookingApprovalsPage() {
         {(filter === null || filter === 'pending') && <section className="booking-approvals-section" aria-labelledby="pending-bookings-heading">
           <h2 id="pending-bookings-heading">Pending booking requests</h2>
           <p>Requests awaiting a decision. Approve, reject, or put a request on tentative hold.</p>
-          {!pending.length ? <Card className="feature-skeleton__body"><p>No pending booking requests found.</p></Card>
+          {!pending.length ? <Card className="dash-row-card"><p>No pending booking requests found.</p></Card>
             : <BookingRequestList bookings={pending} />}
         </section>}
         {(filter === null || filter === 'tentative') && <section className="booking-approvals-section" aria-labelledby="tentative-bookings-heading">
           <h2 id="tentative-bookings-heading">Tentative venue holds</h2>
           <p>Reserved temporarily while arrangements are finalised. Open a booking to release or convert its hold.</p>
-          {!tentative.length ? <Card className="feature-skeleton__body"><p>No active tentative venue holds.</p></Card>
+          {!tentative.length ? <Card className="dash-row-card"><p>No active tentative venue holds.</p></Card>
             : <BookingRequestList bookings={tentative} held />}
         </section>}
       </>}
@@ -76,12 +75,11 @@ function BookingRequestList({ bookings, held = false }: { bookings: VenueBooking
     const status = held ? 'tentative' : booking.status
     const hold = held ? booking.holds?.find(h => h.status === 'active') : undefined
     return <li key={booking.bookingId}>
-      <Card className="feature-skeleton__body booking-approvals-card">
-        <div className="booking-approvals-card__header">
-          <h3>{booking.event.eventName?.trim() || 'Unnamed event'}</h3>
-          <span className="venue-card-preview__tag booking-status-tag" data-booking-status={status}>Status: {BOOKING_STATUS_LABELS[status]}</span>
-        </div>
-        <dl>
+      {/* The whole card opens the booking; decisions are made there. */}
+      <RowLink to={`/venue-staff/bookings/${booking.bookingId}?from=booking-approvals`} className="card dash-row-card booking-approvals-card"
+        titleAs="h3" title={booking.event.eventName?.trim() || 'Unnamed event'}
+        badges={<span className="venue-card-preview__tag booking-status-tag" data-booking-status={status}>Status: {BOOKING_STATUS_LABELS[status]}</span>}>
+        <dl className="dash-figures dash-facts">
           <div><dt>Event ID</dt><dd>{booking.event.eventId}</dd></div>
           <div><dt>Booking ID</dt><dd>{booking.bookingId}</dd></div>
           <div><dt>Current coordinator</dt><dd>{booking.currentCoordinatorName ?? 'Unassigned'}{booking.currentCoordinatorEmail ? ` (${booking.currentCoordinatorEmail})` : ''}</dd></div>
@@ -95,8 +93,7 @@ function BookingRequestList({ bookings, held = false }: { bookings: VenueBooking
           <div><dt>Required facilities</dt><dd>{(booking.effectiveRequirements?.requiredFacilities ?? booking.requirements?.requiredFacilities ?? []).map(f => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None specified'}</dd></div>
           <div><dt>Accessibility requirements</dt><dd>{(booking.effectiveRequirements?.accessibilityNeeds ?? booking.requirements?.accessibilityNeeds ?? booking.event.accessibilityNeeds).map(f => venueAccessibilityLabels[f as AccessibilityFeature] ?? f).join(', ') || 'None specified'}</dd></div>
         </dl>
-        <Link to={`/venue-staff/bookings/${booking.bookingId}?from=booking-approvals`}>View booking details</Link>
-      </Card>
+      </RowLink>
     </li>
   })}</ul>
 }

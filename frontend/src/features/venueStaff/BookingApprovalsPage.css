@@ -12,36 +12,8 @@
   min-width: 0;
 }
 
-.booking-approvals-card__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem;
-}
-
-.booking-approvals-card h3 {
-  margin: 0;
-  min-width: 0;
-  font-size: 1.2rem;
-}
-
-.booking-approvals-section { margin-top: 1.5rem; }
 .booking-approvals-section > h2 { margin: 0 0 .4rem; }
 .booking-approvals-section > p { margin: 0 0 1rem; color: var(--ink-soft); }
 
-.booking-approvals-card dl {
-  display: grid;
-  gap: 0.9rem;
-  margin: 1.25rem 0;
-}
-
-.booking-approvals-card dt {
-  font-weight: 600;
-}
-
-.booking-approvals-card dd {
-  margin: 0.25rem 0 0;
-  color: var(--ink-soft);
-  white-space: pre-line;
-}
+.booking-approvals-card dl { margin-top: 0.75rem; }
+.booking-approvals-card dd { white-space: pre-line; }

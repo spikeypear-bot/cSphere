@@ -1,4 +1,4 @@
-// @stories DEV16 EC04
+// @stories DEV16 EC04 VS02
 import { expect, test, type Page } from '@playwright/test'
 
 async function openFixture(page: Page, role: 'venue-staff' | 'coordinator' = 'venue-staff', venueCount = 1) {
@@ -81,9 +81,8 @@ test('DEV16 EC04 (cross-cutting): desktop margins stay consistent and map contro
   await page.setViewportSize({ width: 1440, height: 1000 })
   await openFixture(page)
   await expect(page.getByRole('button', { name: /Singapore room Singapore/ })).toBeVisible()
-  const staffShell = await page.locator('.app-shell__content').boundingBox()
-  expect(staffShell!.width).toBeCloseTo(900, 1)
-  expect(staffShell!.x).toBeCloseTo(270, 1)
+  // Both roles sit in the same side-nav console shell.
+  const staffShell = await page.locator('.console-shell__content').boundingBox()
   const staffStyle = await page.getByLabel('Minimum capacity').evaluate(el => {
     const style = getComputedStyle(el)
     return [style.backgroundColor, style.borderRadius, style.paddingTop, style.fontWeight]
@@ -122,7 +121,7 @@ test('DEV16 EC04 (cross-cutting): desktop margins stay consistent and map contro
   await coordinator.setViewportSize({ width: 1440, height: 1000 })
   await openFixture(coordinator, 'coordinator')
   await expect(coordinator.getByRole('heading', { name: 'Search venues' })).toBeVisible()
-  const coordinatorShell = await coordinator.locator('.app-shell__content').boundingBox()
+  const coordinatorShell = await coordinator.locator('.console-shell__content').boundingBox()
   expect(coordinatorShell!.x).toBeCloseTo(staffShell!.x, 1)
   expect(coordinatorShell!.width).toBeCloseTo(staffShell!.width, 1)
   await expect(coordinator.getByLabel('Required capacity', { exact: true })).toBeVisible()
