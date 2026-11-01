@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**272 test files, 2289 tests, 82 stories traced, 0 files untraced.**
+**274 test files, 2298 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -73,7 +73,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | TS06 | 1 | 3 | 3 | 1 | 99 | AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS09 | 7 | 7 | 15 | 1 | 230 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS01 | 1 | 3 | 2 | 1 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS02 |  | 2 | 4 | 1 | 102 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS02 |  | 2 | 8 | 4 | 136 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS03 | 1 | 2 | 3 | 3 | 113 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS04 | 1 | 4 | 2 | 1 | 119 | AC3, AC4, AC5, AC6, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS06A |  |  | 1 | 1 | 25 | — | happy, negative, boundary, failure, cross-cutting |
@@ -1012,11 +1012,18 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
+- frontend component/unit: `frontend/src/features/venueMap/VenueMapExplorer.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSharedPanels.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffDashboard.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffNav.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/venue-map-layout.spec.ts`
+- e2e (browser): `frontend/e2e/venue-map.spec.ts`
+- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
 <details><summary>VS03</summary>
