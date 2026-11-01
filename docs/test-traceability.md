@@ -5,14 +5,14 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**272 test files, 2289 tests, 82 stories traced, 0 files untraced.**
+**274 test files, 2298 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
 | AT01 | 5 | 6 | 9 | 5 | 172 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT02 | 2 | 4 | 6 | 4 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT03 | 5 | 4 | 8 | 4 | 112 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| AT04 | 2 | 4 | 5 | 5 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT04 | 2 | 4 | 9 | 5 | 114 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT07 |  |  | 1 | 1 | 10 | — | happy, negative, boundary, conflict, failure |
 | AT08 | 2 | 2 | 3 | 4 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT09 | 1 | 2 | 3 | 1 | 33 | — | happy, negative, boundary, failure, cross-cutting |
@@ -186,11 +186,15 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationQueryFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/RegistrationConfirmationFlowTest.java`
+- frontend component/unit: `frontend/src/App.test.tsx`
+- frontend component/unit: `frontend/src/features/attendee/AttendeeDashboard.test.tsx`
+- frontend component/unit: `frontend/src/features/attendee/AttendeeNav.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeStatusBadges.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeWorkflowAudit.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationConfirmation.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationPages.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/Withdrawal.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
 - e2e (browser): `frontend/e2e/attendee-badges.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-registration-status.spec.ts`
