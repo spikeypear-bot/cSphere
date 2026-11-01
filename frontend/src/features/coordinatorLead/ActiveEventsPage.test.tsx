@@ -1,4 +1,4 @@
-// @stories ECL-C4 TS09
+// @stories ECL-C4 TS09 EC09
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'

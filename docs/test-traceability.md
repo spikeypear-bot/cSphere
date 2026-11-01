@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**271 test files, 2275 tests, 82 stories traced, 0 files untraced.**
+**271 test files, 2276 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -28,7 +28,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
 | EC07 | 1 | 3 | 1 | 1 | 87 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC08 | 4 | 7 | 5 | 4 | 265 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC09 | 2 | 1 | 3 | 1 | 38 | — | happy, boundary, failure, cross-cutting |
+| EC09 | 2 | 1 | 5 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC10 |  | 1 | 2 | 2 | 50 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C1 | 2 | 1 | 3 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure |
 | EC-C2 | 2 | 4 | 3 | 2 | 118 | — | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -428,9 +428,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`
+- frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorNav.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 
 </details>
