@@ -1,4 +1,4 @@
-// @stories ECL-C4 TS09 EC09
+// @stories ECL-C4 TS09 EC09 ECL-C1
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -109,7 +109,8 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     const user = userEvent.setup()
     render(<MemoryRouter initialEntries={['/coordinator-lead']}><App /></MemoryRouter>)
 
-    const link = await screen.findByRole('link', { name: 'Active events' })
+    const nav = await screen.findByRole('navigation', { name: 'Event Coordinator Lead' })
+    const link = within(nav).getByRole('link', { name: 'Active events' })
     expect(link).toHaveAttribute('href', '/coordinator-lead/active-events')
     await user.click(link)
 
