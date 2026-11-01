@@ -7,8 +7,10 @@ import './dashboard.css'
  * with a trailing chevron. Its accessible name is the title alone (so a
  * screen reader hears "Gala dinner, link", not every figure); the badges, details and
  * aside are its description. */
-export function RowLink({ to, onClick, title, titleAs: Title = 'span', media, badges, aside, children, className, ...rest }: {
+export function RowLink({ to, state, onClick, title, titleAs: Title = 'span', media, badges, aside, children, className, ...rest }: {
   to?: string
+  /** Router state for the page `to` opens (link form only). */
+  state?: unknown
   /** Without `to`: the row is a button that runs this. */
   onClick?: () => void
   title: ReactNode
@@ -49,5 +51,5 @@ export function RowLink({ to, onClick, title, titleAs: Title = 'span', media, ba
   )
   return to === undefined
     ? <button type="button" onClick={onClick} {...shared}>{content}</button>
-    : <Link to={to} {...shared}>{content}</Link>
+    : <Link to={to} state={state} {...shared}>{content}</Link>
 }

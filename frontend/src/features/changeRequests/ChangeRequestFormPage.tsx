@@ -72,7 +72,7 @@ export function ChangeRequestFormPage() {
       <div className="page">
         <div role="alert" className="change-request__error">
           <p>You can't request a change to this event. It belongs to another organisation, or it no longer exists.</p>
-          <Link className="button button--secondary" to="/organiser">Back to your event requests</Link>
+          <Link className="button button--secondary" to="/organiser/requests">Back to your event requests</Link>
         </div>
       </div>
     )

@@ -21,13 +21,12 @@ export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted',
   // An assigned request is the coordinator's to review; the Lead views it and
   // can reassign it from there (ELC-C5). The review page reads this state to
   // lead back to the assignments and name the coordinator the card showed.
-  // RowLink passes it through to the router Link (its props type has no `state`).
-  const linkState = coordinatorName ? { state: { coordinator: { id: request.coordinatorId, name: coordinatorName } } } : {}
+  const linkState = coordinatorName ? { coordinator: { id: request.coordinatorId, name: coordinatorName } } : undefined
   return (
     <RowLink to={`/coordinator-lead/unassigned-requests/${request.requestId}`} className="card dash-row-card"
       titleAs={headingLevel === 3 ? 'h3' : 'h2'} title={request.eventName?.trim() || 'Untitled request'}
       badges={<StatusBadge status={request.status} journey={request.journeyStatus} />}
-      {...linkState}>
+      state={linkState}>
       <p>{request.organisation}</p>
       <dl className="dash-figures dash-facts">
         <div>

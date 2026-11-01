@@ -2,8 +2,6 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { SessionProvider } from './lib/session'
 import { HOME_BY_ROLE, useSession, type Role } from './lib/sessionContext'
 import { AppShell } from './components/AppShell'
-import { FeatureSkeletonPage } from './components/FeatureSkeletonPage'
-import type { SkeletonFeature } from './types/skeletonFeature'
 import { LoginPage } from './features/auth/LoginPage'
 import { OrganiserHomePage } from './features/organiser/OrganiserHomePage'
 import { MyRequestsPage } from './features/organiser/MyRequestsPage'
@@ -83,12 +81,6 @@ function useRoleGate(expected: Role) {
 function redirectFor(role: Role | null, pathname: string): string {
   const denied = `access-denied=${encodeURIComponent(pathname)}`
   return role ? `${HOME_BY_ROLE[role]}?${denied}` : `/?${denied}`
-}
-
-function skeletonRoutes(features: SkeletonFeature[]) {
-  return features.map((feature) => (
-    <Route key={feature.path} path={feature.path} element={<FeatureSkeletonPage feature={feature} />} />
-  ))
 }
 
 function OrganiserRoutes() {
