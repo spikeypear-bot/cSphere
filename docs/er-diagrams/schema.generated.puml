@@ -207,6 +207,7 @@ entity event_requests {
 	registration_capacity : integer
 	registration_opens_at : timestamp with time zone
 	attendee_instructions : text
+	registration_closes_at : timestamp with time zone
 }
 
 entity event_safety_reviews {
