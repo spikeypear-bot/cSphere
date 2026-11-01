@@ -188,7 +188,8 @@ it('keeps the queue behind the existing Venue Staff route gate', async () => {
   vi.stubGlobal('fetch', fetch); page('attendee')
   expect(await screen.findByRole('alert')).toHaveTextContent('Access denied')
   expect(screen.queryByRole('heading', { name: 'Pending booking requests' })).not.toBeInTheDocument()
-  expect(fetch).not.toHaveBeenCalled()
+  // The attendee's own dashboard may load; the booking queue must not.
+  expect(fetch.mock.calls.map(([url]) => String(url)).filter(url => url.includes('/venue-staff/'))).toEqual([])
 })
 
 it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
