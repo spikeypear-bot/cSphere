@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { ReadinessDto } from './readinessTypes'
-import { SafetyOfficerHomePage } from './SafetyOfficerHomePage'
+import { SafetyReviewsPage } from './SafetyReviewsPage'
 import { SafetyEventDetailsPage } from './SafetyEventDetailsPage'
 
 const EVENT_ID = 'event-1'
@@ -51,9 +51,9 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
         venueAddress: '1 Harbour Road', status: 'confirmed',
       }]),
     })
-    render(<MemoryRouter initialEntries={['/safety-officer']}>
+    render(<MemoryRouter initialEntries={['/safety-officer/reviews']}>
       <SessionProvider>
-        <Routes><Route path="/safety-officer" element={<SafetyOfficerHomePage />} /></Routes>
+        <Routes><Route path="/safety-officer/reviews" element={<SafetyReviewsPage />} /></Routes>
       </SessionProvider>
     </MemoryRouter>)
 
@@ -76,9 +76,9 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
       ]),
       'GET /api/safety/events/confirmed': () => jsonResponse(200, []),
     })
-    render(<MemoryRouter initialEntries={['/safety-officer']}>
+    render(<MemoryRouter initialEntries={['/safety-officer/reviews']}>
       <SessionProvider>
-        <Routes><Route path="/safety-officer" element={<SafetyOfficerHomePage />} /></Routes>
+        <Routes><Route path="/safety-officer/reviews" element={<SafetyReviewsPage />} /></Routes>
       </SessionProvider>
     </MemoryRouter>)
 
@@ -89,6 +89,28 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(within(planning).getByText('Withdrawn Breakfast')).toBeInTheDocument()
     // The same label every other role sees, not a console-only one.
     expect(within(queue).getByText('Awaiting Safety Review')).toBeInTheDocument()
+  })
+
+  it('SO-C1 (happy): each event card is one link that opens the event, named by the event', async () => {
+    seedSession('safety-officer')
+    stubApi({
+      'GET /api/safety/events/planning': () => jsonResponse(200, []),
+      'GET /api/safety/events/confirmed': () => jsonResponse(200, [{
+        eventId: EVENT_ID, eventName: 'Town Hall',
+        startDatetime: EVENT.startDatetime, endDatetime: EVENT.endDatetime,
+        venueAddress: '1 Harbour Road', status: 'confirmed',
+      }]),
+    })
+    render(<MemoryRouter initialEntries={['/safety-officer/reviews']}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer/reviews" element={<SafetyReviewsPage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+
+    const confirmed = (await screen.findByRole('heading', { name: 'Confirmed events' })).closest('section') as HTMLElement
+    const card = await within(confirmed).findByRole('listitem')
+    expect(within(card).getAllByRole('link')).toHaveLength(1)
+    expect(within(card).getByRole('link', { name: 'Town Hall' })).toHaveAttribute('href', `/safety-officer/events/${EVENT_ID}`)
   })
 
   it('persists checklist changes, shows event logistics, and blocks approval while incomplete', async () => {

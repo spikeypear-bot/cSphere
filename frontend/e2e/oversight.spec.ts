@@ -18,12 +18,12 @@ test('SO-C5 SO-C2 (happy): the Safety Officer rejects with a reason and the item
 
   const officer = await signedIn(browser, 'so1')
   await test.step('SO-C1 AC7 / SO-C2 AC2, AC3, AC6: it is waiting for review, and opens with its details, its venue, and what is not finalised', async () => {
-    await officer.goto('/safety-officer')
+    await officer.goto('/safety-officer/reviews')
     const waiting = officer.getByRole('region', { name: 'Waiting for your safety review' })
       .or(officer.locator('section').filter({ has: officer.getByRole('heading', { name: 'Waiting for your safety review' }) }))
     const card = waiting.getByRole('listitem').filter({ hasText: eventName })
     await expect(card).toContainText(venueName)
-    await card.getByRole('link', { name: 'View event' }).click()
+    await card.getByRole('link', { name: eventName }).click()
     await expect(officer).toHaveURL(new RegExp(`/safety-officer/events/${eventId}$`))
     await expect(officer.getByText('E2E journey').first()).toBeVisible()
     await expect(officer.getByText(venueName).first()).toBeVisible()
@@ -84,12 +84,12 @@ test('SO-C1 SO-C2 (happy): confirmed events are listed with date and venue, open
 
   const officer = await signedIn(browser, 'so1')
   await test.step('SO-C1 AC1, AC2: the confirmed event is listed with its date in Singapore time and its venue', async () => {
-    await officer.goto('/safety-officer')
+    await officer.goto('/safety-officer/reviews')
     const confirmed = officer.locator('section').filter({ has: officer.getByRole('heading', { name: 'Confirmed events' }) })
     const card = confirmed.getByRole('listitem').filter({ hasText: eventName })
     await expect(card).toContainText(venueName)
     await expect(card).toContainText('12 Oct 2027')
-    await card.getByRole('link', { name: 'View event' }).click()
+    await card.getByRole('link', { name: eventName }).click()
   })
 
   await test.step('SO-C2 AC1, AC2, AC5, AC7: its details are shown with no decision to make, and Back returns to the list', async () => {
@@ -97,7 +97,7 @@ test('SO-C1 SO-C2 (happy): confirmed events are listed with date and venue, open
     await expect(officer.getByText('Theatre seating').first()).toBeVisible()
     await expect(officer.getByRole('button', { name: 'Reject', exact: true })).toHaveCount(0)
     await officer.getByRole('link', { name: 'Back to events' }).click()
-    await expect(officer).toHaveURL(/\/safety-officer\/?$/)
+    await expect(officer).toHaveURL(/\/safety-officer\/reviews$/)
   })
 
   await test.step('SO-C1 AC8 / SO-C2 AC8 (negative): only a Safety Officer can read them, including by API', async () => {

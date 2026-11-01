@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { EVENT_STATUS_LABELS } from '../../types/event'
 import { JourneyStatusBadge } from '../../components/ui/JourneyStatus'
@@ -8,7 +8,8 @@ import type { SafetyEventListItem } from './readinessTypes'
 import { useSafetyData } from './useSafetyData'
 import './safetyOfficer.css'
 
-export function SafetyOfficerHomePage() {
+/** SO-C1: every event the Safety Officer can see, in three sections (the console's "Safety reviews" page). */
+export function SafetyReviewsPage() {
   const planning = useSafetyData<SafetyEventListItem[]>('/safety/events/planning')
   const confirmed = useSafetyData<SafetyEventListItem[]>('/safety/events/confirmed')
   // EC08: only events actually sent are the Safety Officer's queue; a
@@ -19,7 +20,7 @@ export function SafetyOfficerHomePage() {
   return (
     <div className="page">
       <PageHeader
-        title="Safety Officer console"
+        title="Safety reviews"
         description="Review planned events and monitor confirmed event readiness."
       />
 
@@ -44,7 +45,7 @@ export function SafetyOfficerHomePage() {
         {confirmed.error ? <p role="alert">Could not load confirmed events. {confirmed.error}</p> : null}
         {confirmed.loading && !confirmed.data ? <p role="status">Loading confirmed events…</p> : null}
         {confirmed.data?.length === 0 ? (
-          <Card><p>No confirmed events to show.</p></Card>
+          <Card className="dash-row-card"><p>No confirmed events to show.</p></Card>
         ) : null}
         {confirmed.data && confirmed.data.length > 0 ? <EventList events={confirmed.data} /> : null}
       </section>
@@ -57,24 +58,19 @@ function EventList({ events }: { events: SafetyEventListItem[] }) {
     <ul className="safety-event-list">
       {events.map((event) => (
         <li key={event.eventId}>
-          <Card className="safety-event-card">
-            <div>
-              <h3>{event.eventName}</h3>
-              {event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : event.status !== 'confirmed' ? (
-                <span className={`status-badge status-badge--${event.status === 'awaiting_safety_review' ? 'pending' : 'approved'}`}
-                  data-status={event.status}>
-                  {EVENT_STATUS_LABELS[event.status] ?? event.status}
-                </span>
-              ) : null}
-              <dl className="safety-event-facts">
-                <div><dt>Date and time</dt><dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd></div>
-                <div><dt>Venue</dt><dd>{event.venueAddress || 'Not finalised'}</dd></div>
-              </dl>
-            </div>
-            <Link className="button button--secondary" to={`/safety-officer/events/${event.eventId}`}>
-              View event
-            </Link>
-          </Card>
+          <RowLink to={`/safety-officer/events/${event.eventId}`} className="card dash-row-card" titleAs="h3"
+            title={event.eventName}
+            badges={event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : event.status !== 'confirmed' ? (
+              <span className={`status-badge status-badge--${event.status === 'awaiting_safety_review' ? 'pending' : 'approved'}`}
+                data-status={event.status}>
+                {EVENT_STATUS_LABELS[event.status] ?? event.status}
+              </span>
+            ) : null}>
+            <dl className="dash-figures dash-facts">
+              <div><dt>Date and time</dt><dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd></div>
+              <div><dt>Venue</dt><dd>{event.venueAddress || 'Not finalised'}</dd></div>
+            </dl>
+          </RowLink>
         </li>
       ))}
     </ul>
