@@ -33,6 +33,7 @@ public class NotificationOutbox {
         payload.put("is_reassignment",n.getIsReassignment()); payload.put("occurred_at",n.getOccurredAt().toString());
         payload.put("read_at",null); payload.put("message",n.getMessage());
         payload.put("venue_booking_id",n.getVenueBookingId()); payload.put("requirement_review_id",n.getRequirementReviewId());
+        payload.put("equipment_request_id",n.getEquipmentRequestId()); payload.put("equipment_review_id",n.getEquipmentReviewId());
         // EC-NEW4 (V54): who did it travels with the queued notice.
         payload.put("actor_name",n.getActorName()); payload.put("actor_role",n.getActorRole());
         payload.put("notification_changes",n.getNotificationChanges());

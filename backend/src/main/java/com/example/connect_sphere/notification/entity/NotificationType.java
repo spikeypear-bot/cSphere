@@ -56,6 +56,11 @@ public enum NotificationType {
     /** TS09 (V38): the assigned coordinator told what Technical Support
      * decided for their event after equipment was reported damaged. */
     equipment_damage_outcome,
+    /** TS11 (V65): Technical Support told a coordinator submitted an equipment request. */
+    equipment_request_submitted,
+    /** TS11 (V65): Technical Support told an approved event change affects an
+     * event's equipment, and asked to review it. */
+    equipment_change_review,
     /** EC-NEW3 (V53, D37): an approved change means the coordinator's
      * approved equipment request needs attention. */
     equipment_request_attention,

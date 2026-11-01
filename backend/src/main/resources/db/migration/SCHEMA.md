@@ -845,3 +845,26 @@ reads already exclude this status. Active identified registrations only are
 notified. Email is intentionally not configured for this project; in-app
 delivery reuses V48's post-commit outbox and 30-second retry schedule. See the
 [AT09 contract](../../../../../../docs/attendee-event-change-notifications.md).
+
+## V65 update — TS11 equipment change reviews and Technical Support notices
+
+`equipment_change_reviews` records an approved event change (EC-NEW3) that affected an event's
+equipment, and Technical Support's review of it. Columns: `review_id` (UUID PK), `event_id`
+(required FK → `events`), `change_request_id` (required FK → `event_change_requests`, unique: one
+review per change), `coordinator_id` (nullable FK → `users`, the coordinator at approval),
+`changed_at`, `previous_values` and `updated_values` (JSONB: `startDatetime`, `endDatetime`,
+`equipmentRequirements`), `affected_reservations` (JSONB snapshot of the reservations that no
+longer covered the event), `requirements_changed`, and the review: `outcome` (`still_suitable`,
+`needs_coordinator_action`), `outcome_note` (trimmed, 1–2000 characters), `reviewed_by` (FK →
+`users`) and `reviewed_at`. A check requires no review fields while unreviewed, a reviewer and time
+once reviewed, and a note for `needs_coordinator_action`.
+
+`notifications` gains `equipment_request_id` (FK → `equipment_requests`) and `equipment_review_id`
+(FK → `equipment_change_reviews`), each with a partial unique index on (`recipient_user_id`,
+column) so a user is told once. `notification_type` gains `equipment_request_submitted` (needs
+`event_id`, `equipment_request_id`, `message`) and `equipment_change_review` (needs `event_id`,
+`equipment_review_id`, `message`); the recreated `chk_notification_shape` keeps every prior branch,
+including VS17's V42/V43/V51 additions below and TS09's `equipment_damage_outcome`. See decision-log D34.
+
+V65 was written as V36, then renumbered at each merge of `main`: for V34–V36, TS09's V37–V40,
+`main`'s V41–V51 (VS17 and others), and finally `main`'s V52–V64.

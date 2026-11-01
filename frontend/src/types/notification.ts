@@ -37,6 +37,9 @@ export type NotificationTypeName =
   | 'attendee_registration_withdrawn'
   // TS09
   | 'equipment_damage_outcome'
+  // TS11
+  | 'equipment_request_submitted'
+  | 'equipment_change_review'
   // EC-NEW3 (D37)
   | 'equipment_request_attention'
   // EC-NEW4 (V54)

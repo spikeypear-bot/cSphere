@@ -494,6 +494,40 @@ public class NotificationService {
         }
     }
 
+    /** TS11 AC1: tell Technical Support a coordinator submitted an equipment
+     * request. Each user is told once per request (AC15). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEquipmentRequestSubmittedNotifications(List<UUID> recipientUserIds, UUID equipmentRequestId,
+            UUID eventId, String eventName, String message) {
+        for (UUID recipient : recipientUserIds) {
+            if (repository.existsByRecipientUserIdAndEquipmentRequestId(recipient, equipmentRequestId)) {
+                continue;
+            }
+            Notification notification = base(recipient, NotificationType.equipment_request_submitted, eventName);
+            notification.setEventId(eventId);
+            notification.setEquipmentRequestId(equipmentRequestId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
+    /** TS11 AC4/AC8: tell Technical Support an approved change affects an
+     * event's equipment and needs reviewing. Each user is told once per review (AC15). */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void createEquipmentChangeReviewNotifications(List<UUID> recipientUserIds, UUID reviewId,
+            UUID eventId, String eventName, String message) {
+        for (UUID recipient : recipientUserIds) {
+            if (repository.existsByRecipientUserIdAndEquipmentReviewId(recipient, reviewId)) {
+                continue;
+            }
+            Notification notification = base(recipient, NotificationType.equipment_change_review, eventName);
+            notification.setEventId(eventId);
+            notification.setEquipmentReviewId(reviewId);
+            notification.setMessage(message);
+            saveBestEffort(notification);
+        }
+    }
+
     /** VS17: database notification and review commit with approval, like hold expiry. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void createVenueRequirementChangedNotifications(List<UUID> recipients,
@@ -672,6 +706,10 @@ public class NotificationService {
             case clarification_requested -> "/organiser/requests/" + n.getEventRequestId() + "/respond";
             case clarification_responded, request_cancelled -> "/coordinator/requests/" + n.getEventRequestId();
             case venue_requirement_changed, venue_booking_requested, venue_booking_cancelled -> "/venue-staff/bookings/" + n.getVenueBookingId();
+            // TS11 AC3: the request opens on Technical Support's request page (TS01).
+            case equipment_request_submitted -> "/technical-support/requests/" + n.getEquipmentRequestId();
+            // TS11 AC10: the event's reservations, with the affected ones flagged.
+            case equipment_change_review -> "/technical-support/change-reviews/" + n.getEquipmentReviewId();
             case venue_arrangements_changed, confirmed_venue_changed, status_change, coordinator_assignment -> n.getEventId() != null
                     ? "/organiser/events/" + n.getEventId()
                     : n.getEventRequestId() != null

@@ -45,6 +45,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  */
 @Tag("integration")
 @Tag("DEV15")
+@Tag("TS11")
 @SpringBootTest
 class DomainClassDiagramTest {
 
@@ -59,6 +60,9 @@ class DomainClassDiagramTest {
             "VenueBecameUnavailable",
             // EO-C1: what changed about a confirmed event's venue, told to its organiser.
             "VenueArrangementChanged",
+            // TS11's application events, like VenueBecameUnavailable above.
+            "ChangeApproved",
+            "EquipmentRequestSubmitted",
             // VS-C3's tentative hold: a record read with JDBC, not an entity.
             "VenueHold");
 

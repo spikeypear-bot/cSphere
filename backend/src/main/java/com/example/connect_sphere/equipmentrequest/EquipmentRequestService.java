@@ -28,9 +28,10 @@ public class EquipmentRequestService {
     private final EquipmentRepository equipment;
     private final EquipmentReservationService reservations;
 
-    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
-     * Setter-injected so this service does not depend on the log; absent in
-     * plain unit tests, where nothing is announced. */
+    /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder),
+     * and TS11's EquipmentRequestSubmitted. Setter-injected so this service does
+     * not depend on either listener; absent in plain unit tests, where nothing
+     * is announced. */
     private org.springframework.context.ApplicationEventPublisher changeLog;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
@@ -41,6 +42,14 @@ public class EquipmentRequestService {
     /** TS09: open equipment shortfalls. Setter-injected like the change log;
      * absent in plain unit tests, where no request is for a shortfall. */
     private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
+
+    /** TS11 (D34): Technical Support's reviews, which gate "mark still suitable". */
+    private com.example.connect_sphere.equipmentreview.EquipmentChangeReviewRepository changeReviews;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setChangeReviews(com.example.connect_sphere.equipmentreview.EquipmentChangeReviewRepository changeReviews) {
+        this.changeReviews = changeReviews;
+    }
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
     void setShortfalls(com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls) {
@@ -89,6 +98,12 @@ public class EquipmentRequestService {
                 .toList();
     }
 
+    private boolean newestOutcomeNeedsCoordinator(UUID eventId) {
+        return changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
+                .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.ReviewOutcome.needs_coordinator_action)
+                .isPresent();
+    }
+
     @Transactional
     public EquipmentRequestDetailsResponse submit(
             UUID coordinatorId, UUID eventId, SubmitEquipmentRequest input) {
@@ -104,6 +119,11 @@ public class EquipmentRequestService {
         com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome shortfall = null;
         if (input != null && input.shortfallOutcomeId() != null && shortfalls != null) {
             shortfall = shortfalls.requireOpenShortfall(eventId, input.shortfallOutcomeId());
+        }
+        // TS11 AC12: Technical Support's "needs coordinator action" opens the same exception.
+        // shortcut: allowed while that is the newest outcome, so more than one additional
+        // request can follow it; link the request to its review if that needs limiting.
+        if (shortfall != null || newestOutcomeNeedsCoordinator(eventId)) {
             if (requests.findByEventId(eventId).stream()
                     .anyMatch(request -> request.getStatus() == EquipmentRequestStatus.processing)) {
                 throw new EquipmentRequestStateException(
@@ -122,6 +142,10 @@ public class EquipmentRequestService {
         for (SubmitEquipmentRequest.Item item : validated.items()) {
             lines.save(new EquipmentRequestLine(
                     new EquipmentRequestLineId(requestId, item.equipmentId()), item.quantity()));
+        }
+        if (changeLog != null) {
+            // TS11 AC1: Technical Support are told after this commits.
+            changeLog.publishEvent(new EquipmentRequestSubmitted(requestId, eventId));
         }
         if (shortfall != null) {
             shortfalls.linkAdditionalRequest(shortfall, requestId);
@@ -173,6 +197,10 @@ public class EquipmentRequestService {
             lines.save(new EquipmentRequestLine(
                     new EquipmentRequestLineId(requestId, item.equipmentId()), item.quantity()));
         }
+        if (changeLog != null) {
+            // TS11 AC1: the revision is a new request Technical Support must review.
+            changeLog.publishEvent(new EquipmentRequestSubmitted(requestId, eventId));
+        }
         int units = validated.items().stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_revised, coordinatorId,
                 "Revised the equipment request: now " + units + (units == 1 ? " item" : " items")
@@ -183,8 +211,10 @@ public class EquipmentRequestService {
 
     /**
      * EC-NEW3 (D37): the coordinator judges that a request an approved change
-     * flagged still fits, e.g. only the requirements wording changed. It is
-     * approved again; its items and reservations are untouched.
+     * flagged still fits because only the requirements wording changed. It is
+     * approved again; its items and reservations are untouched. Refused while a
+     * reservation misses the event's time, or after Technical Support's "needs
+     * coordinator action" (TS11 AC13, amended): both leave only a revision.
      */
     @Transactional
     public EquipmentRequestDetailsResponse markStillSuitable(
@@ -197,6 +227,16 @@ public class EquipmentRequestService {
                 .findFirst()
                 .orElseThrow(() -> new EquipmentRequestStateException(
                         "This equipment request does not need attention."));
+        // EC-NEW3 D37 with TS11 AC13 (amended): bookings that miss the event's time are not still suitable.
+        if (reservations.reservationsForEvent(eventId).stream().anyMatch(r -> !r.covers(
+                event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))) {
+            throw new EquipmentRequestStateException(
+                    "A reservation no longer covers the event's time. Revise the request instead.");
+        }
+        if (newestOutcomeNeedsCoordinator(eventId)) {
+            throw new EquipmentRequestStateException(
+                    "Technical Support said this request needs changing. Revise the request instead.");
+        }
         String note = rawNote == null ? "" : rawNote.strip();
         if (note.isEmpty() || note.length() > MAX_REQUIREMENT_LENGTH) {
             throw new InvalidEquipmentRequestException(

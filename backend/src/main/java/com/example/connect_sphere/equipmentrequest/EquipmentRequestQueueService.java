@@ -97,9 +97,14 @@ public class EquipmentRequestQueueService {
             users.findAllById(coordinatorIds).forEach(user -> names.put(user.getUserId(), user.getUsername()));
         }
         Set<UUID> shortfallRequests = new HashSet<>(outcomes.shortfallRequestIds(requestIds));
+        // TS11 AC2: the report each shortfall request came from (few per page).
+        Map<UUID, UUID> shortfallReports = new HashMap<>();
+        shortfallRequests.forEach(id -> outcomes.findByAdditionalRequestId(id)
+                .ifPresent(outcome -> shortfallReports.put(id, outcome.getReportId())));
 
         return open.stream()
-                .map(r -> toResponse(r, eventsById.get(r.getEventId()), itemsByRequest, names, shortfallRequests))
+                .map(r -> toResponse(r, eventsById.get(r.getEventId()), itemsByRequest, names, shortfallRequests,
+                        shortfallReports))
                 .sorted(Comparator.comparing(EquipmentRequestResponse::eventStart,
                                 Comparator.nullsLast(Comparator.naturalOrder()))
                         .thenComparing(response -> response.requestId().toString()))
@@ -108,7 +113,7 @@ public class EquipmentRequestQueueService {
 
     private EquipmentRequestResponse toResponse(EquipmentRequest r, Event event,
             Map<UUID, List<EquipmentRequestResponse.Item>> items, Map<UUID, String> names,
-            Set<UUID> shortfallRequests) {
+            Set<UUID> shortfallRequests, Map<UUID, UUID> shortfallReports) {
         Instant start = event != null && event.getStartDatetime() != null ? event.getStartDatetime().toInstant() : null;
         Instant end = event != null && event.getEndDatetime() != null ? event.getEndDatetime().toInstant() : null;
         UUID coordinator = event != null ? event.getCoordinatorId() : null;
@@ -118,7 +123,7 @@ public class EquipmentRequestQueueService {
                 event != null ? event.getEventName() : "Unknown event", start, end,
                 r.getTechnicalRequirement(), r.getStatus().name(),
                 event != null ? event.getOrganisation() : null, requestedBy,
-                shortfallRequests.contains(r.getId()), items.getOrDefault(r.getId(), List.of()),
+                shortfallRequests.contains(r.getId()), shortfallReports.get(r.getId()), items.getOrDefault(r.getId(), List.of()),
                 event != null ? statuses.journeyOf(event).name() : null);
     }
 

@@ -7,7 +7,7 @@ import type { EquipmentRequestStatus, EquipmentRequestSummary, TimePeriod } from
 import { fetchEquipmentRequests, toIso } from '../reservations/reservationApi'
 import { toLocalInputValue } from '../reservations/reservationUtils'
 import { useFulfilment } from '../reservations/useFulfilment'
-import { TS } from '../shared/faultyEquipment'
+import { reportPath, TS } from '../shared/faultyEquipment'
 import { describeWhen, requesterName } from '../shared/format'
 import { ResourceView } from '../../../components/ui/ResourceView'
 import { useResource } from '../../../lib/useResource'
@@ -87,6 +87,12 @@ function RequestWorkspace({ request, rejectReason, onDecided }: {
           <div><dt>Organisation</dt><dd>{request.organisationName ?? 'Not recorded'}</dd></div>
           <div><dt>Requested by</dt><dd>{requesterName(request.requestedBy)}</dd></div>
         </dl>
+        {request.shortfallReportId ? (
+          <p className="request-head__note">
+            <span>Shortfall</span>
+            <Link to={reportPath(request.shortfallReportId)}>Open the damage report this request replaces</Link>
+          </p>
+        ) : null}
         {request.technicalRequirement ? (
           <p className="request-head__note"><span>Technical note</span>{request.technicalRequirement}</p>
         ) : null}

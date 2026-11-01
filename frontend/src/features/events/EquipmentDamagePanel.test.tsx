@@ -158,6 +158,9 @@ describe('TS09 the coordinator sees damaged equipment and deals with a shortfall
       ]),
       'GET /api/events/event-1/equipment-requests': () => jsonResponse(200, [approved]),
       'POST /api/events/event-1/equipment-request': () => jsonResponse(201, created),
+      // TS11: the equipment change reviews panel renders alongside this one
+      // whenever there is an active request, and reads this on its own.
+      'GET /api/events/event-1/equipment-change-reviews': () => jsonResponse(200, []),
     })
     const user = userEvent.setup()
     render(
@@ -177,7 +180,10 @@ describe('TS09 the coordinator sees damaged equipment and deals with a shortfall
     await user.click(screen.getByRole('button', { name: 'Submit equipment request' }))
 
     expect(await screen.findByText('Additional request for the shortfall submitted to Technical Support for review.')).toBeInTheDocument()
-    expect(calls.at(-1)?.body).toEqual({
+    // TS11's change-reviews panel reads on its own alongside this one, so the
+    // submission is not necessarily the last call recorded.
+    const submitted = calls.find((call) => call.method === 'POST' && call.url === '/api/events/event-1/equipment-request')
+    expect(submitted?.body).toEqual({
       technicalRequirement: 'Replaces 1 × Projector reported damaged.',
       items: [{ equipmentId: 'eq-proj', quantity: 1 }],
       shortfallOutcomeId: 'out-1',

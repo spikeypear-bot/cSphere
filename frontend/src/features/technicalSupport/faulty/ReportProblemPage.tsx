@@ -4,12 +4,12 @@ import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { ApiClientError } from '../../../lib/apiClient'
-import { EquipmentPhoto } from '../damage/EquipmentPhoto'
 import { fetchCatalogue, reportDamage } from '../damage/equipmentDamageApi'
 import { DESCRIPTION_MAX, type CatalogueItem, type DamageBlockStatus } from '../damage/equipmentDamage.types'
 import '../damage/equipmentDamage.css'
 import { fetchEquipmentDetail } from '../inventory/inventoryApi'
 import type { EquipmentDetail } from '../inventory/inventory.types'
+import { EquipmentSummaryCard } from '../shared/EquipmentSummaryCard'
 import { reportPath, TS } from '../shared/faultyEquipment'
 import { addStatusPeriod, ApiError, UNIT_COMMITTED_MESSAGE } from '../status/equipmentStatusApi'
 import { toIso } from '../reservations/reservationApi'
@@ -182,14 +182,13 @@ export function ReportProblemPage() {
             {show('equipment') ? <p className="field-error">{show('equipment')}</p> : null}
 
             {equipment ? (
-              <div className="equipment-damage__chosen">
-                <EquipmentPhoto name={equipment.equipmentName} />
+              <EquipmentSummaryCard name={equipment.equipmentName}>
                 <p>
                   {equipment.equipmentName}: {serialised
                     ? 'choose the unit and its status.'
                     : 'units of this kind are not tracked one by one, so enter how many are affected; this is recorded as a damage report.'}
                 </p>
-              </div>
+              </EquipmentSummaryCard>
             ) : null}
 
             {equipment && serialised ? (

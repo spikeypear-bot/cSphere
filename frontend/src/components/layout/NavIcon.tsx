@@ -41,6 +41,12 @@ const SHAPES = {
       <path d="m12.2 12.2 4.8 4.8" />
     </>
   ),
+  changes: (
+    <>
+      <path d="M3 7h12M12 4l3 3-3 3" strokeLinejoin="round" />
+      <path d="M17 13H5M8 10l-3 3 3 3" strokeLinejoin="round" />
+    </>
+  ),
 } as const
 
 export type NavIconName = keyof typeof SHAPES
