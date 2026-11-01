@@ -1,6 +1,6 @@
 // @stories EO-C2 EO02
 import { expect, test } from '@playwright/test'
-import { apiToken, evidence, signedIn, uniqueName } from './support.ts'
+import { apiToken, signedIn, uniqueName } from './support.ts'
 
 // EO-C2 through the browser and the packaged backend: an organiser cannot
 // send a request that ends when it starts, starts in the past or expects
@@ -39,7 +39,6 @@ test('an organiser is shown each date, time and attendance problem and can only 
     await expect(page.getByText('The end date & time must be after the start date & time.')).toBeVisible()
     await expect(end).toHaveAttribute('aria-invalid', 'true')
     await expect(next).toBeDisabled()
-    await evidence(page, 'EO-C2-TC1')
   })
 
   await test.step('AC2: a start in the past is explained next to the start', async () => {
@@ -47,7 +46,6 @@ test('an organiser is shown each date, time and attendance problem and can only 
     await end.fill(singaporeLocal(-1, '12:00'))
     await expect(page.getByText('The start date & time must be in the future.')).toBeVisible()
     await expect(next).toBeDisabled()
-    await evidence(page, 'EO-C2-TC2')
   })
 
   await test.step('AC4: nobody attending is explained', async () => {
@@ -56,7 +54,6 @@ test('an organiser is shown each date, time and attendance problem and can only 
     await attendance.fill('0')
     await expect(page.getByText('Expected attendance must be at least 1.')).toBeVisible()
     await expect(next).toBeDisabled()
-    await evidence(page, 'EO-C2-TC3a')
   })
 
   await test.step('once fixed, the request is submitted', async () => {
@@ -70,7 +67,6 @@ test('an organiser is shown each date, time and attendance problem and can only 
     await expect(page.getByRole('group', { name: 'Equipment requirements' })).toBeVisible()
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page.getByText(/\(Singapore time\)/).first()).toBeVisible()
-    await evidence(page, 'EO-C2-TC4')
     await page.getByRole('button', { name: 'Submit for review' }).click()
     await expect(page.getByText('Your event request has been submitted successfully.')).toBeVisible()
   })
