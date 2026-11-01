@@ -90,3 +90,5 @@
 }
 
 .event-details__journey { display: grid; gap: 1rem; }
+/* Buttons under a booking sit side by side with room between them. */
+.event-details__booking-list > li > .button { margin: 0.5rem 0.5rem 0 0; }

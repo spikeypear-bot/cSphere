@@ -9,6 +9,7 @@ import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { BookingVenueDetails } from '../../components/venue/BookingVenueDetails'
 import { VenueDetails } from '../../components/venue/VenueDetails'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
@@ -487,8 +488,7 @@ export function VenueBookingRequestPage() {
                   {b.rejectReason ? <p className="venue-request__history-note"><strong>Reason:</strong> {b.rejectReason}</p> : null}
                   {b.alternativeVenueAddress ? <p className="venue-request__history-note"><strong>Suggested venue:</strong> {b.alternativeVenueAddress}</p> : null}
                   {b.alternativeArrangement ? <p className="venue-request__history-note"><strong>Alternative arrangement:</strong> {b.alternativeArrangement}</p> : null}
-                  <div className="venue-request__history-note"><strong>Operating hours</strong><OperatingHours hours={b.operatingHours} /></div>
-                  <BookingTimingSummary timing={b.timing} />
+                  <BookingVenueDetails booking={b} />
                   <HoldStatus holds={b.holds} />
 
                   </li>

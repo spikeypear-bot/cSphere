@@ -1,4 +1,3 @@
-import { OperatingHours } from '../../components/OperatingHours'
 import { BookingAssessment } from '../venueStaff/BookingAssessment'
 import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import { useEffect, useState } from 'react'
@@ -26,7 +25,7 @@ import type { ReadinessDto } from '../safetyOfficer/readinessTypes'
 import { useSafetyData } from '../safetyOfficer/useSafetyData'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './EventDetailsPage.css'
-import { BookingTimingSummary } from '../../components/BookingTimingSummary'
+import { BookingVenueDetails } from '../../components/venue/BookingVenueDetails'
 import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
 import { EquipmentDamagePanel } from './EquipmentDamagePanel'
 
@@ -308,8 +307,7 @@ function VenueBookingCard({ eventId, planning, active, canRebook, onCancelled }:
                   <strong>{booking.venueAddress}</strong>: {BOOKING_STATUS_LABELS[booking.status]}
                   <BookingRequestMeta booking={booking} />
                 </p>
-                <dl className="venue-card-preview__information"><div><dt>Operating hours</dt><dd><OperatingHours hours={booking.operatingHours} /></dd></div></dl>
-                <BookingTimingSummary timing={booking.timing} />
+                <BookingVenueDetails booking={booking} />
                 {booking.requiresAlternative && canRebook && !hasResolvedReplacement(booking.bookingId) ? (
                   <Link className="button button--secondary" to={replacementLink(booking)}>Find replacement venue</Link>
                 ) : null}

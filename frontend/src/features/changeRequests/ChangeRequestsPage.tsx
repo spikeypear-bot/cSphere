@@ -107,7 +107,7 @@ export function ChangeRequestsPage() {
       <div className="page">
         <div role="alert" className="change-request__error">
           <p>You can't view these change requests. The event belongs to another organisation, or it no longer exists.</p>
-          <Link className="button button--secondary" to={base || '/'}>Back to your console</Link>
+          <Link className="button button--secondary" to={base || '/'}>Back to dashboard</Link>
         </div>
       </div>
     )
@@ -118,7 +118,7 @@ export function ChangeRequestsPage() {
   return (
     <div className="page change-request">
       <PageHeader
-        eyebrow={<Link to={base}>Back to your console</Link>}
+        eyebrow={<Link to={base}>Back to dashboard</Link>}
         title="Change requests"
         description={name}
         actions={organiser && views && !hasPending ? (

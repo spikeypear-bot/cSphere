@@ -70,10 +70,13 @@ describe('VS17 operating hours across role displays', () => {
  })
  it('VS17 (happy): coordinator existing bookings also show live operating hours', async () => {
   let venue = makeVenue('Wednesday 08:00–18:00'); coordinator(() => venue, true)
-  expect(await screen.findByText('8am – 6pm')).toBeInTheDocument()
-  expect(screen.getByText('Operating hours', { selector: 'dt' })).toBeInTheDocument()
+  // Opening hours are in the booking's details window, not inline on the event page.
+  await userEvent.click(await screen.findByRole('button', { name: 'View venue details' }))
+  const details = screen.getByRole('dialog', { name: 'Hours Hall' })
+  expect(within(details).getByText('8am – 6pm')).toBeInTheDocument()
+  expect(within(details).getByText('Operating hours', { selector: 'dt' })).toBeInTheDocument()
   venue = makeVenue('Wednesday 08:30–18:00'); fireEvent.focus(window)
-  expect(await screen.findByText('8:30am – 6pm')).toBeInTheDocument()
+  expect(await within(details).findByText('8:30am – 6pm')).toBeInTheDocument()
  })
  it('VS17 (happy): organiser hours update on focus while the arrangements remain open', async () => {
   let summary = 'Wednesday 08:00–18:00'; vi.stubGlobal('fetch', vi.fn(async () => json(eo(summary))))
@@ -87,7 +90,10 @@ describe('VS17 operating hours across role displays', () => {
 it('VS17 (cross-cutting): coordinator request history renders structured rows even when legacy prose disagrees',async()=>{
  coordinator(()=>makeVenue('Wednesday 08:00'),false,true)
  const history=(await screen.findByRole('heading',{name:'Earlier requests for this event'})).closest('.venue-request__history') as HTMLElement
- expect(within(history).getByText('Wednesday')).toBeInTheDocument()
- expect(within(history).getByText('8am \u2013 6pm')).toBeInTheDocument()
- expect(within(history).queryByText('fea')).not.toBeInTheDocument()
+ expect(within(history).queryByText('Wednesday')).not.toBeInTheDocument()
+ await userEvent.click(within(history).getByRole('button',{name:'View venue details'}))
+ const details=screen.getByRole('dialog',{name:'Hours Hall'})
+ expect(within(details).getByText('Wednesday')).toBeInTheDocument()
+ expect(within(details).getByText('8am \u2013 6pm')).toBeInTheDocument()
+ expect(screen.queryByText('fea')).not.toBeInTheDocument()
 })
