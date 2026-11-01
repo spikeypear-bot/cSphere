@@ -39,7 +39,7 @@ function renderPage() {
       <SessionProvider>
         <Routes>
           <Route path="/organiser/requests/:requestId/respond" element={<ClarificationResponsePage />} />
-          <Route path="/organiser" element={<p>Organiser home</p>} />
+          <Route path="/organiser/requests" element={<p>Organiser home</p>} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,

@@ -5,7 +5,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import { EventDetailsPage } from './EventDetailsPage'
-import { OrganiserHomePage } from '../organiser/OrganiserHomePage'
+import { MyRequestsPage } from '../organiser/MyRequestsPage'
 import { NotificationBell } from '../notifications/NotificationBell'
 import userEvent from '@testing-library/user-event'
 
@@ -235,7 +235,7 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
   })
 })
 
-describe('OrganiserHomePage clarification row (EO26)', () => {
+describe('MyRequestsPage clarification row (EO26)', () => {
   it("highlights a request that needs clarification, shows the question, and links to Respond", async () => {
     seedSession('organiser')
     stubApi({
@@ -250,7 +250,7 @@ describe('OrganiserHomePage clarification row (EO26)', () => {
         actorName: 'ec1', actorRole: 'ec', message: 'Is 150 final?', flaggedFields: [], fromStatus: 'pending',
         toStatus: 'clarification_required', occurredAt: '2026-09-21T01:00:00Z' }]),
     })
-    render(<MemoryRouter initialEntries={['/organiser']}><SessionProvider><OrganiserHomePage /></SessionProvider></MemoryRouter>)
+    render(<MemoryRouter initialEntries={['/organiser']}><SessionProvider><MyRequestsPage /></SessionProvider></MemoryRouter>)
 
     expect(await screen.findByText('Is 150 final?')).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Respond' })).toHaveAttribute('href', '/organiser/requests/r1/respond')

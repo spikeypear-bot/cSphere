@@ -6,8 +6,9 @@ import { FeatureSkeletonPage } from './components/FeatureSkeletonPage'
 import type { SkeletonFeature } from './types/skeletonFeature'
 import { LoginPage } from './features/auth/LoginPage'
 import { OrganiserHomePage } from './features/organiser/OrganiserHomePage'
+import { MyRequestsPage } from './features/organiser/MyRequestsPage'
+import { organiserNav } from './features/organiser/organiserNav'
 import { EventRequestWizardPage } from './features/organiser/EventRequestWizardPage'
-import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatures'
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
 import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
 import { AssignedEventsPage } from './features/coordinator/AssignedEventsPage'
@@ -93,17 +94,21 @@ function OrganiserRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<OrganiserHomePage />} />
-      <Route path="requests/new" element={<EventRequestWizardPage />} />
-      <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
-      <Route path="requests/:requestId/respond" element={<ClarificationResponsePage />} />
-      <Route path="requests/:requestId/change" element={<ChangeRequestFormPage />} />
-      <Route path="events/:eventId/change" element={<ChangeRequestFormPage />} />
-      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
-      <Route path="events/:eventId" element={<EventDetailsPage />} />
-      {skeletonRoutes(organiserExtraFeatures)}
-    </Routes>
+    <ConsoleShell navLabel="Event Organiser" items={organiserNav}>
+      <Routes>
+        <Route index element={<OrganiserHomePage />} />
+        <Route path="requests" element={<MyRequestsPage />} />
+        <Route path="requests/new" element={<EventRequestWizardPage />} />
+        <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
+        <Route path="requests/:requestId/respond" element={<ClarificationResponsePage />} />
+        <Route path="requests/:requestId/change" element={<ChangeRequestFormPage />} />
+        <Route path="events/:eventId/change" element={<ChangeRequestFormPage />} />
+        <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+        <Route path="events/:eventId" element={<EventDetailsPage />} />
+        {/* Retired placeholder pages and unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/organiser" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

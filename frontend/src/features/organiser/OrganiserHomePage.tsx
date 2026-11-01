@@ -1,213 +1,123 @@
-import { useLiveRefresh } from '../../lib/useLiveRefresh'
-import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Card } from '../../components/ui/Card'
-import { Notice } from '../../components/ui/Notice'
+import { Link } from 'react-router-dom'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { StatusBadge } from '../../components/ui/StatusBadge'
-import { StatusTimeline } from '../../components/ui/StatusTimeline'
-import { JourneyStepper, StatusFilter } from '../../components/ui/JourneyStatus'
-import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
-import { apiClient, ApiClientError } from '../../lib/apiClient'
+import { JourneyStatusBadge } from '../../components/ui/JourneyStatus'
+import { Panel } from '../../components/ui/Panel'
+import { ResourceView } from '../../components/ui/ResourceView'
+import { RowLink } from '../../components/ui/RowLink'
+import { apiClient } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
+import { useResource, type Resource } from '../../lib/useResource'
+import { countOf, greetingFor } from '../../lib/greeting'
 import { formatRelativeTime } from '../../lib/relativeTime'
-import type { ActivityDto } from '../../types/activity'
-import type { EventRequestDto } from '../../types/eventRequest'
 import type { ChangeRequestView } from '../../types/changeRequest'
-import { getCompletionPercent } from './eventRequestCompletion'
-import { organiserExtraFeatures } from './organiserExtraFeatures'
-import { CancelRequestAction } from './CancelRequestAction'
-import './OrganiserHomePage.css'
+import type { EventRequestDto } from '../../types/eventRequest'
+import { formatEventDateTime, formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 
-/** EO15: "view my event requests and their statuses". The scoping happens on
- * the server, from the access token's `organisation` claim (D20) — the value
- * read here is for display only, and nothing is sent with the request. */
-/** EO03 AC2-AC4: Submitted, Under Review, or an event still being planned or confirmed. */
-function changeable(request: EventRequestDto): boolean {
-  if (request.status !== 'pending' && request.status !== 'approved') return false
-  return !['COMPLETED', 'CANCELLED'].includes(request.journeyStatus?.code ?? '')
-}
+/** How many rows each panel shows before "View all". */
+const TOP = 5
+const read = <T,>(path: string) => () => apiClient.get<T>(path, { cache: 'no-store' })
 
+/** A draft to finish, or a coordinator's question to answer. */
+const needsAction = (r: EventRequestDto) => r.status === 'draft' || r.status === 'clarification_required'
+/** An approved request whose event is still ahead (not completed or cancelled). */
+const isUpcoming = (r: EventRequestDto) => r.status === 'approved' && r.eventId !== null && !r.journeyStatus?.isFinal
+
+/** EO15: the organiser console's front page — what needs their attention,
+ * from the same reads My requests uses. */
 export function OrganiserHomePage() {
-  const liveRevision = useLiveRefresh()
-  const { organisation } = useSession()
-  const [requests, setRequests] = useState<EventRequestDto[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  // EC-NEW2: filter by the same status the coordinator sees.
-  const [filter, setFilter] = useState<string | null>(null)
-  const location = useLocation()
-  const navigate = useNavigate()
-  // EO02: show the "submitted successfully" confirmation exactly once, then
-  // drop it from history state so refreshing or navigating back here later
-  // doesn't re-show it.
-  const [justSubmitted] = useState(() => Boolean((location.state as { justSubmitted?: boolean } | null)?.justSubmitted))
-  const [justResubmitted] = useState(() =>
-    Boolean((location.state as { justResubmitted?: boolean } | null)?.justResubmitted))
-  // EO07: the request just cancelled from this list, for the confirmation.
-  const [justCancelled, setJustCancelled] = useState<string | null>(null)
-  useEffect(() => {
-    if (justSubmitted || justResubmitted) navigate('.', { replace: true, state: null })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
-
-  // EO03 AC30: which requests have a change waiting (one call for the list).
-  const [pendingChanges, setPendingChanges] = useState<Set<string>>(new Set())
-  useEffect(() => {
-    let cancelled = false
-    apiClient.get<ChangeRequestView[]>('/change-requests')
-      .then((views) => { if (!cancelled) setPendingChanges(new Set(views.map((v) => v.requestId))) })
-      .catch(() => { /* the list still works without the badges */ })
-    return () => { cancelled = true }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    apiClient
-      .get<EventRequestDto[]>('/event-requests')
-      .then((results) => {
-        if (!cancelled) { setRequests(results); setError(null) }
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        setError(err instanceof ApiClientError ? err.message : 'Could not load your event requests.')
-      })
-    return () => {
-      cancelled = true
-    }
-    // The route guard guarantees a signed-in Organiser here, and the scope is
-    // the token's, so there is nothing for this to depend on.
-  }, [liveRevision])
+  const { username } = useSession()
+  const requests = useResource(read<EventRequestDto[]>('/event-requests'), 'requests')
+  const changes = useResource(read<ChangeRequestView[]>('/change-requests'), 'changes')
+  const greeting = greetingFor()
+  const pendingChanges = changes.data ? { ...changes, data: changes.data.filter((c) => c.status === 'pending') } : changes
 
   return (
-    <div className="page">
-      <PageHeader title="Your event requests" description={organisation} actions={<NewRequestButton />} />
+    <section className="page">
+      <PageHeader
+        title={username ? `${greeting}, ${username}` : greeting}
+        description={<p className="page-header__description" aria-live="polite">{summarise(requests, pendingChanges)}</p>}
+        actions={<Link to="/organiser/requests/new" className="button button--primary">New event request</Link>}
+      />
+      <div className="dash-grid">
+        <Panel title="Needs your action" action="View all" actionName="View all requests needing your action"
+          to="/organiser/requests" className="dash-grid__wide">
+          <ResourceView resource={requests} loadingText="Loading your requests…" errorText="Your requests could not be loaded."
+            emptyText="Nothing needs your action right now." emptyClassName="dash-empty"
+            isEmpty={(list) => !list.some(needsAction)}>
+            {(list) => (
+              <ul className="dash-queue" aria-label="Needs your action">
+                {list.filter(needsAction).slice(0, TOP).map((request) => (
+                  <li key={request.requestId}>
+                    <RowLink className="dash-queue__row" title={request.eventName || 'Untitled draft'}
+                      to={request.status === 'draft'
+                        ? `/organiser/requests/${request.requestId}`
+                        : `/organiser/requests/${request.requestId}/respond`}
+                      badges={request.journeyStatus ? <JourneyStatusBadge status={request.journeyStatus} /> : null}>
+                      <p>
+                        {request.status === 'draft'
+                          ? `Draft, edited ${formatRelativeTime(request.updatedAt)} — finish and submit it`
+                          : 'The coordinator has a question — respond to it'}
+                      </p>
+                    </RowLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
 
-      {justSubmitted ? <Notice>Your event request has been submitted successfully.</Notice> : null}
+        <Panel title="Upcoming events" action="View all" actionName="View all my events" to="/organiser/requests">
+          <ResourceView resource={requests} loadingText="Loading your events…" errorText="Your events could not be loaded."
+            emptyText="No upcoming events yet." emptyClassName="dash-empty" isEmpty={(list) => !list.some(isUpcoming)}>
+            {(list) => (
+              <ul className="dash-queue" aria-label="Upcoming events">
+                {list.filter(isUpcoming)
+                  .sort((a, b) => (a.startDatetime ?? '').localeCompare(b.startDatetime ?? ''))
+                  .slice(0, TOP).map((request) => (
+                    <li key={request.requestId}>
+                      <RowLink to={`/organiser/events/${request.eventId}`} className="dash-queue__row"
+                        title={request.eventName || 'Untitled event'}
+                        badges={request.journeyStatus ? <JourneyStatusBadge status={request.journeyStatus} /> : null}>
+                        {request.startDatetime && request.endDatetime
+                          ? <p className="dash-queue__when">{formatEventTimeRange(request.startDatetime, request.endDatetime)}</p>
+                          : null}
+                      </RowLink>
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
 
-      {justResubmitted ? (
-        <Notice>Your updated request has been sent back for review.</Notice>
-      ) : null}
-
-      {justCancelled ? <Notice>"{justCancelled}" has been cancelled.</Notice> : null}
-
-      {error ? <p role="alert">{error}</p> : null}
-
-      {requests === null && !error ? <p>Loading…</p> : null}
-
-      {requests?.length === 0 ? (
-        <Card className="organiser-home__empty">
-          <p>No event requests yet — start your first one below.</p>
-        </Card>
-      ) : null}
-
-      <StatusFilter
-        statuses={(requests ?? []).flatMap((r) => (r.journeyStatus ? [r.journeyStatus] : []))}
-        selected={filter} onChange={setFilter} label="Filter your requests by status" />
-
-      <ul className="plain-list">
-        {requests?.filter((r) => filter === null || r.journeyStatus?.code === filter).map((request) => (
-          <li key={request.requestId}>
-            <Card className="organiser-home__row"
-              data-attention={request.status === 'clarification_required' ? 'true' : undefined}>
-              <div className="organiser-home__row-main">
-                <div className="organiser-home__row-heading">
-                  {request.status === 'draft' ? (
-                    <span
-                      className="completion-ring"
-                      style={{ ['--percent' as string]: getCompletionPercent(request) }}
-                      title={`${getCompletionPercent(request)}% of required fields complete`}
-                      aria-hidden="true"
-                    />
-                  ) : null}
-                  <h3>{request.eventName || 'Untitled draft'}</h3>
-                </div>
-                <p className="field-hint">
-                  {request.status === 'draft'
-                    ? `Edited ${formatRelativeTime(request.updatedAt)} — not submitted yet`
-                    : `Last updated ${formatRelativeTime(request.updatedAt)}`}
-                </p>
-                {request.journeyStatus && request.status !== 'draft'
-                  ? <JourneyStepper status={request.journeyStatus} />
-                  : <StatusTimeline status={request.status} />}
-                {request.status === 'clarification_required' ? <LatestQuestion requestId={request.requestId} /> : null}
-                {/* EO09: the recorded reason stays visible, not only in the notification. */}
-                {request.status === 'rejected' && request.rejectionReason ? (
-                  <p className="organiser-home__reason"><strong>Reason for rejection:</strong> {request.rejectionReason}</p>
-                ) : null}
-              </div>
-              <StatusBadge status={request.status} journey={request.journeyStatus} />
-              {pendingChanges.has(request.requestId) ? (
-                <Link className="change-request__status change-request__status--pending"
-                  to={`/organiser/requests/${request.requestId}/changes`}>Change requested</Link>
-              ) : changeable(request) ? (
-                <Link className="button button--ghost" to={`/organiser/requests/${request.requestId}/change`}>
-                  Request a change
-                </Link>
-              ) : null}
-              {request.status === 'draft' ? (
-                <Link className="button button--secondary" to={`/organiser/requests/${request.requestId}`}>
-                  Continue editing
-                </Link>
-              ) : null}
-              {request.status === 'clarification_required' ? (
-                <Link className="button button--primary" to={`/organiser/requests/${request.requestId}/respond`}>
-                  Respond
-                </Link>
-              ) : null}
-              {request.status === 'pending' || request.status === 'clarification_required' ? (
-                <CancelRequestAction requestId={request.requestId} eventName={request.eventName || 'Untitled request'}
-                  onCancelled={(updated) => {
-                    setRequests((current) => current?.map((r) => r.requestId === updated.requestId ? updated : r) ?? null)
-                    setJustCancelled(updated.eventName || 'Your request')
-                  }} />
-              ) : null}
-              {request.status === 'approved' && request.eventId ? (
-                <Link className="button button--secondary" to={`/organiser/events/${request.eventId}`}>
-                  View event
-                </Link>
-              ) : null}
-            </Card>
-          </li>
-        ))}
-      </ul>
-
-      <div className="page-section--divided">
-        <h2>More Event Organiser stories</h2>
-        <p className="field-hint">Not built yet — pick one up next sprint.</p>
-        <SkeletonFeatureGrid basePath="/organiser" features={organiserExtraFeatures} />
+        <Panel title="Change requests waiting" action="View all" actionName="View all change requests" to="/organiser/requests">
+          <ResourceView resource={pendingChanges} loadingText="Loading change requests…" errorText="Change requests could not be loaded."
+            emptyText="No change requests waiting." emptyClassName="dash-empty" isEmpty={(list) => list.length === 0}>
+            {(list) => (
+              <ul className="dash-queue" aria-label="Change requests waiting">
+                {list.slice(0, TOP).map((change) => (
+                  <li key={change.changeRequestId}>
+                    <RowLink to={`/organiser/requests/${change.requestId}/changes`} className="dash-queue__row"
+                      title={`Change to ${change.eventName}`}>
+                      <p>Asked {formatEventDateTime(change.requestedAt)} · waiting for the coordinator</p>
+                    </RowLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
       </div>
-    </div>
+    </section>
   )
 }
 
-/** EO26: the coordinator's latest question, right on the list, so the
- * organiser knows what is being asked before opening the request. */
-function LatestQuestion({ requestId }: { requestId: string }) {
-  const [question, setQuestion] = useState<ActivityDto | null>(null)
-  useEffect(() => {
-    let cancelled = false
-    apiClient.get<ActivityDto[]>(`/event-requests/${requestId}/timeline`)
-      .then((entries) => {
-        if (cancelled || !Array.isArray(entries)) return
-        setQuestion([...entries].reverse().find((e) => e.type === 'clarification_requested') ?? null)
-      })
-      .catch(() => undefined)
-    return () => {
-      cancelled = true
-    }
-  }, [requestId])
-  if (!question?.message) return null
-  return (
-    <p className="organiser-home__question">
-      <strong>{question.actorName} asked:</strong> {question.message}
-    </p>
-  )
-}
-
-function NewRequestButton() {
-  return (
-    <Link to="/organiser/requests/new" className="button button--primary organiser-home__new">
-      New event request
-    </Link>
-  )
+/** "2 requests need your action · 1 change waiting", from whichever has loaded. */
+function summarise(requests: Resource<EventRequestDto[]>, changes: Resource<ChangeRequestView[]>): string {
+  if (requests.loading && changes.loading) return 'Checking what needs your attention…'
+  const toDo = requests.data?.filter(needsAction).length
+  const parts = [
+    toDo !== undefined ? `${countOf(toDo, 'request')} need${toDo === 1 ? 's' : ''} your action` : null,
+    changes.data ? `${countOf(changes.data.length, 'change')} waiting` : null,
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : 'Some of what needs your attention could not be loaded.'
 }

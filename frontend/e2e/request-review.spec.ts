@@ -69,7 +69,7 @@ test('ECL-C1 ECL-C6 EC01 EO26 EO19 (happy): a request is found, assigned, questi
     const panel = await openBell(organiser)
     await expect(panel.getByText(`Clarification needed on "${eventName}"`)).toBeVisible()
     await organiser.keyboard.press('Escape')
-    await organiser.goto('/organiser')
+    await organiser.goto('/organiser/requests')
     await organiser.getByRole('listitem').filter({ hasText: eventName }).getByRole('link', { name: 'Respond' }).click()
     await expect(organiser).toHaveURL(new RegExp(`/organiser/requests/${requestId}/respond$`))
     await expect(organiser.getByText('Requested by your coordinator')).toBeVisible()

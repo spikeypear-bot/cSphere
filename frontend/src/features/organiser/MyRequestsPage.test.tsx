@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
-import { OrganiserHomePage } from './OrganiserHomePage'
+import { MyRequestsPage } from './MyRequestsPage'
 
 function seedSession() {
   window.localStorage.setItem(
@@ -27,17 +27,17 @@ function jsonResponse(status: number, body: unknown): Response {
 
 function renderHome(initialState?: unknown) {
   return render(
-    <MemoryRouter initialEntries={[{ pathname: '/organiser', state: initialState }]}>
+    <MemoryRouter initialEntries={[{ pathname: '/organiser/requests', state: initialState }]}>
       <SessionProvider>
         <Routes>
-          <Route path="/organiser" element={<OrganiserHomePage />} />
+          <Route path="/organiser/requests" element={<MyRequestsPage />} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,
   )
 }
 
-describe('OrganiserHomePage — EO15 (view requests) and EO02 (submission confirmation)', () => {
+describe('MyRequestsPage — EO15 (view requests) and EO02 (submission confirmation)', () => {
   beforeEach(() => {
     window.localStorage.clear()
     seedSession()
@@ -68,7 +68,7 @@ describe('OrganiserHomePage — EO15 (view requests) and EO02 (submission confir
   })
 })
 
-describe('OrganiserHomePage — EO01/EO15 UX enhancements (docs/decision-log.md D17)', () => {
+describe('MyRequestsPage — EO01/EO15 UX enhancements (docs/decision-log.md D17)', () => {
   beforeEach(() => {
     window.localStorage.clear()
     seedSession()
@@ -134,7 +134,7 @@ describe('OrganiserHomePage — EO01/EO15 UX enhancements (docs/decision-log.md 
   })
 })
 
-describe('OrganiserHomePage — EO04 opening the arrangements', () => {
+describe('MyRequestsPage — EO04 opening the arrangements', () => {
   afterEach(() => {
     cleanup()
     vi.unstubAllGlobals()

@@ -160,7 +160,7 @@ export function EventRequestWizardPage() {
     return (
       <Card style={{ padding: '1.5rem' }}>
         <p>{NOT_EDITABLE[status] ?? NOT_EDITABLE.pending}</p>
-        <Button variant="secondary" onClick={() => navigate('/organiser')}>
+        <Button variant="secondary" onClick={() => navigate('/organiser/requests')}>
           Back to my event requests
         </Button>
       </Card>
@@ -226,7 +226,7 @@ export function EventRequestWizardPage() {
     // discard what was typed (the previous "Save & exit" button looked like
     // it did this but only navigated away, without calling save()).
     await save()
-    navigate('/organiser')
+    navigate('/organiser/requests')
   }
 
   async function handleSubmit() {
@@ -247,7 +247,7 @@ export function EventRequestWizardPage() {
         // EO02: "is shown that the request has been submitted successfully" —
         // a plain redirect back to the list wasn't itself a confirmation, so
         // the list picks this flag up and shows a banner once.
-        navigate('/organiser', { state: { justSubmitted: true } })
+        navigate('/organiser/requests', { state: { justSubmitted: true } })
       } else {
         setMissingFields(result.missingFields)
         setServerReport({ values: { ...fields }, errors: result.fieldErrors })

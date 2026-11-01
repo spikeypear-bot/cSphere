@@ -10,7 +10,7 @@ import { ChangeRequestFormPage } from './ChangeRequestFormPage'
 import { ChangeRequestRedirect, ChangeRequestsPage } from './ChangeRequestsPage'
 import { ChangeRequestReviewPage } from './ChangeRequestReviewPage'
 import { ChangeRequestPanel } from './ChangeRequestPanel'
-import { OrganiserHomePage } from '../organiser/OrganiserHomePage'
+import { MyRequestsPage } from '../organiser/MyRequestsPage'
 import { AssignedEventsPage } from '../coordinator/AssignedEventsPage'
 
 const REQ = 'req-1'
@@ -499,7 +499,7 @@ describe('EO03 / EC-NEW3 — where a waiting change is visible', () => {
       ]),
       'GET /api/change-requests': () => jsonResponse(200, [view({ requestId: 'waiting' })]),
     })
-    render(<MemoryRouter><SessionProvider><OrganiserHomePage /></SessionProvider></MemoryRouter>)
+    render(<MemoryRouter><SessionProvider><MyRequestsPage /></SessionProvider></MemoryRouter>)
 
     const row = (name: string) => screen.getByRole('heading', { name }).closest('.organiser-home__row') as HTMLElement
     expect(await within(await screen.findByRole('heading', { name: 'Waiting Gala' }).then((h) => h.closest('.organiser-home__row') as HTMLElement))

@@ -1,4 +1,4 @@
-// @stories ECL-C4 TS09 EC09
+// @stories ECL-C4 TS09 EC09 EO15
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -81,7 +81,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
 
   it.each([
     ['coordinator', 'ec1', /^Good \w+, ec1$/],
-    ['organiser', 'eo1', /Your event requests/i],
+    ['organiser', 'eo1', /^Good \w+, eo1$/],
     ['venue-staff', 'vs1', /Venue Staff console/i],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /^Welcome$/i],
