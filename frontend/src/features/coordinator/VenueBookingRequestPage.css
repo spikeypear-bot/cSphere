@@ -176,7 +176,6 @@
 .venue-request__field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.9rem; }
 .venue-request__field label { font-weight: 600; }
 .venue-request__field textarea { font: inherit; width: 100%; box-sizing: border-box; }
-.venue-request__error { color: var(--danger); }
 .venue-request__timings {
   display: grid;
   gap: 0.85rem;
@@ -248,7 +247,6 @@
 .venue-request__history-status[data-booking-status='approved'] { background: var(--success-soft); color: var(--success); }
 .venue-request__history-status[data-booking-status='rejected'] { background: var(--danger-soft); color: var(--danger); }
 .venue-request__history-note { margin: 0.45rem 0 0; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.45; }
-.venue-request__history-item .booking-timing-summary { margin-top: 0.65rem; }
 .venue-request__review { display: flex; flex-direction: column; gap: var(--venue-map-section-gap); }
 .venue-request .venue-request__review > * { margin-block: 0; }
 .venue-request__review > .button { align-self: flex-start; }

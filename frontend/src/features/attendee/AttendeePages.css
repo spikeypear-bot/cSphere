@@ -60,13 +60,6 @@
 
 .attendee-event-details { display: flex; flex-direction: column; gap: 1.25rem; min-width: 0; }
 
-.attendee-event-details__grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
-  align-items: start;
-}
-
 .attendee-details-card { min-width: 0; padding: 1.25rem; }
 .attendee-details-card h2 { margin: 0 0 0.85rem; font-size: 1.05rem; }
 .attendee-details-card__description { margin: 0 0 1rem; color: var(--ink-soft); line-height: 1.6; }
@@ -107,7 +100,6 @@
 .attendee-withdrawal-dialog__actions { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: flex-end; margin-top: 1.5rem; }
 
 @media (max-width: 640px) {
-  .attendee-event-details__grid { grid-template-columns: minmax(0, 1fr); }
   .attendee-details-card--event { grid-column: auto; }
   .attendee-details-card { padding: 1rem; }
 }
