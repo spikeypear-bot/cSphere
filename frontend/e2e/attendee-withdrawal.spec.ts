@@ -62,7 +62,7 @@ test('AT08 AT01 AT02 AT03 AT04 (happy): cancel a withdrawal, confirm it, reopen 
     await attendee.getByRole('link', { name: 'My Registrations', exact: true }).last().click()
     const history = attendee.getByRole('listitem').filter({ hasText: initial.reference })
     await expect(history.getByText('Withdrawn', { exact: true })).toBeVisible()
-    await history.getByRole('link', { name: 'View registration' }).click()
+    await history.getByRole('link', { name: eventName }).click()
     await attendee.getByRole('link', { name: 'View latest event details' }).click()
     await expect(attendee.getByText('2 places available', { exact: true })).toBeVisible()
     await attendee.getByRole('button', { name: 'Register for this event' }).click()

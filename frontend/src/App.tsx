@@ -40,6 +40,7 @@ import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { AppShell as ConsoleShell } from './components/layout/AppShell'
 import { coordinatorNav } from './features/coordinator/coordinatorNav'
+import { attendeeNav } from './features/attendee/attendeeNav'
 import { technicalSupportNav } from './features/technicalSupport/technicalSupportNav'
 import { LegacyRedirect, LegacyReportRedirect, LegacyRequestRedirect } from './features/technicalSupport/LegacyRedirects'
 import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
@@ -215,14 +216,18 @@ function AttendeeRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<AttendeeHomePage />} />
-      <Route path="browse" element={<AttendeeEventsPage />} />
-      <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
-      <Route path="my-registrations" element={<MyRegistrationsPage />} />
-      <Route path="my-registrations/:registrationId" element={<RegistrationDetailsPage />} />
-      <Route path="register" element={<Navigate to="/attendee/browse" replace />} />
-    </Routes>
+    <ConsoleShell navLabel="Attendee" items={attendeeNav}>
+      <Routes>
+        <Route index element={<AttendeeHomePage />} />
+        <Route path="browse" element={<AttendeeEventsPage />} />
+        <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
+        <Route path="my-registrations" element={<MyRegistrationsPage />} />
+        <Route path="my-registrations/:registrationId" element={<RegistrationDetailsPage />} />
+        <Route path="register" element={<Navigate to="/attendee/browse" replace />} />
+        {/* Unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/attendee" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

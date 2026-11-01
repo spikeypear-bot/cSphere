@@ -1,4 +1,4 @@
-// @stories AU04 DEV05 TS09 EC09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories AU04 DEV05 TS09 EC09 AT04  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -81,7 +81,7 @@ describe('App routing — role consoles', () => {
   it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
     signInAs('attendee', 'att1', 'Acme Pte Ltd')
     renderApp('/')
-    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
   })
 
   it('TS09 (happy): opens equipment requests from the Technical Support dashboard side navigation', async () => {
@@ -103,12 +103,13 @@ describe('App routing — role consoles', () => {
   })
 
   it("redirects a signed-in account away from another role's console and says why", async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('attendee', 'att1')
     renderApp('/venue-staff')
 
     // Their own console, not the login page: the session is valid, this just
     // isn't their area. The server rejects the API calls regardless (D20).
-    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
 
     // AU06 — a silent redirect reads as the app misbehaving. Originally
     // delivered on the role-select screen (PR #11); it moved to AppShell when
@@ -118,10 +119,11 @@ describe('App routing — role consoles', () => {
   })
 
   it('does not show the access-denied alert during ordinary navigation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('attendee', 'att1')
     renderApp('/attendee')
 
-    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -179,7 +181,7 @@ describe('App routing — role consoles', () => {
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
-    ['attendee', 'att1', /^Welcome$/i],
+    ['attendee', 'att1', /^Good \w+, att1$/],
   ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
