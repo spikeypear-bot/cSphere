@@ -8,6 +8,23 @@ Line ends: }o zero or many, |o zero or one, || exactly one
 Postgres enum types are listed on their own; columns name them as their type
 endlegend
 
+entity equipment_change_reviews {
+	* review_id : uuid <<PK>>
+	--
+	* event_id : uuid <<FK>>
+	* change_request_id : uuid <<FK>>
+	coordinator_id : uuid <<FK>>
+	* changed_at : timestamp with time zone
+	* previous_values : jsonb
+	* updated_values : jsonb
+	* affected_reservations : jsonb
+	* requirements_changed : boolean
+	outcome : text
+	outcome_note : text
+	reviewed_by : uuid <<FK>>
+	reviewed_at : timestamp with time zone
+}
+
 entity equipment_damage_outcomes {
 	* outcome_id : uuid <<PK>>
 	--
@@ -282,6 +299,8 @@ entity notifications {
 	notification_changes : jsonb
 	original_event_start_datetime : timestamp with time zone
 	original_event_end_datetime : timestamp with time zone
+	equipment_request_id : uuid <<FK>>
+	equipment_review_id : uuid <<FK>>
 }
 
 entity refresh_tokens {
@@ -586,6 +605,8 @@ enum notification_type {
 	attendee_registration_withdrawn
 	attendee_event_changed
 	attendee_event_cancelled
+	equipment_request_submitted
+	equipment_change_review
 }
 
 enum user_role {
@@ -607,6 +628,10 @@ enum venue_booking_status {
 	attention
 }
 
+equipment_change_reviews }o--|| event_change_requests : change_request_id
+equipment_change_reviews }o--o| users : coordinator_id
+equipment_change_reviews }o--|| events : event_id
+equipment_change_reviews }o--o| users : reviewed_by
 equipment_damage_outcomes }o--o| equipment_requests : additional_request_id
 equipment_damage_outcomes }o--o| users : decided_by
 equipment_damage_outcomes }o--|| events : event_id
@@ -647,6 +672,8 @@ event_safety_reviews }o--|| users : reviewed_by
 events }o--o| users : confirmed_by
 events }o--o| users : coordinator_id
 events }o--o| venues : venue_id
+notifications }o--o| equipment_requests : equipment_request_id
+notifications }o--o| equipment_change_reviews : equipment_review_id
 notifications }o--o| events : event_id
 notifications }o--o| event_requests : event_request_id
 notifications }o--|| users : recipient_user_id
