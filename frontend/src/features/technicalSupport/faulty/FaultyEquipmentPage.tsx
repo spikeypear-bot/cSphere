@@ -38,11 +38,11 @@ export function FaultyEquipmentPage() {
           <ul className="equipment-damage__list" aria-label="Blocked units">
             {list.map((block) => (
               <li key={block.id}>
-                <RowLink to={equipmentPath(block.equipmentId)} className="card tech-row-card" titleAs="h3"
+                <RowLink to={equipmentPath(block.equipmentId)} className="card dash-row-card" titleAs="h3"
                   title={`${block.equipmentName} · ${block.serialNumber}`}
                   media={<EquipmentPhoto name={block.equipmentName} />}
                   badges={<span className="dash-badge dash-badge--danger">{block.status}</span>}>
-                  <p className="tech-row-card__hint">{describeSpan(block.start, block.end)}</p>
+                  <p className="dash-row-card__hint">{describeSpan(block.start, block.end)}</p>
                 </RowLink>
               </li>
             ))}
@@ -60,7 +60,7 @@ export function FaultyEquipmentPage() {
               const waiting = report.affectedEvents.filter((e) => e.active && e.outcome === null).length
               return (
                 <li key={report.reportId}>
-                  <RowLink to={reportPath(report.reportId)} className="card tech-row-card" titleAs="h3"
+                  <RowLink to={reportPath(report.reportId)} className="card dash-row-card" titleAs="h3"
                     title={`${report.equipmentName}${report.serialNumber ? ` · ${report.serialNumber}` : ` · ${report.quantity} damaged`}`}
                     media={<EquipmentPhoto name={report.equipmentName} />}
                     badges={(
@@ -69,8 +69,8 @@ export function FaultyEquipmentPage() {
                       </span>
                     )}>
                     <p>{report.description}</p>
-                    <p className="tech-row-card__hint">{describeSpan(report.periodStart, report.periodEnd)}</p>
-                    <p className="tech-row-card__hint">
+                    <p className="dash-row-card__hint">{describeSpan(report.periodStart, report.periodEnd)}</p>
+                    <p className="dash-row-card__hint">
                       Reported {formatEventDateTime(report.reportedAt)} by {report.reportedByName}
                       {' · '}{report.affectedEvents.length} affected event{report.affectedEvents.length === 1 ? '' : 's'}
                       {waiting ? ` · ${waiting} awaiting a decision` : ''}

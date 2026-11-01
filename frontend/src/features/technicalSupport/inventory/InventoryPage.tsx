@@ -64,8 +64,8 @@ export function InventoryPage() {
                   <li key={item.equipmentId}>
                     <RowLink to={`${equipmentPath(item.equipmentId)}?${query}`} className="card tech-kind" titleAs="h2"
                       title={item.equipmentName} media={<EquipmentPhoto name={item.equipmentName} />}>
-                      <p className="tech-row-card__hint">{categoryOf(item.equipmentName)} · {item.serialised ? 'tracked by unit' : 'counted by quantity'}</p>
-                      <dl className="tech-figures">
+                      <p className="dash-row-card__hint">{categoryOf(item.equipmentName)} · {item.serialised ? 'tracked by unit' : 'counted by quantity'}</p>
+                      <dl className="dash-figures">
                         <div><dt>Total</dt><dd>{item.totalQuantity}</dd></div>
                         <div><dt>Reserved</dt><dd>{item.reservedQuantity}</dd></div>
                         <div><dt>Out of action</dt><dd>{item.outOfActionQuantity}</dd></div>

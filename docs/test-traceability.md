@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**271 test files, 2276 tests, 82 stories traced, 0 files untraced.**
+**271 test files, 2278 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -23,19 +23,19 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | DEV16 | 4 | 6 | 20 | 3 | 329 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC01 | 2 | 2 | 2 | 1 | 76 | AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12 | happy, negative, conflict |
 | EC02 | 2 | 5 | 6 | 3 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC03 | 4 | 4 | 7 | 5 | 143 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC03 | 4 | 4 | 7 | 5 | 145 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 3 | 3 | 28 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
 | EC07 | 1 | 3 | 1 | 1 | 87 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC08 | 4 | 7 | 5 | 4 | 265 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC08 | 4 | 7 | 5 | 4 | 267 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 2 | 1 | 5 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC10 |  | 1 | 2 | 2 | 50 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C1 | 2 | 1 | 3 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure |
+| EC-C1 | 2 | 1 | 4 | 1 | 46 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C2 | 2 | 4 | 3 | 2 | 118 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C3 | 2 | 1 | 2 | 1 | 50 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C4 |  | 1 | 2 | 1 | 65 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9 | happy, negative, boundary, conflict, failure |
-| EC-NEW2 | 2 | 2 | 7 | 2 | 173 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-NEW3 | 8 | 5 | 5 | 1 | 223 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW2 | 2 | 2 | 7 | 2 | 175 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW3 | 8 | 5 | 5 | 1 | 225 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 3 | 4 | 1 | 5 | 116 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW5 | 2 | 2 | 3 | 3 | 102 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C1 | 1 | 1 | 2 | 1 | 43 | AC2, AC4, AC7 | happy, negative, conflict, cross-cutting |
@@ -50,7 +50,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EO01 | 2 | 1 | 4 | 3 | 89 | — | happy, boundary |
 | EO02 | 3 | 2 | 5 | 5 | 126 | — | happy, negative, boundary, conflict, failure |
 | EO03 | 3 | 2 | 2 | 2 | 83 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO04 | 2 | 3 | 5 | 3 | 131 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO04 | 2 | 3 | 5 | 3 | 133 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO07 | 4 | 5 | 3 | 2 | 183 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO09 | 3 | 3 | 2 | 1 | 109 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO10 | 1 | 2 | 1 | 1 | 31 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9 | happy, negative, boundary, conflict, cross-cutting |
@@ -63,10 +63,10 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EO-C2 | 2 | 1 | 5 | 1 | 113 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure |
 | SO-C1 | 1 |  | 1 | 1 | 18 | AC1, AC2, AC7, AC8 | happy, negative, conflict |
 | SO-C2 |  | 4 |  | 1 | 64 | AC1, AC2, AC3, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C3 | 1 |  | 2 | 1 | 32 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C3 | 1 |  | 2 | 1 | 34 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C4 | 2 | 2 | 1 | 2 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C5 | 2 | 2 | 3 | 1 | 109 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C6 | 2 | 2 | 3 | 1 | 108 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C5 | 2 | 2 | 3 | 1 | 111 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C6 | 2 | 2 | 3 | 1 | 110 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS01 | 3 | 3 | 6 | 1 | 100 | AC1, AC2, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS02 | 2 | 4 | 6 | 1 | 132 | AC5, AC10, AC11, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS03 | 4 | 4 | 6 | 1 | 121 | AC2, AC3 | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -84,7 +84,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | VS13 | 2 | 2 | 2 | 1 | 51 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS15 |  |  | 5 | 2 | 42 | — | happy, boundary, conflict, failure, cross-cutting |
 | VS16 |  | 1 | 2 | 1 | 22 | — | happy, negative, boundary, cross-cutting |
-| VS17 | 13 | 20 | 23 | 8 | 712 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS17 | 13 | 20 | 23 | 8 | 714 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS18 |  | 1 | 4 | 1 | 46 | — | happy, negative, boundary, conflict, cross-cutting |
 | VS25 |  | 2 |  | 1 | 25 | AC1, AC5 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C1 | 1 | 5 | 1 | 2 | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -452,6 +452,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventReassignmentFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/EventReassignmentRequestsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.ecnew4.test.tsx`
 - e2e (browser): `frontend/e2e/oversight.spec.ts`
 

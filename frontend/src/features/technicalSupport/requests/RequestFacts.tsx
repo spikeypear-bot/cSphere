@@ -31,7 +31,7 @@ export function RequestBadges({ request }: { request: EquipmentRequestSummary })
  * time is recorded, so none is shown. */
 export function RequestFacts({ request }: { request: EquipmentRequestSummary }) {
   return (
-    <dl className="tech-figures tech-facts">
+    <dl className="dash-figures dash-facts">
       <div><dt>Event dates</dt><dd>{formatEventTimeRange(request.eventStart, request.eventEnd)}</dd></div>
       <div><dt>Organisation</dt><dd>{request.organisationName ?? 'Not recorded'}</dd></div>
       <div><dt>Requested by</dt><dd>{requesterName(request.requestedBy)}</dd></div>

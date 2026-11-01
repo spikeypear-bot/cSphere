@@ -91,10 +91,20 @@ export function EventDetailsPage() {
       {error && <p role="alert">Could not refresh event details. {error}</p>}
       <PageHeader
         title={event.eventName}
-        actions={journey ? <JourneyStatusBadge status={journey} /> : (
-          <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
-            {EVENT_STATUS_LABELS[event.status] ?? event.status}
-          </span>
+        actions={(
+          <>
+            {journey ? <JourneyStatusBadge status={journey} /> : (
+              <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
+                {EVENT_STATUS_LABELS[event.status] ?? event.status}
+              </span>
+            )}
+            {/* EC-C1: moved here from the My events cards, which are now one link each. */}
+            {role === 'coordinator' && event.status !== 'completed' && event.status !== 'cancelled' ? (
+              <Link className="button button--secondary" to={`/coordinator/events/${event.eventId}/reassignment-request`}>
+                Request reassignment
+              </Link>
+            ) : null}
+          </>
         )}
       />
 

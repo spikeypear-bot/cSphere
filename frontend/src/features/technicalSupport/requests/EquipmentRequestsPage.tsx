@@ -49,7 +49,7 @@ export function EquipmentRequestsPage() {
           <ul className="plain-list" aria-label="Equipment requests">
             {list.map((request) => (
               <li key={request.requestId}>
-                <RowLink to={`${TS}/requests/${request.requestId}`} className="card tech-row-card" titleAs="h2"
+                <RowLink to={`${TS}/requests/${request.requestId}`} className="card dash-row-card" titleAs="h2"
                   title={request.eventName} badges={<RequestBadges request={request} />}>
                   <RequestFacts request={request} />
                 </RowLink>

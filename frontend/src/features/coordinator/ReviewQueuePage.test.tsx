@@ -53,12 +53,12 @@ describe('ReviewQueuePage (EC02 queue)', () => {
 
     const mine = await screen.findByRole('region', { name: /Needs your review/ })
     expect(within(mine).getByText('Town Hall')).toBeInTheDocument()
-    expect(within(mine).getByRole('link', { name: 'Review' })).toHaveAttribute('href', '/coordinator/requests/r1')
+    expect(within(mine).getByRole('link', { name: 'Town Hall' })).toHaveAttribute('href', '/coordinator/requests/r1')
 
     const waiting = screen.getByRole('region', { name: /Waiting for the organiser/ })
     expect(within(waiting).getByText('Gala')).toBeInTheDocument()
     expect(within(waiting).getByText('Clarification required')).toBeInTheDocument()
-    expect(within(waiting).getByRole('link', { name: 'View' })).toHaveAttribute('href', '/coordinator/requests/r2')
+    expect(within(waiting).getByRole('link', { name: 'Gala' })).toHaveAttribute('href', '/coordinator/requests/r2')
   })
 
   it('shows no unassigned requests and offers no way to assign one (ELC-C6)', async () => {
