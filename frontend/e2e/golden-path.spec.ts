@@ -1,6 +1,6 @@
 // @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5 VS17 EC-C2
 import { expect, test } from '@playwright/test'
-import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
+import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName, addVenueToRequest } from './support.ts'
 
 // IS212 Week 9: the one journey that matters most, end to end through the
 // browser across six roles: the core workflow the project instructions call
@@ -47,12 +47,12 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
   await test.step('EC03, EC08 AC38: the coordinator requests the venue (EC01–EC03 still work alongside EC08)', async () => {
     await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
     await coordinator.getByPlaceholder('Search by address or details').fill(venueName)
-    await coordinator.getByRole('button', { name: new RegExp(venueName) }).first().click()
+    await addVenueToRequest(coordinator, new RegExp(venueName))
     await coordinator.getByRole('button', { name: `Request ${venueName}` }).click()
     await expect(coordinator.getByText(`Booking request for ${venueName} sent to Venue Staff`)).toBeVisible()
     await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
     await coordinator.getByPlaceholder('Search by address or details').fill(breakoutName)
-    await coordinator.getByRole('button', { name: new RegExp(breakoutName) }).first().click()
+    await addVenueToRequest(coordinator, new RegExp(breakoutName))
     await coordinator.getByRole('button', { name: `Request ${breakoutName}` }).click()
     await expect(coordinator.getByText(`Booking request for ${breakoutName} sent to Venue Staff`)).toBeVisible()
   })

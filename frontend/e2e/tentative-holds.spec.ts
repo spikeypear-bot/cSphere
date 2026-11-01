@@ -1,6 +1,6 @@
 // @stories VS-C3 VS17 VS03 VS08 VS15 EC03 EC-NEW5
 import { expect, test } from '@playwright/test'
-import { apiGet, apiToken, createVenue, createCompetingBooking, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
+import { apiGet, apiToken, createVenue, createCompetingBooking, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName, addVenueToRequest } from './support.ts'
 
 test('VS-C3 (cross-cutting): Venue Staff hold, release and convert a coordinator booking without duplicating the reservation', async ({ browser, request }, testInfo) => {
   test.setTimeout(180_000)
@@ -21,7 +21,7 @@ test('VS-C3 (cross-cutting): Venue Staff hold, release and convert a coordinator
   const eventId = coordinator.url().split('/events/')[1].split(/[/?#]/)[0]
   await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
   await coordinator.getByPlaceholder('Search by address or details').fill(venueName)
-  await coordinator.getByRole('button', { name: new RegExp(venueName) }).first().click()
+  await addVenueToRequest(coordinator, new RegExp(venueName))
   await coordinator.getByRole('button', { name: `Request ${venueName}` }).click()
   await expect(coordinator.getByText(`Booking request for ${venueName} sent to Venue Staff`)).toBeVisible()
   const token = await apiToken(request, 'ec1')

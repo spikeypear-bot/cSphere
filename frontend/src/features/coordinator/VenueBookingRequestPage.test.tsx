@@ -10,6 +10,12 @@ import { VenueBookingRequestPage } from './VenueBookingRequestPage'
 
 const EVENT = 'ev-1'
 
+/** Opens a venue's details window from its card and adds it to the request. */
+async function addVenue(name: RegExp) {
+  await userEvent.click(await screen.findByRole('button', { name }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^(Add to request|Remove from request)$/ }))
+}
+
 afterEach(() => {
   cleanup()
   vi.unstubAllGlobals()
@@ -45,7 +51,7 @@ it('submits one linked replacement for a rejected booking while preserving other
   renderPage(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=old-booking`)
 
   expect(await screen.findByRole('heading', { name: 'Find a replacement venue' })).toBeInTheDocument()
-  await userEvent.click(screen.getByRole('button', { name: /1 Harbour Road/ }))
+  await addVenue(/1 Harbour Road/)
   await userEvent.click(screen.getByRole('button', { name: 'Request replacement 1 Harbour Road' }))
 
   expect(await screen.findByText('Event page')).toBeInTheDocument()
@@ -176,8 +182,8 @@ describe('VenueBookingRequestPage (EC03)', () => {
       [query('2027-03-10T06:00:00.000Z','2027-03-10T08:00:00.000Z','45','30')]: () => jsonResponse(200, available),
     })
     renderPage()
-    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
-    await userEvent.click(screen.getByRole('button', { name: /2 Garden Lane/ }))
+    await addVenue(/1 Harbour Road/)
+    await addVenue(/2 Garden Lane/)
     const a = within(screen.getByRole('group', { name: 'Timings for 1 Harbour Road' }))
     const b = within(screen.getByRole('group', { name: 'Timings for 2 Garden Lane' }))
     expect(a.getByLabelText('Start')).toHaveValue('2027-03-10T09:00')
@@ -207,7 +213,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     stubApi({ ...routes(), ['GET /api/events/' + EVENT + '/venue-options?' + params]: () => jsonResponse(200,
       [{ ...OPTIONS[0], verdict: 'blocked', reasons: ['Setup overlaps another booking.'] }]) })
     renderPage()
-    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    await addVenue(/1 Harbour Road/)
     expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeEnabled()
     fireEvent.change(screen.getByLabelText('Start'), { target: { value: '2027-03-10T10:00' } })
     expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
@@ -224,7 +230,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
       [`GET /api/events/${EVENT}/venue-options?setupDurationMinutes=60&turnaroundDurationMinutes=45&startDatetime=2027-03-10T01%3A00%3A00.000Z&endDatetime=2027-03-10T04%3A00%3A00.000Z`]: () => jsonResponse(200, [timed]),
     })
     renderPage()
-    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    await addVenue(/1 Harbour Road/)
     expect(screen.getByLabelText(/^Setup \(minutes\)/)).toHaveValue(30)
     expect(screen.getByLabelText(/^Turnaround \(minutes\)/)).toHaveValue(45)
     await userEvent.clear(screen.getByLabelText(/^Setup \(minutes\)/))
@@ -244,7 +250,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     }), [`GET /api/events/${EVENT}`]: () => jsonResponse(200, { ...event, status: 'confirmed' }) })
     renderPage()
     expect(await screen.findByText(/Alternative arrangements required for Closed Hall/)).toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /1 Harbour Road/ }))
+    await addVenue(/1 Harbour Road/)
     await userEvent.click(screen.getByRole('button', { name: 'Request replacement 1 Harbour Road' }))
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(submitted).toMatchObject({ venueId: 'v1', replacesBookingId: 'original' })
@@ -276,7 +282,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const blocked = screen.getByRole('button', { name: /3 Small Street/ })
     expect(blocked).not.toBeDisabled()
     expect(blocked).toHaveTextContent('Capacity 100 is below the expected attendance of 150.')
-    await user.click(blocked)
+    await addVenue(/3 Small Street/)
     expect(screen.getByRole('table')).toHaveTextContent('100 ✗')
   })
 
@@ -289,7 +295,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const blocked = await screen.findByRole('button', { name: /4 Missing Facility Road/ })
     expect(blocked).not.toBeDisabled()
     expect(blocked).toHaveTextContent('Missing facilities: projection.')
-    await user.click(blocked)
+    await addVenue(/4 Missing Facility Road/)
     expect(screen.getByRole('table')).toHaveTextContent('Missing: Projection')
     expect(screen.getByRole('button', { name: 'Request 4 Missing Facility Road' })).toBeDisabled()
   })
@@ -348,7 +354,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    await addVenue(/1 Harbour Road/)
     expect(screen.getByRole('table')).toHaveTextContent('Provided ✓')
     await user.type(screen.getByLabelText('Notes for Venue Staff (optional)'), 'Stage needed')
     await user.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
@@ -365,8 +371,8 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
-    await user.click(screen.getByRole('button', { name: /2 Garden Lane/ }))
+    await addVenue(/1 Harbour Road/)
+    await addVenue(/2 Garden Lane/)
     expect(screen.getByRole('heading', { name: 'Review and submit 2 venues' })).toBeInTheDocument()
     await user.type(screen.getByLabelText('Why is this venue still suitable? (required)'), 'Ramp hire arranged')
     expect(screen.getByRole('button', { name: 'Request 2 venues' })).toBeEnabled()
@@ -386,7 +392,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /2 Garden Lane/ }))
+    await addVenue(/2 Garden Lane/)
     const submit = screen.getByRole('button', { name: 'Request 2 Garden Lane' })
     expect(submit).toBeDisabled()
     expect(screen.getByRole('table')).toHaveTextContent('Not provided ✗')
@@ -429,7 +435,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    await addVenue(/1 Harbour Road/)
     await user.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('overlaps the event')
@@ -462,5 +468,41 @@ describe('VS17 EC-C2 EC08 independent room requirements', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Withdraw venue requirement' }))
     await waitFor(() => expect(screen.queryByText('This venue requirement still blocks event readiness.')).not.toBeInTheDocument())
     expect(calls.find(c => c.method === 'POST')?.body).toEqual({reason: 'Breakout removed'})
+  })
+})
+
+describe('EC03 venue details window', () => {
+  beforeEach(() => seedSession('coordinator'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EC03 (happy): a venue card opens its details, and only "Add to request" adds it', async () => {
+    const calls = stubApi(routes())
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: /1 Harbour Road/ }))
+    const details = screen.getByRole('dialog', { name: '1 Harbour Road' })
+    expect(within(details).getByText('Operating hours')).toBeInTheDocument()
+    // Looking is not choosing.
+    expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
+
+    await userEvent.click(within(details).getByRole('button', { name: 'Add to request' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(within(screen.getByRole('button', { name: /^1 Harbour Road/ })).getByText('Added')).toBeInTheDocument()
+    expect(within(screen.getByRole('list', { name: 'Selected venues' })).getByText('1 Harbour Road')).toBeInTheDocument()
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+  })
+
+  it('EC03 (happy): an added venue is removed from its details window', async () => {
+    stubApi(routes())
+    renderPage()
+
+    await addVenue(/1 Harbour Road/)
+    await userEvent.click(screen.getByRole('button', { name: /^1 Harbour Road/ }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove from request' }))
+    expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
   })
 })

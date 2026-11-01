@@ -235,3 +235,10 @@ export function uniqueDay(): string {
   const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + daysGiven++) % 700) * 86_400_000)
   return day.toISOString().slice(0, 10)
 }
+
+/** EC03: open a venue card's details window and add the venue to the request.
+ * `name` matches the card's accessible name (the venue address comes first). */
+export async function addVenueToRequest(page: Page, name: RegExp) {
+  await page.getByRole('button', { name }).first().click()
+  await page.getByRole('dialog').getByRole('button', { name: /^(Add to request|Remove from request)$/ }).click()
+}

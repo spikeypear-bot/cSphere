@@ -10,6 +10,12 @@ import { EventDetailsPage } from './EventDetailsPage'
 import { OrganiserArrangements } from './OrganiserArrangements'
 import type { VenueDto } from '../../types/venue'
 const json = (body: unknown) => ({ ok: true, status: 200, text: async () => JSON.stringify(body) }) as Response
+/** Opens a venue's details window from its card and adds it to the request. */
+async function addVenue(name: RegExp) {
+  await userEvent.click(await screen.findByRole('button', { name }))
+  await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: /^(Add to request|Remove from request)$/ }))
+}
+
 const makeVenue = (summary: string): VenueDto => ({ venueId: 'v1', venueAddress: 'Hours Hall', venueCapacity: 200, supportedLayouts: ['theatre'],
  venueAccessibilities: [], venueFacilities: [], additionalInformation: null, operatingInformation: 'fea',
  operatingHours: summary === 'Operating hours not configured' ? [] : [{ dayOfWeek: 3, openTime: summary.includes('08:30') ? '08:30' : '08:00', closeTime: '18:00' }] })
@@ -49,7 +55,7 @@ describe('VS17 operating hours across role displays', () => {
  })
  it('VS17 (happy): coordinator details show one current schedule and refresh it without navigation', async () => {
   let venue = makeVenue('Wednesday 08:00–18:00'); coordinator(() => venue)
-  await userEvent.click(await screen.findByRole('button', { name: /Hours Hall/ }))
+  await addVenue(/Hours Hall/)
   // The selected venue's details open in a window from its "View venue details" button.
   await userEvent.click(screen.getByRole('button', { name: 'View venue details' }))
   const details = screen.getByRole('dialog', { name: /Hours Hall/ })

@@ -29,6 +29,7 @@ import { validMinutes, occupiedPeriod } from '../../lib/bookingTiming'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { CoordinatorVenueMap } from './CoordinatorVenueMap'
 import { venueMatchesSearch } from '../../components/venue/venueMatchesSearch'
+import { hasCoordinates } from '../venueMap/mapData'
 
 type BookingInput = { start: string; end: string; setup: string; turnaround: string; reason: string; requirements?: BookingRequirements }
 type TimingReview = { key: string; option?: VenueOptionDto; error?: string }
@@ -204,7 +205,7 @@ export function VenueBookingRequestPage() {
 
   const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
   // The open details window's venue, read from the live options so a refresh shows in it.
-  const detailsVenue = options.find((o) => o.venue.venueId === detailsId)?.venue ?? null
+  const detailsOption = options.find((o) => o.venue.venueId === detailsId) ?? null
   const reviewed = (option: VenueOptionDto) => {
     const input = bookingTimes[option.venue.venueId]
     if (!validInput(input)) return undefined
@@ -354,7 +355,7 @@ export function VenueBookingRequestPage() {
                     <li key={option.venue.venueId}>
                       <VenueOptionCard option={option} attendance={event.expectedAttendance}
                         selected={selectedIds.includes(option.venue.venueId)}
-                        onSelect={() => toggleVenue(option.venue.venueId)} />
+                        onOpen={() => setDetailsId(option.venue.venueId)} />
                     </li>
                   ))}
                 </ul>
@@ -396,11 +397,7 @@ export function VenueBookingRequestPage() {
                   {selected.length === 1
                     ? <Comparison event={event} option={reviewed(selected[0]) ?? selected[0]} input={bookingTimes[selected[0].venue.venueId]} />
                     : null}
-                  {detailsVenue ? (
-                    <Modal title={detailsVenue.venueAddress} onClose={() => setDetailsId(null)}>
-                      <VenueDetails venue={detailsVenue} />
-                    </Modal>
-                  ) : null}
+
 
                   {needsJustification ? (
                     <div className="venue-request__field">
@@ -494,6 +491,26 @@ export function VenueBookingRequestPage() {
           ) : null}
         </div>
       </div>
+      {detailsOption ? (
+        <Modal title={detailsOption.venue.venueAddress} onClose={() => setDetailsId(null)}
+          footer={<>
+            {hasCoordinates(detailsOption.venue) ? (
+              <Button variant="secondary" onClick={() => { setMapFocusId(detailsOption.venue.venueId); setDetailsId(null) }}>
+                Show on map
+              </Button>
+            ) : null}
+            <Button variant={selectedIds.includes(detailsOption.venue.venueId) ? 'secondary' : 'primary'}
+              onClick={() => { toggleVenue(detailsOption.venue.venueId); setDetailsId(null) }}>
+              {selectedIds.includes(detailsOption.venue.venueId) ? 'Remove from request' : 'Add to request'}
+            </Button>
+          </>}>
+          <p className="venue-request__details-verdict" data-verdict={detailsOption.verdict}>
+            <strong>{VERDICT_LABELS[detailsOption.verdict]}</strong>
+            {detailsOption.reasons.length > 0 ? <> · {detailsOption.reasons.join(' ')}</> : null}
+          </p>
+          <VenueDetails venue={detailsOption.venue} />
+        </Modal>
+      ) : null}
     </div>
   )
 }
@@ -560,22 +577,24 @@ function BookingTimingInputs({ option, input, disabled, onChange }: {
   </fieldset>
 }
 
-function VenueOptionCard({ option, attendance, selected, onSelect }: {
+/** Opens the venue's details window, where it is added to or removed from the request. */
+function VenueOptionCard({ option, attendance, selected, onOpen }: {
   option: VenueOptionDto
   attendance: number
   selected: boolean
-  onSelect: () => void
+  onOpen: () => void
 }) {
   const { venue } = option
   const capacity = venue.venueCapacity ?? 0
   const fill = Math.min(100, Math.round((attendance / Math.max(1, capacity)) * 100))
   const disabled = false
   return (
-    <button type="button" className="venue-option" data-verdict={option.verdict} aria-pressed={selected}
-      disabled={disabled} onClick={onSelect}>
+    <button type="button" className="venue-option" data-verdict={option.verdict} data-selected={selected}
+      disabled={disabled} onClick={onOpen}>
       <span className="venue-option__head">
         <span className="venue-option__name">{venue.venueAddress}</span>
         <span className="venue-option__verdict">{VERDICT_LABELS[option.verdict]}</span>
+        {selected ? <span className="dash-badge dash-badge--success">Added</span> : null}
       </span>
       <span className="venue-option__capacity">
         <span className="venue-option__bar" aria-hidden="true"><span style={{ width: `${fill}%` }} /></span>
