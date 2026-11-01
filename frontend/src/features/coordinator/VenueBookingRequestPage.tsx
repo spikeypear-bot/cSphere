@@ -210,9 +210,12 @@ export function VenueBookingRequestPage() {
   }
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
-  const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
+  // A venue that became already requested (e.g. from another tab) drops out of the request.
+  const selected = options.filter((o) => selectedIds.includes(o.venue.venueId) && !alreadyRequested.has(o.venue.venueId))
   // The open details window's venue, read from the live options so a refresh shows in it.
   const detailsOption = options.find((o) => o.venue.venueId === detailsId) ?? null
+  // Forget a window whose venue a refresh removed, so it never reopens by itself.
+  if (detailsId && !detailsOption) setDetailsId(null)
   const reviewed = (option: VenueOptionDto) => {
     const input = bookingTimes[option.venue.venueId]
     if (!validInput(input)) return undefined
@@ -232,7 +235,8 @@ export function VenueBookingRequestPage() {
     && timesValid && (!needsJustification || justification.trim().length > 0)
 
   function toggleVenue(id: string) {
-    const option = visible.find(value => value.venue.venueId === id)
+    // Any requestable venue, not just the ones the search shows: a selected venue can be removed while filtered out.
+    const option = requestableOptions.find(value => value.venue.venueId === id)
     if (!option || alreadyRequested.has(id)) return
     setMapFocusId(id)
     setSelectedIds(current => replacing
@@ -361,7 +365,7 @@ export function VenueBookingRequestPage() {
                   {visible.map((option) => (
                     <li key={option.venue.venueId}>
                       <VenueOptionCard option={option} attendance={event.expectedAttendance}
-                        selected={selectedIds.includes(option.venue.venueId)}
+                        selected={selectedIds.includes(option.venue.venueId) && !alreadyRequested.has(option.venue.venueId)}
                         requestedStatus={alreadyRequested.get(option.venue.venueId)}
                         onOpen={() => setDetailsId(option.venue.venueId)} />
                     </li>
@@ -500,15 +504,15 @@ export function VenueBookingRequestPage() {
       </div>
       {detailsOption ? (
         <Modal title={detailsOption.venue.venueAddress} onClose={() => setDetailsId(null)}
-          footer={hasCoordinates(detailsOption.venue) || !alreadyRequested.has(detailsOption.venue.venueId) ? <>
+          footer={hasCoordinates(detailsOption.venue) || !alreadyRequested.has(detailsOption.venue.venueId) ? (close) => <>
             {hasCoordinates(detailsOption.venue) ? (
-              <Button variant="secondary" onClick={() => { setMapFocusId(detailsOption.venue.venueId); setDetailsId(null) }}>
+              <Button variant="secondary" onClick={() => { setMapFocusId(detailsOption.venue.venueId); close() }}>
                 Show on map
               </Button>
             ) : null}
             {alreadyRequested.has(detailsOption.venue.venueId) ? null : (
               <Button variant={selectedIds.includes(detailsOption.venue.venueId) ? 'secondary' : 'primary'}
-                onClick={() => { toggleVenue(detailsOption.venue.venueId); setDetailsId(null) }}>
+                onClick={() => { toggleVenue(detailsOption.venue.venueId); close() }}>
                 {selectedIds.includes(detailsOption.venue.venueId) ? 'Remove from request' : 'Add to request'}
               </Button>
             )}

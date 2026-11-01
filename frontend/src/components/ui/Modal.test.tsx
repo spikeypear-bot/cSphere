@@ -35,4 +35,16 @@ describe('EC04 shared modal', () => {
     dialog.close()
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('EC04 (happy): a footer action closes it through the dialog, once', async () => {
+    const onClose = vi.fn()
+    render(<Modal title="Marina Bay Hall" onClose={onClose}
+      footer={(close) => <button type="button" onClick={close}>Add to request</button>}>
+      <p>400 people</p>
+    </Modal>)
+
+    await userEvent.click(screen.getByRole('button', { name: 'Add to request' }))
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
 })

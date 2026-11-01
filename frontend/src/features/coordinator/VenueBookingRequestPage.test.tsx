@@ -538,3 +538,47 @@ describe('EC03 a venue already requested for this event cannot be requested agai
     expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add to request' })).toBeInTheDocument()
   })
 })
+
+describe('EC03 venue window edge cases', () => {
+  beforeEach(() => seedSession('coordinator'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EC03 (boundary): a selected venue hidden by the search can still be removed from its window', async () => {
+    stubApi(routes())
+    renderPage()
+
+    await addVenue(/1 Harbour Road/)
+    fireEvent.change(screen.getByPlaceholderText('Search by address or details'), { target: { value: 'Garden' } })
+    await userEvent.click(within(screen.getByRole('list', { name: 'Selected venues' })).getByRole('button', { name: 'View venue details' }))
+    await userEvent.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Remove from request' }))
+    expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
+  })
+
+  it('EC03 (conflict): a selected venue that becomes already requested drops out of the request', async () => {
+    const bookings: unknown[] = []
+    stubApi(routes(bookings))
+    renderPage()
+
+    await addVenue(/1 Harbour Road/)
+    expect(screen.getByRole('list', { name: 'Selected venues' })).toBeInTheDocument()
+    // Another tab requests the same venue; the page's live refresh picks it up.
+    bookings.push({ bookingId: 'b9', status: 'pending', venueId: 'v1', venueAddress: '1 Harbour Road' })
+    fireEvent.focus(window)
+    expect(await within(await screen.findByRole('button', { name: /^1 Harbour Road/ })).findByText('Already requested')).toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
+  })
+
+  it('EC03 (happy): when replacing a booking, its own venue can be chosen again (reschedule)', async () => {
+    stubApi(routes([{ bookingId: 'old-booking', status: 'approved', venueId: 'v1', venueAddress: '1 Harbour Road' }]))
+    renderPage(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=old-booking`)
+
+    const card = await screen.findByRole('button', { name: /^1 Harbour Road/ })
+    expect(within(card).queryByText('Already requested')).not.toBeInTheDocument()
+    await userEvent.click(card)
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add to request' })).toBeInTheDocument()
+  })
+})

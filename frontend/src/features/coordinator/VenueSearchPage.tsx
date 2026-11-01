@@ -48,6 +48,8 @@ export function VenueSearchPage() {
   // The venue whose details window is open; looked up live so a refresh shows in it.
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const details = visible.find(venue => venue.venueId === detailsId) ?? null
+  // Forget a window whose venue a refresh or filter removed, so it never reopens by itself.
+  if (detailsId && !details) setDetailsId(null)
 
   useEffect(() => {
     if (!searchQuery || liveRevision === 0) return
@@ -190,8 +192,8 @@ export function VenueSearchPage() {
       ) : null}
       {details ? (
         <Modal title={details.venueAddress} onClose={() => setDetailsId(null)}
-          footer={hasCoordinates(details) ? (
-            <Button variant="secondary" onClick={() => { setMapFocusId(details.venueId); setDetailsId(null) }}>Show on map</Button>
+          footer={hasCoordinates(details) ? (close) => (
+            <Button variant="secondary" onClick={() => { setMapFocusId(details.venueId); close() }}>Show on map</Button>
           ) : null}>
           <VenueDetails venue={details}>
             {startDatetime && endDatetime && <BookingTimingSummary timing={{
