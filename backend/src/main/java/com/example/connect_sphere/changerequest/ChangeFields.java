@@ -91,7 +91,8 @@ final class ChangeFields {
                 names(v.get("requiredFacilities")).stream().map(Facility::valueOf).toList(),
                 (Boolean) v.get("registrationNeeds"),
                 v.get("registrationCapacity") == null ? null : ((Number) v.get("registrationCapacity")).intValue(),
-                time(v.get("registrationOpensAt")), null, (String) v.get("attendeeInstructions"));
+                time(v.get("registrationOpensAt")), time(v.get("startDatetime")),
+                (String) v.get("attendeeInstructions"));
     }
 
     /** The fields whose meaning differs, in the form's order. */
