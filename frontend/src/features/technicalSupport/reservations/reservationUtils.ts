@@ -55,8 +55,7 @@ export function describeReserveError(error: unknown): string {
   return 'Could not save the reservations. Please try again.'
 }
 
+/** An instant as a datetime-local value in Singapore time (the inverse of toIso). */
 export function toLocalInputValue(iso: string): string {
-  const d = new Date(iso)
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return new Date(new Date(iso).getTime() + 8 * 60 * 60 * 1000).toISOString().slice(0, 16)
 }

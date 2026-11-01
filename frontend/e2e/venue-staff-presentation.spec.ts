@@ -55,7 +55,8 @@ test('VS17 (cross-cutting): staff navigation, structured details, issue times an
  await expect(issue.getByText('Operational issue reported successfully.')).toBeVisible()
  // A confirmed booking fixture isolates the presentation and calendar regression.
  const venueName=uniqueName('Attention display hall'); const venueId=await createVenue(request,venueName)
- const now=new Date();const future=new Date(Date.UTC(now.getUTCFullYear(),now.getUTCMonth()+1,15));const day=future.toISOString().slice(0,10)
+ // The browser clock is pinned to the month before this day, so "Next month" always shows it, whatever the real date.
+ const day='2099-03-15';const pinnedNow=new Date('2099-02-10T10:00:00+08:00')
  const eventId=await confirmedEventByApi(request,uniqueName('Staff display event'),venueId,`${day}T09:00:00+08:00`,`${day}T12:00:00+08:00`)
  const vs=await apiToken(request,'vs1');const ec=await apiToken(request,'ec1')
  const bookings=await apiGet<{bookingId:string}[]>(request,ec,`/api/events/${eventId}/venue-bookings`);const bookingId=bookings[0].bookingId
@@ -77,6 +78,7 @@ test('VS17 (cross-cutting): staff navigation, structured details, issue times an
  await expect(comment).toBeVisible()
  expect(await staff.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true)
  await staff.screenshot({path:testInfo.outputPath('staff-assessment-mobile.png'),fullPage:true})
+ await staff.clock.setFixedTime(pinnedNow)
  await staff.goto('/venue-staff/availability-calendar')
  await staff.getByLabel('Venue',{exact:true}).selectOption(venueId)
  await staff.getByRole('button',{name:'Next month',exact:true}).click()

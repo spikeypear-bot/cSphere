@@ -314,6 +314,8 @@ jobs:
   e2e:
     needs: package
     runs-on: ubuntu-latest
+    # A hung step (e.g. apt stuck on an unreachable mirror) fails in 10 min, not GitHub's default 6 h.
+    timeout-minutes: 10
     services:
       postgres:
         image: postgres:latest
@@ -332,6 +334,9 @@ jobs:
       SPRING_DATASOURCE_URL: jdbc:postgresql://localhost:5432/csphere
       SPRING_DATASOURCE_USERNAME: postgres
       SPRING_DATASOURCE_PASSWORD: root
+      # EC-C3: hold reminders and expiry are checked every 2 s instead of 30 s,
+      # so the reminder journey waits a bounded few seconds, not half a minute.
+      VENUE_HOLDS_EXPIRY_DELAY_MS: '2000'
     steps:
       - name: Checkout code
         uses: actions/checkout@v7

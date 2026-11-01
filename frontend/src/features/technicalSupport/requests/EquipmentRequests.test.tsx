@@ -9,6 +9,9 @@ import { eventWindow, requestPageRoutes } from '../../../test/requestPageStubs'
 import { EquipmentRequestDetailPage } from './EquipmentRequestDetailPage'
 import { EquipmentRequestsPage } from './EquipmentRequestsPage'
 
+// Entered times are Singapore time on every machine.
+const sgtIso = (local: string) => new Date(`${local}:00+08:00`).toISOString()
+
 const eventStart = '2027-03-10T09:00:00+08:00'
 const eventEnd = '2027-03-10T12:00:00+08:00'
 
@@ -260,7 +263,7 @@ describe('TS09 equipment requests list and request page', () => {
   it('TS02 (boundary): the loan window starts as the event’s times; a changed window reloads availability and is the one reserved, and an end before the start blocks reserving', async () => {
     const w = eventWindow(eventStart, eventEnd)
     const later = { start: '2027-03-10T08:00', end: '2027-03-10T13:00' }
-    const laterQuery = `start=${encodeURIComponent(new Date(later.start).toISOString())}&end=${encodeURIComponent(new Date(later.end).toISOString())}`
+    const laterQuery = `start=${encodeURIComponent(sgtIso(later.start))}&end=${encodeURIComponent(sgtIso(later.end))}`
     const calls = stubApi({
       ...requestPageRoutes(request('r1'), {
         requests: () => [request('r1')],
@@ -291,9 +294,9 @@ describe('TS09 equipment requests list and request page', () => {
     await user.click(screen.getByRole('button', { name: 'Reserve all remaining (1 unit)' }))
     await waitFor(() => expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1))
     expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({
-      start: new Date(later.start).toISOString(), end: new Date(later.end).toISOString(),
+      start: sgtIso(later.start), end: sgtIso(later.end),
     })
-    expect(w.from).not.toBe(new Date(later.start).toISOString())
+    expect(w.from).not.toBe(sgtIso(later.start))
   })
 
   it('TS09 (negative): a request that is not in the list says it could not be found and loads nothing else', async () => {

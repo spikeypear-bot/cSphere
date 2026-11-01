@@ -1611,6 +1611,7 @@ class Event <<Entity>>  {
 	{field} +attendeeInstructions : String
 	{field} +confirmedAt : OffsetDateTime
 	{field} +confirmedBy : UUID
+	{field} +confirmedVenues : String
 	{field} +coordinatorId : UUID
 	{field} +description : String
 	{field} +endDatetime : OffsetDateTime
@@ -1839,6 +1840,7 @@ class EventService {
 
 class OrganiserVenueNotices {
 	{field} {static} -SINGAPORE : DateTimeFormatter
+	{method} +confirmed ( event : Event , at : OffsetDateTime ) : void
 	{method} +on ( change : VenueArrangementChanged ) : void
 	{method} +reconfirmed ( event : Event ) : void
 }
@@ -2248,6 +2250,7 @@ class NotificationService {
 	{method} +createAttendeeEventCancellationNotifications ( eventId : UUID , eventName : String , originalStart : OffsetDateTime , originalEnd : OffsetDateTime , reason : String , cancelledAt : OffsetDateTime ) : void
 	{method} +createAttendeeEventChangeNotifications ( changeRequestId : UUID , eventId : UUID , eventName : String , changes : List , committedAt : OffsetDateTime ) : void
 	{method} +createAttendeeRegistrationConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String , registrationId : UUID ) : void
+	{method} +createAttendeeVenueChangeNotifications ( eventId : UUID , eventName : String , previousVenues : String , updatedVenues : String , confirmedAt : OffsetDateTime ) : void
 	{method} +createAttendeeWithdrawalConfirmation ( recipientUserId : UUID , eventId : UUID , eventName : String , registrationReference : String , registrationId : UUID , withdrawnAt : OffsetDateTime ) : void
 	{method} +createChangeRequestNotifications ( recipientUserIds : List , type : NotificationType , eventRequestId : UUID , eventId : UUID , eventName : String , message : String ) : void
 	{method} +createClarificationRequestedNotifications ( recipientUserIds : List , eventRequestId : UUID , eventName : String , message : String ) : void

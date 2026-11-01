@@ -56,6 +56,7 @@ export function ChangeRequestsPage() {
   const [views, setViews] = useState<ChangeRequestView[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [notAssigned, setNotAssigned] = useState(false)
+  const [denied, setDenied] = useState(false)
   const [attempt, setAttempt] = useState(0)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
@@ -80,6 +81,8 @@ export function ChangeRequestsPage() {
       .catch((err: unknown) => {
         if (cancelled) return
         if (isNotAssigned(err)) setNotAssigned(true)
+        // EO03 AC1: someone else's request; the server says "not found" either way.
+        else if (err instanceof ApiClientError && (err.status === 403 || err.status === 404)) setDenied(true)
         setError(err instanceof ApiClientError ? err.message : 'The change requests could not be loaded.')
       })
     return () => { cancelled = true }
@@ -98,6 +101,16 @@ export function ChangeRequestsPage() {
   }
 
   if (notAssigned) return <NotAssignedNotice what="request" />
+  if (denied) {
+    return (
+      <div className="page">
+        <div role="alert" className="change-request__error">
+          <p>You can't view these change requests. The event belongs to another organisation, or it no longer exists.</p>
+          <Link className="button button--secondary" to={base || '/'}>Back to your console</Link>
+        </div>
+      </div>
+    )
+  }
   const name = views?.[0]?.eventName
   const hasPending = views?.some((v) => v.status === 'pending' && !v.closedReason)
 

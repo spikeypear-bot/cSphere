@@ -19,7 +19,8 @@ const eventStart = '2027-03-10T09:00:00+08:00'
 const eventEnd = '2027-03-10T12:00:00+08:00'
 const localStart = toLocalInputValue(eventStart)
 const localEnd = toLocalInputValue(eventEnd)
-const localToIso = (value: string) => new Date(value).toISOString()
+// Entered times are Singapore time on every machine (the app reads them so, whatever the browser's timezone).
+const localToIso = (value: string) => new Date(`${value}:00+08:00`).toISOString()
 
 function renderRoutes(path: string) {
   return render(

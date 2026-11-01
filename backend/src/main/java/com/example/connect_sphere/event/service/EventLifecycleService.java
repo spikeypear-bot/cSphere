@@ -312,6 +312,10 @@ public class EventLifecycleService {
         if (reconfirming && venueNotices != null) {
             venueNotices.reconfirmed(saved);
         }
+        // AT09: attendees hear when it is confirmed with different venues.
+        if (venueNotices != null) {
+            venueNotices.confirmed(saved, now);
+        }
         record(saved, ActivityType.event_confirmed, coordinatorId, null, JourneyStatus.SAFETY_APPROVED);
 
         UUID organiser = eventRequests.findByEventId(eventId).map(EventRequest::getCreatedBy).orElse(null);

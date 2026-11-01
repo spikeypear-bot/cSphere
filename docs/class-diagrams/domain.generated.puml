@@ -335,6 +335,7 @@ class Event <<Entity>>  {
 	{field} +attendeeInstructions : String
 	{field} +confirmedAt : OffsetDateTime
 	{field} +confirmedBy : UUID
+	{field} +confirmedVenues : String
 	{field} +coordinatorId : UUID
 	{field} +description : String
 	{field} +endDatetime : OffsetDateTime
