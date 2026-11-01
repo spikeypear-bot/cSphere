@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**272 test files, 2289 tests, 82 stories traced, 0 files untraced.**
+**274 test files, 2296 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -38,7 +38,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EC-NEW3 | 8 | 5 | 5 | 1 | 225 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 3 | 4 | 1 | 5 | 116 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW5 | 2 | 2 | 3 | 3 | 102 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C1 | 1 | 1 | 2 | 1 | 43 | AC2, AC4, AC7 | happy, negative, conflict, cross-cutting |
+| ECL-C1 | 1 | 1 | 6 | 1 | 76 | AC2, AC4, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
 | ECL-C3 | 2 | 1 | 4 | 2 | 140 | — | happy, boundary, failure |
 | ECL-C4 |  | 1 | 1 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -567,6 +567,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
+- frontend component/unit: `frontend/src/App.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorLeadDashboard.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorLeadNav.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/lib/authTokens.test.ts`
 - e2e (browser): `frontend/e2e/request-review.spec.ts`
