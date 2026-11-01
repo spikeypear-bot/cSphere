@@ -28,7 +28,7 @@ export function AssignedEventsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/coordinator">Event Coordinator console</Link>}
+        eyebrow={<Link to="/coordinator">Dashboard</Link>}
         title="My events"
         description="Events assigned to you that are being planned or are confirmed, soonest first."
         actions={

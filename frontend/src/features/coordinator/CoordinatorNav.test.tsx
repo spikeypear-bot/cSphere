@@ -3,12 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import App from '../../App'
-import { jsonResponse, seedSession } from '../../test/apiStubs'
+import { emptyBody, jsonResponse, seedSession } from '../../test/apiStubs'
 
 /** Every coordinator read answers "nothing here", so any page renders. */
 function stubEmptyReads() {
-  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) =>
-    jsonResponse(200, String(input).endsWith('/event-requests/queue') ? { needsReview: [], awaitingOrganiser: [] } : [])))
+  vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
 }
 
 function renderAt(path: string) {

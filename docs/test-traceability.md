@@ -5,89 +5,92 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**261 test files, 2228 tests, 79 stories traced, 0 files untraced.**
+**271 test files, 2275 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
-| AT01 | 5 | 6 | 9 | 4 | 170 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT01 | 5 | 6 | 9 | 5 | 172 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT02 | 2 | 4 | 6 | 4 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT03 | 5 | 4 | 8 | 4 | 112 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| AT04 | 2 | 4 | 5 | 4 | 77 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| AT07 |  |  | 1 |  | 8 | — | happy, negative, boundary, failure |
-| AT08 | 2 | 2 | 3 | 2 | 53 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| AT09 |  | 2 | 3 |  | 19 | — | happy, negative, boundary, failure, cross-cutting |
+| AT04 | 2 | 4 | 5 | 5 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT07 |  |  | 1 | 1 | 10 | — | happy, negative, boundary, conflict, failure |
+| AT08 | 2 | 2 | 3 | 4 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT09 | 1 | 2 | 3 | 1 | 33 | — | happy, negative, boundary, failure, cross-cutting |
 | AU04 | 6 | 8 | 6 | 3 | 140 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AU06 |  |  |  | 1 | 3 | — | negative, cross-cutting |
 | DEV05 |  | 3 | 4 |  | 53 | — | happy |
 | DEV15 | 1 | 2 |  |  | 6 | — | happy, negative |
 | DEV16 | 4 | 6 | 20 | 3 | 329 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC01 | 2 | 2 | 2 |  | 74 | — | happy, negative, conflict |
-| EC02 | 2 | 5 | 5 | 3 | 142 | — | happy, negative, boundary, conflict, cross-cutting |
+| EC01 | 2 | 2 | 2 | 1 | 76 | AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12 | happy, negative, conflict |
+| EC02 | 2 | 5 | 6 | 3 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC03 | 4 | 4 | 7 | 5 | 143 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC04 | 1 |  | 3 | 2 | 23 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC05 | 1 |  |  |  | 2 | — | negative |
-| EC07 | 1 | 3 | 1 |  | 83 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC08 | 4 | 7 | 5 | 4 | 264 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC09 | 2 | 1 | 1 | 1 | 31 | — | happy, boundary, cross-cutting |
-| EC10 |  | 1 | 2 | 1 | 45 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C1 | 2 | 1 | 2 |  | 17 | — | — |
+| EC04 | 1 |  | 3 | 3 | 28 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
+| EC07 | 1 | 3 | 1 | 1 | 87 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC08 | 4 | 7 | 5 | 4 | 265 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC09 | 2 | 1 | 3 | 1 | 38 | — | happy, boundary, failure, cross-cutting |
+| EC10 |  | 1 | 2 | 2 | 50 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C1 | 2 | 1 | 3 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure |
 | EC-C2 | 2 | 4 | 3 | 2 | 118 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C3 | 2 | 1 | 2 |  | 45 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C4 |  | 1 | 1 |  | 45 | — | happy, conflict |
-| EC-NEW2 | 2 | 1 | 7 | 2 | 165 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-NEW3 | 8 | 5 | 4 | 1 | 215 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-NEW4 | 2 | 4 | 1 | 1 | 91 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C3 | 2 | 1 | 2 | 1 | 50 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C4 |  | 1 | 2 | 1 | 65 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9 | happy, negative, boundary, conflict, failure |
+| EC-NEW2 | 2 | 2 | 7 | 2 | 173 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW3 | 8 | 5 | 5 | 1 | 223 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW4 | 3 | 4 | 1 | 5 | 116 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW5 | 2 | 2 | 3 | 3 | 102 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C1 | 1 | 1 | 2 |  | 41 | — | happy, negative, conflict, cross-cutting |
+| ECL-C1 | 1 | 1 | 2 | 1 | 43 | AC2, AC4, AC7 | happy, negative, conflict, cross-cutting |
 | ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
 | ECL-C3 | 2 | 1 | 4 | 2 | 140 | — | happy, boundary, failure |
-| ECL-C4 |  | 1 | 1 |  | 21 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C7 | 2 | 4 | 3 | 1 | 176 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C4 |  | 1 | 1 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C5 |  |  |  | 1 | 2 | AC1, AC2, AC3, AC8, AC9, AC13 | happy, negative |
+| ECL-C6 |  |  |  | 1 | 2 | AC3, AC7, AC12 | happy, negative |
+| ECL-C7 | 2 | 4 | 3 | 2 | 178 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ELC-C5 | 2 | 3 | 3 | 1 | 137 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | ELC-C6 | 3 | 3 | 4 | 3 | 181 | — | happy, boundary, conflict, failure |
-| EO01 | 2 | 1 | 4 | 3 | 88 | — | happy, boundary |
-| EO02 | 3 | 2 | 5 | 5 | 125 | — | happy, negative, boundary, conflict, failure |
-| EO03 | 3 | 2 | 1 | 1 | 63 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO04 | 2 | 3 | 5 | 3 | 130 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO07 | 4 | 5 | 3 | 1 | 181 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO09 | 3 | 3 | 1 | 1 | 103 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO10 | 1 | 2 | 1 |  | 29 | AC2, AC3, AC4, AC6, AC9 | happy, boundary, conflict, cross-cutting |
-| EO11 | 1 |  | 1 |  | 23 | — | — |
-| EO12 | 3 | 1 | 2 |  | 23 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC11, AC12, AC13, AC14, AC15, AC16 | happy, negative, boundary, failure, cross-cutting |
-| EO15 | 1 | 1 | 4 | 2 | 44 | — | happy |
-| EO19 | 3 | 2 | 2 |  | 85 | — | happy, boundary, conflict |
-| EO26 | 3 | 3 | 5 |  | 114 | — | happy, negative, boundary, conflict, failure |
-| EO-C1 | 1 | 1 | 1 | 1 | 28 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, failure |
+| EO01 | 2 | 1 | 4 | 3 | 89 | — | happy, boundary |
+| EO02 | 3 | 2 | 5 | 5 | 126 | — | happy, negative, boundary, conflict, failure |
+| EO03 | 3 | 2 | 2 | 2 | 83 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO04 | 2 | 3 | 5 | 3 | 131 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO07 | 4 | 5 | 3 | 2 | 183 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO09 | 3 | 3 | 2 | 1 | 109 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO10 | 1 | 2 | 1 | 1 | 31 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9 | happy, negative, boundary, conflict, cross-cutting |
+| EO11 | 1 |  | 1 | 1 | 25 | AC1, AC2, AC5, AC7 | negative, boundary, conflict |
+| EO12 | 3 | 1 | 2 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC11, AC12, AC13, AC14, AC15, AC16 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO15 | 1 | 1 | 4 | 2 | 46 | — | happy, cross-cutting |
+| EO19 | 3 | 2 | 2 | 1 | 87 | AC1, AC3, AC4, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict |
+| EO26 | 3 | 3 | 5 | 1 | 116 | AC1, AC3, AC6, AC8 | happy, negative, boundary, conflict, failure |
+| EO-C1 | 1 | 1 | 1 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, failure |
 | EO-C2 | 2 | 1 | 5 | 1 | 113 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure |
-| SO-C1 | 1 |  | 1 |  | 14 | — | happy, negative, conflict |
-| SO-C2 |  | 4 |  |  | 60 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C1 | 1 |  | 1 | 1 | 18 | AC1, AC2, AC7, AC8 | happy, negative, conflict |
+| SO-C2 |  | 4 |  | 1 | 64 | AC1, AC2, AC3, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C3 | 1 |  | 2 | 1 | 32 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C4 | 2 | 2 | 1 | 2 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C5 | 2 | 2 | 3 |  | 104 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C6 | 2 | 2 | 3 | 1 | 107 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS01 | 3 | 3 | 6 |  | 96 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS02 | 2 | 4 | 5 |  | 124 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS03 | 4 | 4 | 5 |  | 113 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS06 | 1 | 3 | 3 |  | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS09 | 7 | 7 | 14 |  | 222 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C5 | 2 | 2 | 3 | 1 | 109 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C6 | 2 | 2 | 3 | 1 | 108 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS01 | 3 | 3 | 6 | 1 | 100 | AC1, AC2, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS02 | 2 | 4 | 6 | 1 | 132 | AC5, AC10, AC11, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS03 | 4 | 4 | 6 | 1 | 121 | AC2, AC3 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS06 | 1 | 3 | 3 | 1 | 99 | AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS09 | 7 | 7 | 15 | 1 | 230 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS01 | 1 | 3 | 2 | 1 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS02 |  | 2 | 4 | 1 | 102 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS03 | 1 | 2 | 3 | 3 | 113 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS04 | 1 | 4 | 2 |  | 114 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS04 | 1 | 4 | 2 | 1 | 119 | AC3, AC4, AC5, AC6, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS06A |  |  | 1 | 1 | 25 | — | happy, negative, boundary, failure, cross-cutting |
 | VS06B |  |  | 1 | 1 | 25 | — | happy, negative, boundary, failure, cross-cutting |
 | VS07 | 3 | 3 | 5 | 3 | 105 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS08 |  | 3 | 2 | 1 | 67 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS09 |  | 1 | 1 |  | 51 | — | happy, boundary, failure, cross-cutting |
+| VS09 |  | 1 | 1 | 1 | 56 | AC3, AC4, AC5, AC6, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS13 | 2 | 2 | 2 | 1 | 51 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS15 |  |  | 5 | 2 | 42 | — | happy, boundary, conflict, failure, cross-cutting |
 | VS16 |  | 1 | 2 | 1 | 22 | — | happy, negative, boundary, cross-cutting |
-| VS17 | 13 | 20 | 23 | 8 | 711 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS17 | 13 | 20 | 23 | 8 | 712 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS18 |  | 1 | 4 | 1 | 46 | — | happy, negative, boundary, conflict, cross-cutting |
-| VS25 |  | 2 |  |  | 20 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS25 |  | 2 |  | 1 | 25 | AC1, AC5 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C1 | 1 | 5 | 1 | 2 | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C2 | 1 | 3 | 3 | 1 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C3 | 2 | 4 | 5 | 2 | 146 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS-C4 | 2 | 2 | 4 |  | 122 | AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C4 | 2 | 2 | 4 | 1 | 127 | AC2, AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 
 ## High-priority stories with no automated test yet
 
@@ -127,6 +130,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - e2e (browser): `frontend/e2e/attendee-registration-status.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-resilience.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-withdrawal.spec.ts`
+- e2e (browser): `frontend/e2e/registration-management.spec.ts`
 
 </details>
 <details><summary>AT02</summary>
@@ -188,6 +192,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/attendee/RegistrationPages.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/Withdrawal.test.tsx`
 - e2e (browser): `frontend/e2e/attendee-badges.spec.ts`
+- e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-registration-status.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-resilience.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-withdrawal.spec.ts`
@@ -196,6 +201,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>AT07</summary>
 
 - frontend component/unit: `frontend/src/features/attendee/AttendeeEventDetailsPage.test.tsx`
+- e2e (browser): `frontend/e2e/registration-management.spec.ts`
 
 </details>
 <details><summary>AT08</summary>
@@ -207,17 +213,21 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/attendee/AttendeeWorkflowAudit.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationPages.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/Withdrawal.test.tsx`
+- e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-resilience.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-withdrawal.spec.ts`
+- e2e (browser): `frontend/e2e/registration-management.spec.ts`
 
 </details>
 <details><summary>AT09</summary>
 
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/OrganiserVenueNoticesTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeEventChangeNotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationQueryFlowTest.java`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeStatusBadges.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationConfirmation.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/AttendeeEventNotifications.test.tsx`
+- e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
 
 </details>
 <details><summary>AU04</summary>
@@ -247,6 +257,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 - e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
+<details><summary>AU06</summary>
+
+- e2e (browser): `frontend/e2e/access-messages.spec.ts`
+
+</details>
 <details><summary>DEV05</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
@@ -269,8 +284,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingDecisionGuardsTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffFailureResponseTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingDecisionGuardsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/VenueCoordinateMigrationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/VenueSeedApiTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/VenueSeedMigrationTest.java`
@@ -279,16 +294,15 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuemap/VenueMapTest.java`
 - frontend component/unit: `frontend/src/components/venue/venueMatchesSearch.test.ts`
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorVenueMaps.test.tsx`
-- frontend component/unit: `frontend/src/features/venueMap/mapData.test.ts`
 - frontend component/unit: `frontend/src/features/venueMap/VenueMap.test.tsx`
 - frontend component/unit: `frontend/src/features/venueMap/VenueMapExplorer.test.tsx`
+- frontend component/unit: `frontend/src/features/venueMap/mapData.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalCoverage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingAssessment.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/TimingConflictReview.test.tsx`
-- frontend component/unit: `frontend/src/features/venueStaff/useVenueRead.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueOperationalIssuesPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenuePages.test.tsx`
@@ -297,6 +311,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSharedPanels.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/useVenueRead.test.tsx`
 - e2e (browser): `frontend/e2e/coordinator-venue-map.spec.ts`
 - e2e (browser): `frontend/e2e/venue-map-layout.spec.ts`
 - e2e (browser): `frontend/e2e/venue-map.spec.ts`
@@ -310,6 +325,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/RequestReviewPage.test.tsx`
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
 <details><summary>EC02</summary>
@@ -323,6 +339,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/components/ui/RequestByline.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/CoordinatorDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/RequestReviewPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/ReviewQueuePage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
@@ -362,12 +379,14 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorVenueMaps.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/VenueSearchPage.test.tsx`
 - e2e (browser): `frontend/e2e/coordinator-venue-map.spec.ts`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 - e2e (browser): `frontend/e2e/venue-map-layout.spec.ts`
 
 </details>
 <details><summary>EC05</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>EC07</summary>
@@ -377,6 +396,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>EC08</summary>
@@ -409,6 +429,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/CoordinatorDashboard.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/CoordinatorNav.test.tsx`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 
 </details>
@@ -418,6 +440,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorVenueMaps.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
 - e2e (browser): `frontend/e2e/coordinator-venue-map.spec.ts`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>EC-C1</summary>
@@ -427,6 +450,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventReassignmentFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/EventReassignmentRequestsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/notifications/NotificationBell.ecnew4.test.tsx`
+- e2e (browser): `frontend/e2e/oversight.spec.ts`
 
 </details>
 <details><summary>EC-C2</summary>
@@ -451,12 +476,15 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldReminderFlowTest.java`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/HoldStatus.test.tsx`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>EC-C4</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
+- frontend component/unit: `frontend/src/features/notifications/NotificationBell.ecnew4.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>EC-NEW2</summary>
@@ -464,6 +492,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/common/status/JourneyStatusResolverTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/components/ui/JourneyStatus.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/ReviewQueuePage.test.tsx`
@@ -491,6 +520,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
 - frontend component/unit: `frontend/src/features/changeRequests/ChangeRequests.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinator/CoordinatorDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/DecisionCard.test.tsx`
@@ -499,6 +529,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>EC-NEW4</summary>
 
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/CoordinatorNotificationsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalFlowTest.java`
@@ -506,7 +537,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/CoordinatorNotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationDeliveryOnceTest.java`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.ecnew4.test.tsx`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 - e2e (browser): `frontend/e2e/notifications.spec.ts`
+- e2e (browser): `frontend/e2e/oversight.spec.ts`
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>EC-NEW5</summary>
@@ -529,6 +564,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/lib/authTokens.test.ts`
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
 <details><summary>ECL-C2</summary>
@@ -558,6 +594,17 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/ActiveEventsOverviewTest.java`
 - frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
+- e2e (browser): `frontend/e2e/oversight.spec.ts`
+
+</details>
+<details><summary>ECL-C5</summary>
+
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
+
+</details>
+<details><summary>ECL-C6</summary>
+
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
 <details><summary>ECL-C7</summary>
@@ -572,6 +619,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorAccessScope.test.tsx`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
 <details><summary>ELC-C5</summary>
@@ -609,10 +657,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
@@ -625,11 +673,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestSubmissionRulesTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/RequestSubmissionRulesFlowTest.java`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestDateRules.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
@@ -645,6 +693,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestNotificationFlowTest.java`
 - frontend component/unit: `frontend/src/features/changeRequests/ChangeRequests.test.tsx`
+- frontend component/unit: `frontend/src/features/notifications/NotificationBell.ecnew4.test.tsx`
+- e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
 - e2e (browser): `frontend/e2e/change-requests.spec.ts`
 
 </details>
@@ -679,6 +729,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/events/EventCancellation.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/CancelRequest.test.tsx`
+- e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 
 </details>
@@ -691,6 +742,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
@@ -700,12 +752,14 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - frontend component/unit: `frontend/src/features/events/OrganiserRegistrations.test.tsx`
+- e2e (browser): `frontend/e2e/registration-management.spec.ts`
 
 </details>
 <details><summary>EO11</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`
 - frontend component/unit: `frontend/src/features/events/OrganiserRegistrations.test.tsx`
+- e2e (browser): `frontend/e2e/registration-management.spec.ts`
 
 </details>
 <details><summary>EO12</summary>
@@ -716,6 +770,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationPeriodAvailability.test.tsx`
 - frontend component/unit: `frontend/src/features/events/RegistrationPeriod.test.tsx`
+- e2e (browser): `frontend/e2e/registration-management.spec.ts`
 
 </details>
 <details><summary>EO15</summary>
@@ -739,6 +794,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - frontend component/unit: `frontend/src/features/notifications/AttendeeNotificationRace.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
 <details><summary>EO26</summary>
@@ -754,6 +810,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/events/EventPlanningPanels.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`
 - frontend component/unit: `frontend/src/lib/fieldChanges.test.ts`
+- e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
 <details><summary>EO-C1</summary>
@@ -772,8 +829,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinator/RequestReviewPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestDateRules.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - e2e (browser): `frontend/e2e/request-rules.spec.ts`
 
 </details>
@@ -781,6 +838,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+- e2e (browser): `frontend/e2e/oversight.spec.ts`
 
 </details>
 <details><summary>SO-C2</summary>
@@ -789,6 +847,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
+- e2e (browser): `frontend/e2e/oversight.spec.ts`
 
 </details>
 <details><summary>SO-C3</summary>
@@ -819,6 +878,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+- e2e (browser): `frontend/e2e/oversight.spec.ts`
 
 </details>
 <details><summary>SO-C6</summary>
@@ -841,12 +901,13 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
-- frontend component/unit: `frontend/src/features/technicalSupport/dashboard/TechnicalSupportDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/dashboard/TechnicalSupportDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
-- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>TS02</summary>
@@ -858,10 +919,12 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
 - frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
+- frontend component/unit: `frontend/src/features/technicalSupport/reservations/singaporeTime.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
-- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>TS03</summary>
@@ -874,11 +937,13 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
+- frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/dashboard/TechnicalSupportDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/faulty/FaultyEquipment.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/inventory/Inventory.test.tsx`
-- frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
-- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/reservations/singaporeTime.test.ts`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>TS06</summary>
@@ -887,9 +952,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
+- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
-- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>TS09</summary>
@@ -913,15 +979,17 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/equipment/equipmentCatalogueMedia.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EquipmentDamagePanel.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/damage/EquipmentDamage.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/dashboard/TechnicalSupportDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/faulty/FaultyEquipment.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/inventory/Inventory.test.tsx`
-- frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/reservations/singaporeTime.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/shared/format.test.ts`
-- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>VS01</summary>
@@ -930,8 +998,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffCoverageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
-- frontend component/unit: `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`
 - e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
@@ -941,8 +1009,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
-- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSharedPanels.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
@@ -968,6 +1036,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalCoverage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>VS06A</summary>
@@ -1005,8 +1074,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueHoldFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
-- frontend component/unit: `frontend/src/features/venueStaff/bookingConflictHighlights.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSharedPanels.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/bookingConflictHighlights.test.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
 </details>
@@ -1014,6 +1083,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>VS13</summary>
@@ -1029,11 +1099,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>VS15</summary>
 
-- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
-- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
+- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 - e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
@@ -1057,9 +1127,9 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueHoursServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffFailureResponseTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffFailureResponseTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueRequirementReviewFlowTest.java`
@@ -1092,9 +1162,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingAssessment.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
-- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/TimingConflictReview.test.tsx`
-- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueEditReturn.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueOperationalIssuesPanel.test.tsx`
@@ -1104,6 +1172,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/bookingStatusColours.test.ts`
+- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - e2e (browser): `frontend/e2e/booking-scroll.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
@@ -1117,10 +1187,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>VS18</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`
-- frontend component/unit: `frontend/src/features/venueStaff/useVenueRead.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueRead.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSharedPanels.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/useVenueRead.test.tsx`
 - e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
@@ -1128,6 +1198,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/OrganiserVenueNoticeFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
 <details><summary>VS-C1</summary>
@@ -1164,10 +1235,10 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffCoverageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
-- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- frontend component/unit: `frontend/src/features/venueStaff/venueCalendarAudit.test.ts`
 - e2e (browser): `frontend/e2e/booking-scroll.spec.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
 
@@ -1182,5 +1253,6 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueStaff/TimingConflictReview.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueSharedPanels.test.tsx`
+- e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>

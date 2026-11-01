@@ -9,7 +9,6 @@ import { OrganiserHomePage } from './features/organiser/OrganiserHomePage'
 import { EventRequestWizardPage } from './features/organiser/EventRequestWizardPage'
 import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatures'
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
-import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
 import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
 import { AssignedEventsPage } from './features/coordinator/AssignedEventsPage'
 import { EventReassignmentRequestPage } from './features/coordinator/EventReassignmentRequestPage'
@@ -128,7 +127,6 @@ function CoordinatorRoutes() {
         <Route path="venue-search" element={<VenueSearchPage />} />
         <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
         <Route path="operational-issues" element={<OperationalIssuesPage />} />
-        {skeletonRoutes(coordinatorFeatures)}
         {/* Retired placeholder pages and unknown paths land on the dashboard. */}
         <Route path="*" element={<Navigate to="/coordinator" replace />} />
       </Routes>

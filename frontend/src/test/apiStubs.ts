@@ -47,3 +47,9 @@ export function stubApi(routes: Record<string, (body: unknown) => Response>) {
   }))
   return calls
 }
+
+/** An empty answer in the shape each read returns: most reads are lists, the
+ * coordinator's review queue is an object of two lists. */
+export function emptyBody(url: string): unknown {
+  return url.endsWith('/event-requests/queue') ? { needsReview: [], awaitingOrganiser: [] } : []
+}

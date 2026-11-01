@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { MemoryRouter, useLocation } from 'react-router-dom'
 import App from '../../App'
-import { jsonResponse, seedSession } from '../../test/apiStubs'
+import { emptyBody, jsonResponse, seedSession } from '../../test/apiStubs'
 
 const REQUEST = {
   requestId: 'r-7', eventId: 'event-7', eventName: 'Town Hall',
@@ -38,7 +38,7 @@ describe('TS09 the Technical Support routes from before the rework redirect to t
       const url = String(input)
       if (url === '/api/equipment-requests?status=all') return jsonResponse(200, [REQUEST])
       if (url === '/api/equipment-damage-reports/rep-9') return jsonResponse(200, REPORT)
-      return jsonResponse(200, [])
+      return jsonResponse(200, emptyBody(url))
     }))
   })
   afterEach(() => {

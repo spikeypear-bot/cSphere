@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import App from '../../App'
 import { AUTH_STORAGE_KEY, type Role } from '../../lib/authTokens'
 import { SessionProvider } from '../../lib/session'
-import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
+import { emptyBody, jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { JourneyCode } from '../../types/status'
 import { ActiveEventsPage } from './ActiveEventsPage'
 
@@ -80,7 +80,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
   })
 
   it.each([
-    ['coordinator', 'ec1', /Event Coordinator console/i],
+    ['coordinator', 'ec1', /^Good \w+, ec1$/],
     ['organiser', 'eo1', /Your event requests/i],
     ['venue-staff', 'vs1', /Venue Staff console/i],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
@@ -90,7 +90,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       fetched.push(String(input))
-      return jsonResponse(200, [])
+      return jsonResponse(200, emptyBody(String(input)))
     }))
     signInAs(role, username)
     render(<MemoryRouter initialEntries={['/coordinator-lead/active-events']}><App /></MemoryRouter>)
