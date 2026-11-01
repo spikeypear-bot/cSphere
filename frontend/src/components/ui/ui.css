@@ -320,3 +320,40 @@
 .not-assigned h1 { margin: 0; font-size: 1.25rem; }
 .not-assigned p { margin: 0; }
 .not-assigned__links { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+
+/* Prominent checkbox: a boxed, enlarged control for a choice that reveals
+ * further required fields (e.g. attendee registration). */
+.field--prominent-check {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.9rem;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+}
+
+.field--prominent-check input[type='checkbox'] {
+  flex: none;
+  width: 1.5rem;
+  height: 1.5rem;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+
+.field--prominent-check label {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.field--prominent-check:has(input:checked) {
+  border-color: var(--accent);
+}
+
+/* Required-field marker drawn by CSS so the label's accessible name stays unchanged. */
+.field-label--required::after {
+  content: ' *';
+  color: var(--danger);
+}

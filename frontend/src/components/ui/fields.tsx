@@ -6,14 +6,15 @@ interface FieldShellProps {
   hint?: string
   error?: string
   htmlFor: string
+  required?: boolean
   children: ReactNode
 }
 
-function FieldShell({ label, hint, error, htmlFor, children }: FieldShellProps) {
+function FieldShell({ label, hint, error, htmlFor, required, children }: FieldShellProps) {
   const classes = ['field', error ? 'field--invalid' : null].filter(Boolean).join(' ')
   return (
     <div className={classes}>
-      <label htmlFor={htmlFor}>{label}</label>
+      <label htmlFor={htmlFor} className={required ? 'field-label--required' : undefined}>{label}</label>
       {children}
       {error ? (
         <span id={`${htmlFor}-error`} className="field-error" role="alert">
@@ -34,6 +35,7 @@ interface TextFieldProps {
   placeholder?: string
   hint?: string
   error?: string
+  required?: boolean
   multiline?: boolean
 }
 
@@ -45,10 +47,11 @@ export function TextField({
   placeholder,
   hint,
   error,
+  required,
   multiline,
 }: TextFieldProps) {
   return (
-    <FieldShell label={label} hint={hint} error={error} htmlFor={id}>
+    <FieldShell label={label} hint={hint} error={error} htmlFor={id} required={required}>
       {multiline ? (
         <textarea
           id={id}
@@ -77,6 +80,7 @@ interface NumberFieldProps {
   hint?: string
   error?: string
   min?: number
+  required?: boolean
   /** EO-C2: only whole numbers can be entered (no decimal point, sign or
    * exponent), e.g. a number of people. Zero is still enterable so the
    * form can say why it is not allowed. */
@@ -85,9 +89,9 @@ interface NumberFieldProps {
 
 const NOT_WHOLE_NUMBER_KEYS = new Set(['.', ',', 'e', 'E', '+', '-'])
 
-export function NumberField({ id, label, value, onChange, hint, error, min, wholeNumber = false }: NumberFieldProps) {
+export function NumberField({ id, label, value, onChange, hint, error, min, required, wholeNumber = false }: NumberFieldProps) {
   return (
-    <FieldShell label={label} hint={hint} error={error} htmlFor={id}>
+    <FieldShell label={label} hint={hint} error={error} htmlFor={id} required={required}>
       <input
         id={id}
         type="number"
@@ -119,6 +123,7 @@ interface DateTimeFieldProps {
   onChange: (isoValue: string | null) => void
   hint?: string
   error?: string
+  required?: boolean
 }
 
 /** Stores/emits a full ISO-8601 instant (matching the backend's OffsetDateTime),
@@ -126,10 +131,10 @@ interface DateTimeFieldProps {
  * typed and shown is always Singapore time, whatever zone the browser is in,
  * so "10:00" means the same moment to the organiser, the coordinator and the
  * venue (Singapore has no daylight saving: always GMT+8). */
-export function DateTimeField({ id, label, value, onChange, hint, error, min, max }: DateTimeFieldProps) {
+export function DateTimeField({ id, label, value, onChange, hint, error, min, max, required }: DateTimeFieldProps) {
   const localValue = value ? toDatetimeLocalValue(value) : ''
   return (
-    <FieldShell label={label} hint={hint ?? SINGAPORE_TIME_HINT} error={error} htmlFor={id}>
+    <FieldShell label={label} hint={hint ?? SINGAPORE_TIME_HINT} error={error} htmlFor={id} required={required}>
       <input
         id={id}
         type="datetime-local"
@@ -168,19 +173,24 @@ interface CheckboxFieldProps {
   checked: boolean
   onChange: (checked: boolean) => void
   hint?: string
+  /** Larger, boxed treatment for a choice that drives the rest of the form. */
+  prominent?: boolean
 }
 
-export function CheckboxField({ id, label, checked, onChange, hint }: CheckboxFieldProps) {
+export function CheckboxField({ id, label, checked, onChange, hint, prominent = false }: CheckboxFieldProps) {
   return (
-    <div className="field" style={{ flexDirection: 'row', alignItems: 'center', gap: '0.6rem' }}>
+    <div
+      className={prominent ? 'field field--prominent-check' : 'field'}
+      style={prominent ? undefined : { flexDirection: 'row', alignItems: 'center', gap: '0.6rem' }}
+    >
       <input
         id={id}
         type="checkbox"
         checked={checked}
         onChange={(event) => onChange(event.target.checked)}
-        style={{ width: 'auto' }}
+        style={prominent ? undefined : { width: 'auto' }}
       />
-      <label htmlFor={id} style={{ fontWeight: 500 }}>
+      <label htmlFor={id} style={prominent ? undefined : { fontWeight: 500 }}>
         {label}
       </label>
       {hint ? <span className="field-hint">{hint}</span> : null}
