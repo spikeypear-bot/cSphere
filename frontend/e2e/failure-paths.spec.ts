@@ -25,7 +25,7 @@ test('a rejected request tells the organiser it was rejected and why (EC02, EC-N
   })
 
   await test.step('EC-NEW2 AC3, AC29 / EO15: the organiser sees Rejected and the reason, with no further actions', async () => {
-    await organiser.goto('/organiser')
+    await organiser.goto('/organiser/requests')
     const row = organiser.getByRole('listitem').filter({ hasText: eventName })
     await expect(row.getByText('Rejected', { exact: true }).first()).toBeVisible()
     await organiser.getByRole('button', { name: /Notifications/ }).click()

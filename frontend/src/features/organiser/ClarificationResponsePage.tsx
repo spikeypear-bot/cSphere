@@ -92,14 +92,14 @@ export function ClarificationResponsePage() {
   }, [requestId])
 
   if (loadError) {
-    return <div className="page page--compact clarify"><Link to="/organiser">Back to your requests</Link><p role="alert">{loadError}</p></div>
+    return <div className="page page--compact clarify"><Link to="/organiser/requests">Back to your requests</Link><p role="alert">{loadError}</p></div>
   }
   if (!request || !fields) return <p>Loading…</p>
 
   if (request.status !== 'clarification_required') {
     return (
       <div className="page page--compact clarify">
-        <Link to="/organiser">Back to your requests</Link>
+        <Link to="/organiser/requests">Back to your requests</Link>
         <p role="status">This request is not waiting for clarification any more.</p>
       </div>
     )
@@ -152,7 +152,7 @@ export function ClarificationResponsePage() {
       // One call: the edits and the resubmission succeed or fail together, so
       // a refused resubmission leaves the request exactly as it was (EO26).
       await apiClient.post<EventRequestDto>(`/event-requests/${requestId}/resubmit`, { response, details: fields })
-      navigate('/organiser', { state: { justResubmitted: true } })
+      navigate('/organiser/requests', { state: { justResubmitted: true } })
     } catch (err) {
       if (err instanceof ApiClientError && err.missingFields) setMissing(err.missingFields)
       if (err instanceof ApiClientError && err.fieldErrors) setServerFieldErrors(err.fieldErrors)
@@ -205,7 +205,7 @@ export function ClarificationResponsePage() {
 
   return (
     <div className="page page--compact clarify">
-      <Link to="/organiser">Back to your requests</Link>
+      <Link to="/organiser/requests">Back to your requests</Link>
       <div>
         <h1>{request.eventName || 'Your event request'}</h1>
         <RequestByline createdAt={request.createdAt} updatedAt={request.updatedAt} timeline={timeline}

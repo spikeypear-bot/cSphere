@@ -61,7 +61,7 @@ function renderDraft() {
       <SessionProvider>
         <Routes>
           <Route path="/organiser/requests/:requestId" element={<EventRequestWizardPage />} />
-          <Route path="/organiser" element={<p>Organiser home</p>} />
+          <Route path="/organiser/requests" element={<p>Organiser home</p>} />
         </Routes>
       </SessionProvider>
     </MemoryRouter>,

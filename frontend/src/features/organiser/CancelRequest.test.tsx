@@ -7,7 +7,7 @@ import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { EventRequestDto, EventRequestStatus } from '../../types/eventRequest'
 import type { StatusView } from '../../types/status'
-import { OrganiserHomePage } from './OrganiserHomePage'
+import { MyRequestsPage } from './MyRequestsPage'
 
 const LABELS: Record<EventRequestStatus, [StatusView['code'], string]> = {
   draft: ['DRAFT', 'Draft'],
@@ -34,9 +34,9 @@ function request(status: EventRequestStatus, over: Partial<EventRequestDto> = {}
 
 function renderHome() {
   return render(
-    <MemoryRouter initialEntries={['/organiser']}>
+    <MemoryRouter initialEntries={['/organiser/requests']}>
       <SessionProvider>
-        <Routes><Route path="/organiser" element={<OrganiserHomePage />} /></Routes>
+        <Routes><Route path="/organiser/requests" element={<MyRequestsPage />} /></Routes>
       </SessionProvider>
     </MemoryRouter>,
   )
