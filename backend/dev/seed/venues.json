@@ -1,0 +1,1150 @@
+[
+  {
+    "venueName": "SMU Yong Pung How School of Law – Seminar Room 3-09, Level 3",
+    "venueAddress": "SMU Yong Pung How School of Law – Seminar Room 3-09, Level 3, 55 Armenian Street, Singapore 179943",
+    "venueCapacity": 40,
+    "supportedLayouts": [
+      "classroom",
+      "boardroom"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "elevators",
+      "step_free_access"
+    ],
+    "venueFacilities": [
+      "air_conditioning",
+      "audio_visual_equipment",
+      "projection"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      }
+    ],
+    "setupMinutes": 15,
+    "turnaroundMinutes": 15,
+    "additionalInformation": "Level 3, Seminar Room 3-09. Teaching/seminar space; campus security access may be required."
+  },
+  {
+    "venueName": "SMU Yong Pung How School of Law – SMU Hall 3, Basement 1",
+    "venueAddress": "SMU Yong Pung How School of Law – SMU Hall 3, Basement 1, 55 Armenian Street, Singapore 179943",
+    "venueCapacity": 150,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "20:00"
+      }
+    ],
+    "setupMinutes": 45,
+    "turnaroundMinutes": 30,
+    "additionalInformation": "Basement 1, SMU Hall 3. Separate booking from the Level 3 seminar rooms."
+  },
+  {
+    "venueName": "NUS University Cultural Centre – Ho Bee Auditorium",
+    "venueAddress": "NUS University Cultural Centre – Ho Bee Auditorium, 50 Kent Ridge Crescent, Singapore 119279",
+    "venueCapacity": 1607,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "step_free_access",
+      "wide_doorways",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      }
+    ],
+    "setupMinutes": 120,
+    "turnaroundMinutes": 90,
+    "additionalInformation": "Fixed auditorium seating; published default 1,607 seats includes wheelchair spaces. Larger configuration requires separate arrangements."
+  },
+  {
+    "venueName": "NUS University Cultural Centre – Theatre",
+    "venueAddress": "NUS University Cultural Centre – Theatre, 50 Kent Ridge Crescent, Singapore 119279",
+    "venueCapacity": 425,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "drop_off_zone",
+      "step_free_access",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      }
+    ],
+    "setupMinutes": 90,
+    "turnaroundMinutes": 60,
+    "additionalInformation": "425 seats including six wheelchair spaces; additional flat-floor configuration needs approval."
+  },
+  {
+    "venueName": "NUS University Cultural Centre – Function Room 1, Level 1",
+    "venueAddress": "NUS University Cultural Centre – Function Room 1, Level 1, 50 Kent Ridge Crescent, Singapore 119279",
+    "venueCapacity": 50,
+    "supportedLayouts": [
+      "theatre",
+      "boardroom"
+    ],
+    "venueAccessibilities": [
+      "step_free_access",
+      "public_transport"
+    ],
+    "venueFacilities": [
+      "air_conditioning",
+      "audio_visual_equipment"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "09:00",
+        "closeTime": "13:00"
+      }
+    ],
+    "setupMinutes": 30,
+    "turnaroundMinutes": 20,
+    "additionalInformation": "Level 1 ancillary function room. Published theatre-style maximum is 50; room is unfurnished by default."
+  },
+  {
+    "venueName": "NTU – Nanyang Auditorium Theatre",
+    "venueAddress": "NTU – Nanyang Auditorium Theatre, 50 Nanyang Avenue, Singapore 639798",
+    "venueCapacity": 1526,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "step_free_access",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      }
+    ],
+    "setupMinutes": 90,
+    "turnaroundMinutes": 90,
+    "additionalInformation": "Nanyang Auditorium main theatre. Published 1,526 seats, including two designated wheelchair spaces."
+  },
+  {
+    "venueName": "Lifelong Learning Institute – Training Room 1-1, Level 1",
+    "venueAddress": "Lifelong Learning Institute – Training Room 1-1, Level 1, 11 Eunos Road 8, Singapore 408601",
+    "venueCapacity": 40,
+    "supportedLayouts": [
+      "classroom",
+      "boardroom"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "air_conditioning",
+      "audio_visual_equipment",
+      "projection"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "16:00"
+      }
+    ],
+    "setupMinutes": 15,
+    "turnaroundMinutes": 15,
+    "additionalInformation": "Level 1, Training Room 1-1. Test capacity set within published 30–50-person range."
+  },
+  {
+    "venueName": "Lifelong Learning Institute – Event Hall 1-1, Level 1",
+    "venueAddress": "Lifelong Learning Institute – Event Hall 1-1, Level 1, 11 Eunos Road 8, Singapore 408601",
+    "venueCapacity": 90,
+    "supportedLayouts": [
+      "classroom",
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "19:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "19:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "19:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "19:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "19:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "19:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "17:00"
+      }
+    ],
+    "setupMinutes": 60,
+    "turnaroundMinutes": 45,
+    "additionalInformation": "Level 1; adjacent to Hall 1-2. Published approximate capacity: 90–100 classroom, 150–180 theatre. Seed 90 for both layouts; combined-hall bookings need separate conflict handling."
+  },
+  {
+    "venueName": "Lifelong Learning Institute – Lecture Theatre",
+    "venueAddress": "Lifelong Learning Institute – Lecture Theatre, 11 Eunos Road 8, Singapore 408601",
+    "venueCapacity": 267,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "18:00"
+      }
+    ],
+    "setupMinutes": 30,
+    "turnaroundMinutes": 30,
+    "additionalInformation": "Dedicated lecture theatre. Published capacity 267."
+  },
+  {
+    "venueName": "Singapore Chinese Cultural Centre – Auditorium, Levels 9–10",
+    "venueAddress": "Singapore Chinese Cultural Centre – Auditorium, Levels 9–10, 1 Straits Boulevard, Singapore 018906",
+    "venueCapacity": 533,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "step_free_access",
+      "wide_doorways",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      }
+    ],
+    "setupMinutes": 90,
+    "turnaroundMinutes": 60,
+    "additionalInformation": "Auditorium on Levels 9–10; published capacity 533. Performing arts venue."
+  },
+  {
+    "venueName": "Singapore Chinese Cultural Centre – Multi-Purpose Hall, Level 7",
+    "venueAddress": "Singapore Chinese Cultural Centre – Multi-Purpose Hall, Level 7, 1 Straits Boulevard, Singapore 018906",
+    "venueCapacity": 300,
+    "supportedLayouts": [
+      "classroom",
+      "theatre",
+      "banquet"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "step_free_access",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      }
+    ],
+    "setupMinutes": 90,
+    "turnaroundMinutes": 60,
+    "additionalInformation": "Level 7. Published maximum: 300 classroom, 550 theatre, 550 banquet; 300 chosen because the app uses one capacity across layouts."
+  },
+  {
+    "venueName": "Singapore Chinese Cultural Centre – Creative Box, Level 6",
+    "venueAddress": "Singapore Chinese Cultural Centre – Creative Box, Level 6, 1 Straits Boulevard, Singapore 018906",
+    "venueCapacity": 100,
+    "supportedLayouts": [
+      "exhibition",
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "09:00",
+        "closeTime": "20:00"
+      }
+    ],
+    "setupMinutes": 60,
+    "turnaroundMinutes": 45,
+    "additionalInformation": "Level 6 flexible event space; published 120-person maximum. Seed conservatively at 100."
+  },
+  {
+    "venueName": "Esplanade – Concert Hall",
+    "venueAddress": "Esplanade – Concert Hall, 1 Esplanade Drive, Singapore 038981",
+    "venueCapacity": 1628,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      }
+    ],
+    "setupMinutes": 120,
+    "turnaroundMinutes": 90,
+    "additionalInformation": "Published main-house seating 1,628, excluding 197 additional gallery seats. Production access may require extra coordination."
+  },
+  {
+    "venueName": "Esplanade – Recital Studio, Level 2",
+    "venueAddress": "Esplanade – Recital Studio, Level 2, 1 Esplanade Drive, Singapore 038981",
+    "venueCapacity": 245,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "23:00"
+      }
+    ],
+    "setupMinutes": 75,
+    "turnaroundMinutes": 60,
+    "additionalInformation": "Level 2, flexible studio with 245 seats on retractable bleachers; fixed theatre capacity used for this test record."
+  },
+  {
+    "venueName": "The Star Performing Arts Centre – The Star Theatre",
+    "venueAddress": "The Star Performing Arts Centre – The Star Theatre, 1 Vista Exchange Green, Singapore 138617",
+    "venueCapacity": 5000,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      }
+    ],
+    "setupMinutes": 120,
+    "turnaroundMinutes": 90,
+    "additionalInformation": "Theatre occupies Levels 5–10. Published full-house capacity 5,000; tier-limited booking is not modelled here."
+  },
+  {
+    "venueName": "Singapore EXPO – Exhibition Hall 1",
+    "venueAddress": "Singapore EXPO – Exhibition Hall 1, 1 Expo Drive, Singapore 486150",
+    "venueCapacity": 6000,
+    "supportedLayouts": [
+      "exhibition",
+      "banquet"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "wide_doorways",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "air_conditioning",
+      "audio_visual_equipment",
+      "breakout_spaces"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "08:00",
+        "closeTime": "22:00"
+      }
+    ],
+    "setupMinutes": 180,
+    "turnaroundMinutes": 120,
+    "additionalInformation": "Hall 1 is individually identifiable. Venue operator quotes up to 9,000 pax per hall; 6,000 is a fictional test cap, not an official configuration-specific limit."
+  },
+  {
+    "venueName": "Sands Expo & Convention Centre – Sands Grand Ballroom",
+    "venueAddress": "Sands Expo & Convention Centre – Sands Grand Ballroom, 10 Bayfront Avenue, Singapore 018956",
+    "venueCapacity": 5000,
+    "supportedLayouts": [
+      "banquet",
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "wide_doorways",
+      "elevators",
+      "wheelchair_support"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage",
+      "breakout_spaces",
+      "dining_area"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      }
+    ],
+    "setupMinutes": 180,
+    "turnaroundMinutes": 120,
+    "additionalInformation": "Sands Grand Ballroom can accommodate up to 8,000 guests in some configurations. Seed cap 5,000 is illustrative for selected layouts."
+  },
+  {
+    "venueName": "Suntec Singapore Convention & Exhibition Centre – Hall 401, Level 4",
+    "venueAddress": "Suntec Singapore Convention & Exhibition Centre – Hall 401, Level 4, 1 Raffles Boulevard, Singapore 039593",
+    "venueCapacity": 1200,
+    "supportedLayouts": [
+      "exhibition",
+      "theatre",
+      "banquet"
+    ],
+    "venueAccessibilities": [
+      "accessible_parking",
+      "drop_off_zone",
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "projection",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 1,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 2,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "08:00",
+        "closeTime": "23:00"
+      }
+    ],
+    "setupMinutes": 120,
+    "turnaroundMinutes": 90,
+    "additionalInformation": "Level 4, Hall 401 is used for events. Test capacity 1,200 is not an operator-published figure. Do not assume combined hall layouts are independently reservable."
+  },
+  {
+    "venueName": "Victoria Theatre & Concert Hall – Victoria Concert Hall",
+    "venueAddress": "Victoria Theatre & Concert Hall – Victoria Concert Hall, 9 Empress Place, Singapore 179556",
+    "venueCapacity": 673,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [
+      "public_transport",
+      "step_free_access",
+      "elevators"
+    ],
+    "venueFacilities": [
+      "audio_visual_equipment",
+      "air_conditioning",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 2,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "09:00",
+        "closeTime": "22:00"
+      }
+    ],
+    "setupMinutes": 75,
+    "turnaroundMinutes": 60,
+    "additionalInformation": "Concert hall inside the Victoria Theatre & Concert Hall complex. Published seating 673."
+  },
+  {
+    "venueName": "The Arts House at the Old Parliament – Chamber",
+    "venueAddress": "The Arts House at the Old Parliament – Chamber, 1 Old Parliament Lane, Singapore 179429",
+    "venueCapacity": 187,
+    "supportedLayouts": [
+      "theatre"
+    ],
+    "venueAccessibilities": [],
+    "venueFacilities": [
+      "air_conditioning",
+      "audio_visual_equipment",
+      "stage"
+    ],
+    "operatingHours": [
+      {
+        "dayOfWeek": 2,
+        "openTime": "10:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 3,
+        "openTime": "10:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 4,
+        "openTime": "10:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 5,
+        "openTime": "10:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 6,
+        "openTime": "10:00",
+        "closeTime": "21:00"
+      },
+      {
+        "dayOfWeek": 7,
+        "openTime": "10:00",
+        "closeTime": "21:00"
+      }
+    ],
+    "setupMinutes": 45,
+    "turnaroundMinutes": 45,
+    "additionalInformation": "The former parliamentary Chamber has 187 seats per Arts House Group venue sales kit. Accessibility left blank intentionally (unrecorded, not 'No accessibility provisions')."
+  }
+]

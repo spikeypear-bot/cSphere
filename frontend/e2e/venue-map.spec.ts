@@ -1,0 +1,70 @@
+// @stories DEV16 AU04
+import { expect, test } from '@playwright/test'
+import { apiGet, apiToken, signedIn } from './support.ts'
+
+test('DEV16 (cross-cutting): persisted rooms, shared markers and mobile layout work beneath the staff console', async ({ browser, request }, testInfo) => {
+  test.setTimeout(90_000)
+  const token = await apiToken(request, 'vs1')
+  const venues = await apiGet<{ venueId: string; venueName: string; venueAddress: string; latitude: number | null; longitude: number | null }[]>(request, token, '/api/venues')
+  const room = venues.find(v => v.latitude != null && venues.some(other => other.venueId !== v.venueId && other.latitude === v.latitude && other.longitude === v.longitude))!
+  expect(room, 'seeded rooms sharing persisted coordinates').toBeTruthy()
+  const page = await signedIn(browser, 'vs1')
+  const errors: string[] = []
+  page.on('pageerror', error => errors.push(error.message))
+  // Keep the network boundary deterministic; the real Leaflet map and markers still run.
+  await page.route('https://tile.openstreetmap.org/**', route => route.fulfill({ status: 200, contentType: 'image/png',
+    body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aWQAAAABJRU5ErkJggg==', 'base64') }))
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.goto('/venue-staff')
+  const explorer = page.getByRole('region', { name: 'Explore venues' })
+  const card = explorer.getByRole('button', { name: new RegExp(room.venueName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).filter({ has: page.locator('strong') })
+  await expect(card).toBeVisible()
+  const home = await page.getByRole('heading', { name: 'Venue Staff console' }).boundingBox()
+  const heading = await explorer.getByRole('heading', { name: 'Explore venues' }).boundingBox()
+  expect(heading!.y).toBeGreaterThan(home!.y)
+  await expect(explorer.getByRole('region', { name: 'Interactive venue map' })).toBeVisible()
+  await card.click()
+  await expect(card).toHaveAttribute('aria-pressed', 'true')
+  await expect(explorer.getByRole('region', { name: 'Selected venue details' })).toBeVisible()
+  await expect(explorer.getByRole('button', { name: 'Zoom in' })).toBeVisible()
+  await expect(explorer.getByRole('link', { name: 'OpenStreetMap', exact: true })).toBeVisible()
+  const shared = venues.find(v => v.venueId !== room.venueId && v.latitude === room.latitude && v.longitude === room.longitude)!
+  const chooseRoom = page.locator('.venue-map-popup').getByRole('button', { name: shared.venueName, exact: true })
+  await expect(chooseRoom).toBeVisible()
+  await chooseRoom.click()
+  await expect(explorer.getByRole('region', { name: 'Selected venue details' }).getByRole('heading', { name: shared.venueName, exact: true })).toBeVisible()
+  await explorer.getByRole('button', { name: 'Close details' }).click()
+  await page.screenshot({ path: testInfo.outputPath('venue-map-desktop.png'), fullPage: true })
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(explorer.getByRole('button', { name: 'List view', exact: true })).toBeVisible()
+  await expect(explorer.getByRole('region', { name: 'Interactive venue map' })).toBeHidden()
+  await explorer.getByRole('button', { name: 'Map view', exact: true }).click()
+  await expect(explorer.getByRole('region', { name: 'Interactive venue map' })).toBeVisible()
+  await explorer.getByRole('button', { name: 'Reset map', exact: true }).click()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
+  await page.screenshot({ path: testInfo.outputPath('venue-map-mobile.png'), fullPage: true })
+  expect(errors).toEqual([])
+  const coordinator = await apiToken(request, 'ec1')
+  const denied = await request.get('/api/venue-staff/map/activity', { headers: { Authorization: `Bearer ${coordinator}` } })
+  expect(denied.status()).toBe(403)
+  await page.context().close()
+})
+
+test('DEV16 (failure): failed map tiles preserve searchable venues and keyboard marker selection', async ({ browser, request }) => {
+  const token = await apiToken(request, 'vs1')
+  const venues = await apiGet<{ venueId: string; venueName: string; latitude: number | null }[]>(request, token, '/api/venues')
+  const room = venues.find(v => v.latitude != null)!
+  const page = await signedIn(browser, 'vs1')
+  await page.route('https://tile.openstreetmap.org/**', route => route.abort())
+  await page.goto('/venue-staff')
+  await expect(page.getByText('Map tiles could not load.', { exact: false })).toBeVisible()
+  await page.getByLabel('Search venues', { exact: true }).fill(room.venueName)
+  const card = page.locator('.venue-map-card').filter({ hasText: room.venueName })
+  await expect(card).toBeVisible()
+  const marker = page.locator('.venue-map-marker').first()
+  await marker.focus()
+  await marker.press('Enter')
+  await expect(card).toHaveAttribute('aria-pressed', 'true')
+  await expect(page.getByRole('region', { name: 'Selected venue details' })).toBeVisible()
+  await page.context().close()
+})

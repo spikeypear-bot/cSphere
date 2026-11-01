@@ -82,7 +82,7 @@ function Review({ view, staff, disabled, onSaved, onRefresh }: { view: VenueRequ
       <tbody>{view.changes.map(c => <tr key={c.field}><th scope="row">{c.label}</th><td>{show(c.field,c.before)}</td><td className="venue-reviews__new"><strong>{show(c.field,c.after)}</strong>
         {c.field === 'venueRequirements' && view.suitability && <div className="venue-reviews__layout-context">
           <p>Venue supports: {view.suitability.supportedLayouts.map(layout => venueLayoutLabels[layout as VenueLayout] ?? layout).join(', ') || 'Not recorded'}</p>
-          <p>Staff assessment needed for written requirements and layout.</p>
+          <p>Review the requested room layout and any written requirements.</p>
         </div>}
       </td></tr>)}</tbody>
     </table></div>

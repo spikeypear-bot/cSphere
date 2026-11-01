@@ -26,6 +26,7 @@ import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 
 @Tag("unit")
+@Tag("DEV16")
 @Tag("EC04")
 @Tag("EC05")
 class VenueSearchServiceTest {
@@ -37,6 +38,37 @@ class VenueSearchServiceTest {
     @BeforeEach
     void setUp() {
         when(availability.conflicts(any(), org.mockito.ArgumentMatchers.isNull(), any(), any())).thenReturn(List.of());
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings={"1.5","2147483648","-1","0"})
+    @org.junit.jupiter.api.DisplayName("DEV16 (negative): non-whole, overflowing and nonpositive capacities are refused before querying venues")
+    void invalidCapacityBeforeRead(String capacity) {
+        assertThatThrownBy(() -> service.search("2027-04-01T02:00:00Z","2027-04-01T04:00:00Z",capacity,List.of()))
+                .isInstanceOf(InvalidVenueSearchException.class).hasMessage("Required capacity must be a whole number greater than 0.");
+        org.mockito.Mockito.verify(venues,org.mockito.Mockito.never()).findAll(any(Sort.class));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings={" "})
+    @org.junit.jupiter.api.DisplayName("DEV16 (negative): missing search times are refused before querying venues")
+    void missingTimesBeforeRead(String value) {
+        assertThatThrownBy(() -> service.search(value,"2027-04-01T04:00:00Z",null,null))
+                .isInstanceOf(InvalidVenueSearchException.class).hasMessage("Start date and time is required.");
+        assertThatThrownBy(() -> service.search("2027-04-01T02:00:00Z",value,null,null))
+                .isInstanceOf(InvalidVenueSearchException.class).hasMessage("End date and time is required.");
+        org.mockito.Mockito.verify(venues,org.mockito.Mockito.never()).findAll(any(Sort.class));
+    }
+
+    @org.junit.jupiter.params.ParameterizedTest
+    @org.junit.jupiter.params.provider.NullAndEmptySource
+    @org.junit.jupiter.params.provider.ValueSource(strings={" ","unknown_facility"})
+    @org.junit.jupiter.api.DisplayName("DEV16 (negative): null, blank and unknown facility selections cannot broaden a venue search")
+    void invalidFacilitiesBeforeRead(String value) {
+        assertThatThrownBy(() -> service.search("2027-04-01T02:00:00Z","2027-04-01T04:00:00Z",null,java.util.Arrays.asList(value)))
+                .isInstanceOf(InvalidVenueSearchException.class).hasMessage("Required facilities must be valid facility selections.");
+        org.mockito.Mockito.verify(venues,org.mockito.Mockito.never()).findAll(any(Sort.class));
     }
 
     @Test

@@ -1,5 +1,17 @@
 # Venue catalogue API
 
+DEV16 adds nullable `latitude` and `longitude` to catalogue/search/detail responses.
+The Venue Staff console now uses these fields for its [interactive map](dev16-interactive-map.md),
+with separate staff-only booking summaries and counts.
+The [EC map extension](dev16-coordinator-map.md) uses saved coordinates in existing
+search and assigned-event venue-option responses without widening staff permissions.
+These expose saved coordinates; existing creation/update input contracts stay the
+same. V62 maps the supplied coordinates onto the 20 existing shared venues; other
+venues may still have null coordinates. Saved coordinates are preserved. Database
+range checks reject nonfinite/out-of-range coordinates from any write path. See
+[coordinate mapping](dev16-venue-coordinate-mapping.md) and
+[shared venue seeding](dev16-venue-seeding.md).
+
 VS06A/VS06B catalogue creation and reads, plus VS07 updates to existing venues.
 Catalogue endpoints do not create booking requests or decide pending approvals.
 Suitability edits reassess existing bookings through the established review workflow.

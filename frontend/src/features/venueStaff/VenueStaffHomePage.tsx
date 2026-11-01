@@ -2,7 +2,9 @@ import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { venueStaffFeatures } from './venueStaffFeatures'
+import { VenueMapExplorer } from '../venueMap/VenueMapExplorer'
 import '../../components/skeleton.css'
+import './VenueStaff.css'
 
 export function VenueStaffHomePage() {
   return <div className="page venue-staff-home">
@@ -12,5 +14,6 @@ export function VenueStaffHomePage() {
         <Card className="skeleton-console-card__inner"><h2>{feature.navLabel}</h2><p>{feature.summary}</p></Card>
       </Link>)}
     </div>
+    <VenueMapExplorer />
   </div>
 }

@@ -94,6 +94,7 @@ public class SecurityConfig {
 						.requestMatchers("/api/venues/*/timing-conflicts", "/api/venues/*/timing-conflicts/scan")
 						.hasRole("VS")
 						// VS02 queue only; existing shared booking reads keep their access rules.
+						.requestMatchers("/api/venue-staff/map/**").hasRole("VS")
 						.requestMatchers(HttpMethod.GET, "/api/venue-staff/booking-requests").hasRole("VS")
 						// Reads are open to any authenticated role: Organisers browse
 						// venues while planning, Coordinators search them (EC04). This

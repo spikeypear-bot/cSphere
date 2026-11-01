@@ -25,6 +25,8 @@ import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './VenueBookingRequestPage.css'
 import { validMinutes, occupiedPeriod } from '../../lib/bookingTiming'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
+import { CoordinatorVenueMap } from './CoordinatorVenueMap'
+import { venueMatchesSearch } from '../../components/venue/venueMatchesSearch'
 
 type BookingInput = { start: string; end: string; setup: string; turnaround: string; reason: string; requirements?: BookingRequirements }
 type TimingReview = { key: string; option?: VenueOptionDto; error?: string }
@@ -88,6 +90,7 @@ export function VenueBookingRequestPage() {
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [mapFocusId, setMapFocusId] = useState<string>()
   const [bookingTimes, setBookingTimes] = useState<Record<string, BookingInput>>({})
   const [notes, setNotes] = useState('')
   const [justification, setJustification] = useState('')
@@ -173,11 +176,11 @@ export function VenueBookingRequestPage() {
   }, [options, bookings, replacing])
 
   const visible = useMemo(() => {
-    const term = search.trim().toLowerCase()
     return requestableOptions.filter((o) => (showBlocked || o.verdict !== 'blocked')
-      && (!term || `${o.venue.venueAddress} ${o.venue.additionalInformation ?? ''}`
-        .toLowerCase().includes(term)))
+      && venueMatchesSearch(o.venue, search))
   }, [requestableOptions, search, showBlocked])
+
+  const mapVenues = useMemo(() => visible.map(option => option.venue), [visible])
 
   const counts = useMemo(() => {
     const c: Record<VenueVerdict, number> = { suitable: 0, needs_justification: 0, blocked: 0 }
@@ -214,6 +217,21 @@ export function VenueBookingRequestPage() {
   })
   const canSubmit = selected.length > 0 && selected.every(o => !!reviewed(o) && reviewed(o)?.verdict !== 'blocked') && !notesTooLong && !justificationTooLong
     && timesValid && (!needsJustification || justification.trim().length > 0)
+
+  function toggleVenue(id: string) {
+    const option = visible.find(value => value.venue.venueId === id)
+    if (!option) return
+    setMapFocusId(id)
+    setSelectedIds(current => replacing
+      ? current.includes(id) ? [] : [id]
+      : current.includes(id) ? current.filter(value => value !== id) : [...current, id])
+    setBookingTimes(current => current[id] ? current : { ...current, [id]: {
+      start: singaporeInput(event!.startDatetime), end: singaporeInput(event!.endDatetime),
+      setup: String(option.venue.setupMinutes ?? 0), turnaround: String(option.venue.turnaroundMinutes ?? 0),
+      reason: '', requirements: replacing?.requirements ?? undefined,
+    } })
+    setSubmitError(null)
+  }
 
   async function submit() {
     if (!canSubmit || !eventId) return
@@ -256,7 +274,7 @@ export function VenueBookingRequestPage() {
         : null
 
   return (
-    <div className="page page--compact venue-request">
+    <div className="page page--compact venue-request venue-map-spacing">
       {loadError && <p role="alert">Could not refresh venue details. {loadError}</p>}
       <Link to={`/coordinator/events/${event.eventId}`}>Back to event</Link>
       <PageHeader title={replacing ? 'Find a replacement venue' : 'Request a venue'}
@@ -296,6 +314,9 @@ export function VenueBookingRequestPage() {
             </Card>
           ) : (
             <>
+              <CoordinatorVenueMap venues={mapVenues} selectedIds={selectedIds}
+                selectedId={visible.some(option => option.venue.venueId === mapFocusId) ? mapFocusId : undefined}
+                onSelect={setMapFocusId} onToggleVenue={toggleVenue} />
               <div className="venue-request__toolbar">
                 <label className="venue-request__search">
                   <span className="visually-hidden">Search venues</span>
@@ -328,22 +349,7 @@ export function VenueBookingRequestPage() {
                     <li key={option.venue.venueId}>
                       <VenueOptionCard option={option} attendance={event.expectedAttendance}
                         selected={selectedIds.includes(option.venue.venueId)}
-                        onSelect={() => {
-                          setSelectedIds((current) => replacing
-                            ? current.includes(option.venue.venueId) ? [] : [option.venue.venueId]
-                            : current.includes(option.venue.venueId)
-                              ? current.filter((id) => id !== option.venue.venueId)
-                              : [...current, option.venue.venueId])
-                          setBookingTimes((current) => current[option.venue.venueId] ? current : {
-                            ...current,
-                            [option.venue.venueId]: {
-                              start: singaporeInput(event.startDatetime),
-                              end: singaporeInput(event.endDatetime),
-                              setup: String(option.venue.setupMinutes ?? 0), turnaround: String(option.venue.turnaroundMinutes ?? 0), reason: '', requirements: replacing?.requirements ?? undefined,
-                            },
-                          })
-                          setSubmitError(null)
-                        }} />
+                        onSelect={() => toggleVenue(option.venue.venueId)} />
                     </li>
                   ))}
                 </ul>

@@ -591,6 +591,8 @@ enum UserRole {
 
 class Venue <<Entity>>  {
 	{field} +additionalInformation : String
+	{field} +latitude : Double
+	{field} +longitude : Double
 	{field} +operatingInformation : String
 	{field} +setupMinutes : int
 	{field} +supportedLayouts : List<String>

@@ -1,0 +1,18 @@
+/* The same form treatment throughout the Venue Staff console. */
+.app-shell[data-role='venue-staff'] :is(input, textarea)::placeholder {
+  color: var(--ink-faint);
+  opacity: 1;
+  font-weight: 400;
+}
+
+.venue-staff-home .venue-search-field { gap: var(--venue-map-field-gap); font-size: .85rem; font-weight: 600; color: var(--ink-soft); }
+.venue-staff-home .venue-search-field input {
+  padding: var(--venue-map-input-padding);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 400;
+}
+.venue-staff-home input[type='date'][data-empty='true'] { color: var(--ink-faint); }
+.venue-staff-home .venue-facility-filter { background: var(--paper); font-size: .85rem; }
+.venue-staff-home .venue-facility-filter input { accent-color: var(--accent-strong); }

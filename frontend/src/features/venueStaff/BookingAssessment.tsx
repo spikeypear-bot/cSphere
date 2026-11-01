@@ -46,7 +46,7 @@ function AssessmentCard({ view, staff, onSaved, eventId, disabled }: { view: Ass
     {attention && <div role="status"><p>Reassessment required. The reserved period is unchanged.</p>
       {failed.length ? <ul>{failed.map(c => <li key={c.key}>{c.detail}</li>)}</ul> : <p>No issues detected by current checks. Review the arrangements before restoring approval.</p>}
       {failed.length === 0 && view.history[0]?.outcome === 'attention' && <p>Previous issue: {view.history[0].reason}</p>}
-      {failed.length > 0 && view.history[0]?.reason.includes('Supported layouts changed') && <p>Supported layouts changed. Staff must reassess the written venue requirements.</p>}
+      {failed.length > 0 && view.history[0]?.reason.includes('Supported layouts changed') && <p>Supported layouts changed. Review the requested room layout and written venue requirements.</p>}
     </div>}
     {staff && attention && view.canReassess !== false && <form aria-label="Booking reassessment" onSubmit={e => { void save(e) }}><fieldset disabled={busy || disabled}>
       <legend>Reassess Booking</legend>

@@ -1,5 +1,5 @@
-// @stories VS17 VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
-import { afterEach, expect, it, vi } from 'vitest'
+// @stories DEV16 VS17 VS02
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
@@ -34,6 +34,36 @@ afterEach(() => { cleanup(); vi.useRealTimers(); vi.unstubAllGlobals(); window.l
 
 const activeHold = { holdId: 'h1', bookingId: 'b2', status: 'active', serverTime: '2027-03-01T00:00:00Z',
   expiresAt: '2027-03-01T01:00:00Z', reservedStart: booking.event.startDatetime, reservedEnd: booking.event.endDatetime }
+
+describe('DEV16 approval queue coverage', () => {
+  it('DEV16 (conflict): attention requests retain their saved occupied period in the approval queue', async () => {
+    const current = { ...booking, status: 'attention', timing: { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,
+      startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime,
+      effectiveStart: '2026-09-24T14:30:00Z', effectiveEnd: '2026-09-24T18:45:00Z', timingNote: 'Crew access', conflicts: [] } }
+    vi.stubGlobal('fetch', vi.fn(async () => response([current])))
+    page()
+    const heading = await screen.findByRole('heading', { name: 'Bookings Requiring Attention' })
+    const section = heading.closest('section')!
+    expect(within(section).getByText('Status: Requires attention')).toBeInTheDocument()
+    expect(within(section).getByText('Venue Occupied (SGT)').nextElementSibling).toHaveTextContent('10:30 pm')
+    expect(within(section).getByRole('link', { name: 'View booking details' })).toHaveAttribute('href', '/venue-staff/bookings/b1?from=booking-approvals')
+  })
+  it('DEV16 (boundary): missing display names and legacy room requirements remain understandable', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => response([{ ...booking,
+      venue: { ...booking.venue, venueAddress: ' ' }, event: { ...booking.event, eventName: ' ' },
+      requirements: { expectedAttendance: 80, venueRequirements: 'Legacy room arrangement',
+        requiredFacilities: ['projection', 'legacy_facility'], accessibilityNeeds: ['step_free_access', 'legacy_access'] },
+    }])))
+    page()
+    const pending = await screen.findByRole('region', { name: 'Pending booking requests' })
+    expect(within(pending).getByRole('heading', { name: 'Unnamed event' })).toBeInTheDocument()
+    expect(within(pending).getByText('Not specified')).toBeInTheDocument()
+    expect(within(pending).getByText('80 people')).toBeInTheDocument()
+    expect(within(pending).getByText('Legacy room arrangement')).toBeInTheDocument()
+    expect(within(pending).getByText('Projection, legacy_facility')).toBeInTheDocument()
+    expect(within(pending).getByText('Step-free access, legacy_access')).toBeInTheDocument()
+  })
+})
 
 it('VS17 (happy): queue identifies the event and booking, current coordinator and effective room requirements', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => response([{ ...booking, currentCoordinatorName: 'ec2', currentCoordinatorEmail: 'ec2@example.test',

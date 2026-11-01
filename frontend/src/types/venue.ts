@@ -21,6 +21,8 @@ export interface VenueOperatingHour { dayOfWeek: number; openTime: string; close
 /** One independently bookable room or space; venueAddress is its displayed identity and location. */
 export interface VenueDto extends CreateVenueDto {
   venueId: string
+  latitude?: number | null
+  longitude?: number | null
   /** Derived compatibility summary only; every display uses operatingHours. */
   operatingInformation: string
 }

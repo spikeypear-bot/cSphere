@@ -20,7 +20,7 @@ export function TimingConflictReview({ venueId }: { venueId: string }) {
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'Could not check conflicts. Please try again.') }
     finally { setBusy(false) }
   }
-  if (read.data?.length === 0 && !read.error && !error) return null
+  if (read.data?.length === 0 && !read.error && !error && !message) return null
 
   return <section className="venue-timing-conflicts" aria-label="Existing timing conflicts">
     <Card className="feature-skeleton__body">
