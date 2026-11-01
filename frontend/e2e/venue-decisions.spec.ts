@@ -47,23 +47,23 @@ test('EC04 (happy): venue search keeps only venues that are free, big enough and
 
   await test.step('EC04 AC3, AC4, AC5 (boundary): a venue whose capacity equals the requirement is included; one more and it is not', async () => {
     await search('777')
-    await expect(results.getByRole('heading', { name: exact })).toBeVisible()
+    await expect(results.getByRole('button', { name: exact })).toBeVisible()
     await search('778')
-    await expect(results.getByRole('heading', { name: noStage })).toBeVisible()
-    await expect(results.getByRole('heading', { name: exact })).toHaveCount(0)
+    await expect(results.getByRole('button', { name: noStage })).toBeVisible()
+    await expect(results.getByRole('button', { name: exact })).toHaveCount(0)
   })
 
   await test.step('EC04 AC6, AC7, AC8: with Stage required as well, only venues with a stage remain', async () => {
     await coordinator.getByRole('checkbox', { name: 'Stage' }).check()
     await search('800')
-    await expect(results.getByRole('heading', { name: stage })).toBeVisible()
-    await expect(results.getByRole('heading', { name: noStage })).toHaveCount(0)
+    await expect(results.getByRole('button', { name: stage })).toBeVisible()
+    await expect(results.getByRole('button', { name: noStage })).toHaveCount(0)
   })
 
   await test.step('EC04 AC1, AC2: a venue unavailable at that time drops out of the same search', async () => {
     await markUnavailable(request, stageId, '2027-11-02T08:00:00+08:00', '2027-11-02T13:00:00+08:00', 'Repainting')
     await search('800')
-    await expect(results.getByRole('heading', { name: stage })).toHaveCount(0)
+    await expect(results.getByRole('button', { name: stage })).toHaveCount(0)
   })
 
   await test.step('EC04 AC10, AC11 (negative): an end before the start, and a capacity of 0, are refused with a reason', async () => {
