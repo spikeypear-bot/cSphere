@@ -50,7 +50,7 @@ public class EquipmentRequestAttentionService {
         boolean timesChanged = changedFields.contains("startDatetime") || changedFields.contains("endDatetime");
         // Re-checked after the change applied, like BookingAssessmentService, not from approve()'s earlier snapshot.
         boolean coverageBroken = timesChanged && reservations.reservationsForEvent(event.getEventId()).stream()
-                .anyMatch(r -> !ChangeImpactService.covers(r, proposed.startDatetime(), proposed.endDatetime()));
+                .anyMatch(r -> !r.covers(proposed.startDatetime().toInstant(), proposed.endDatetime().toInstant()));
         if (!coverageBroken && !changedFields.contains("equipmentRequirements")) return;
         String reason = coverageBroken ? COVERAGE_BROKEN : REQUIREMENTS_CHANGED;
         // A reservation the event no longer fits outranks a wording change, whichever came first.

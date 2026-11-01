@@ -20,6 +20,20 @@ function seedSession() {
   )
 }
 
+function seedTechnicalSupportSession() {
+  window.localStorage.setItem(
+    'connectsphere.auth',
+    JSON.stringify({
+      accessToken: 'access-1',
+      refreshToken: 'refresh-1',
+      userId: 'ts-1',
+      username: 'ts1',
+      role: 'technical-support',
+      organisation: null,
+    }),
+  )
+}
+
 function jsonResponse(status: number, body: unknown): Response {
   return { ok: status >= 200 && status < 300, status, text: async () => JSON.stringify(body) } as Response
 }
@@ -290,5 +304,34 @@ describe('EO07 NotificationBell — cancellation notifications', () => {
 
     expect(await screen.findByText('"Town Hall" has been cancelled')).toBeInTheDocument()
     expect(screen.getByText(/no longer needed/)).toBeInTheDocument()
+  })
+})
+
+describe('NotificationBell — Technical Support sees the heading only', () => {
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('TS09 (happy): the reason and message lines are left out, the heading and time stay', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url === '/api/notifications') return jsonResponse(200, [REJECTED_NOTIFICATION, VENUE_UNAVAILABLE_NOTIFICATION])
+      if (url === '/api/notifications/unread-count') return jsonResponse(200, { count: 1 })
+      throw new Error(`Unexpected fetch: ${url}`)
+    }))
+    window.localStorage.clear()
+    seedTechnicalSupportSession()
+    const user = userEvent.setup()
+    renderBell()
+
+    await user.click(await screen.findByLabelText(/Notifications/))
+
+    expect(await screen.findByText('"Alumni Homecoming" is now Rejected')).toBeInTheDocument()
+    expect(screen.getByText('A venue booking for "Alumni Homecoming" is unavailable')).toBeInTheDocument()
+    expect(screen.queryByText(/Reason: No venue available/)).not.toBeInTheDocument()
+    expect(screen.queryByText(VENUE_UNAVAILABLE_NOTIFICATION.message)).not.toBeInTheDocument()
+    expect(screen.getAllByText(/ago$|just now/).length).toBeGreaterThan(0)
   })
 })

@@ -15,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
@@ -106,6 +108,16 @@ public class ChangeRequestService {
         this.users = users;
         this.clock = clock;
         this.venueRequirements = venueRequirements;
+    }
+
+    /** TS11: announces approved changes (ChangeApproved) to listeners that tell
+     * staff after commit. Setter-injected, like EquipmentRequestService's
+     * publisher, so plain unit tests need not supply one. */
+    private org.springframework.context.ApplicationEventPublisher published;
+
+    @Autowired(required = false)
+    void setPublisher(org.springframework.context.ApplicationEventPublisher published) {
+        this.published = published;
     }
 
     // ---- EO03: ask ---------------------------------------------------------------
@@ -257,6 +269,12 @@ public class ChangeRequestService {
         if (replan) {
             lifecycle.returnToPlanning(event.getEventId(), coordinator.userId(),
                     fitActivityMessage("An approved change affects the event's arrangements: " + summary));
+        }
+
+        if (published != null && origin.getEventId() != null) {
+            published.publishEvent(new ChangeApproved(saved.getChangeRequestId(), origin.getEventId(),
+                    Map.copyOf(withoutNulls(currentValues)), Map.copyOf(withoutNulls(saved.getProposedValues())),
+                    Set.copyOf(changed), saved.getDecidedAt()));
         }
 
         String name = nameOf(origin, event);
@@ -513,4 +531,27 @@ public class ChangeRequestService {
         return OffsetDateTime.now(clock);
     }
 
+    /** Map.copyOf refuses null values; an empty field is simply absent. */
+    private static Map<String, Object> withoutNulls(Map<String, Object> values) {
+        Map<String, Object> kept = new java.util.LinkedHashMap<>();
+        values.forEach((key, value) -> {
+            if (value != null) {
+                kept.put(key, value);
+            }
+        });
+        return kept;
+    }
+
+    private static void afterCommit(Runnable action) {
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    action.run();
+                }
+            });
+        } else {
+            action.run();
+        }
+    }
 }

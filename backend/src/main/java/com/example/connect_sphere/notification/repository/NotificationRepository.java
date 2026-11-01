@@ -27,4 +27,10 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
     int markAllRead(@org.springframework.data.repository.query.Param("recipient") UUID recipient,
             @org.springframework.data.repository.query.Param("upTo") java.time.OffsetDateTime upTo,
             @org.springframework.data.repository.query.Param("now") java.time.OffsetDateTime now);
+
+    /** TS11 AC15: has this user already been told about this equipment request? */
+    boolean existsByRecipientUserIdAndEquipmentRequestId(UUID recipientUserId, UUID equipmentRequestId);
+
+    /** TS11 AC15: has this user already been asked to review this change? */
+    boolean existsByRecipientUserIdAndEquipmentReviewId(UUID recipientUserId, UUID equipmentReviewId);
 }

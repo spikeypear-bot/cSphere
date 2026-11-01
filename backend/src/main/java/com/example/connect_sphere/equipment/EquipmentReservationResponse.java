@@ -17,6 +17,13 @@ public record EquipmentReservationResponse(
         /** D33: an extra unit held beyond what the event requested. */
         boolean spare) {
 
+    /** Whether this reservation's loan window covers the whole of {@code start}
+     * to {@code end} (EC-NEW3's equipment impact, TS11 AC4). */
+    public boolean covers(Instant start, Instant end) {
+        return loanedFrom != null && loanedUntil != null
+                && !loanedFrom.isAfter(start) && !loanedUntil.isBefore(end);
+    }
+
     static EquipmentReservationResponse from(EquipmentLog log, String equipmentName, String eventName) {
         return new EquipmentReservationResponse(
                 log.getId(), log.getEventId(), log.getEquipmentId(), equipmentName,
