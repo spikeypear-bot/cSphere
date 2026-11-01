@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**272 test files, 2289 tests, 82 stories traced, 0 files untraced.**
+**274 test files, 2296 tests, 82 stories traced, 0 files untraced.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -56,7 +56,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EO10 | 1 | 2 | 1 | 1 | 31 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9 | happy, negative, boundary, conflict, cross-cutting |
 | EO11 | 1 |  | 1 | 1 | 25 | AC1, AC2, AC5, AC7 | negative, boundary, conflict |
 | EO12 | 3 | 1 | 2 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC11, AC12, AC13, AC14, AC15, AC16 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO15 | 1 | 1 | 4 | 2 | 46 | — | happy, cross-cutting |
+| EO15 | 1 | 1 | 8 | 2 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO19 | 3 | 2 | 2 | 1 | 87 | AC1, AC3, AC4, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict |
 | EO26 | 3 | 3 | 5 | 1 | 116 | AC1, AC3, AC6, AC8 | happy, negative, boundary, conflict, failure |
 | EO-C1 | 1 | 1 | 1 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, failure |
@@ -664,7 +664,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/MyRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
@@ -680,7 +680,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/RequestSubmissionRulesFlowTest.java`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestDateRules.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/MyRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - frontend component/unit: `frontend/src/features/organiser/eventRequestValidation.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
@@ -714,7 +714,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventLifecycle.test.tsx`
 - frontend component/unit: `frontend/src/features/events/VenueOperatingHoursDisplay.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/MyRequestsPage.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 - e2e (browser): `frontend/e2e/venue-operating-hours.spec.ts`
 - e2e (browser): `frontend/e2e/venue-suitability-live.spec.ts`
@@ -747,7 +747,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/MyRequestsPage.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
@@ -782,9 +782,13 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
+- frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/components/ui/StatusTimeline.test.tsx`
+- frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
-- frontend component/unit: `frontend/src/features/organiser/OrganiserHomePage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/MyRequestsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/OrganiserDashboard.test.tsx`
+- frontend component/unit: `frontend/src/features/organiser/OrganiserNav.test.tsx`
 - frontend component/unit: `frontend/src/lib/relativeTime.test.ts`
 - e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
