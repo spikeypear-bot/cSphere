@@ -32,7 +32,7 @@ test('ECL-C1 ECL-C6 EC01 EO26 EO19 (happy): a request is found, assigned, questi
   })
 
   await test.step('ECL-C6 AC7, AC12 / ECL-C1 AC7: once assigned it leaves the list, with a confirmation naming the coordinator', async () => {
-    await lead.getByLabel('Event Coordinator').selectOption({ label: 'ec1' })
+    await lead.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec1' })
     await lead.getByRole('button', { name: 'Assign request' }).click()
     await expect(lead.getByText(`“${eventName}” was assigned to ec1. The organiser has been notified.`)).toBeVisible()
     await expect(lead.getByRole('listitem').filter({ hasText: eventName })).toHaveCount(0)
@@ -120,7 +120,7 @@ test('ECL-C5 EO19 (happy): the Lead moves a request to another coordinator; the 
   })
 
   await test.step('ECL-C5 AC13: reassigned to ec2, with a confirmation naming the request and coordinator', async () => {
-    await lead.getByLabel('Event Coordinator').selectOption({ label: 'ec2' })
+    await lead.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec2' })
     await lead.getByRole('button', { name: 'Reassign request' }).click()
     await expect(lead.getByText(`“${eventName}” was reassigned to ec2. The organiser has been notified.`)).toBeVisible()
   })

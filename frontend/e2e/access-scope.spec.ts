@@ -29,7 +29,7 @@ test('reassigning an event moves it from one coordinator to another at once (ECL
     await held.getByRole('link', { name: `Reassign: ${eventName}` }).click()
     await expect(lead.getByText(/the current coordinator loses access straight away/)).toBeVisible()
     await lead.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Reassign' }).click()
-    await lead.getByLabel('Event Coordinator').selectOption({ label: 'ec2' })
+    await lead.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec2' })
     await lead.getByRole('button', { name: 'Reassign request' }).click()
     await expect(lead.getByRole('list', { name: 'Events held by ec2' }).getByText(eventName)).toBeVisible()
   })

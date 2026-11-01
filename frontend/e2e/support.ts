@@ -121,7 +121,7 @@ export async function requestIdOf(request: APIRequestContext, eventName: string)
 export async function leadAssigns(page: Page, requestId: string) {
   await page.goto(`/coordinator-lead/unassigned-requests/${requestId}`)
   await page.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Assign' }).click()
-  await page.getByLabel('Event Coordinator').selectOption({ label: 'ec1' })
+  await page.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec1' })
   await page.getByRole('button', { name: 'Assign request' }).click()
   await expect(page.getByText(/assigned to ec1/i).first()).toBeVisible()
 }

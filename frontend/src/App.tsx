@@ -2,6 +2,9 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { SessionProvider } from './lib/session'
 import { HOME_BY_ROLE, useSession, type Role } from './lib/sessionContext'
 import { AppShell } from './components/AppShell'
+// Loaded here, as the placeholder pages used to load it, so page styles such as
+// .venue-card-preview's padding still override its .feature-skeleton__body.
+import './components/skeleton.css'
 import { LoginPage } from './features/auth/LoginPage'
 import { OrganiserHomePage } from './features/organiser/OrganiserHomePage'
 import { MyRequestsPage } from './features/organiser/MyRequestsPage'
