@@ -296,3 +296,5 @@
 .venue-request__details-verdict strong { color: var(--success); }
 .venue-request__details-verdict[data-verdict='needs_justification'] strong { color: var(--role-coordinator); }
 .venue-request__details-verdict[data-verdict='blocked'] strong { color: var(--danger); }
+.venue-option[data-requested='true'] { border-inline-start-color: var(--hairline-strong); }
+.venue-request__already-requested { margin: 0; padding: 0.75rem 1rem; border-radius: var(--radius-sm); background: var(--paper); color: var(--ink-soft); }

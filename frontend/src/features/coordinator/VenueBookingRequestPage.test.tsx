@@ -506,3 +506,35 @@ describe('EC03 venue details window', () => {
     expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
   })
 })
+
+describe('EC03 a venue already requested for this event cannot be requested again', () => {
+  beforeEach(() => seedSession('coordinator'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it.each(['pending', 'approved', 'attention'])('EC03 (conflict): a %s booking marks its venue "Already requested" and its window offers no Add', async (status) => {
+    stubApi(routes([{ bookingId: 'b1', status, venueId: 'v1', venueAddress: '1 Harbour Road' }]))
+    renderPage()
+
+    const card = await screen.findByRole('button', { name: /^1 Harbour Road/ })
+    expect(within(card).getByText('Already requested')).toBeInTheDocument()
+    await userEvent.click(card)
+    const details = screen.getByRole('dialog', { name: '1 Harbour Road' })
+    expect(within(details).getByText(/already requested for this event/i)).toBeInTheDocument()
+    expect(within(details).queryByRole('button', { name: 'Add to request' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
+  })
+
+  it.each(['rejected', 'cancelled'])('EC03 (happy): a %s booking does not stop the venue being requested again', async (status) => {
+    stubApi(routes([{ bookingId: 'b1', status, venueId: 'v1', venueAddress: '1 Harbour Road' }]))
+    renderPage()
+
+    const card = await screen.findByRole('button', { name: /^1 Harbour Road/ })
+    expect(within(card).queryByText('Already requested')).not.toBeInTheDocument()
+    await userEvent.click(card)
+    expect(within(screen.getByRole('dialog')).getByRole('button', { name: 'Add to request' })).toBeInTheDocument()
+  })
+})
