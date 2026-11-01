@@ -9,7 +9,7 @@ import { useResource, type Resource } from '../../lib/useResource'
 import type { ChangeRequestView } from '../../types/changeRequest'
 import type { EventDto } from '../../types/event'
 import type { CoordinatorVenueOperationalIssueDto } from '../../types/venueOperationalIssue'
-import { countOf, greetingFor } from '../technicalSupport/shared/format'
+import { countOf, greetingFor } from '../../lib/greeting'
 import { formatEventDateTime, formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import type { ReviewQueue } from './ReviewQueuePage'
 

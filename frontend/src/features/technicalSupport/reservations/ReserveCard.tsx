@@ -2,7 +2,8 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { EquipmentPhoto } from '../damage/EquipmentPhoto'
-import { countOf, describeWhen } from '../shared/format'
+import { countOf } from '../../../lib/greeting'
+import { describeWhen } from '../shared/format'
 import {
   describeReserved,
   groupReservations,
