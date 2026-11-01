@@ -92,7 +92,7 @@ The customer says all six must be in the Week 12 submission and expects no furth
 
 ## Explicit Out-of-Scope / Deferred (VERIFIED, backlog `Out of Scope` rows)
 
-Do not build these unless the backlog is updated to bring them in scope: event programme/multi-session recording, supporting-document attachments, in-app comments/discussion threads (EO18; the structured clarification timeline from D21 is in scope), Event-Coordinator "portfolio" browsing, rejection appeals, user guides, generic dashboards/role-based overview screens (except the SO-C1–SO-C4 console described above), most reporting/export features, attendance-vs-registration distinction, waiting lists, and technical-staff on-site assignment. Recurring/similar-event reuse and event categories are also out of the named 20 and not modelled.
+Do not build these unless the backlog is updated to bring them in scope: event programme/multi-session recording, supporting-document attachments, in-app comments/discussion threads (EO18; the structured clarification timeline from D21 is in scope), Event-Coordinator "portfolio" browsing, rejection appeals, user guides, generic dashboards/role-based overview screens (except the SO-C1–SO-C4 console described above, and each role's console — side navigation plus a dashboard of that role's existing work — delivered as a task on that role's existing story, as TS09 did for Technical Support and EC09 for the Event Coordinator; backlog VS19/TS10/AT10 stay out of scope), most reporting/export features, attendance-vs-registration distinction, waiting lists, and technical-staff on-site assignment. Recurring/similar-event reuse and event categories are also out of the named 20 and not modelled.
 
 ## Functional & Non-Functional Requirements
 
