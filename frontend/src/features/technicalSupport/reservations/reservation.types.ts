@@ -30,6 +30,8 @@ export interface EquipmentRequestSummary {
   requestedBy?: { userId: string; name: string } | null
   /** TS09 AC19: an additional request answering an equipment shortfall. */
   isShortfallRequest?: boolean
+  /** TS11 AC2: the TS09 damage report that shortfall came from. */
+  shortfallReportId?: string | null
   items?: RequestLine[]
   eventStatus?: string
 }

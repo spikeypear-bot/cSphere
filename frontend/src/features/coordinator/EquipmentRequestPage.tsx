@@ -44,7 +44,10 @@ interface DraftLine {
 export function EquipmentRequestPage() {
   const { eventId } = useParams<{ eventId: string }>()
   // TS09 AC19: opened from a damage shortfall, the request is for what is missing.
-  const shortfallId = useSearchParams()[0].get('shortfall')
+  const [params] = useSearchParams()
+  const shortfallId = params.get('shortfall')
+  // TS11 AC12: Technical Support asked for action, so the same exception applies.
+  const forChange = params.get('additional') === 'change'
   const [shortfall, setShortfall] = useState<EventEquipmentDamage | null>(null)
   const [event, setEvent] = useState<EventDto | null>(null)
   const [catalogue, setCatalogue] = useState<EquipmentCatalogueItem[]>([])
@@ -98,7 +101,8 @@ export function EquipmentRequestPage() {
   // An additional request for a shortfall sits beside the approved one; only a
   // request still awaiting review blocks it. A superseded request (EC-NEW3)
   // no longer blocks anything either: the revision already replaced it.
-  const activeRequest = shortfall
+  const additional = shortfall !== null || forChange
+  const activeRequest = additional
     ? requests.find((request) => request.status === 'processing')
     // EC-NEW3 (D37): a flagged request comes first, so a second one (TS09) can still be resolved.
     : requests.find((request) => request.status === 'attention')
@@ -206,6 +210,7 @@ export function EquipmentRequestPage() {
       setRequests((current) => [...current, created])
       setSuccess(shortfall
         ? 'Additional request for the shortfall submitted to Technical Support for review.'
+        : forChange ? 'Additional request submitted to Technical Support for review.'
         : 'Equipment request submitted to Technical Support for review.')
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Could not submit the equipment request.')
@@ -299,6 +304,12 @@ export function EquipmentRequestPage() {
           Additional request for the shortfall: {shortfall.shortfall} × {shortfall.equipmentName} reported damaged.
         </Notice>
       ) : null}
+      {forChange && !activeRequest ? (
+        <Notice tone="info">
+          Additional request: Technical Support asked you to act on an approved change. Request only what the event
+          now needs on top of its approved equipment.
+        </Notice>
+      ) : null}
 
       {requests.filter((request) => request.status === 'rejected').map((request) => (
         <Card key={request.requestId} className="equipment-request__previous">
@@ -348,7 +359,7 @@ export function EquipmentRequestPage() {
               ))}
             </ul>
           ) : null}
-          {!shortfall ? (
+          {!additional ? (
             <Button type="button" variant="secondary" onClick={() => startRevise(activeRequest)}>
               Revise request
             </Button>
@@ -374,7 +385,7 @@ export function EquipmentRequestPage() {
             </>
           ) : null}
         </Card>
-      ) : event.status !== 'pending' && !shortfall ? (
+      ) : event.status !== 'pending' && !additional ? (
         <Card className="equipment-request__existing">
           <p>Equipment requests can only be submitted while this event is in Planning.</p>
         </Card>

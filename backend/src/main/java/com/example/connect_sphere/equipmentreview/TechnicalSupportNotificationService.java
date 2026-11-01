@@ -90,6 +90,15 @@ public class TechnicalSupportNotificationService {
         this.self = self;
     }
 
+    /** TS09 shortfalls (AC2). Setter-injected like EquipmentRequestService's;
+     * absent in plain unit tests, where no request is for a shortfall. */
+    private com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository shortfalls;
+
+    @org.springframework.beans.factory.annotation.Autowired(required = false)
+    void setShortfalls(com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository shortfalls) {
+        this.shortfalls = shortfalls;
+    }
+
     @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
     public void onEquipmentRequestSubmitted(EquipmentRequestSubmitted submitted) {
         try {
@@ -125,7 +134,11 @@ public class TechnicalSupportNotificationService {
         return users.findByRole(UserRole.technician).stream().map(User::getUserId).toList();
     }
 
-    /** AC1: the event, its dates and times, the coordinator, and the items and quantities requested. */
+    /** The opening words that mark a shortfall request's notice (AC2); the bell titles it from them. */
+    static final String SHORTFALL_PREFIX = "Shortfall request for damage report ";
+
+    /** AC1: the event, its dates and times, the coordinator, and the items and quantities requested.
+     * AC2: an additional request for a TS09 shortfall says so first, naming its report. */
     @Transactional(propagation = Propagation.REQUIRES_NEW, readOnly = true)
     Optional<Notice> describeRequest(UUID requestId) {
         return requests.findById(requestId).flatMap(request -> events.findById(request.getEventId()).map(event -> {
@@ -134,7 +147,9 @@ public class TechnicalSupportNotificationService {
                             .map(Equipment::getName).orElse("Unknown equipment"))
                     .toList();
             String notes = request.getTechnicalRequirement();
-            String message = event.getEventName() + ", " + period(event.getStartDatetime(), event.getEndDatetime())
+            String shortfall = shortfalls == null ? "" : shortfalls.findByAdditionalRequestId(requestId)
+                    .map(outcome -> SHORTFALL_PREFIX + outcome.getReportId() + ". ").orElse("");
+            String message = shortfall + event.getEventName() + ", " + period(event.getStartDatetime(), event.getEndDatetime())
                     + " (Singapore time). Coordinator: " + coordinatorName(event.getCoordinatorId()) + ". "
                     + (items.isEmpty() ? "No itemised equipment." : "Requested: " + String.join(", ", items) + ".")
                     + (notes == null || notes.isBlank() ? "" : " Notes: " + notes);

@@ -25,6 +25,8 @@ public record EquipmentRequestResponse(
         Person requestedBy,
         /** TS09 AC19: an additional request answering an equipment shortfall. */
         @JsonProperty("isShortfallRequest") boolean isShortfallRequest,
+        /** TS11 AC2: the TS09 damage report a shortfall request answers; null otherwise. */
+        UUID shortfallReportId,
         List<Item> items,
         /** The event's journey status (as {@code JourneyStatus}, D22). */
         String eventStatus) {

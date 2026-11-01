@@ -1,4 +1,4 @@
-// @stories TS11
+// @stories TS11 TS09
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -8,6 +8,7 @@ import { jsonResponse, seedSession, stubApi } from '../../../test/apiStubs'
 import { requestPageRoutes } from '../../../test/requestPageStubs'
 import { NotificationBell } from '../../notifications/NotificationBell'
 import { EquipmentChangeReviewsPanel } from '../../coordinator/EquipmentChangeReviewsPanel'
+import { EquipmentRequestPage } from '../../coordinator/EquipmentRequestPage'
 import { EquipmentRequestDetailPage } from '../requests/EquipmentRequestDetailPage'
 import { ChangeReviewPage } from './ChangeReviewPage'
 import { ChangeReviewsPage } from './ChangeReviewsPage'
@@ -58,6 +59,7 @@ function renderAt(path: string) {
           <Route path="/technical-support/change-reviews/:reviewId" element={<ChangeReviewPage />} />
           <Route path="/technical-support/requests/:requestId" element={<EquipmentRequestDetailPage />} />
           <Route path="/coordinator/events/:eventId" element={<EquipmentChangeReviewsPanel eventId="event-1" />} />
+          <Route path="/coordinator/events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
           <Route path="/bell" element={<NotificationBell />} />
         </Routes>
       </SessionProvider>
@@ -244,5 +246,95 @@ describe('TS11 Technical Support equipment notices and change reviews', () => {
 
     expect(await screen.findByText('Needs coordinator action')).toBeInTheDocument()
     expect(screen.getByText(/Ask for a projector from 12 pm/)).toBeInTheDocument()
+  })
+
+  it('TS11 AC2 (happy): a shortfall request is titled as one in the bell', async () => {
+    stubApi({
+      'GET /api/notifications': () => jsonResponse(200, [
+        { notificationId: 'n1', type: 'equipment_request_submitted', eventRequestId: null, eventId: 'event-1',
+          eventName: 'Town Hall', newStatus: null, reason: null, coordinatorName: null, coordinatorEmail: null,
+          isReassignment: null, occurredAt: new Date().toISOString(), read: false,
+          linkPath: '/technical-support/requests/request-1',
+          message: 'Shortfall request for damage report report-7. Town Hall, 10 Mar 2027, 9:00 AM – 10 Mar 2027, 12:00 PM (Singapore time). Coordinator: ec1. Requested: 1 × Projector.' },
+      ]),
+      'GET /api/notifications/unread-count': () => jsonResponse(200, { count: 1 }),
+    })
+    const user = userEvent.setup()
+    renderAt('/bell')
+
+    await user.click(await screen.findByLabelText('Notifications, 1 unread'))
+
+    expect(await screen.findByText('New shortfall request for "Town Hall"')).toBeInTheDocument()
+    expect(screen.queryByText('New equipment request for "Town Hall"')).not.toBeInTheDocument()
+  })
+
+  it('TS11 AC2, AC3 (happy): the request a shortfall notice opens links to its TS09 damage report', async () => {
+    const shortfall = request('request-1', { isShortfallRequest: true, shortfallReportId: 'report-7' })
+    stubApi(requestPageRoutes(shortfall, {
+      requests: () => [shortfall], lines: () => [], reservations: () => [], availability: () => [],
+    }))
+    renderAt('/technical-support/requests/request-1')
+
+    expect(await screen.findByRole('link', { name: 'Open the damage report this request replaces' }))
+      .toHaveAttribute('href', '/technical-support/faulty/reports/report-7')
+  })
+
+  it('TS11 AC2 (negative): an ordinary request has no damage report link', async () => {
+    stubApi(requestPageRoutes(request('request-1'), {
+      requests: () => [request('request-1')], lines: () => [], reservations: () => [], availability: () => [],
+    }))
+    renderAt('/technical-support/requests/request-1')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Town Hall' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Open the damage report this request replaces' })).not.toBeInTheDocument()
+  })
+
+  it('TS11 AC12 (happy): after "needs coordinator action" the coordinator submits an additional request beside the flagged one', async () => {
+    seedSession('coordinator')
+    const flagged = {
+      requestId: 'req-1', eventId: 'event-1', status: 'attention', technicalRequirement: 'One mic', rejectReason: null,
+      attentionReason: 'An approved change may affect it.', lines: [{ equipmentId: 'eq-mic', equipmentName: 'Mic', quantity: 1 }],
+    }
+    const calls = stubApi({
+      'GET /api/events/event-1/equipment-change-reviews': () => jsonResponse(200, [
+        { reviewId: 'review-1', eventId: 'event-1', eventName: 'Town Hall', changedAt: OPEN_REVIEW.changedAt,
+          needsReview: false, affectedCount: 0, requirementsChanged: true, outcome: 'needs_coordinator_action',
+          outcomeNote: 'Ask for two more mics', reviewedByName: 'ts1', reviewedAt: OPEN_REVIEW.changedAt },
+      ]),
+      'GET /api/events/event-1': () => jsonResponse(200, {
+        eventId: 'event-1', eventName: 'Town Hall', status: 'pending', equipmentRequirements: 'Three mics',
+      }),
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [
+        { equipmentId: 'eq-mic', equipmentName: 'Mic', totalQuantity: 6, serialised: false },
+      ]),
+      'GET /api/events/event-1/equipment-requests': () => jsonResponse(200, [flagged]),
+      'POST /api/events/event-1/equipment-request': () => jsonResponse(201, { ...flagged, requestId: 'req-2', status: 'processing' }),
+    })
+    const user = userEvent.setup()
+    renderAt('/coordinator/events/event-1')
+
+    await user.click(await screen.findByRole('link', { name: 'Submit an additional request' }))
+    expect(await screen.findByText(/Technical Support asked you to act on an approved change/)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Submit equipment request' }))
+
+    expect(await screen.findByText('Additional request submitted to Technical Support for review.')).toBeInTheDocument()
+    const submitted = calls.find((call) => call.method === 'POST' && call.url === '/api/events/event-1/equipment-request')
+    // The server allows it from the review outcome; no shortfall is named.
+    expect(submitted?.body).toEqual({ technicalRequirement: 'Three mics', items: [] })
+  })
+
+  it('TS11 AC12 (negative): a "still suitable" outcome offers no additional request', async () => {
+    seedSession('coordinator')
+    stubApi({
+      'GET /api/events/event-1/equipment-change-reviews': () => jsonResponse(200, [
+        { reviewId: 'review-1', eventId: 'event-1', eventName: 'Town Hall', changedAt: OPEN_REVIEW.changedAt,
+          needsReview: false, affectedCount: 0, requirementsChanged: true, outcome: 'still_suitable',
+          outcomeNote: null, reviewedByName: 'ts1', reviewedAt: OPEN_REVIEW.changedAt },
+      ]),
+    })
+    renderAt('/coordinator/events/event-1')
+
+    expect(await screen.findByText('Still suitable')).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Submit an additional request' })).not.toBeInTheDocument()
   })
 })

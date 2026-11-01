@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { fetchEventChangeReviews } from '../technicalSupport/changeReviews/changeReviewApi'
@@ -52,6 +53,12 @@ export function EquipmentChangeReviewsPanel({ eventId }: { eventId: string }) {
           ))}
         </ul>
       )}
+      {/* TS11 AC12: the newest outcome asks the coordinator to act (reviews come newest first). */}
+      {state.status === 'loaded' && state.reviews[0]?.outcome === 'needs_coordinator_action' ? (
+        <Link className="button button--secondary" to={`/coordinator/events/${eventId}/equipment-request?additional=change`}>
+          Submit an additional request
+        </Link>
+      ) : null}
     </Card>
   )
 }

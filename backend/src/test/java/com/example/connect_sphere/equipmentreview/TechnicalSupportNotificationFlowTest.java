@@ -556,6 +556,59 @@ class TechnicalSupportNotificationFlowTest {
         assertThat(requestStatus(requestId)).isEqualTo("attention");
     }
 
+    private int requestsFor(UUID eventId) {
+        return jdbc.queryForObject("SELECT count(*) FROM equipment_requests WHERE event_id = ?", Integer.class, eventId);
+    }
+
+    @Test
+    @Tag("TS09")
+    @DisplayName("TS11 AC12 (happy): after 'needs coordinator action' the coordinator submits an additional request beside the flagged one, as TS09 AC19 allows")
+    void needsCoordinatorActionAllowsAnAdditionalRequest() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 1);
+        approved(asked(eventId, "09:00", "12:00", 150, "Two extra microphones"));
+        outcome(reviewOf(eventId), "{\"outcome\":\"needs_coordinator_action\",\"note\":\"Ask for two more mics\"}")
+                .andExpect(status().isOk());
+
+        UUID additional = requested(eventId, mics, 2);
+
+        assertThat(requestStatus(additional)).isEqualTo("processing");
+        // The flagged request and its reservation are left as they were (AC13).
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+        assertThat(requestsFor(eventId)).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("TS11 AC12 (negative): after 'still suitable' no additional request is allowed, and none is saved")
+    void stillSuitableAllowsNoAdditionalRequest() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        reservedAndApproved(eventId, mics, 1);
+        approved(asked(eventId, "09:00", "12:00", 150, "Two extra microphones"));
+        outcome(reviewOf(eventId), "{\"outcome\":\"still_suitable\"}").andExpect(status().isOk());
+
+        requestEquipment(eventId, mics, 2).andExpect(status().isConflict());
+
+        assertThat(requestsFor(eventId)).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("TS11 AC12 (conflict): a second additional request while one awaits review is refused, and none is saved")
+    void onlyOneAdditionalRequestAwaitsReview() throws Exception {
+        UUID mics = equipment("TS11 Mic " + UUID.randomUUID(), 5);
+        UUID eventId = event();
+        reservedAndApproved(eventId, mics, 1);
+        approved(asked(eventId, "09:00", "12:00", 150, "Two extra microphones"));
+        outcome(reviewOf(eventId), "{\"outcome\":\"needs_coordinator_action\",\"note\":\"Ask for two more mics\"}")
+                .andExpect(status().isOk());
+        requested(eventId, mics, 2);
+
+        requestEquipment(eventId, mics, 1).andExpect(status().isConflict());
+
+        assertThat(requestsFor(eventId)).isEqualTo(2);
+    }
+
     @Test
     @DisplayName("EC-NEW3 (D37) (negative): the coordinator cannot mark a request still suitable while a reservation misses the event's new time")
     void theCoordinatorCannotClearATimeFlag() throws Exception {

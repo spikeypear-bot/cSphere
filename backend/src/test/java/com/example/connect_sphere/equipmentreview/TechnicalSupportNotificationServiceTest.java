@@ -24,6 +24,8 @@ import org.mockito.ArgumentCaptor;
 
 import com.example.connect_sphere.changerequest.ChangeApproved;
 import com.example.connect_sphere.equipment.EquipmentRepository;
+import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome;
+import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository;
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
@@ -81,6 +83,46 @@ class TechnicalSupportNotificationServiceTest {
     private void request(EquipmentRequestStatus status) {
         when(requests.findByEventId(event.getEventId())).thenReturn(List.of(
                 new EquipmentRequest(UUID.randomUUID(), event.getEventId(), status, "")));
+    }
+
+    /** A processing request for the event, 10 Mar 2027 9:00-12:00 Singapore, with no itemised lines. */
+    private UUID submitted() {
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-10T09:00+08:00"));
+        event.setEndDatetime(OffsetDateTime.parse("2027-03-10T12:00+08:00"));
+        UUID requestId = UUID.randomUUID();
+        when(requests.findById(requestId)).thenReturn(Optional.of(
+                new EquipmentRequest(requestId, event.getEventId(), EquipmentRequestStatus.processing, "")));
+        return requestId;
+    }
+
+    @Test
+    @Tag("TS09")
+    @DisplayName("TS11 AC2 (happy): an additional request for a TS09 shortfall is notified the same way, marked as a shortfall request naming its damage report")
+    void aShortfallRequestIsMarked() {
+        UUID requestId = submitted();
+        UUID reportId = UUID.randomUUID();
+        EquipmentDamageOutcomeRepository outcomes = mock(EquipmentDamageOutcomeRepository.class);
+        when(outcomes.findByAdditionalRequestId(requestId))
+                .thenReturn(Optional.of(new EquipmentDamageOutcome(reportId, event.getEventId())));
+        service.setShortfalls(outcomes);
+
+        var notice = service.describeRequest(requestId).orElseThrow();
+
+        assertThat(notice.message()).isEqualTo("Shortfall request for damage report " + reportId + ". Gala, "
+                + "10 Mar 2027, 9:00 AM – 10 Mar 2027, 12:00 PM (Singapore time). Coordinator: ec1. No itemised equipment.");
+        assertThat(notice.referenceId()).isEqualTo(requestId);
+    }
+
+    @Test
+    @DisplayName("TS11 AC2 (negative): a request not raised for a shortfall is not marked as one")
+    void anOrdinaryRequestIsNotMarked() {
+        UUID requestId = submitted();
+        EquipmentDamageOutcomeRepository outcomes = mock(EquipmentDamageOutcomeRepository.class);
+        when(outcomes.findByAdditionalRequestId(requestId)).thenReturn(Optional.empty());
+        service.setShortfalls(outcomes);
+
+        assertThat(service.describeRequest(requestId).orElseThrow().message()).isEqualTo("Gala, "
+                + "10 Mar 2027, 9:00 AM – 10 Mar 2027, 12:00 PM (Singapore time). Coordinator: ec1. No itemised equipment.");
     }
 
     @Test

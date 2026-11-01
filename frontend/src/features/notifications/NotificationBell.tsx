@@ -62,7 +62,10 @@ function describe(n: NotificationDto): string {
   if (n.type === 'attendee_registration_withdrawn') return `Your registration for "${n.eventName}" has been withdrawn`
   // TS09: the outcome itself is the message, shown under the title.
   if (n.type === 'equipment_damage_outcome') return `Damaged equipment affects "${n.eventName}"`
-  if (n.type === 'equipment_request_submitted') return `New equipment request for "${n.eventName}"`
+  // TS11 AC2: the server opens a shortfall request's message with these words.
+  if (n.type === 'equipment_request_submitted') return n.message?.startsWith('Shortfall request')
+    ? `New shortfall request for "${n.eventName}"`
+    : `New equipment request for "${n.eventName}"`
   if (n.type === 'equipment_change_review') return `An approved change to "${n.eventName}" affects its equipment`
   if (n.type === 'equipment_request_attention') return `The equipment request for "${n.eventName}" needs attention`
   if (n.type === 'venue_timing_changed') return `Venue timings updated for "${n.eventName}"`

@@ -98,6 +98,12 @@ public class EquipmentRequestService {
                 .toList();
     }
 
+    private boolean newestOutcomeNeedsCoordinator(UUID eventId) {
+        return changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
+                .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.ReviewOutcome.needs_coordinator_action)
+                .isPresent();
+    }
+
     @Transactional
     public EquipmentRequestDetailsResponse submit(
             UUID coordinatorId, UUID eventId, SubmitEquipmentRequest input) {
@@ -113,6 +119,11 @@ public class EquipmentRequestService {
         com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome shortfall = null;
         if (input != null && input.shortfallOutcomeId() != null && shortfalls != null) {
             shortfall = shortfalls.requireOpenShortfall(eventId, input.shortfallOutcomeId());
+        }
+        // TS11 AC12: Technical Support's "needs coordinator action" opens the same exception.
+        // shortcut: allowed while that is the newest outcome, so more than one additional
+        // request can follow it; link the request to its review if that needs limiting.
+        if (shortfall != null || newestOutcomeNeedsCoordinator(eventId)) {
             if (requests.findByEventId(eventId).stream()
                     .anyMatch(request -> request.getStatus() == EquipmentRequestStatus.processing)) {
                 throw new EquipmentRequestStateException(
@@ -222,9 +233,7 @@ public class EquipmentRequestService {
             throw new EquipmentRequestStateException(
                     "A reservation no longer covers the event's time. Revise the request instead.");
         }
-        if (changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
-                .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.ReviewOutcome.needs_coordinator_action)
-                .isPresent()) {
+        if (newestOutcomeNeedsCoordinator(eventId)) {
             throw new EquipmentRequestStateException(
                     "Technical Support said this request needs changing. Revise the request instead.");
         }
