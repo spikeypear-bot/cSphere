@@ -6,7 +6,11 @@
   padding: 0;
 }
 
-.reassignment-request,
+.reassignment-request {
+  display: grid;
+  gap: 1rem;
+}
+
 .reassignment-empty {
   display: grid;
   gap: 1rem;

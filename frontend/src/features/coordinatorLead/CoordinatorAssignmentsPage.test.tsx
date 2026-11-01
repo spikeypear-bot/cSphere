@@ -185,7 +185,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     const card = await cardFor('Offsite')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
     expect(within(card).getAllByRole('link')).toHaveLength(1)
-    expect(within(card).getByRole('link', { name: 'View request: Offsite' }))
+    expect(within(card).getByRole('link', { name: 'Offsite' }))
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r1')
     // Anchored: the Refresh button's own label contains "assignments".
     expect(screen.queryByRole('button', { name: /^(re)?assign/i })).not.toBeInTheDocument()
@@ -208,7 +208,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('link', { name: 'View request: Offsite' }))
+    await user.click(await screen.findByRole('link', { name: 'Offsite' }))
 
     expect(await screen.findByRole('heading', { level: 1, name: 'Offsite' })).toBeInTheDocument()
     expect(screen.getByText(/has been assigned to ec1, who/)).toBeInTheDocument()
@@ -243,7 +243,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
 
     expect(eventNames(await groupOf('ec1 1 request'))).toEqual(['Offsite'])
     await groupOf('ec2 0 requests')
-    await user.click(screen.getByRole('link', { name: 'View request: Offsite' }))
+    await user.click(screen.getByRole('link', { name: 'Offsite' }))
     await user.click(await screen.findByRole('button', { name: 'Reassign' }))
     await user.selectOptions(await screen.findByLabelText('Event Coordinator'), await screen.findByRole('option', { name: 'ec2' }))
     await user.click(screen.getByRole('button', { name: 'Reassign request' }))
@@ -277,7 +277,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('link', { name: 'View request: Offsite' }))
+    await user.click(await screen.findByRole('link', { name: 'Offsite' }))
     await screen.findByRole('heading', { level: 1, name: 'Offsite' })
     expect(screen.queryByRole('link', { name: 'Back to unassigned requests' })).not.toBeInTheDocument()
     await user.click(screen.getByRole('link', { name: 'Back to coordinator assignments' }))
@@ -296,7 +296,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('link', { name: 'View request: Offsite' }))
+    await user.click(await screen.findByRole('link', { name: 'Offsite' }))
 
     expect(await screen.findByText(/has been assigned to an Event Coordinator, who/)).toBeInTheDocument()
     expect(screen.queryByText(/assigned to ec1/)).not.toBeInTheDocument()

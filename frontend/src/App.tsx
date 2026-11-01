@@ -25,7 +25,7 @@ import { ChangeRequestFormPage } from './features/changeRequests/ChangeRequestFo
 import { ChangeRequestRedirect, ChangeRequestsPage } from './features/changeRequests/ChangeRequestsPage'
 import { ChangeRequestReviewPage } from './features/changeRequests/ChangeRequestReviewPage'
 import { CoordinatorLeadHomePage } from './features/coordinatorLead/CoordinatorLeadHomePage'
-import { coordinatorLeadFeatures } from './features/coordinatorLead/coordinatorLeadFeatures'
+import { coordinatorLeadNav } from './features/coordinatorLead/coordinatorLeadNav'
 import { IncomingRequestReviewPage } from './features/coordinatorLead/IncomingRequestReviewPage'
 import { UnassignedRequestsPage } from './features/coordinatorLead/UnassignedRequestsPage'
 import { ClarificationResponsePage } from './features/organiser/ClarificationResponsePage'
@@ -148,20 +148,23 @@ function CoordinatorLeadRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<CoordinatorLeadHomePage />} />
-      <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
-      <Route path="unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
-      {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
-      <Route path="events/:eventId" element={<EventDetailsPage />} />
-      <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
-      {/* ECL-C4: every assigned active event, for workload before assigning. */}
-      <Route path="active-events" element={<ActiveEventsPage />} />
-      <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
-      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
-      <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
-      {skeletonRoutes(coordinatorLeadFeatures)}
-    </Routes>
+    <ConsoleShell navLabel="Event Coordinator Lead" items={coordinatorLeadNav}>
+      <Routes>
+        <Route index element={<CoordinatorLeadHomePage />} />
+        <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
+        <Route path="unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
+        {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
+        <Route path="events/:eventId" element={<EventDetailsPage />} />
+        <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
+        {/* ECL-C4: every assigned active event, for workload before assigning. */}
+        <Route path="active-events" element={<ActiveEventsPage />} />
+        <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
+        <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+        <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
+        {/* Unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/coordinator-lead" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

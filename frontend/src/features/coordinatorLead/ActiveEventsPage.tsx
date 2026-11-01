@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { JourneyStatusBadge, StatusFilter } from '../../components/ui/JourneyStatus'
 import type { CoordinatorEventsDto, EventDto } from '../../types/event'
@@ -43,7 +44,7 @@ export function ActiveEventsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/coordinator-lead">Event Coordinator Lead console</Link>}
+        eyebrow={<Link to="/coordinator-lead">Dashboard</Link>}
         title="Active events"
         description="Every assigned event from Planning to Confirmed, across organisations, soonest first — to see each Event Coordinator's workload before assigning a new request."
         actions={
@@ -130,17 +131,14 @@ export function ActiveEventsPage() {
   )
 }
 
-/** One active event: what the Lead needs to judge it (AC4) and a read-only
- * way into it (AC7) — no coordinator actions. */
+/** One active event: what the Lead needs to judge it (AC4); the whole card is a
+ * read-only way into it (AC7) — no coordinator actions. */
 function ActiveEventCard({ event, coordinatorName }: { event: EventDto; coordinatorName: string }) {
   return (
-    <Card className="lead-request-card">
-      <div className="lead-request-card__head">
-        <h3>{event.eventName}</h3>
-        {event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : null}
-      </div>
-      <p className="lead-request-card__organisation">{event.organisation}</p>
-      <dl className="lead-request-card__facts">
+    <RowLink to={`/coordinator-lead/events/${event.eventId}`} className="card dash-row-card" titleAs="h3" title={event.eventName}
+      badges={event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : null}>
+      <p>{event.organisation}</p>
+      <dl className="dash-figures dash-facts">
         <div>
           <dt>When (Singapore time)</dt>
           <dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd>
@@ -154,8 +152,6 @@ function ActiveEventCard({ event, coordinatorName }: { event: EventDto; coordina
           <dd>{event.coordinatorName ?? coordinatorName}</dd>
         </div>
       </dl>
-      <Link className="button button--secondary lead-request-card__review" to={`/coordinator-lead/events/${event.eventId}`}
-        aria-label={`View event: ${event.eventName}`}>View event</Link>
-    </Card>
+    </RowLink>
   )
 }

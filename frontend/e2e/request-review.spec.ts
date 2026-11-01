@@ -113,7 +113,7 @@ test('ECL-C5 EO19 (happy): the Lead moves a request to another coordinator; the 
   const lead = await signedIn(browser, 'ecl1')
   await test.step('ECL-C5 AC2, AC3 (negative): from Coordinator assignments, reassigning without a choice is blocked', async () => {
     await lead.goto('/coordinator-lead/assignments')
-    await lead.getByRole('link', { name: `View request: ${eventName}` }).click()
+    await lead.getByRole('link', { name: eventName, exact: true }).click()
     await lead.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Reassign' }).click()
     await lead.getByRole('button', { name: 'Reassign request' }).click()
     await expect(lead.getByText('Choose an Event Coordinator before reassigning.')).toBeVisible()

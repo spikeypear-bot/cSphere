@@ -1,4 +1,4 @@
-// @stories ECL-C4 TS09 EC09 AT04 EO15
+// @stories ECL-C4 TS09 EC09 AT04 EO15 ECL-C1
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -109,7 +109,8 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     const user = userEvent.setup()
     render(<MemoryRouter initialEntries={['/coordinator-lead']}><App /></MemoryRouter>)
 
-    const link = await screen.findByRole('link', { name: 'Active events' })
+    const nav = await screen.findByRole('navigation', { name: 'Event Coordinator Lead' })
+    const link = within(nav).getByRole('link', { name: 'Active events' })
     expect(link).toHaveAttribute('href', '/coordinator-lead/active-events')
     await user.click(link)
 
@@ -225,12 +226,14 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     renderPage()
 
     const card = await cardFor('Offsite')
-    expect(within(card).getAllByRole('link').map((link) => link.textContent)).toEqual(['View event'])
+    // The whole card is the one link, named by the event.
+    expect(within(card).getAllByRole('link')).toHaveLength(1)
+    expect(within(card).getByRole('link', { name: 'Offsite' })).toHaveAttribute('href', '/coordinator-lead/events/e1')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /approve|book|confirm|reassign/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /approve|book|confirm|reassign/i })).not.toBeInTheDocument()
 
-    await user.click(within(card).getByRole('link', { name: 'View event: Offsite' }))
+    await user.click(within(card).getByRole('link', { name: 'Offsite' }))
     expect(await screen.findByRole('heading', { name: 'Event oversight page' })).toBeInTheDocument()
   })
 
