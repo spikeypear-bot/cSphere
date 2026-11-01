@@ -470,6 +470,7 @@ class EventRequest <<Entity>>  {
 	{field} +organisation : String
 	{field} +purpose : String
 	{field} +registrationCapacity : Integer
+	{field} +registrationClosesAt : OffsetDateTime
 	{field} +registrationNeeds : Boolean
 	{field} +registrationOpensAt : OffsetDateTime
 	{field} +rejectionReason : String

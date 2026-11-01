@@ -389,7 +389,8 @@ public class EventRequestService {
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
         event.setRegistrationCapacity(entity.getRegistrationCapacity());
         event.setRegistrationOpensAt(entity.getRegistrationOpensAt());
-        event.setRegistrationClosesAt(entity.getStartDatetime());
+        event.setRegistrationClosesAt(entity.getRegistrationClosesAt() != null
+                ? entity.getRegistrationClosesAt() : entity.getStartDatetime());
         event.setAttendeeInstructions(entity.getAttendeeInstructions());
         event.setOrganisation(entity.getOrganisation());
         event.setCoordinatorId(actingCoordinatorId);
@@ -757,6 +758,12 @@ public class EventRequestService {
             if (opens != null && start != null && !opens.isBefore(start)) {
                 problems.put("registrationOpensAt", "Registration must open before the event start.");
             }
+            OffsetDateTime closes = entity.getRegistrationClosesAt();
+            if (closes != null && start != null && closes.isAfter(start)) {
+                problems.put("registrationClosesAt", "Registration must close no later than the event start.");
+            } else if (closes != null && opens != null && !closes.isAfter(opens)) {
+                problems.put("registrationClosesAt", "Registration must close after it opens.");
+            }
         }
         return problems;
     }
@@ -846,7 +853,7 @@ public class EventRequestService {
                 e.getRequiredFacilities() == null ? List.of()
                         : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
                 e.getRegistrationNeeds(), e.getRegistrationCapacity(), e.getRegistrationOpensAt(),
-                e.getStartDatetime(), e.getAttendeeInstructions());
+                e.getRegistrationClosesAt(), e.getAttendeeInstructions());
     }
 
     /** EO03: proposed details must be submittable exactly as a new request is
@@ -902,6 +909,7 @@ public class EventRequestService {
         entity.setRegistrationNeeds(request.registrationNeeds());
         entity.setRegistrationCapacity(request.registrationCapacity());
         entity.setRegistrationOpensAt(request.registrationOpensAt());
+        entity.setRegistrationClosesAt(request.registrationClosesAt());
         entity.setAttendeeInstructions(request.attendeeInstructions());
     }
 

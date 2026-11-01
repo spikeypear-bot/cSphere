@@ -16,6 +16,7 @@ import com.example.connect_sphere.eventrequest.entity.EventRequest;
 public interface EventRequestMapper {
     @Mapping(target = "createdByName", source = "createdBy", qualifiedByName = "username")
     @Mapping(target = "journeyStatus", source = ".", qualifiedByName = "journeyStatus")
-    @Mapping(target = "registrationClosesAt", source = "startDatetime")
+    @Mapping(target = "registrationClosesAt",
+            expression = "java(entity.getRegistrationClosesAt() != null ? entity.getRegistrationClosesAt() : entity.getStartDatetime())")
     EventRequestDto toDto(EventRequest entity);
 }

@@ -46,7 +46,7 @@ class AttendeeRegistrationFlowTest {
     @Autowired JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("AT01 AT02 (cross-cutting): request approval carries registration settings and derives closing time from event start")
+    @DisplayName("AT01 AT02 (cross-cutting): request approval carries registration settings, including the chosen closing time")
     void approvalCarriesRegistrationSettings() throws Exception {
         FlowSupport flow = new FlowSupport(mvc, users);
         String request = FlowSupport.requestBody("Registration approval", 10, "none")
@@ -62,11 +62,30 @@ class AttendeeRegistrationFlowTest {
                 .andReturn().getResponse().getContentAsString();
         var dto = flow.read(approved);
         assertThat(OffsetDateTime.parse(dto.get("registrationClosesAt").asString()).toInstant())
-                .isEqualTo(OffsetDateTime.parse(dto.get("startDatetime").asString()).toInstant());
+                .isEqualTo(OffsetDateTime.parse("2027-02-01T00:00:00Z").toInstant());
         Event event = events.findById(UUID.fromString(dto.get("eventId").asString())).orElseThrow();
+        assertThat(event.getRegistrationClosesAt().toInstant())
+                .isEqualTo(OffsetDateTime.parse("2027-02-01T00:00:00Z").toInstant());
         assertThat(event.getRegistrationCapacity()).isEqualTo(10);
         assertThat(event.getRegistrationOpensAt()).isEqualTo(OffsetDateTime.parse("2027-01-01T00:00:00Z"));
         assertThat(event.getAttendeeInstructions()).isEqualTo("Bring your ticket");
+    }
+
+    @Test
+    @DisplayName("AT01 AT02 (edge): approval closes registration at event start when no closing time was chosen")
+    void approvalDefaultsClosingToEventStart() throws Exception {
+        FlowSupport flow = new FlowSupport(mvc, users);
+        String request = FlowSupport.requestBody("Registration default close", 10, "none")
+                .replace("\"registrationNeeds\":false", """
+                        "registrationNeeds":true,"registrationCapacity":10,
+                        "registrationOpensAt":"2027-01-01T00:00:00Z"
+                        """);
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", request);
+        String approved = mvc.perform(post("/api/event-requests/" + requestId + "/approve").with(flow.as("ec1")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        var dto = flow.read(approved);
+        assertThat(OffsetDateTime.parse(dto.get("registrationClosesAt").asString()).toInstant())
+                .isEqualTo(OffsetDateTime.parse(dto.get("startDatetime").asString()).toInstant());
     }
 
     @Test

@@ -10,7 +10,7 @@ export const ATTENDANCE_WHOLE_NUMBER = 'Expected attendance must be a whole numb
 const INVALID_DATES = 'Enter valid start and end dates and times.'
 
 export type RequestRuleField = 'startDatetime' | 'endDatetime' | 'expectedAttendance'
-  | 'registrationCapacity' | 'registrationOpensAt'
+  | 'registrationCapacity' | 'registrationOpensAt' | 'registrationClosesAt'
 export type RequestFieldProblems = Partial<Record<RequestRuleField, string>>
 
 /** The end must be strictly after the start, compared as moments: the same
@@ -32,7 +32,7 @@ export function dateRangeError(start: string | null, end: string | null): string
 export function requestFieldProblems(
   fields: { startDatetime: string | null; endDatetime: string | null; expectedAttendance: number | null
     registrationNeeds?: boolean | null; registrationCapacity?: number | null
-    registrationOpensAt?: string | null },
+    registrationOpensAt?: string | null; registrationClosesAt?: string | null },
   now: number = Date.now(),
 ): RequestFieldProblems {
   const problems: RequestFieldProblems = {}
@@ -56,6 +56,12 @@ export function requestFieldProblems(
     const eventStart = fields.startDatetime ? Date.parse(fields.startDatetime) : NaN
     if (Number.isFinite(opens) && Number.isFinite(eventStart) && opens >= eventStart) {
       problems.registrationOpensAt = 'Registration must open before the event start.'
+    }
+    const closes = fields.registrationClosesAt ? Date.parse(fields.registrationClosesAt) : NaN
+    if (Number.isFinite(closes) && Number.isFinite(eventStart) && closes > eventStart) {
+      problems.registrationClosesAt = 'Registration must close no later than the event start.'
+    } else if (Number.isFinite(closes) && Number.isFinite(opens) && closes <= opens) {
+      problems.registrationClosesAt = 'Registration must close after it opens.'
     }
   }
   return problems

@@ -105,12 +105,14 @@ export function EventRequestWizardPage() {
   const [catalogueError, setCatalogueError] = useState<string | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<Record<string, string>>({})
   const [equipmentNotes, setEquipmentNotes] = useState('')
+  const [equipmentSearch, setEquipmentSearch] = useState('')
+  const [choosingClose, setChoosingClose] = useState(false)
   const equipmentDraftInitialized = useRef(false)
   // EO-C2: date, time and attendance problems, checked as the organiser types,
   // plus any the server reported on submit (e.g. the start passed meanwhile).
   const problems = requestFieldProblems(fields)
   const scheduleBlocked = Boolean(problems.startDatetime || problems.endDatetime || problems.expectedAttendance)
-  const registrationBlocked = Boolean(problems.registrationCapacity || problems.registrationOpensAt)
+  const registrationBlocked = Boolean(problems.registrationCapacity || problems.registrationOpensAt || problems.registrationClosesAt)
   // The server's messages are about the values it saw; one stops showing as
   // soon as the organiser changes that field.
   const [serverReport, setServerReport] = useState<{ values: Record<string, unknown>; errors: Record<string, string> } | null>(null)
@@ -145,6 +147,28 @@ export function EventRequestWizardPage() {
     equipmentDraftInitialized.current = true
   }, [equipmentCatalogue, fields.equipmentRequirements])
 
+  // Pre-fill the registration window and capacity the first time the
+  // organiser reaches this step, so they only adjust values, not invent them.
+  const registrationNeeds = Boolean(fields.registrationNeeds)
+  const startDatetime = fields.startDatetime
+  const expectedAttendance = fields.expectedAttendance
+  const hasOpensAt = Boolean(fields.registrationOpensAt)
+  const hasCapacity = fields.registrationCapacity != null
+  useEffect(() => {
+    if (stepIndex !== 3 || !registrationNeeds) return
+    const update: Partial<DraftFields> = {}
+    if (!hasOpensAt && startDatetime) {
+      const start = Date.parse(startDatetime)
+      const weekBefore = start - 7 * 24 * 60 * 60 * 1000
+      const opens = Math.max(Date.now(), weekBefore)
+      if (opens < start) update.registrationOpensAt = new Date(opens).toISOString()
+    }
+    if (!hasCapacity && expectedAttendance && expectedAttendance >= 1) {
+      update.registrationCapacity = expectedAttendance
+    }
+    if (Object.keys(update).length > 0) setFields(update)
+  }, [stepIndex, registrationNeeds, startDatetime, expectedAttendance, hasOpensAt, hasCapacity, setFields])
+
   if (loading) {
     return <p>Loading your draft…</p>
   }
@@ -167,11 +191,21 @@ export function EventRequestWizardPage() {
     )
   }
 
+  // Scroll to and focus the first thing blocking Next so it never fails silently.
+  function revealFirstProblem() {
+    window.setTimeout(() => {
+      const target = document.querySelector<HTMLElement>('.wizard__step [aria-invalid="true"]')
+        ?? document.querySelector<HTMLElement>('.wizard__step .field-error')
+      target?.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
+      target?.focus?.()
+    }, 0)
+  }
+
   async function goToStep(nextIndex: number) {
     // Leaving the schedule step needs a valid schedule; other steps never
     // trap the organiser away from the step where it can be fixed.
-    if (nextIndex > stepIndex && stepIndex === 1 && scheduleBlocked) return
-    if (nextIndex > stepIndex && stepIndex === 3 && (invalidEquipmentQuantity || registrationBlocked)) return
+    if (nextIndex > stepIndex && stepIndex === 1 && scheduleBlocked) return revealFirstProblem()
+    if (nextIndex > stepIndex && stepIndex === 3 && (invalidEquipmentQuantity || registrationBlocked)) return revealFirstProblem()
     await save()
     setStepIndex(nextIndex)
   }
@@ -252,7 +286,7 @@ export function EventRequestWizardPage() {
         setMissingFields(result.missingFields)
         setServerReport({ values: { ...fields }, errors: result.fieldErrors })
         // Take the organiser to the fields that need changing.
-        if (result.fieldErrors.registrationCapacity || result.fieldErrors.registrationOpensAt) setStepIndex(3)
+        if (result.fieldErrors.registrationCapacity || result.fieldErrors.registrationOpensAt || result.fieldErrors.registrationClosesAt) setStepIndex(3)
         else if (hasProblems(result.fieldErrors)) setStepIndex(1)
       }
     } catch (error) {
@@ -261,6 +295,16 @@ export function EventRequestWizardPage() {
       setSubmitting(false)
     }
   }
+
+  const searchTerm = equipmentSearch.trim().toLowerCase()
+  const visibleEquipment = (equipmentCatalogue ?? []).filter((equipment) =>
+    !searchTerm || equipment.equipmentName.toLowerCase().includes(searchTerm)
+      || selectedEquipment[equipment.equipmentId] !== undefined)
+  const selectedCount = Object.keys(selectedEquipment).length
+  const selectedSummary = (equipmentCatalogue ?? [])
+    .filter((equipment) => selectedEquipment[equipment.equipmentId] !== undefined)
+    .map((equipment) => `${equipment.equipmentName} ×${selectedEquipment[equipment.equipmentId]}`)
+    .join(', ')
 
   return (
     <div className="page">
@@ -288,6 +332,7 @@ export function EventRequestWizardPage() {
           <>
             <TextField
               id="eventName"
+              required
               label="Event name"
               value={fields.eventName ?? ''}
               onChange={(value) => setFields({ eventName: value || null })}
@@ -309,6 +354,7 @@ export function EventRequestWizardPage() {
             </fieldset>
             <TextField
               id="purpose"
+              required
               label="Purpose"
               value={fields.purpose ?? ''}
               onChange={(value) => setFields({ purpose: value || null })}
@@ -331,6 +377,7 @@ export function EventRequestWizardPage() {
           <>
             <DateTimeField
               id="startDatetime"
+              required
               label="Start date & time"
               min={new Date().toISOString()}
               value={fields.startDatetime}
@@ -339,6 +386,7 @@ export function EventRequestWizardPage() {
             />
             <DateTimeField
               id="endDatetime"
+              required
               label="End date & time"
               min={fields.startDatetime ?? undefined}
               value={fields.endDatetime}
@@ -347,6 +395,7 @@ export function EventRequestWizardPage() {
             />
             <NumberField
               id="expectedAttendance"
+              required
               label="Expected attendance"
               min={1}
               wholeNumber
@@ -362,6 +411,7 @@ export function EventRequestWizardPage() {
           <>
             <TextField
               id="venueRequirements"
+              required
               label="Venue requirements"
               value={fields.venueRequirements ?? ''}
               onChange={(value) => setFields({ venueRequirements: value || null })}
@@ -398,37 +448,78 @@ export function EventRequestWizardPage() {
                 </p>
               ) : null}
               {equipmentCatalogue?.length === 0 ? <p>No equipment types are currently listed.</p> : null}
-              {equipmentCatalogue?.map((equipment) => {
-                const checked = selectedEquipment[equipment.equipmentId] !== undefined
-                return (
-                  <div className="wizard__equipment-option" key={equipment.equipmentId}>
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={checked}
-                        onChange={(event) => toggleEquipment(equipment.equipmentId, event.target.checked)}
-                      />
-                      {equipment.equipmentName}
-                    </label>
-                    {checked ? (
-                      <label>
-                        Quantity
+              {equipmentCatalogue && equipmentCatalogue.length > 0 ? (
+                <div className="wizard__equipment-toolbar">
+                  <input
+                    type="search"
+                    className="wizard__equipment-search"
+                    placeholder="Search equipment"
+                    aria-label="Search equipment"
+                    value={equipmentSearch}
+                    onChange={(event) => setEquipmentSearch(event.target.value)}
+                  />
+                  <span className="wizard__equipment-count" role="status">
+                    {selectedCount} selected
+                  </span>
+                </div>
+              ) : null}
+              <div className="wizard__equipment-grid">
+                {visibleEquipment.map((equipment) => {
+                  const checked = selectedEquipment[equipment.equipmentId] !== undefined
+                  const quantity = selectedEquipment[equipment.equipmentId]
+                  const invalid = checked && !/^[1-9]\d*$/.test(quantity)
+                  return (
+                    <div className="wizard__equipment-option" data-selected={checked} key={equipment.equipmentId}>
+                      <label className="wizard__equipment-name">
                         <input
-                          type="number"
-                          min="1"
-                          step="1"
-                          value={selectedEquipment[equipment.equipmentId]}
-                          onChange={(event) => updateEquipmentQuantity(equipment.equipmentId, event.target.value)}
-                          aria-label={`${equipment.equipmentName} quantity`}
-                          aria-invalid={!/^[1-9]\d*$/.test(selectedEquipment[equipment.equipmentId])}
+                          type="checkbox"
+                          checked={checked}
+                          onChange={(event) => toggleEquipment(equipment.equipmentId, event.target.checked)}
                         />
+                        {equipment.equipmentName}
                       </label>
-                    ) : null}
-                  </div>
-                )
-              })}
+                      {checked ? (
+                        <div className="wizard__stepper">
+                          <button
+                            type="button"
+                            aria-label={`Decrease ${equipment.equipmentName} quantity`}
+                            onClick={() => updateEquipmentQuantity(equipment.equipmentId, String(Math.max(1, (Number(quantity) || 1) - 1)))}
+                          >
+                            −
+                          </button>
+                          <input
+                            type="number"
+                            min="1"
+                            step="1"
+                            value={quantity}
+                            onChange={(event) => updateEquipmentQuantity(equipment.equipmentId, event.target.value)}
+                            aria-label={`${equipment.equipmentName} quantity`}
+                            aria-invalid={invalid}
+                            className="wizard__quantity-input"
+                          />
+                          <button
+                            type="button"
+                            aria-label={`Increase ${equipment.equipmentName} quantity`}
+                            onClick={() => updateEquipmentQuantity(equipment.equipmentId, String((Number(quantity) || 0) + 1))}
+                          >
+                            +
+                          </button>
+                        </div>
+                      ) : null}
+                    </div>
+                  )
+                })}
+              </div>
+              {equipmentCatalogue && equipmentSearch.trim() && visibleEquipment.length === 0
+                ? <p className="field-hint">No equipment matches “{equipmentSearch.trim()}”.</p>
+                : null}
               {invalidEquipmentQuantity ? (
-                <p role="alert">Enter a whole quantity greater than zero for each selected item.</p>
+                <p role="alert" className="field-error wizard__quantity-error">
+                  Enter a whole quantity of at least 1 for each selected item.
+                </p>
+              ) : null}
+              {selectedSummary ? (
+                <p className="wizard__equipment-summary"><strong>Selected:</strong> {selectedSummary}</p>
               ) : null}
             </fieldset>
             <TextField
@@ -442,13 +533,15 @@ export function EventRequestWizardPage() {
             <CheckboxField
               id="registrationNeeds"
               label="Attendees need to register for this event"
+              prominent
               checked={Boolean(fields.registrationNeeds)}
               onChange={(checked) => setFields({ registrationNeeds: checked })}
             />
             {fields.registrationNeeds ? <div className="wizard__registration-settings">
-              <p className="field-hint">Set a place limit and the Singapore-time window when attendees can register.</p>
+              <p className="field-hint wizard__registration-intro">Choose how many attendees can sign up and when registration opens. All times are Singapore time (GMT+8).</p>
               <NumberField
                 id="registrationCapacity"
+                required
                 label="Registration capacity"
                 min={1}
                 wholeNumber
@@ -459,12 +552,54 @@ export function EventRequestWizardPage() {
               />
               <DateTimeField
                 id="registrationOpensAt"
+                required
                 label="Registration opens"
                 value={fields.registrationOpensAt ?? null}
                 onChange={(value) => setFields({ registrationOpensAt: value })}
                 error={fieldError('registrationOpensAt')}
               />
-              <p className="field-hint">Registration initially closes when the event starts. The organiser can adjust the period after approval.</p>
+              {fields.registrationClosesAt || choosingClose ? (
+                <>
+                  <DateTimeField
+                    id="registrationClosesAt"
+                    label="Registration closes (optional)"
+                    value={fields.registrationClosesAt ?? null}
+                    max={fields.startDatetime ?? undefined}
+                    hint="Must be after registration opens and no later than the event start."
+                    onChange={(value) => setFields({ registrationClosesAt: value })}
+                    error={fieldError('registrationClosesAt')}
+                  />
+                  <div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => { setFields({ registrationClosesAt: null }); setChoosingClose(false) }}
+                    >
+                      Close at event start instead
+                    </Button>
+                  </div>
+                </>
+              ) : (
+                <div className="wizard__close-default">
+                  <span>
+                    <strong>Registration closes:</strong>{' '}
+                    {fields.startDatetime
+                      ? `when the event starts (${formatFieldValue('startDatetime', fields.startDatetime)}, Singapore time)`
+                      : 'when the event starts'}
+                  </span>
+                  <Button type="button" variant="secondary" onClick={() => setChoosingClose(true)}>
+                    Choose a different time
+                  </Button>
+                </div>
+              )}
+              <p className="wizard__registration-note">
+                {fields.registrationOpensAt && fields.startDatetime
+                  ? <>Registration opens <strong>{formatFieldValue('startDatetime', fields.registrationOpensAt)}</strong> and closes {fields.registrationClosesAt
+                    ? <strong>{formatFieldValue('startDatetime', fields.registrationClosesAt)}</strong>
+                    : <>when the event starts at <strong>{formatFieldValue('startDatetime', fields.startDatetime)}</strong></>} (Singapore time). </>
+                  : <>Registration closes when the event starts unless you choose a closing time. </>}
+                You can adjust the period after approval.
+              </p>
               <TextField
                 id="attendeeInstructions"
                 label="Attendee instructions"
@@ -488,7 +623,7 @@ export function EventRequestWizardPage() {
       </Card>
 
       {submitError && <p role="alert">{submitError}</p>}
-      <div className="wizard__nav">
+      <div className="wizard__nav wizard__nav--sticky">
         {stepIndex === 0 ? (
           <>
             <Button variant="secondary" onClick={() => save()}>
@@ -504,7 +639,7 @@ export function EventRequestWizardPage() {
           </Button>
         )}
         {stepIndex < STEPS.length - 1 ? (
-          <Button disabled={(stepIndex === 1 && scheduleBlocked) || (stepIndex === 3 && invalidEquipmentQuantity)} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
+          <Button disabled={stepIndex === 1 && scheduleBlocked} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
         ) : (
           <Button onClick={handleSubmit} disabled={submitting || scheduleBlocked || invalidEquipmentQuantity}>
             {submitting ? 'Submitting…' : 'Submit for review'}
@@ -601,7 +736,7 @@ function ReviewStep({
         {fields.registrationNeeds ? <>
           <SummaryRow label="Registration capacity" value={fields.registrationCapacity?.toString() ?? null} onEdit={() => onEditStep(3)} />
           <SummaryRow label="Registration opens" value={fields.registrationOpensAt && `${formatFieldValue('startDatetime', fields.registrationOpensAt)} (Singapore time)`} onEdit={() => onEditStep(3)} />
-          <SummaryRow label="Registration closes" value={fields.startDatetime && `${formatFieldValue('startDatetime', fields.startDatetime)} (Singapore time)`} onEdit={() => onEditStep(3)} />
+          <SummaryRow label="Registration closes" value={(fields.registrationClosesAt ?? fields.startDatetime) && `${formatFieldValue('startDatetime', (fields.registrationClosesAt ?? fields.startDatetime) as string)} (Singapore time)`} onEdit={() => onEditStep(3)} />
           <SummaryRow label="Attendee instructions" value={fields.attendeeInstructions} onEdit={() => onEditStep(3)} />
         </> : null}
       </dl>

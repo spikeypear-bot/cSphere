@@ -88,6 +88,9 @@ public class EventRequest {
     @Column(name = "registration_needs")
     private Boolean registrationNeeds;
 
+    @Column(name = "registration_closes_at")
+    private OffsetDateTime registrationClosesAt;
+
     @Column(name = "registration_capacity")
     private Integer registrationCapacity;
 
