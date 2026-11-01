@@ -1,6 +1,6 @@
 // @stories EC04 VS17
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -67,10 +67,15 @@ describe('EC04 VenueSearchPage', () => {
     await user.click(screen.getByLabelText('Projection'))
     await user.click(screen.getByRole('button', { name: 'Search venues' }))
 
-    expect(await screen.findByText('1 Harbour Road')).toBeInTheDocument()
-    expect(screen.getByText('100 people capacity')).toBeInTheDocument()
-    expect(screen.getByText('Wednesday')).toBeInTheDocument()
-    expect(screen.getByText('10:30am \u2013 11:30pm')).toBeInTheDocument()
+    // A short card; opening hours and booking timings are in its details window.
+    const card = await screen.findByRole('button', { name: '1 Harbour Road' })
+    expect(within(card).getByText(/100 people/)).toBeInTheDocument()
+    expect(screen.queryByText('Wednesday')).not.toBeInTheDocument()
+    await user.click(card)
+    const details = screen.getByRole('dialog', { name: '1 Harbour Road' })
+    expect(within(details).getByText('Wednesday')).toBeInTheDocument()
+    expect(within(details).getByText('10:30am \u2013 11:30pm')).toBeInTheDocument()
+    expect(within(details).getByText('Booking Window')).toBeInTheDocument()
     expect(screen.queryByText('Legacy text must never be advertised')).not.toBeInTheDocument()
     const url = new URL(calls[0].url, 'http://localhost')
     expect(url.searchParams.get('startDatetime')).toBe(new Date(start).toISOString())

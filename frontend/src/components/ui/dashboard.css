@@ -80,6 +80,21 @@
   transition: background-color 120ms ease, border-color 120ms ease;
 }
 
+/* The button form (opens a window rather than a page) looks the same. */
+button.row-link {
+  width: 100%;
+  margin: 0;
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+
+button.row-link:not(.card) {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
 .row-link:hover {
   background: var(--paper);
 }

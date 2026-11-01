@@ -7,7 +7,9 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { VenueDetails } from '../../components/venue/VenueDetails'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
@@ -90,6 +92,7 @@ export function VenueBookingRequestPage() {
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [detailsId, setDetailsId] = useState<string | null>(null)
   const [mapFocusId, setMapFocusId] = useState<string>()
   const [bookingTimes, setBookingTimes] = useState<Record<string, BookingInput>>({})
   const [notes, setNotes] = useState('')
@@ -200,6 +203,8 @@ export function VenueBookingRequestPage() {
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
   const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
+  // The open details window's venue, read from the live options so a refresh shows in it.
+  const detailsVenue = options.find((o) => o.venue.venueId === detailsId)?.venue ?? null
   const reviewed = (option: VenueOptionDto) => {
     const input = bookingTimes[option.venue.venueId]
     if (!validInput(input)) return undefined
@@ -376,16 +381,26 @@ export function VenueBookingRequestPage() {
                         {reviewed(option) && <SuitabilitySummary option={reviewed(option)!} />}
                         {reviewed(option) && changedTiming(bookingTimes[option.venue.venueId], option, event) &&
                           <ul>{reviewed(option)!.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
-                        <Button variant="secondary" className="venue-request__remove-button"
-                          onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
-                          Remove selection
-                        </Button>
+                        <div className="venue-request__venue-actions">
+                          <Button variant="secondary" onClick={() => setDetailsId(option.venue.venueId)}>
+                            View venue details
+                          </Button>
+                          <Button variant="secondary"
+                            onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
+                            Remove selection
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
-                  {selected.length === 1 ? <>
-                    <VenueDetails venue={selected[0].venue} />
-                    <Comparison event={event} option={reviewed(selected[0]) ?? selected[0]} input={bookingTimes[selected[0].venue.venueId]} /></> : null}
+                  {selected.length === 1
+                    ? <Comparison event={event} option={reviewed(selected[0]) ?? selected[0]} input={bookingTimes[selected[0].venue.venueId]} />
+                    : null}
+                  {detailsVenue ? (
+                    <Modal title={detailsVenue.venueAddress} onClose={() => setDetailsId(null)}>
+                      <VenueDetails venue={detailsVenue} />
+                    </Modal>
+                  ) : null}
 
                   {needsJustification ? (
                     <div className="venue-request__field">
@@ -543,23 +558,6 @@ function BookingTimingInputs({ option, input, disabled, onChange }: {
       ...occupiedPeriod(instant(input.start), instant(input.end), Number(input.setup), Number(input.turnaround)),
       timingNote: input.reason || null, conflicts: [] }} />}
   </fieldset>
-}
-
-function VenueDetails({ venue }: { venue: VenueOptionDto['venue'] }) {
-  return (
-    <section className="venue-request__venue-details" aria-labelledby="venue-details-heading">
-      <h3 id="venue-details-heading">Selected venue details</h3>
-      <p className="venue-request__venue-address">{venue.venueAddress}</p>
-      <dl>
-        <div><dt>Capacity</dt><dd>{venue.venueCapacity?.toLocaleString() ?? 'Not recorded'} people</dd></div>
-        <div><dt>Supported layouts</dt><dd>{venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Facilities</dt><dd>{venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Accessibility</dt><dd>{venue.venueAccessibilities.map(accessibilityLabel).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Operating hours</dt><dd><OperatingHours hours={venue.operatingHours} /></dd></div>
-        {venue.additionalInformation ? <div><dt>Additional information</dt><dd>{venue.additionalInformation}</dd></div> : null}
-      </dl>
-    </section>
-  )
 }
 
 function VenueOptionCard({ option, attendance, selected, onSelect }: {

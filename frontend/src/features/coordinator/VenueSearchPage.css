@@ -41,20 +41,10 @@
 .venue-search__results .card {
   height: 100%;
   box-sizing: border-box;
-  padding: var(--venue-map-content-gap);
 }
 .venue-search__results .card[data-map-focused='true'] {
   border-color: var(--role-coordinator);
   box-shadow: inset 3px 0 var(--role-coordinator);
-}
-
-.venue-search__results h3 {
-  margin: 0 0 0.5rem;
-  overflow-wrap: anywhere;
-}
-
-.venue-search__results p {
-  margin: 0.35rem 0;
 }
 
 @media (max-width: 640px) {

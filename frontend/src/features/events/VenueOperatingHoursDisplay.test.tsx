@@ -50,7 +50,9 @@ describe('VS17 operating hours across role displays', () => {
  it('VS17 (happy): coordinator details show one current schedule and refresh it without navigation', async () => {
   let venue = makeVenue('Wednesday 08:00–18:00'); coordinator(() => venue)
   await userEvent.click(await screen.findByRole('button', { name: /Hours Hall/ }))
-  const details = screen.getByRole('region', { name: 'Selected venue details' })
+  // The selected venue's details open in a window from its "View venue details" button.
+  await userEvent.click(screen.getByRole('button', { name: 'View venue details' }))
+  const details = screen.getByRole('dialog', { name: /Hours Hall/ })
   expect(within(details).getByText('8am – 6pm')).toBeInTheDocument()
   expect(within(details).getAllByText('Operating hours', { selector: 'dt' })).toHaveLength(1)
   expect(screen.queryByText('Structured weekly hours')).not.toBeInTheDocument()

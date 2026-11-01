@@ -5,7 +5,7 @@
 .venue-request__needs dl { margin: 0; display: grid; gap: 0.6rem; }
 .venue-request__needs dt { font-size: 0.8rem; font-weight: 600; color: var(--ink-soft); }
 .venue-request__needs dd { margin: 0; overflow-wrap: anywhere; }
-.venue-request__needs dd, .venue-request__venue-details dd { line-height: 1.45; }
+.venue-request__needs dd { line-height: 1.45; }
 
 .venue-request__main { display: flex; flex-direction: column; gap: var(--venue-map-section-gap); min-width: 0; }
 .venue-request__replacement-callout {
@@ -223,21 +223,6 @@
 @media (max-width: 650px) {
   .venue-request__window-fields, .venue-request__buffer-fields { grid-template-columns: 1fr; }
 }
-.venue-request__venue-details {
-  margin-bottom: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--hairline);
-  border-radius: var(--radius-md);
-  background: color-mix(in srgb, var(--accent) 5%, var(--panel));
-}
-.venue-request__venue-details h3 { margin: 0; font-size: 1rem; }
-.venue-request__venue-address { margin: 0.25rem 0 0.85rem; font-weight: 700; }
-.venue-request__venue-details dl { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.75rem 1rem; margin: 0; }
-.venue-request__venue-details dt { font-size: 0.78rem; font-weight: 700; color: var(--ink-soft); }
-.venue-request__venue-details dd { margin: 0.15rem 0 0; overflow-wrap: anywhere; }
-@media (max-width: 650px) {
-  .venue-request__venue-details dl { grid-template-columns: 1fr; }
-}
 .venue-request__history ul { margin: 0; padding-inline-start: 1.1rem; }
 .venue-request__history .venue-request__history-heading { margin-bottom: 1rem; }
 .venue-request__history-list { list-style: none; display: grid; gap: var(--venue-map-content-gap); padding: 0 !important; }
@@ -276,7 +261,7 @@
   background: color-mix(in srgb, var(--accent) 2%, var(--panel));
 }
 .venue-request__review > ul[aria-label='Selected venues'] > li > strong { display: block; overflow-wrap: anywhere; }
-.venue-request__remove-button { margin-top: 0.25rem; }
+.venue-request__venue-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
 .venue-request__submit-note { margin: 0 0 0.75rem; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.5; }
 .venue-request__submit-button { min-height: 2.75rem; }
 
