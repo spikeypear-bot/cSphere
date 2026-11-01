@@ -226,12 +226,14 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     renderPage()
 
     const card = await cardFor('Offsite')
-    expect(within(card).getAllByRole('link').map((link) => link.textContent)).toEqual(['View event'])
+    // The whole card is the one link, named by the event.
+    expect(within(card).getAllByRole('link')).toHaveLength(1)
+    expect(within(card).getByRole('link', { name: 'Offsite' })).toHaveAttribute('href', '/coordinator-lead/events/e1')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /approve|book|confirm|reassign/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /approve|book|confirm|reassign/i })).not.toBeInTheDocument()
 
-    await user.click(within(card).getByRole('link', { name: 'View event: Offsite' }))
+    await user.click(within(card).getByRole('link', { name: 'Offsite' }))
     expect(await screen.findByRole('heading', { name: 'Event oversight page' })).toBeInTheDocument()
   })
 

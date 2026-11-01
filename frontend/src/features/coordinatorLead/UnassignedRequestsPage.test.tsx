@@ -135,9 +135,9 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     renderPage()
 
     await cardFor('Offsite')
-    expect(screen.getByRole('link', { name: 'Review request: Offsite' }))
+    expect(screen.getByRole('link', { name: 'Offsite' }))
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r1')
-    expect(screen.getByRole('link', { name: 'Review request: Annual Gala' }))
+    expect(screen.getByRole('link', { name: 'Annual Gala' }))
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
   })
 
@@ -158,7 +158,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     // That time is when the request last changed, so it must not read as its submission time.
     expect(within(waiting).getByText('Last updated', { selector: 'dt' }).nextElementSibling).toHaveTextContent('2 days ago')
     expect(within(waiting).queryByText('Submitted', { selector: 'dt' })).not.toBeInTheDocument()
-    expect(within(waiting).getByRole('link', { name: 'Review request: Annual Gala' }))
+    expect(within(waiting).getByRole('link', { name: 'Annual Gala' }))
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
     expect(within(await cardFor('Offsite')).getByText('Submitted', { selector: '.status-badge' })).toBeInTheDocument()
   })

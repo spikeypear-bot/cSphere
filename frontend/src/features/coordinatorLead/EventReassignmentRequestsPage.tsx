@@ -59,7 +59,7 @@ export function EventReassignmentRequestsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/coordinator-lead">Event Coordinator Lead console</Link>}
+        eyebrow={<Link to="/coordinator-lead">Dashboard</Link>}
         title="Event reassignment requests"
         description="Review Coordinator requests to transfer their active events."
         actions={<Button variant="ghost" onClick={() => {
@@ -82,12 +82,12 @@ export function EventReassignmentRequestsPage() {
             const busy = busyId === requestId
             return (
               <li key={requestId}>
-                <Card className="reassignment-request">
+                <Card className="dash-row-card reassignment-request">
                   <div className="event-reassignment-queue__heading">
                     <h2>{request.eventName}</h2>
                     <span className="status-badge status-badge--pending">Pending</span>
                   </div>
-                  <dl className="reassignment-facts">
+                  <dl className="dash-figures dash-facts">
                     <div><dt>Organisation</dt><dd>{request.organisation ?? '—'}</dd></div>
                     <div><dt>Requested by</dt><dd>{request.requesterName}</dd></div>
                     <div><dt>Current coordinator</dt><dd>{request.coordinatorName ?? request.requesterName}</dd></div>
