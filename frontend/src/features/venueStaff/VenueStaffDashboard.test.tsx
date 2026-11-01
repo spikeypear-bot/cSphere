@@ -108,4 +108,17 @@ describe('VS02 venue staff dashboard', () => {
 
     expect(await within(await panel()).findByRole('link', { name: 'Event 3' })).toBeInTheDocument()
   })
+
+  it('VS02 (boundary): a request with no event name or venue address still shows, saying so', async () => {
+    routes(() => jsonResponse(200, [booking(4, {
+      venue: { venueId: 'v1', venueAddress: '  ', venueCapacity: 200, supportedLayouts: [], venueAccessibilities: [], venueFacilities: [] },
+      event: { eventId: 'e4', eventName: ' ', startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z',
+        expectedAttendance: 50, venueRequirements: null, accessibilityNeeds: [] },
+    })]))
+    renderDashboard()
+
+    const requests = await panel()
+    expect(await within(requests).findByRole('link', { name: 'Unnamed event' })).toHaveAttribute('href', '/venue-staff/bookings/b4?from=booking-approvals')
+    expect(within(requests).getByText('Venue not specified')).toBeInTheDocument()
+  })
 })
