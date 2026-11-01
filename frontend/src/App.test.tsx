@@ -55,13 +55,14 @@ describe('App routing — role consoles', () => {
 
   // ---- EC09: "My events" belongs to the Event Coordinator console ----
 
-  it('puts "My events" one click away on the Event Coordinator console and opens the page there', async () => {
+  it('puts "My events" one click away in the Event Coordinator navigation and opens the page there', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     const user = userEvent.setup()
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator')
 
-    const link = await screen.findByRole('link', { name: 'My events' })
+    const nav = await screen.findByRole('navigation', { name: 'Event Coordinator' })
+    const link = within(nav).getByRole('link', { name: 'My events' })
     expect(link).toHaveAttribute('href', '/coordinator/my-events')
     await user.click(link)
 

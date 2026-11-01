@@ -40,6 +40,7 @@ import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
 import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
 import { AppShell as ConsoleShell } from './components/layout/AppShell'
+import { coordinatorNav } from './features/coordinator/coordinatorNav'
 import { technicalSupportNav } from './features/technicalSupport/technicalSupportNav'
 import { LegacyRedirect, LegacyReportRedirect, LegacyRequestRedirect } from './features/technicalSupport/LegacyRedirects'
 import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
@@ -113,21 +114,25 @@ function CoordinatorRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<CoordinatorHomePage />} />
-      <Route path="review-queue" element={<ReviewQueuePage />} />
-      <Route path="my-events" element={<AssignedEventsPage />} />
-      <Route path="requests/:requestId" element={<RequestReviewPage />} />
-      <Route path="events/:eventId" element={<EventDetailsPage />} />
-      <Route path="events/:eventId/reassignment-request" element={<EventReassignmentRequestPage />} />
-      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
-      <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
-      <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
-      <Route path="venue-search" element={<VenueSearchPage />} />
-      <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
-      <Route path="operational-issues" element={<OperationalIssuesPage />} />
-      {skeletonRoutes(coordinatorFeatures)}
-    </Routes>
+    <ConsoleShell navLabel="Event Coordinator" items={coordinatorNav}>
+      <Routes>
+        <Route index element={<CoordinatorHomePage />} />
+        <Route path="review-queue" element={<ReviewQueuePage />} />
+        <Route path="my-events" element={<AssignedEventsPage />} />
+        <Route path="requests/:requestId" element={<RequestReviewPage />} />
+        <Route path="events/:eventId" element={<EventDetailsPage />} />
+        <Route path="events/:eventId/reassignment-request" element={<EventReassignmentRequestPage />} />
+        <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+        <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
+        <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
+        <Route path="venue-search" element={<VenueSearchPage />} />
+        <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
+        <Route path="operational-issues" element={<OperationalIssuesPage />} />
+        {skeletonRoutes(coordinatorFeatures)}
+        {/* Retired placeholder pages and unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/coordinator" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
