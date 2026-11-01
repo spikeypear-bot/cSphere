@@ -28,6 +28,7 @@ export interface DraftFields {
   registrationNeeds: boolean | null
   registrationCapacity?: number | null
   registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
   attendeeInstructions?: string | null
 }
 
@@ -42,9 +43,10 @@ const BLANK_DRAFT: DraftFields = {
   equipmentRequirements: null,
   accessibilityNeeds: [],
   requiredFacilities: [],
-  registrationNeeds: null,
+  registrationNeeds: true,
   registrationCapacity: null,
   registrationOpensAt: null,
+  registrationClosesAt: null,
   attendeeInstructions: null,
 }
 
@@ -73,7 +75,10 @@ function backupKey(organisation: string | null, id: string | null): string {
 function readBackup(organisation: string | null, id: string | null): DraftFields | null {
   try {
     const raw = window.localStorage.getItem(backupKey(organisation, id))
-    return raw ? (JSON.parse(raw) as DraftFields) : null
+    if (!raw) return null
+    const backup = JSON.parse(raw) as DraftFields
+    // Backups saved before registration defaulted to on hold null.
+    return { ...backup, registrationNeeds: backup.registrationNeeds ?? true }
   } catch {
     return null // Corrupt/unavailable storage is not worth failing the page over.
   }
@@ -96,6 +101,14 @@ function clearBackup(organisation: string | null, id: string | null): void {
   }
 }
 
+/** The close time the organiser actually chose, or null when the server is
+ * only reporting its default of the event start. */
+export function chosenRegistrationClose(dto: EventRequestDto): string | null {
+  return dto.registrationClosesAt
+    && Date.parse(dto.registrationClosesAt) !== Date.parse(dto.startDatetime ?? '')
+    ? dto.registrationClosesAt : null
+}
+
 function toDraftFields(dto: EventRequestDto): DraftFields {
   return {
     eventName: dto.eventName,
@@ -108,9 +121,12 @@ function toDraftFields(dto: EventRequestDto): DraftFields {
     equipmentRequirements: dto.equipmentRequirements,
     accessibilityNeeds: dto.accessibilityNeeds,
     requiredFacilities: dto.requiredFacilities ?? [],
-    registrationNeeds: dto.registrationNeeds,
+    registrationNeeds: dto.registrationNeeds ?? true,
     registrationCapacity: dto.registrationCapacity ?? null,
     registrationOpensAt: dto.registrationOpensAt ?? null,
+    // The server reports the event start when no close time was chosen; keep
+    // that as "not set" so moving the event start later moves the close too.
+    registrationClosesAt: chosenRegistrationClose(dto),
     attendeeInstructions: dto.attendeeInstructions ?? null,
   }
 }

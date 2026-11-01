@@ -17,6 +17,7 @@ import {
   type SaveEventRequestRequest,
 } from '../../types/eventRequest'
 import { hasProblems, requestFieldProblems, type RequestFieldProblems } from './eventRequestValidation'
+import { chosenRegistrationClose } from './useEventRequestDraft'
 import './ClarificationResponsePage.css'
 import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 
@@ -46,6 +47,7 @@ function fieldsFrom(request: EventRequestDto): Fields {
     registrationNeeds: request.registrationNeeds,
     registrationCapacity: request.registrationCapacity ?? null,
     registrationOpensAt: request.registrationOpensAt ?? null,
+    registrationClosesAt: chosenRegistrationClose(request),
     attendeeInstructions: request.attendeeInstructions ?? null,
   }
 }

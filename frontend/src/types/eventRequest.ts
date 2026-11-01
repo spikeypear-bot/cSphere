@@ -109,6 +109,7 @@ export interface SaveEventRequestRequest {
   registrationNeeds?: boolean | null
   registrationCapacity?: number | null
   registrationOpensAt?: string | null
+  registrationClosesAt?: string | null
   attendeeInstructions?: string | null
 }
 
