@@ -37,6 +37,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
+import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
@@ -287,6 +288,58 @@ class VenueBookingRequestServiceTest {
                 .isInstanceOf(NotAssignedCoordinatorException.class);
 
         verify(bookings, never()).findForEvent(event.getEventId());
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC-C2 AC8 (failure): rejects an empty venue batch without persisting anything")
+    void rejectsEmptyVenueBatch() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(), null))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Add at least one venue");
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Add at least one venue");
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(List.of())))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Add at least one venue");
+
+        verifySubmissionWasNotPersisted();
+        verify(venues, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC-C2 AC8 (failure): rejects a batch containing a booking without a venue")
+    void rejectsVenueBatchWithMissingSelection() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(java.util.Collections.singletonList(null))))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Select a venue for every booking");
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(List.of(new SubmitVenueBookingRequest(null, null, null)))))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Select a venue for every booking");
+
+        verifySubmissionWasNotPersisted();
+        verify(venues, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC-C2 AC8 (failure): rejects an unknown venue without persisting the batch")
+    void rejectsVenueBatchWithUnknownVenue() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(List.of(
+                        new SubmitVenueBookingRequest(UUID.randomUUID(), null, null)))))
+                .isInstanceOf(VenueNotFoundException.class);
+
         verifySubmissionWasNotPersisted();
     }
 
