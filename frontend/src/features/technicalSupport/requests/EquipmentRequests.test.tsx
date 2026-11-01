@@ -98,7 +98,7 @@ describe('TS09 equipment requests list and request page', () => {
     await user.selectOptions(screen.getByLabelText('Status'), 'all')
     expect(await screen.findByRole('link', { name: 'Gala r3' })).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Equipment requests' })).getAllByRole('listitem')).toHaveLength(3)
-    expect(screen.getByText('Rejected', { selector: '.tech-badge' })).toBeInTheDocument()
+    expect(screen.getByText('Rejected', { selector: '.dash-badge' })).toBeInTheDocument()
     expect(calls.map((call) => call.url)).toEqual([
       '/api/equipment-requests?status=processing',
       '/api/equipment-requests?status=approved',

@@ -7,9 +7,9 @@ import {
 } from '../reservations/reservation.types'
 import { fetchEquipmentRequests } from '../reservations/reservationApi'
 import { TS } from '../shared/faultyEquipment'
-import { ResourceView } from '../shared/ResourceView'
-import { RowLink } from '../shared/RowLink'
-import { useResource } from '../shared/useResource'
+import { ResourceView } from '../../../components/ui/ResourceView'
+import { RowLink } from '../../../components/ui/RowLink'
+import { useResource } from '../../../lib/useResource'
 import { RequestBadges, RequestFacts } from './RequestFacts'
 import '../technicalSupport.css'
 

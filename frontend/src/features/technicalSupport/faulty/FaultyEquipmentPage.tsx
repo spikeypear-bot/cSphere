@@ -7,9 +7,9 @@ import { fetchReports } from '../damage/equipmentDamageApi'
 import { fetchCurrentStatusPeriods } from '../status/equipmentStatusApi'
 import { equipmentPath, reportPath, TS } from '../shared/faultyEquipment'
 import { describeSpan } from '../shared/format'
-import { ResourceView } from '../shared/ResourceView'
-import { RowLink } from '../shared/RowLink'
-import { useResource } from '../shared/useResource'
+import { ResourceView } from '../../../components/ui/ResourceView'
+import { RowLink } from '../../../components/ui/RowLink'
+import { useResource } from '../../../lib/useResource'
 import '../damage/equipmentDamage.css'
 import '../technicalSupport.css'
 
@@ -41,7 +41,7 @@ export function FaultyEquipmentPage() {
                 <RowLink to={equipmentPath(block.equipmentId)} className="card tech-row-card" titleAs="h3"
                   title={`${block.equipmentName} · ${block.serialNumber}`}
                   media={<EquipmentPhoto name={block.equipmentName} />}
-                  badges={<span className="tech-badge tech-badge--danger">{block.status}</span>}>
+                  badges={<span className="dash-badge dash-badge--danger">{block.status}</span>}>
                   <p className="tech-row-card__hint">{describeSpan(block.start, block.end)}</p>
                 </RowLink>
               </li>
@@ -64,7 +64,7 @@ export function FaultyEquipmentPage() {
                     title={`${report.equipmentName}${report.serialNumber ? ` · ${report.serialNumber}` : ` · ${report.quantity} damaged`}`}
                     media={<EquipmentPhoto name={report.equipmentName} />}
                     badges={(
-                      <span className={report.status === 'OPEN' ? 'tech-badge tech-badge--danger' : 'tech-badge tech-badge--neutral'}>
+                      <span className={report.status === 'OPEN' ? 'dash-badge dash-badge--danger' : 'dash-badge dash-badge--neutral'}>
                         {report.status === 'OPEN' ? 'Open' : 'Closed'}
                       </span>
                     )}>

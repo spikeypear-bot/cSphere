@@ -1,6 +1,6 @@
 import { useId, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import '../technicalSupport.css'
+import './dashboard.css'
 
 /** One row or card that opens a page: the whole surface is a single link,
  * with a trailing chevron. Its accessible name is the title alone (so a
