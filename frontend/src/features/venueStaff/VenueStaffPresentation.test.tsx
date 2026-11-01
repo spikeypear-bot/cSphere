@@ -1,7 +1,9 @@
-// @stories VS17 VS15 VS16 VS18 VS-C3
+// @stories VS17 VS15 VS16 VS18 VS-C3 VS02
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
+import { jsonResponse, seedSession } from '../../test/apiStubs'
+import { SessionProvider } from '../../lib/session'
 import { VenueStaffHomePage } from './VenueStaffHomePage'
 import { VenueDetailsPage } from './VenueDetailsPage'
 const json = (body: unknown) => ({ok:true, status:200, text:async()=>JSON.stringify(body)}) as Response
@@ -14,12 +16,15 @@ function details(getBookings: () => unknown[]) {
  }))
  render(<MemoryRouter initialEntries={['/venue-staff/catalogue/v1']}><Routes><Route path="/venue-staff/catalogue/:venueId" element={<VenueDetailsPage/>}/></Routes></MemoryRouter>)
 }
-afterEach(()=>{cleanup();vi.unstubAllGlobals()})
+afterEach(()=>{cleanup();vi.unstubAllGlobals();window.localStorage.clear()})
 describe('VS17 Venue Staff presentation',()=>{
- it('VS17 (happy): home links to all implemented features without developer scaffold text',()=>{
-  render(<MemoryRouter><VenueStaffHomePage/></MemoryRouter>)
-  expect(screen.getByRole('heading',{name:'Venue Staff console'})).toBeInTheDocument()
-  expect(screen.getAllByRole('link').map(a=>a.getAttribute('href'))).toEqual(['/venue-staff/catalogue','/venue-staff/catalogue/new','/venue-staff/booking-approvals','/venue-staff/availability-calendar'])
+ it('VS17 VS02 (happy): home greets the staff member and links to booking approvals without developer scaffold text',async()=>{
+  // The other pages are reached from the side navigation (VenueStaffNav.test.tsx).
+  seedSession('venue-staff');vi.stubGlobal('fetch',vi.fn(async()=>jsonResponse(200,[])))
+  render(<MemoryRouter><SessionProvider><VenueStaffHomePage/></SessionProvider></MemoryRouter>)
+  expect(screen.getByRole('heading',{level:1})).toHaveTextContent(/^Good \w+, vs1$/)
+  expect(screen.getByRole('link',{name:'View all booking requests'})).toHaveAttribute('href','/venue-staff/booking-approvals')
+  expect(await screen.findByText('No booking requests waiting for review.')).toBeInTheDocument()
   expect(screen.queryByText(/Skeleton|None of these pages|backend package|Sprint story|live backlog|VS06A/)).not.toBeInTheDocument()
  })
  it.each([['approved','Approved'],['attention','Requires attention'],['changed','Replaced'],['rejected','Rejected'],['cancelled','Cancelled'],['pending','Pending']])('VS17 (cross-cutting): associated booking status %s has the human label %s',async(status,label)=>{

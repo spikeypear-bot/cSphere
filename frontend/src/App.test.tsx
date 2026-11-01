@@ -177,7 +177,7 @@ describe('App routing — role consoles', () => {
   it.each([
     ['coordinator', 'ec1', /^Good \w+, ec1$/],
     ['organiser', 'eo1', /Your event requests/i],
-    ['venue-staff', 'vs1', /Venue Staff console/i],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /^Welcome$/i],
   ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {

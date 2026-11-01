@@ -82,7 +82,7 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
   it.each([
     ['coordinator', 'ec1', /^Good \w+, ec1$/],
     ['organiser', 'eo1', /Your event requests/i],
-    ['venue-staff', 'vs1', /Venue Staff console/i],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/],
     ['technical-support', 'ts1', /^Good \w+, ts1$/],
     ['attendee', 'att1', /^Welcome$/i],
   ] as const)('ECL-C4 AC1 (negative): a signed-in %s opening the URL directly is sent to their own console, told why, and no events are read', async (role, username, ownConsole) => {
