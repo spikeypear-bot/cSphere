@@ -16,7 +16,8 @@ const TOP = 5
 const read = <T,>(path: string) => () => apiClient.get<T>(path, { cache: 'no-store' })
 
 const upcoming = (list: RegistrationDetails[]) => list.filter((r) =>
-  r.registrationStatus === 'confirmed' && r.eventStatus !== 'completed' && Date.parse(r.endDatetime) > Date.now())
+  r.registrationStatus === 'confirmed' && r.eventStatus !== 'completed' && r.eventStatus !== 'cancelled'
+  && Date.parse(r.endDatetime) > Date.now())
 // The same server-data mapping the Browse events badge shows.
 const openNow = (list: AttendeeEventListItem[]) => list.filter((e) =>
   registrationBadge({ ...e, eventStatus: e.status }).label === 'Open for Registration')

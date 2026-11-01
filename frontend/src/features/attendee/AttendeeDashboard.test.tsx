@@ -119,4 +119,13 @@ describe('AT04 attendee dashboard', () => {
     expect(within(panel('My upcoming registrations')).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(await within(panel('Open for registration')).findByRole('link', { name: 'Expo' })).toBeInTheDocument()
   })
+
+  it('AT04 (boundary): a registration for a cancelled event is not upcoming', async () => {
+    routes({ [REGISTRATIONS]: () => jsonResponse(200, [registration(1), registration(2, { eventStatus: 'cancelled' })]) })
+    renderDashboard()
+
+    const mine = await findPanel('My upcoming registrations')
+    expect(await within(mine).findByRole('link', { name: 'Gala' })).toBeInTheDocument()
+    expect(within(mine).queryByRole('link', { name: 'Registered 2' })).not.toBeInTheDocument()
+  })
 })

@@ -180,12 +180,13 @@ describe('App routing — role consoles', () => {
   })
 
   it.each([
-    ['coordinator', 'ec1', /^Good \w+, ec1$/],
-    ['organiser', 'eo1', /^Good \w+, eo1$/],
-    ['venue-staff', 'vs1', /^Good \w+, vs1$/],
-    ['technical-support', 'ts1', /^Good \w+, ts1$/],
-    ['attendee', 'att1', /^Good \w+, att1$/],
-  ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
+    ['coordinator', 'ec1', /^Good \w+, ec1$/, 'Event Coordinator'],
+    ['organiser', 'eo1', /^Good \w+, eo1$/, 'Event Organiser'],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/, 'Venue Staff'],
+    ['technical-support', 'ts1', /^Good \w+, ts1$/, 'Technical Support'],
+    ['attendee', 'att1', /^Good \w+, att1$/, 'Attendee'],
+    ['safety-officer', 'so1', /^Good \w+, so1$/, 'Safety Officer'],
+  ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole, ownNav) => {
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       fetched.push(String(input))
@@ -195,6 +196,8 @@ describe('App routing — role consoles', () => {
     renderApp('/coordinator-lead/assignments')
 
     expect(await screen.findByRole('heading', { level: 1, name: ownConsole })).toBeInTheDocument()
+    // The user's own console, not just any dashboard with their name on it.
+    expect(screen.getByRole('navigation', { name: ownNav })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Coordinator assignments' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/assignments')

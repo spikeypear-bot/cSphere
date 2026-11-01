@@ -110,4 +110,22 @@ describe('EO15 organiser dashboard', () => {
     expect(await within(panel('Needs your action')).findByRole('link', { name: /Gala/ })).toBeInTheDocument()
     expect(await screen.findByText('2 requests need your action')).toBeInTheDocument()
   })
+
+  it('EO15 (boundary): a change that can no longer be decided is not shown as waiting', async () => {
+    routes({ [CHANGES]: () => jsonResponse(200, [{ ...change('pending'), closedReason: 'The event has started.' }]) })
+    renderDashboard()
+
+    expect(await within(await findPanel('Change requests waiting')).findByText('No change requests waiting.')).toBeInTheDocument()
+    expect(await screen.findByText(/0 changes waiting/)).toBeInTheDocument()
+  })
+
+  it('EO15 (boundary): an approved event that has already ended is not upcoming', async () => {
+    const ended = request(6, { eventName: 'Past Fair', status: 'approved', eventId: 'event-6', journeyStatus: journey('CONFIRMED'),
+      startDatetime: '2020-01-01T01:00:00Z', endDatetime: '2020-01-01T04:00:00Z' })
+    routes({ [REQUESTS]: () => jsonResponse(200, [planned, ended]) })
+    renderDashboard()
+
+    expect(await within(await findPanel('Upcoming events')).findByRole('link', { name: 'Expo' })).toBeInTheDocument()
+    expect(within(panel('Upcoming events')).queryByRole('link', { name: 'Past Fair' })).not.toBeInTheDocument()
+  })
 })

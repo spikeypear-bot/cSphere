@@ -52,8 +52,8 @@ describe('VS02 venue staff dashboard', () => {
     renderDashboard()
 
     const requests = await panel()
-    expect(await within(requests).findByRole('link', { name: 'Workshop' })).toHaveAttribute('href', '/venue-staff/bookings/b1')
-    expect(within(requests).getByRole('link', { name: 'Event 2' })).toHaveAttribute('href', '/venue-staff/bookings/b2')
+    expect(await within(requests).findByRole('link', { name: 'Workshop' })).toHaveAttribute('href', '/venue-staff/bookings/b1?from=booking-approvals')
+    expect(within(requests).getByRole('link', { name: 'Event 2' })).toHaveAttribute('href', '/venue-staff/bookings/b2?from=booking-approvals')
     expect(within(requests).getByText('Requires attention')).toBeInTheDocument()
     expect(within(requests).getAllByText('Seminar Room')).toHaveLength(2)
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Good \w+, vs1$/)
@@ -98,5 +98,14 @@ describe('VS02 venue staff dashboard', () => {
     expect(within(requests).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Explore venues' })).toBeInTheDocument()
     expect(within(requests).getByRole('alert')).toHaveTextContent('Booking requests could not be loaded.')
+  })
+
+  it('VS02 (boundary): a booking whose tentative hold has lapsed is back to review, as on Booking approvals', async () => {
+    // The server still says active, but its own clock puts the deadline now.
+    const lapsed = { ...activeHold, bookingId: 'b3', expiresAt: activeHold.serverTime }
+    routes(() => jsonResponse(200, [booking(3, { holds: [lapsed] })]))
+    renderDashboard()
+
+    expect(await within(await panel()).findByRole('link', { name: 'Event 3' })).toBeInTheDocument()
   })
 })

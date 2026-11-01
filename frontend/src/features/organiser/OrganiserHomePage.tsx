@@ -19,8 +19,9 @@ const read = <T,>(path: string) => () => apiClient.get<T>(path, { cache: 'no-sto
 
 /** A draft to finish, or a coordinator's question to answer. */
 const needsAction = (r: EventRequestDto) => r.status === 'draft' || r.status === 'clarification_required'
-/** An approved request whose event is still ahead (not completed or cancelled). */
+/** An approved request whose event is still ahead: not completed or cancelled, and not yet ended. */
 const isUpcoming = (r: EventRequestDto) => r.status === 'approved' && r.eventId !== null && !r.journeyStatus?.isFinal
+  && (r.endDatetime === null || Date.parse(r.endDatetime) > Date.now())
 
 /** EO15: the organiser console's front page — what needs their attention,
  * from the same reads My requests uses. */
@@ -29,7 +30,7 @@ export function OrganiserHomePage() {
   const requests = useResource(read<EventRequestDto[]>('/event-requests'), 'requests')
   const changes = useResource(read<ChangeRequestView[]>('/change-requests'), 'changes')
   const greeting = greetingFor()
-  const pendingChanges = changes.data ? { ...changes, data: changes.data.filter((c) => c.status === 'pending') } : changes
+  const pendingChanges = changes.data ? { ...changes, data: changes.data.filter((c) => c.status === 'pending' && !c.closedReason) } : changes
 
   return (
     <section className="page">

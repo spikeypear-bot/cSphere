@@ -1,3 +1,4 @@
+import { useMemo } from 'react'
 import { PageHeader } from '../../components/ui/PageHeader'
 import { Panel } from '../../components/ui/Panel'
 import { ResourceView } from '../../components/ui/ResourceView'
@@ -10,22 +11,27 @@ import type { VenueBookingDto } from '../../types/venueBooking'
 import { BOOKING_STATUS_LABELS, bookingDisplayStatus } from '../../types/venueBookingStatus'
 import { VenueMapExplorer } from '../venueMap/VenueMapExplorer'
 import { formatEventTimeRange } from './formatEventDateTime'
+import { useHoldDeadline } from './useHoldDeadline'
 import './VenueStaff.css'
 
 /** How many rows the panel shows before "View all". */
 const TOP = 5
 
 /** Requests still waiting on a decision: attention first, then pending ones not on a tentative hold. */
-function toReview(bookings: VenueBookingDto[]) {
-  const status = (b: VenueBookingDto) => bookingDisplayStatus(b.status, b.holds)
+function toReview(bookings: VenueBookingDto[], expired: Set<string>) {
+  // `expired` lapses holds on the server's own clock, exactly as Booking approvals does.
+  const status = (b: VenueBookingDto) => bookingDisplayStatus(b.status, b.holds, expired)
   return [...bookings.filter((b) => status(b) === 'attention'), ...bookings.filter((b) => status(b) === 'pending')]
 }
 
 /** VS02: the venue staff console's front page — booking requests to decide, then the venue map. */
 export function VenueStaffHomePage() {
   const { username } = useSession()
-  const requests = useResource(
-    () => apiClient.get<VenueBookingDto[]>('/venue-staff/booking-requests', { cache: 'no-store' }).then(toReview), 'requests')
+  const loaded = useResource(
+    () => apiClient.get<VenueBookingDto[]>('/venue-staff/booking-requests', { cache: 'no-store' }), 'requests')
+  const holds = useMemo(() => (loaded.data ?? []).flatMap((b) => b.holds ?? []), [loaded.data])
+  const expired = useHoldDeadline(holds, loaded.retry)
+  const requests = { ...loaded, data: loaded.data ? toReview(loaded.data, expired) : null }
   const greeting = greetingFor()
 
   return (
@@ -44,7 +50,7 @@ export function VenueStaffHomePage() {
               <ul className="dash-queue" aria-label="Booking requests to review">
                 {list.slice(0, TOP).map((booking) => (
                   <li key={booking.bookingId}>
-                    <RowLink to={`/venue-staff/bookings/${booking.bookingId}`} className="dash-queue__row"
+                    <RowLink to={`/venue-staff/bookings/${booking.bookingId}?from=booking-approvals`} className="dash-queue__row"
                       title={booking.event.eventName?.trim() || 'Unnamed event'}
                       badges={booking.status === 'attention'
                         ? <span className="dash-badge dash-badge--danger">{BOOKING_STATUS_LABELS.attention}</span> : null}>
