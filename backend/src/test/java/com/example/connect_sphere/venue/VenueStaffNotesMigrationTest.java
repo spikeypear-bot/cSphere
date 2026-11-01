@@ -34,7 +34,8 @@ class VenueStaffNotesMigrationTest {
     private void inSchema(Scenario scenario) throws Exception {
         String schema="dev16_notes_"+UUID.randomUUID().toString().replace("-","");
         try {
-            migrate(schema,"62");
+            // The version just before V64 (V63, AT09, sits between), so only V64 runs inside a scenario.
+            migrate(schema,"63");
             try(var c=dataSource.getConnection();var sql=c.createStatement()) {
                 sql.execute("SET search_path TO "+schema);
                 try { scenario.run(c,schema); } finally { sql.execute("RESET search_path"); }
