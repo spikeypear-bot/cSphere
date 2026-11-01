@@ -1,4 +1,4 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5 VS17 EC-C2
+// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C1 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5 VS17 EC-C2
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName, addVenueToRequest } from './support.ts'
 
@@ -97,7 +97,7 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
 
   const officer = await signedIn(browser, 'so1')
   await test.step('EC08 AC18, SO-C1: the event is in the Safety Officer\'s queue', async () => {
-    await officer.goto('/safety-officer')
+    await officer.goto('/safety-officer/reviews')
     await expect(officer.getByText(eventName)).toBeVisible()
   })
 

@@ -104,7 +104,7 @@ export function SafetyEventDetailsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/safety-officer">Safety Officer console</Link>}
+        eyebrow={<Link to="/safety-officer/reviews">Safety reviews</Link>}
         title={event.eventName}
         description={`${EVENT_STATUS_LABELS[event.status] ?? event.status} · ${new Date(event.startDatetime).toLocaleString()}`}
       />
@@ -218,7 +218,7 @@ export function SafetyEventDetailsPage() {
         </Card>
       ) : null}
       {actionError ? <p role="alert">{actionError}</p> : null}
-      <Link to="/safety-officer" className="button button--secondary">Back to events</Link>
+      <Link to="/safety-officer/reviews" className="button button--secondary">Back to events</Link>
     </div>
   )
 }

@@ -56,6 +56,8 @@ import { AttendeeEventsPage } from './features/attendee/AttendeeEventsPage'
 import { MyRegistrationsPage } from './features/attendee/MyRegistrationsPage'
 import { RegistrationDetailsPage } from './features/attendee/RegistrationDetailsPage'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
+import { SafetyReviewsPage } from './features/safetyOfficer/SafetyReviewsPage'
+import { safetyOfficerNav } from './features/safetyOfficer/safetyOfficerNav'
 import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
 
 /** Route-level role gating. The role comes from the access token's `role`
@@ -230,10 +232,14 @@ function SafetyOfficerRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<SafetyOfficerHomePage />} />
-      <Route path="events/:eventId" element={<SafetyEventDetailsPage />} />
-    </Routes>
+    <ConsoleShell navLabel="Safety Officer" items={safetyOfficerNav}>
+      <Routes>
+        <Route index element={<SafetyOfficerHomePage />} />
+        <Route path="reviews" element={<SafetyReviewsPage />} />
+        <Route path="events/:eventId" element={<SafetyEventDetailsPage />} />
+        <Route path="*" element={<Navigate to="/safety-officer" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
