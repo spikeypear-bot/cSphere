@@ -90,10 +90,11 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     stubApi({ [MY_EVENTS]: () => jsonResponse(200, [event('e1', 'Offsite'), event('e2', 'Annual Gala')]) })
     renderPage()
 
-    expect(within(await cardFor('Offsite')).getByRole('link', { name: 'Open event Offsite' }))
-      .toHaveAttribute('href', '/coordinator/events/e1')
-    expect(within(await cardFor('Annual Gala')).getByRole('link', { name: 'Open event Annual Gala' }))
-      .toHaveAttribute('href', '/coordinator/events/e2')
+    // The whole card is the link (the shared RowLink), named by the event.
+    expect(await screen.findByRole('link', { name: 'Offsite' })).toHaveAttribute('href', '/coordinator/events/e1')
+    expect(screen.getByRole('link', { name: 'Annual Gala' })).toHaveAttribute('href', '/coordinator/events/e2')
+    // Reassignment is asked from the event's own page now, not from the list.
+    expect(screen.queryByRole('link', { name: 'Request reassignment' })).not.toBeInTheDocument()
   })
 
   it('shows a clear message when no events are assigned to the coordinator', async () => {

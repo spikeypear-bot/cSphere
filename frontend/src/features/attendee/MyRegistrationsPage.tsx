@@ -3,6 +3,7 @@ import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { registrationDateTime, useRegistrations, type RegistrationDetails } from './registrationView'
 import { AttendeeStatusBadges } from './AttendeeStatusBadges'
 import './AttendeePages.css'
@@ -20,17 +21,16 @@ export function MyRegistrationsPage() {
       <Card className="attendee-state-card"><h2>No registrations yet</h2><p>Register for an event to see your status here.</p></Card> :
       <ul className="attendee-events__list">
         {data.map(registration => <li key={registration.registrationId}>
-          <Card className="attendee-events__card">
-            <h2><Link to={`/attendee/my-registrations/${encodeURIComponent(registration.registrationId)}`}>{registration.eventName}</Link></h2>
+          <RowLink to={`/attendee/my-registrations/${encodeURIComponent(registration.registrationId)}`}
+            className="card dash-row-card attendee-events__card" titleAs="h2" title={registration.eventName}>
             <AttendeeStatusBadges value={registration} />
-            <dl className="attendee-event-details__facts">
+            <dl className="dash-figures dash-facts">
               <div><dt>Registration reference</dt><dd>{registration.reference}</dd></div>
               <div><dt>Starts</dt><dd>{registrationDateTime(registration.startDatetime)}</dd></div>
               <div><dt>Ends</dt><dd>{registrationDateTime(registration.endDatetime)}</dd></div>
               <div><dt>Registered</dt><dd>{registrationDateTime(registration.registeredAt)}</dd></div>
             </dl>
-            <Link className="button button--secondary attendee-events__open" to={`/attendee/my-registrations/${encodeURIComponent(registration.registrationId)}`}>View registration</Link>
-          </Card>
+          </RowLink>
         </li>)}
       </ul>}
   </main>

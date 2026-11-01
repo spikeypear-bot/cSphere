@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
-import { Button } from '../../../components/ui/Button'
-import type { Resource } from './useResource'
-import '../technicalSupport.css'
+import { Button } from './Button'
+import type { Resource } from '../../lib/useResource'
+import './dashboard.css'
 
 /** The three states every console read shows the same way: loading, an
  * error with Try again, and empty. `children` renders the loaded data. */
@@ -17,7 +17,7 @@ export function ResourceView<T>({ resource, loadingText, errorText, emptyText, e
 }) {
   if (resource.error !== null) {
     return (
-      <div role="alert" className="tech-load-error">
+      <div role="alert" className="dash-load-error">
         <p>{errorText} {resource.error}</p>
         <Button variant="secondary" onClick={resource.retry}>Try again</Button>
       </div>

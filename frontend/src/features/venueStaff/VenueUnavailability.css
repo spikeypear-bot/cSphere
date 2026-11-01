@@ -2,10 +2,6 @@
 .venue-unavailability fieldset { border: 0; padding: 0; display: grid; gap: .6rem; max-width: 42rem; }
 .venue-unavailability input, .venue-unavailability textarea { font: inherit; padding: .6rem; width: 100%; box-sizing: border-box; }
 .unavailability-warning { border-left: 4px solid #b7791f; padding: 1rem; margin-block: 1rem; background: #b7791f14; }
-.venue-schedule-list { list-style: none; padding: 0; display: grid; gap: .8rem; }
-.venue-schedule-list > li { border-left: 4px solid #b7791f; padding: .8rem 1rem; background: #b7791f14; }
-.venue-schedule-list > li[data-kind="booking"] { border-color: #3879b8; background: #3879b814; }
-.venue-schedule-list > li[data-kind="pending"] { border-color: #777; background: #77777714; }
 
 /* Match the Venue Details card spacing and the shared field components. */
 section.venue-unavailability { margin-block: 0; min-width: 0; }

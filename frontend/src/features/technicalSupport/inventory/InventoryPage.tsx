@@ -7,9 +7,9 @@ import '../damage/equipmentDamage.css'
 import { DateRangeFields } from '../shared/DateRangeFields'
 import { rangeFromParams, rangeToWindow } from '../shared/dateWindow'
 import { equipmentPath } from '../shared/faultyEquipment'
-import { ResourceView } from '../shared/ResourceView'
-import { RowLink } from '../shared/RowLink'
-import { useResource } from '../shared/useResource'
+import { ResourceView } from '../../../components/ui/ResourceView'
+import { RowLink } from '../../../components/ui/RowLink'
+import { useResource } from '../../../lib/useResource'
 import { fetchCatalogueForWindow } from './inventoryApi'
 import '../technicalSupport.css'
 
@@ -64,8 +64,8 @@ export function InventoryPage() {
                   <li key={item.equipmentId}>
                     <RowLink to={`${equipmentPath(item.equipmentId)}?${query}`} className="card tech-kind" titleAs="h2"
                       title={item.equipmentName} media={<EquipmentPhoto name={item.equipmentName} />}>
-                      <p className="tech-row-card__hint">{categoryOf(item.equipmentName)} · {item.serialised ? 'tracked by unit' : 'counted by quantity'}</p>
-                      <dl className="tech-figures">
+                      <p className="dash-row-card__hint">{categoryOf(item.equipmentName)} · {item.serialised ? 'tracked by unit' : 'counted by quantity'}</p>
+                      <dl className="dash-figures">
                         <div><dt>Total</dt><dd>{item.totalQuantity}</dd></div>
                         <div><dt>Reserved</dt><dd>{item.reservedQuantity}</dd></div>
                         <div><dt>Out of action</dt><dd>{item.outOfActionQuantity}</dd></div>

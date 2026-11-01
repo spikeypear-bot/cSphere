@@ -1,11 +1,11 @@
-// @stories AU04 DEV05 TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories AU04 DEV05 TS09 EC09 AT04 EO15 ECL-C1 VS02  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import App from './App'
 import { AUTH_STORAGE_KEY, type Role } from './lib/authTokens'
-import { jsonResponse } from './test/apiStubs'
+import { emptyBody, jsonResponse } from './test/apiStubs'
 
 /** Seeds a signed-in session the way a successful login would. The app reads
  * role from stored token data, so tests no longer click a role selector. */
@@ -42,26 +42,24 @@ describe('App routing — role consoles', () => {
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator')
 
-    expect(await screen.findByRole('heading', { name: /Event Coordinator console/i })).toBeInTheDocument()
-    // EC01/EC02's review queue is a real page now, reached via its own
-    // button rather than a "Skeleton" card (see coordinatorFeatures.ts).
-    expect(screen.getByRole('link', { name: 'Review requests' })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, ec1$/ })).toBeInTheDocument()
+    // EC01/EC02's review queue is one click away in the console's navigation.
+    const nav = screen.getByRole('navigation', { name: 'Event Coordinator' })
+    expect(within(nav).getByRole('link', { name: 'Review queue' })).toHaveAttribute(
       'href', '/coordinator/review-queue',
     )
-    // Every *remaining* skeleton card still names its backlog story ID so a
-    // teammate can trace it.
-    expect(screen.getByText('EC04')).toBeInTheDocument()
   })
 
-  // ---- EC09: "My events" belongs to the Event Coordinator console ----
+  // ---- EC09: "My events" belongs to the Event Coordinator console's navigation ----
 
-  it('puts "My events" one click away on the Event Coordinator console and opens the page there', async () => {
-    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
+  it('puts "My events" one click away in the Event Coordinator navigation and opens the page there', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     const user = userEvent.setup()
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator')
 
-    const link = await screen.findByRole('link', { name: 'My events' })
+    const nav = await screen.findByRole('navigation', { name: 'Event Coordinator' })
+    const link = within(nav).getByRole('link', { name: 'My events' })
     expect(link).toHaveAttribute('href', '/coordinator/my-events')
     await user.click(link)
 
@@ -70,11 +68,13 @@ describe('App routing — role consoles', () => {
   })
 
   it('redirects an Event Coordinator Lead away from "My events" and says why', async () => {
+    // The Lead dashboard reads its queues.
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
     renderApp('/coordinator/my-events')
 
     // Redirected, so the page that fetches the list is never mounted.
-    expect(await screen.findByRole('heading', { name: /Event Coordinator Lead console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, ecl1$/ })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'My events' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator/my-events')
@@ -83,7 +83,7 @@ describe('App routing — role consoles', () => {
   it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
     signInAs('attendee', 'att1', 'Acme Pte Ltd')
     renderApp('/')
-    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
   })
 
   it('TS09 (happy): opens equipment requests from the Technical Support dashboard side navigation', async () => {
@@ -105,12 +105,13 @@ describe('App routing — role consoles', () => {
   })
 
   it("redirects a signed-in account away from another role's console and says why", async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('attendee', 'att1')
     renderApp('/venue-staff')
 
     // Their own console, not the login page: the session is valid, this just
     // isn't their area. The server rejects the API calls regardless (D20).
-    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
 
     // AU06 — a silent redirect reads as the app misbehaving. Originally
     // delivered on the role-select screen (PR #11); it moved to AppShell when
@@ -120,10 +121,11 @@ describe('App routing — role consoles', () => {
   })
 
   it('does not show the access-denied alert during ordinary navigation', async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('attendee', 'att1')
     renderApp('/attendee')
 
-    expect(await screen.findByRole('heading', { level: 1, name: /^Welcome$/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
@@ -141,7 +143,7 @@ describe('App routing — role consoles', () => {
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
     renderApp('/')
 
-    expect(await screen.findByRole('heading', { name: /Event Coordinator Lead console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, ecl1$/ })).toBeInTheDocument()
     expect(screen.getByRole('link', { name: 'Unassigned requests' })).toHaveAttribute(
       'href', '/coordinator-lead/unassigned-requests',
     )
@@ -149,11 +151,12 @@ describe('App routing — role consoles', () => {
   })
 
   it("redirects an Event Coordinator away from the Lead's unassigned queue and says why", async () => {
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator-lead/unassigned-requests')
 
     // Redirected, so the page that fetches the queue is never mounted.
-    expect(await screen.findByRole('heading', { name: /Event Coordinator console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, ec1$/ })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Unassigned requests' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/unassigned-requests')
@@ -167,7 +170,8 @@ describe('App routing — role consoles', () => {
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
     renderApp('/coordinator-lead')
 
-    const link = await screen.findByRole('link', { name: 'Coordinator assignments' })
+    const nav = await screen.findByRole('navigation', { name: 'Event Coordinator Lead' })
+    const link = within(nav).getByRole('link', { name: 'Assignments' })
     expect(link).toHaveAttribute('href', '/coordinator-lead/assignments')
     await user.click(link)
 
@@ -176,21 +180,24 @@ describe('App routing — role consoles', () => {
   })
 
   it.each([
-    ['coordinator', 'ec1', /Event Coordinator console/i],
-    ['organiser', 'eo1', /Your event requests/i],
-    ['venue-staff', 'vs1', /Venue Staff console/i],
-    ['technical-support', 'ts1', /^Good \w+, ts1$/],
-    ['attendee', 'att1', /^Welcome$/i],
-  ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole) => {
+    ['coordinator', 'ec1', /^Good \w+, ec1$/, 'Event Coordinator'],
+    ['organiser', 'eo1', /^Good \w+, eo1$/, 'Event Organiser'],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/, 'Venue Staff'],
+    ['technical-support', 'ts1', /^Good \w+, ts1$/, 'Technical Support'],
+    ['attendee', 'att1', /^Good \w+, att1$/, 'Attendee'],
+    ['safety-officer', 'so1', /^Good \w+, so1$/, 'Safety Officer'],
+  ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole, ownNav) => {
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       fetched.push(String(input))
-      return jsonResponse(200, [])
+      return jsonResponse(200, emptyBody(String(input)))
     }))
     signInAs(role, username)
     renderApp('/coordinator-lead/assignments')
 
     expect(await screen.findByRole('heading', { level: 1, name: ownConsole })).toBeInTheDocument()
+    // The user's own console, not just any dashboard with their name on it.
+    expect(screen.getByRole('navigation', { name: ownNav })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { name: 'Coordinator assignments' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/assignments')
@@ -199,10 +206,12 @@ describe('App routing — role consoles', () => {
   })
 
   it("redirects an Event Coordinator Lead away from the Event Coordinator's console — it is a separate role", async () => {
+    // The Lead dashboard reads its queues.
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
     renderApp('/coordinator/review-queue')
 
-    expect(await screen.findByRole('heading', { name: /Event Coordinator Lead console/i })).toBeInTheDocument()
+    expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, ecl1$/ })).toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator/review-queue')
   })

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { RefreshIcon } from '../../components/ui/RefreshIcon'
 import { JourneyStatusBadge, StatusFilter } from '../../components/ui/JourneyStatus'
 import { EVENT_STATUS_LABELS, type EventDto } from '../../types/event'
@@ -28,7 +29,7 @@ export function AssignedEventsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/coordinator">Event Coordinator console</Link>}
+        eyebrow={<Link to="/coordinator">Dashboard</Link>}
         title="My events"
         description="Events assigned to you that are being planned or are confirmed, soonest first."
         actions={
@@ -64,11 +65,11 @@ export function AssignedEventsPage() {
               <ol className="plain-list">
                 {changes.map((change) => (
                   <li key={change.changeRequestId}>
-                    <Card className="assigned-events__change">
-                      <Link to={`/coordinator/change-requests/${change.changeRequestId}`}>Change to {change.eventName}</Link>
-                      <p className="field-hint">{change.organisation} · asked by {change.requestedByName}, <When iso={change.requestedAt} /></p>
+                    <RowLink to={`/coordinator/change-requests/${change.changeRequestId}`} className="card dash-row-card"
+                      titleAs="h3" title={`Change to ${change.eventName}`}>
+                      <p>{change.organisation} · asked by {change.requestedByName}, <When iso={change.requestedAt} /></p>
                       <p className="assigned-events__change-reason"><strong>Reason:</strong> {change.reason}</p>
-                    </Card>
+                    </RowLink>
                   </li>
                 ))}
               </ol>
@@ -88,45 +89,26 @@ export function AssignedEventsPage() {
   )
 }
 
+/** The whole card opens the event (the shared RowLink); reassignment is asked from there. */
 function AssignedEventCard({ event, change }: { event: EventDto; change?: ChangeRequestView }) {
   return (
-    <Card className="assigned-events__card">
-      <div className="assigned-events__card-head">
-        <h2>{event.eventName}</h2>
-        {event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : (
-          <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
-            {EVENT_STATUS_LABELS[event.status] ?? event.status}
-          </span>
-        )}
-      </div>
-      <p className="assigned-events__organisation">{event.organisation}</p>
-      {change ? (
-        <Link className="change-request__status change-request__status--pending"
-          to={`/coordinator/change-requests/${change.changeRequestId}`}>Change requested · review</Link>
-      ) : null}
-      <dl className="assigned-events__facts">
-        <div>
-          <dt>When (Singapore time)</dt>
-          <dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd>
-        </div>
-        <div>
-          <dt>Expected attendance</dt>
-          <dd>{event.expectedAttendance.toLocaleString()} people</dd>
-        </div>
+    <RowLink to={`/coordinator/events/${event.eventId}`} className="card dash-row-card assigned-events__card"
+      titleAs="h2" title={event.eventName}
+      badges={(
+        <>
+          {event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : (
+            <span className={`status-badge status-badge--${event.status === 'pending' ? 'pending' : 'approved'}`}>
+              {EVENT_STATUS_LABELS[event.status] ?? event.status}
+            </span>
+          )}
+          {change ? <span className="dash-badge dash-badge--warning">Change requested</span> : null}
+        </>
+      )}>
+      <p>{event.organisation}</p>
+      <dl className="dash-figures dash-facts">
+        <div><dt>When (Singapore time)</dt><dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd></div>
+        <div><dt>Expected attendance</dt><dd>{event.expectedAttendance.toLocaleString()} people</dd></div>
       </dl>
-      <Link
-        to={`/coordinator/events/${event.eventId}`}
-        className="button button--secondary assigned-events__open"
-        aria-label={`Open event ${event.eventName}`}
-      >
-        Open event
-      </Link>
-      <Link
-        to={`/coordinator/events/${event.eventId}/reassignment-request`}
-        className="button button--secondary assigned-events__open"
-      >
-        Request reassignment
-      </Link>
-    </Card>
+    </RowLink>
   )
 }

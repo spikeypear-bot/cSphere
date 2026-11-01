@@ -14,8 +14,8 @@ import { DateRangeFields } from '../shared/DateRangeFields'
 import { rangeFromParams, rangeToWindow } from '../shared/dateWindow'
 import { reportPath, TS } from '../shared/faultyEquipment'
 import { describeSpan } from '../shared/format'
-import { ResourceView } from '../shared/ResourceView'
-import { useResource } from '../shared/useResource'
+import { ResourceView } from '../../../components/ui/ResourceView'
+import { useResource } from '../../../lib/useResource'
 import { fetchEquipmentDetail, fetchEquipmentReservations } from './inventoryApi'
 import '../technicalSupport.css'
 
@@ -89,7 +89,7 @@ export function EquipmentDetailPage() {
                 {kind.units.map((unit) => (
                   <li key={unit.serialNumber}>
                     <strong>{unit.serialNumber}</strong>
-                    <span className={`tech-badge${unit.status === 'Available' ? '' : ' tech-badge--danger'}`}>{unit.status} now</span>
+                    <span className={`dash-badge${unit.status === 'Available' ? '' : ' dash-badge--danger'}`}>{unit.status} now</span>
                     <Link to={`${TS}/faulty/new?equipment=${kind.equipmentId}&serial=${encodeURIComponent(unit.serialNumber)}`}>
                       Report a problem with {unit.serialNumber}
                     </Link>
@@ -144,7 +144,7 @@ export function EquipmentDetailPage() {
                       <Link to={reportPath(report.reportId)}>
                         {report.serialNumber ?? `${report.quantity} unit${report.quantity === 1 ? '' : 's'}`}: {report.description}
                       </Link>
-                      <span className="tech-badge">{report.status === 'OPEN' ? 'Open' : 'Closed'}</span>
+                      <span className="dash-badge">{report.status === 'OPEN' ? 'Open' : 'Closed'}</span>
                       <p className="field-hint">{describeSpan(report.periodStart, report.periodEnd)}</p>
                     </li>
                   ))}

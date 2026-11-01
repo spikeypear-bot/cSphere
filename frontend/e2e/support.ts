@@ -121,7 +121,7 @@ export async function requestIdOf(request: APIRequestContext, eventName: string)
 export async function leadAssigns(page: Page, requestId: string) {
   await page.goto(`/coordinator-lead/unassigned-requests/${requestId}`)
   await page.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Assign' }).click()
-  await page.getByLabel('Event Coordinator').selectOption({ label: 'ec1' })
+  await page.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec1' })
   await page.getByRole('button', { name: 'Assign request' }).click()
   await expect(page.getByText(/assigned to ec1/i).first()).toBeVisible()
 }
@@ -234,4 +234,11 @@ export function uniqueDay(): string {
   // Counting on from one start keeps the days in a run distinct; a fresh Date.now() per call could repeat one.
   const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + daysGiven++) % 700) * 86_400_000)
   return day.toISOString().slice(0, 10)
+}
+
+/** EC03: open a venue card's details window and add the venue to the request.
+ * `name` matches the card's accessible name (the venue address comes first). */
+export async function addVenueToRequest(page: Page, name: RegExp) {
+  await page.getByRole('button', { name }).first().click()
+  await page.getByRole('dialog').getByRole('button', { name: /^(Add to request|Remove from request)$/ }).click()
 }

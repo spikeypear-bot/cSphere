@@ -1,4 +1,4 @@
-// @stories VS17 VS07 VS06A VS06B VS13 VS15 VS16 VS18
+// @stories VS17 VS07 VS06A VS06B VS13 VS15 VS16 VS18 VS02
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, confirmedEventByApi, createVenue, signedIn, uniqueName } from './support.ts'
 
@@ -6,8 +6,9 @@ test('VS17 (cross-cutting): staff navigation, structured details, issue times an
  test.setTimeout(150_000)
  const staff=await signedIn(browser,'vs1')
  await staff.goto('/venue-staff')
- await expect(staff.getByRole('heading',{name:'Venue Staff console'})).toBeVisible()
+ await expect(staff.getByRole('heading',{level:1,name:/^Good \w+, vs1$/})).toBeVisible()
  await expect(staff.getByText(/None of these pages are built|backend package|live backlog|Skeleton/)).toHaveCount(0)
+ await staff.getByRole('navigation',{name:'Venue Staff'}).getByRole('link',{name:'Venue catalogue'}).click()
  const main=staff.locator('main')
  await main.getByRole('link',{name:/Add a venue/}).click()
  await staff.getByRole('button',{name:'Save venue'}).click()

@@ -7,7 +7,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { BookingVenueDetails } from '../../components/venue/BookingVenueDetails'
+import { VenueDetails } from '../../components/venue/VenueDetails'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { NotAssignedNotice } from '../../components/ui/NotAssignedNotice'
 import { isNotAssigned } from '../../lib/notAssigned'
@@ -27,6 +30,7 @@ import { validMinutes, occupiedPeriod } from '../../lib/bookingTiming'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { CoordinatorVenueMap } from './CoordinatorVenueMap'
 import { venueMatchesSearch } from '../../components/venue/venueMatchesSearch'
+import { hasCoordinates } from '../venueMap/mapData'
 
 type BookingInput = { start: string; end: string; setup: string; turnaround: string; reason: string; requirements?: BookingRequirements }
 type TimingReview = { key: string; option?: VenueOptionDto; error?: string }
@@ -90,6 +94,7 @@ export function VenueBookingRequestPage() {
   const [search, setSearch] = useState('')
   const [showBlocked, setShowBlocked] = useState(false)
   const [selectedIds, setSelectedIds] = useState<string[]>([])
+  const [detailsId, setDetailsId] = useState<string | null>(null)
   const [mapFocusId, setMapFocusId] = useState<string>()
   const [bookingTimes, setBookingTimes] = useState<Record<string, BookingInput>>({})
   const [notes, setNotes] = useState('')
@@ -175,6 +180,12 @@ export function VenueBookingRequestPage() {
     return (options ?? []).filter(option => !unavailableVenueIds.has(option.venue.venueId))
   }, [options, bookings, replacing])
 
+  // One active booking per venue per event (the server's rule). Outside a
+  // replacement these venues stay listed but are marked and cannot be added.
+  const alreadyRequested = useMemo(() => new Map<string, EventVenueBookingDto['status']>(replacing ? [] : (bookings ?? [])
+    .filter(booking => booking.status === 'pending' || booking.status === 'approved' || booking.status === 'attention')
+    .map(booking => [booking.venueId, booking.status])), [bookings, replacing])
+
   const visible = useMemo(() => {
     return requestableOptions.filter((o) => (showBlocked || o.verdict !== 'blocked')
       && venueMatchesSearch(o.venue, search))
@@ -199,7 +210,12 @@ export function VenueBookingRequestPage() {
   }
   if (!event || !options || !bookings) return <p>Loading venues…</p>
 
-  const selected = options.filter((o) => selectedIds.includes(o.venue.venueId))
+  // A venue that became already requested (e.g. from another tab) drops out of the request.
+  const selected = options.filter((o) => selectedIds.includes(o.venue.venueId) && !alreadyRequested.has(o.venue.venueId))
+  // The open details window's venue, read from the live options so a refresh shows in it.
+  const detailsOption = options.find((o) => o.venue.venueId === detailsId) ?? null
+  // Forget a window whose venue a refresh removed, so it never reopens by itself.
+  if (detailsId && !detailsOption) setDetailsId(null)
   const reviewed = (option: VenueOptionDto) => {
     const input = bookingTimes[option.venue.venueId]
     if (!validInput(input)) return undefined
@@ -219,8 +235,9 @@ export function VenueBookingRequestPage() {
     && timesValid && (!needsJustification || justification.trim().length > 0)
 
   function toggleVenue(id: string) {
-    const option = visible.find(value => value.venue.venueId === id)
-    if (!option) return
+    // Any requestable venue, not just the ones the search shows: a selected venue can be removed while filtered out.
+    const option = requestableOptions.find(value => value.venue.venueId === id)
+    if (!option || alreadyRequested.has(id)) return
     setMapFocusId(id)
     setSelectedIds(current => replacing
       ? current.includes(id) ? [] : [id]
@@ -348,8 +365,9 @@ export function VenueBookingRequestPage() {
                   {visible.map((option) => (
                     <li key={option.venue.venueId}>
                       <VenueOptionCard option={option} attendance={event.expectedAttendance}
-                        selected={selectedIds.includes(option.venue.venueId)}
-                        onSelect={() => toggleVenue(option.venue.venueId)} />
+                        selected={selectedIds.includes(option.venue.venueId) && !alreadyRequested.has(option.venue.venueId)}
+                        requestedStatus={alreadyRequested.get(option.venue.venueId)}
+                        onOpen={() => setDetailsId(option.venue.venueId)} />
                     </li>
                   ))}
                 </ul>
@@ -376,16 +394,22 @@ export function VenueBookingRequestPage() {
                         {reviewed(option) && <SuitabilitySummary option={reviewed(option)!} />}
                         {reviewed(option) && changedTiming(bookingTimes[option.venue.venueId], option, event) &&
                           <ul>{reviewed(option)!.reasons.map(reason => <li key={reason}>{reason}</li>)}</ul>}
-                        <Button variant="secondary" className="venue-request__remove-button"
-                          onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
-                          Remove selection
-                        </Button>
+                        <div className="venue-request__venue-actions">
+                          <Button variant="secondary" onClick={() => setDetailsId(option.venue.venueId)}>
+                            View venue details
+                          </Button>
+                          <Button variant="secondary"
+                            onClick={() => setSelectedIds((current) => current.filter((id) => id !== option.venue.venueId))}>
+                            Remove selection
+                          </Button>
+                        </div>
                       </li>
                     ))}
                   </ul>
-                  {selected.length === 1 ? <>
-                    <VenueDetails venue={selected[0].venue} />
-                    <Comparison event={event} option={reviewed(selected[0]) ?? selected[0]} input={bookingTimes[selected[0].venue.venueId]} /></> : null}
+                  {selected.length === 1
+                    ? <Comparison event={event} option={reviewed(selected[0]) ?? selected[0]} input={bookingTimes[selected[0].venue.venueId]} />
+                    : null}
+
 
                   {needsJustification ? (
                     <div className="venue-request__field">
@@ -468,8 +492,7 @@ export function VenueBookingRequestPage() {
                   {b.rejectReason ? <p className="venue-request__history-note"><strong>Reason:</strong> {b.rejectReason}</p> : null}
                   {b.alternativeVenueAddress ? <p className="venue-request__history-note"><strong>Suggested venue:</strong> {b.alternativeVenueAddress}</p> : null}
                   {b.alternativeArrangement ? <p className="venue-request__history-note"><strong>Alternative arrangement:</strong> {b.alternativeArrangement}</p> : null}
-                  <div className="venue-request__history-note"><strong>Operating hours</strong><OperatingHours hours={b.operatingHours} /></div>
-                  <BookingTimingSummary timing={b.timing} />
+                  <BookingVenueDetails booking={b} />
                   <HoldStatus holds={b.holds} />
 
                   </li>
@@ -479,6 +502,35 @@ export function VenueBookingRequestPage() {
           ) : null}
         </div>
       </div>
+      {detailsOption ? (
+        <Modal title={detailsOption.venue.venueAddress} onClose={() => setDetailsId(null)}
+          footer={hasCoordinates(detailsOption.venue) || !alreadyRequested.has(detailsOption.venue.venueId) ? (close) => <>
+            {hasCoordinates(detailsOption.venue) ? (
+              <Button variant="secondary" onClick={() => { setMapFocusId(detailsOption.venue.venueId); close() }}>
+                Show on map
+              </Button>
+            ) : null}
+            {alreadyRequested.has(detailsOption.venue.venueId) ? null : (
+              <Button variant={selectedIds.includes(detailsOption.venue.venueId) ? 'secondary' : 'primary'}
+                onClick={() => { toggleVenue(detailsOption.venue.venueId); close() }}>
+                {selectedIds.includes(detailsOption.venue.venueId) ? 'Remove from request' : 'Add to request'}
+              </Button>
+            )}
+          </> : null}>
+          <p className="venue-request__details-verdict" data-verdict={detailsOption.verdict}>
+            <strong>{VERDICT_LABELS[detailsOption.verdict]}</strong>
+            {detailsOption.reasons.length > 0 ? <> · {detailsOption.reasons.join(' ')}</> : null}
+          </p>
+          {alreadyRequested.has(detailsOption.venue.venueId) ? (
+            <p role="note" className="venue-request__already-requested">
+              This venue is already requested for this event
+              ({BOOKING_STATUS_LABELS[alreadyRequested.get(detailsOption.venue.venueId) as EventVenueBookingDto['status']]}).
+              To change it, use <strong>Replace or reschedule this booking</strong> under Earlier requests.
+            </p>
+          ) : null}
+          <VenueDetails venue={detailsOption.venue} />
+        </Modal>
+      ) : null}
     </div>
   )
 }
@@ -545,39 +597,28 @@ function BookingTimingInputs({ option, input, disabled, onChange }: {
   </fieldset>
 }
 
-function VenueDetails({ venue }: { venue: VenueOptionDto['venue'] }) {
-  return (
-    <section className="venue-request__venue-details" aria-labelledby="venue-details-heading">
-      <h3 id="venue-details-heading">Selected venue details</h3>
-      <p className="venue-request__venue-address">{venue.venueAddress}</p>
-      <dl>
-        <div><dt>Capacity</dt><dd>{venue.venueCapacity?.toLocaleString() ?? 'Not recorded'} people</dd></div>
-        <div><dt>Supported layouts</dt><dd>{venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Facilities</dt><dd>{venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Accessibility</dt><dd>{venue.venueAccessibilities.map(accessibilityLabel).join(', ') || 'None recorded'}</dd></div>
-        <div><dt>Operating hours</dt><dd><OperatingHours hours={venue.operatingHours} /></dd></div>
-        {venue.additionalInformation ? <div><dt>Additional information</dt><dd>{venue.additionalInformation}</dd></div> : null}
-      </dl>
-    </section>
-  )
-}
-
-function VenueOptionCard({ option, attendance, selected, onSelect }: {
+/** Opens the venue's details window, where it is added to or removed from the request. */
+function VenueOptionCard({ option, attendance, selected, requestedStatus, onOpen }: {
   option: VenueOptionDto
   attendance: number
   selected: boolean
-  onSelect: () => void
+  /** Set when this event already has an active booking at the venue. */
+  requestedStatus?: string
+  onOpen: () => void
 }) {
   const { venue } = option
   const capacity = venue.venueCapacity ?? 0
   const fill = Math.min(100, Math.round((attendance / Math.max(1, capacity)) * 100))
   const disabled = false
   return (
-    <button type="button" className="venue-option" data-verdict={option.verdict} aria-pressed={selected}
-      disabled={disabled} onClick={onSelect}>
+    <button type="button" className="venue-option" data-verdict={option.verdict} data-selected={selected}
+      data-requested={requestedStatus !== undefined}
+      disabled={disabled} onClick={onOpen}>
       <span className="venue-option__head">
         <span className="venue-option__name">{venue.venueAddress}</span>
         <span className="venue-option__verdict">{VERDICT_LABELS[option.verdict]}</span>
+        {selected ? <span className="dash-badge dash-badge--success">Added</span> : null}
+        {requestedStatus !== undefined ? <span className="dash-badge dash-badge--neutral">Already requested</span> : null}
       </span>
       <span className="venue-option__capacity">
         <span className="venue-option__bar" aria-hidden="true"><span style={{ width: `${fill}%` }} /></span>

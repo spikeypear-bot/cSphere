@@ -45,7 +45,7 @@ export function CoordinatorAssignmentsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/coordinator-lead">Event Coordinator Lead console</Link>}
+        eyebrow={<Link to="/coordinator-lead">Dashboard</Link>}
         title="Coordinator assignments"
         description="Every Event Coordinator with the requests under review and the active events they hold, soonest first."
         actions={
@@ -100,12 +100,15 @@ export function CoordinatorAssignmentsPage() {
             <ul className="lead-request-cards" aria-label={`Events held by ${coordinator.coordinatorName}`}>
               {eventsOf(coordinator.coordinatorId).filter(({ event }) => matches(event.journeyStatus)).map(({ requestId, event }) => (
                 <li key={event.eventId}>
-                  <Card className="lead-event-card">
+                  <Card className="dash-row-card lead-event-card">
                     <div className="lead-event-card__head">
                       <h3>{event.eventName}</h3>
                       {event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : null}
                     </div>
-                    <p className="field-hint">{event.organisation} · {formatEventTimeRange(event.startDatetime, event.endDatetime)}</p>
+                    <p>{event.organisation}</p>
+                    <dl className="dash-figures dash-facts">
+                      <div><dt>When (Singapore time)</dt><dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd></div>
+                    </dl>
                     <div className="lead-event-card__actions">
                       <Link className="button button--secondary" to={`/coordinator-lead/events/${event.eventId}`}
                         aria-label={`View event: ${event.eventName}`}>View event</Link>

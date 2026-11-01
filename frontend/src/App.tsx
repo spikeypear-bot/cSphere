@@ -2,14 +2,15 @@ import { Navigate, Route, Routes, useLocation } from 'react-router-dom'
 import { SessionProvider } from './lib/session'
 import { HOME_BY_ROLE, useSession, type Role } from './lib/sessionContext'
 import { AppShell } from './components/AppShell'
-import { FeatureSkeletonPage } from './components/FeatureSkeletonPage'
-import type { SkeletonFeature } from './types/skeletonFeature'
+// Loaded here, as the placeholder pages used to load it, so page styles such as
+// .venue-card-preview's padding still override its .feature-skeleton__body.
+import './components/skeleton.css'
 import { LoginPage } from './features/auth/LoginPage'
 import { OrganiserHomePage } from './features/organiser/OrganiserHomePage'
+import { MyRequestsPage } from './features/organiser/MyRequestsPage'
+import { organiserNav } from './features/organiser/organiserNav'
 import { EventRequestWizardPage } from './features/organiser/EventRequestWizardPage'
-import { organiserExtraFeatures } from './features/organiser/organiserExtraFeatures'
 import { CoordinatorHomePage } from './features/coordinator/CoordinatorHomePage'
-import { coordinatorFeatures } from './features/coordinator/coordinatorFeatures'
 import { ReviewQueuePage } from './features/coordinator/ReviewQueuePage'
 import { AssignedEventsPage } from './features/coordinator/AssignedEventsPage'
 import { EventReassignmentRequestPage } from './features/coordinator/EventReassignmentRequestPage'
@@ -25,7 +26,7 @@ import { ChangeRequestFormPage } from './features/changeRequests/ChangeRequestFo
 import { ChangeRequestRedirect, ChangeRequestsPage } from './features/changeRequests/ChangeRequestsPage'
 import { ChangeRequestReviewPage } from './features/changeRequests/ChangeRequestReviewPage'
 import { CoordinatorLeadHomePage } from './features/coordinatorLead/CoordinatorLeadHomePage'
-import { coordinatorLeadFeatures } from './features/coordinatorLead/coordinatorLeadFeatures'
+import { coordinatorLeadNav } from './features/coordinatorLead/coordinatorLeadNav'
 import { IncomingRequestReviewPage } from './features/coordinatorLead/IncomingRequestReviewPage'
 import { UnassignedRequestsPage } from './features/coordinatorLead/UnassignedRequestsPage'
 import { ClarificationResponsePage } from './features/organiser/ClarificationResponsePage'
@@ -38,8 +39,10 @@ import { BookingDetailsPage } from './features/venueStaff/BookingDetailsPage'
 import { BookingApprovalsPage } from './features/venueStaff/BookingApprovalsPage'
 import { VenueCataloguePage } from './features/venueStaff/VenueCataloguePage'
 import { VenueSchedulePage } from './features/venueStaff/VenueSchedulePage'
-import { venueStaffFeatures } from './features/venueStaff/venueStaffFeatures'
+import { venueStaffNav } from './features/venueStaff/venueStaffNav'
 import { AppShell as ConsoleShell } from './components/layout/AppShell'
+import { coordinatorNav } from './features/coordinator/coordinatorNav'
+import { attendeeNav } from './features/attendee/attendeeNav'
 import { technicalSupportNav } from './features/technicalSupport/technicalSupportNav'
 import { LegacyRedirect, LegacyReportRedirect, LegacyRequestRedirect } from './features/technicalSupport/LegacyRedirects'
 import { TechnicalSupportDashboardPage } from './features/technicalSupport/dashboard/TechnicalSupportDashboardPage'
@@ -56,6 +59,8 @@ import { AttendeeEventsPage } from './features/attendee/AttendeeEventsPage'
 import { MyRegistrationsPage } from './features/attendee/MyRegistrationsPage'
 import { RegistrationDetailsPage } from './features/attendee/RegistrationDetailsPage'
 import { SafetyOfficerHomePage } from './features/safetyOfficer/SafetyOfficerHomePage'
+import { SafetyReviewsPage } from './features/safetyOfficer/SafetyReviewsPage'
+import { safetyOfficerNav } from './features/safetyOfficer/safetyOfficerNav'
 import { SafetyEventDetailsPage } from './features/safetyOfficer/SafetyEventDetailsPage'
 
 /** Route-level role gating. The role comes from the access token's `role`
@@ -81,29 +86,27 @@ function redirectFor(role: Role | null, pathname: string): string {
   return role ? `${HOME_BY_ROLE[role]}?${denied}` : `/?${denied}`
 }
 
-function skeletonRoutes(features: SkeletonFeature[]) {
-  return features.map((feature) => (
-    <Route key={feature.path} path={feature.path} element={<FeatureSkeletonPage feature={feature} />} />
-  ))
-}
-
 function OrganiserRoutes() {
   const permitted = useRoleGate('organiser')
   const { pathname } = useLocation()
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<OrganiserHomePage />} />
-      <Route path="requests/new" element={<EventRequestWizardPage />} />
-      <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
-      <Route path="requests/:requestId/respond" element={<ClarificationResponsePage />} />
-      <Route path="requests/:requestId/change" element={<ChangeRequestFormPage />} />
-      <Route path="events/:eventId/change" element={<ChangeRequestFormPage />} />
-      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
-      <Route path="events/:eventId" element={<EventDetailsPage />} />
-      {skeletonRoutes(organiserExtraFeatures)}
-    </Routes>
+    <ConsoleShell navLabel="Event Organiser" items={organiserNav}>
+      <Routes>
+        <Route index element={<OrganiserHomePage />} />
+        <Route path="requests" element={<MyRequestsPage />} />
+        <Route path="requests/new" element={<EventRequestWizardPage />} />
+        <Route path="requests/:requestId" element={<EventRequestWizardPage />} />
+        <Route path="requests/:requestId/respond" element={<ClarificationResponsePage />} />
+        <Route path="requests/:requestId/change" element={<ChangeRequestFormPage />} />
+        <Route path="events/:eventId/change" element={<ChangeRequestFormPage />} />
+        <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+        <Route path="events/:eventId" element={<EventDetailsPage />} />
+        {/* Retired placeholder pages and unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/organiser" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
@@ -113,21 +116,24 @@ function CoordinatorRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<CoordinatorHomePage />} />
-      <Route path="review-queue" element={<ReviewQueuePage />} />
-      <Route path="my-events" element={<AssignedEventsPage />} />
-      <Route path="requests/:requestId" element={<RequestReviewPage />} />
-      <Route path="events/:eventId" element={<EventDetailsPage />} />
-      <Route path="events/:eventId/reassignment-request" element={<EventReassignmentRequestPage />} />
-      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
-      <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
-      <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
-      <Route path="venue-search" element={<VenueSearchPage />} />
-      <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
-      <Route path="operational-issues" element={<OperationalIssuesPage />} />
-      {skeletonRoutes(coordinatorFeatures)}
-    </Routes>
+    <ConsoleShell navLabel="Event Coordinator" items={coordinatorNav}>
+      <Routes>
+        <Route index element={<CoordinatorHomePage />} />
+        <Route path="review-queue" element={<ReviewQueuePage />} />
+        <Route path="my-events" element={<AssignedEventsPage />} />
+        <Route path="requests/:requestId" element={<RequestReviewPage />} />
+        <Route path="events/:eventId" element={<EventDetailsPage />} />
+        <Route path="events/:eventId/reassignment-request" element={<EventReassignmentRequestPage />} />
+        <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+        <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
+        <Route path="events/:eventId/venue-booking" element={<VenueBookingRequestPage />} />
+        <Route path="venue-search" element={<VenueSearchPage />} />
+        <Route path="events/:eventId/equipment-request" element={<EquipmentRequestPage />} />
+        <Route path="operational-issues" element={<OperationalIssuesPage />} />
+        {/* Retired placeholder pages and unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/coordinator" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
@@ -137,20 +143,23 @@ function CoordinatorLeadRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<CoordinatorLeadHomePage />} />
-      <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
-      <Route path="unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
-      {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
-      <Route path="events/:eventId" element={<EventDetailsPage />} />
-      <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
-      {/* ECL-C4: every assigned active event, for workload before assigning. */}
-      <Route path="active-events" element={<ActiveEventsPage />} />
-      <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
-      <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
-      <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
-      {skeletonRoutes(coordinatorLeadFeatures)}
-    </Routes>
+    <ConsoleShell navLabel="Event Coordinator Lead" items={coordinatorLeadNav}>
+      <Routes>
+        <Route index element={<CoordinatorLeadHomePage />} />
+        <Route path="unassigned-requests" element={<UnassignedRequestsPage />} />
+        <Route path="unassigned-requests/:requestId" element={<IncomingRequestReviewPage />} />
+        {/* ECL-C7: the Lead can view any event for oversight (read-only). */}
+        <Route path="events/:eventId" element={<EventDetailsPage />} />
+        <Route path="assignments" element={<CoordinatorAssignmentsPage />} />
+        {/* ECL-C4: every assigned active event, for workload before assigning. */}
+        <Route path="active-events" element={<ActiveEventsPage />} />
+        <Route path="reassignment-requests" element={<EventReassignmentRequestsPage />} />
+        <Route path="requests/:requestId/changes" element={<ChangeRequestsPage />} />
+        <Route path="change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
+        {/* Unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/coordinator-lead" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
@@ -160,17 +169,20 @@ function VenueStaffRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<VenueStaffHomePage />} />
-      <Route path="catalogue" element={<VenueCataloguePage />} />
-      <Route path="catalogue/new" element={<VenueCreatePage />} />
-      <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
-      <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
-      <Route path="booking-approvals" element={<BookingApprovalsPage />} />
-      <Route path="availability-calendar" element={<VenueSchedulePage />} />
-      <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
-      {skeletonRoutes(venueStaffFeatures.filter(feature => !feature.path.startsWith('catalogue') && feature.path !== 'booking-approvals' && feature.path !== 'availability-calendar'))}
-    </Routes>
+    <ConsoleShell navLabel="Venue Staff" items={venueStaffNav}>
+      <Routes>
+        <Route index element={<VenueStaffHomePage />} />
+        <Route path="catalogue" element={<VenueCataloguePage />} />
+        <Route path="catalogue/new" element={<VenueCreatePage />} />
+        <Route path="catalogue/:venueId" element={<VenueDetailsPage />} />
+        <Route path="bookings/:bookingId" element={<BookingDetailsPage />} />
+        <Route path="booking-approvals" element={<BookingApprovalsPage />} />
+        <Route path="availability-calendar" element={<VenueSchedulePage />} />
+        <Route path="catalogue/:venueId/edit" element={<VenueEditPage />} />
+        {/* Unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/venue-staff" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
@@ -210,14 +222,18 @@ function AttendeeRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<AttendeeHomePage />} />
-      <Route path="browse" element={<AttendeeEventsPage />} />
-      <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
-      <Route path="my-registrations" element={<MyRegistrationsPage />} />
-      <Route path="my-registrations/:registrationId" element={<RegistrationDetailsPage />} />
-      <Route path="register" element={<Navigate to="/attendee/browse" replace />} />
-    </Routes>
+    <ConsoleShell navLabel="Attendee" items={attendeeNav}>
+      <Routes>
+        <Route index element={<AttendeeHomePage />} />
+        <Route path="browse" element={<AttendeeEventsPage />} />
+        <Route path="events/:eventId" element={<AttendeeEventDetailsPage />} />
+        <Route path="my-registrations" element={<MyRegistrationsPage />} />
+        <Route path="my-registrations/:registrationId" element={<RegistrationDetailsPage />} />
+        <Route path="register" element={<Navigate to="/attendee/browse" replace />} />
+        {/* Unknown paths land on the dashboard. */}
+        <Route path="*" element={<Navigate to="/attendee" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 
@@ -227,10 +243,14 @@ function SafetyOfficerRoutes() {
   const { role } = useSession()
   if (!permitted) return <Navigate to={redirectFor(role, pathname)} replace />
   return (
-    <Routes>
-      <Route index element={<SafetyOfficerHomePage />} />
-      <Route path="events/:eventId" element={<SafetyEventDetailsPage />} />
-    </Routes>
+    <ConsoleShell navLabel="Safety Officer" items={safetyOfficerNav}>
+      <Routes>
+        <Route index element={<SafetyOfficerHomePage />} />
+        <Route path="reviews" element={<SafetyReviewsPage />} />
+        <Route path="events/:eventId" element={<SafetyEventDetailsPage />} />
+        <Route path="*" element={<Navigate to="/safety-officer" replace />} />
+      </Routes>
+    </ConsoleShell>
   )
 }
 

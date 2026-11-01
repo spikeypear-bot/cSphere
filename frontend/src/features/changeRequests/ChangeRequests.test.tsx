@@ -10,7 +10,7 @@ import { ChangeRequestFormPage } from './ChangeRequestFormPage'
 import { ChangeRequestRedirect, ChangeRequestsPage } from './ChangeRequestsPage'
 import { ChangeRequestReviewPage } from './ChangeRequestReviewPage'
 import { ChangeRequestPanel } from './ChangeRequestPanel'
-import { OrganiserHomePage } from '../organiser/OrganiserHomePage'
+import { MyRequestsPage } from '../organiser/MyRequestsPage'
 import { AssignedEventsPage } from '../coordinator/AssignedEventsPage'
 
 const REQ = 'req-1'
@@ -499,7 +499,7 @@ describe('EO03 / EC-NEW3 — where a waiting change is visible', () => {
       ]),
       'GET /api/change-requests': () => jsonResponse(200, [view({ requestId: 'waiting' })]),
     })
-    render(<MemoryRouter><SessionProvider><OrganiserHomePage /></SessionProvider></MemoryRouter>)
+    render(<MemoryRouter><SessionProvider><MyRequestsPage /></SessionProvider></MemoryRouter>)
 
     const row = (name: string) => screen.getByRole('heading', { name }).closest('.organiser-home__row') as HTMLElement
     expect(await within(await screen.findByRole('heading', { name: 'Waiting Gala' }).then((h) => h.closest('.organiser-home__row') as HTMLElement))
@@ -522,9 +522,10 @@ describe('EO03 / EC-NEW3 — where a waiting change is visible', () => {
     render(<MemoryRouter><SessionProvider><AssignedEventsPage /></SessionProvider></MemoryRouter>)
 
     expect(await screen.findByText('1 change request is waiting for your decision.')).toBeInTheDocument()
-    const card = screen.getByRole('heading', { name: 'Town Hall' }).closest('.assigned-events__card') as HTMLElement
-    expect(within(card).getByRole('link', { name: 'Change requested · review' })).toHaveAttribute('href', `/coordinator/change-requests/${CR}`)
-    const quiet = screen.getByRole('heading', { name: 'Quiet Fair' }).closest('.assigned-events__card') as HTMLElement
+    const card = screen.getByRole('link', { name: 'Town Hall' })
+    expect(within(card).getByText('Change requested')).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Change to Town Hall' })).toHaveAttribute('href', `/coordinator/change-requests/${CR}`)
+    const quiet = screen.getByRole('link', { name: 'Quiet Fair' })
     expect(within(quiet).queryByText(/Change requested/)).not.toBeInTheDocument()
   })
 
@@ -546,7 +547,7 @@ describe('EO03 / EC-NEW3 — where a waiting change is visible', () => {
 
     const list = within(await screen.findByRole('region', { name: 'Change requests waiting for you' }))
     const links = list.getAllByRole('link')
-    expect(links.map((l) => l.textContent)).toEqual(['Change to Quiet Fair', 'Change to Town Hall'])
+    expect(links.map((l) => within(l).getByRole('heading').textContent)).toEqual(['Change to Quiet Fair', 'Change to Town Hall'])
     expect(links[0]).toHaveAttribute('href', '/coordinator/change-requests/cr-old')
     expect(list.getByText(/Globex Holdings · asked by eo1/)).toBeInTheDocument()
     expect(list.getByText('Fewer guests')).toBeInTheDocument()

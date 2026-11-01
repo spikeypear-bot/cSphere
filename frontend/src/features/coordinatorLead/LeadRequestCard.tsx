@@ -1,5 +1,4 @@
-import { Link } from 'react-router-dom'
-import { Card } from '../../components/ui/Card'
+import { RowLink } from '../../components/ui/RowLink'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import type { EventRequestDto } from '../../types/eventRequest'
@@ -7,7 +6,7 @@ import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import './LeadRequestCard.css'
 
 /** One event request as an overview card on the Lead's lists (ECL-C1,
- * ECL-C2), opening its review page (ECL-C3). */
+ * ECL-C2): the whole card opens its review page (ECL-C3). */
 export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted', coordinatorName, headingLevel = 2 }: {
   request: EventRequestDto
   /** When the organiser submitted the request. */
@@ -19,18 +18,17 @@ export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted',
   /** 3 where the cards sit under a group heading. */
   headingLevel?: 2 | 3
 }) {
-  const Heading = headingLevel === 3 ? 'h3' : 'h2'
-  // An assigned request is the coordinator's to review; the Lead views it
-  // and can reassign it from there (ELC-C5).
-  const action = coordinatorName ? 'View request' : 'Review request'
+  // An assigned request is the coordinator's to review; the Lead views it and
+  // can reassign it from there (ELC-C5). The review page reads this state to
+  // lead back to the assignments and name the coordinator the card showed.
+  const linkState = coordinatorName ? { coordinator: { id: request.coordinatorId, name: coordinatorName } } : undefined
   return (
-    <Card className="lead-request-card">
-      <div className="lead-request-card__head">
-        <Heading>{request.eventName?.trim() || 'Untitled request'}</Heading>
-        <StatusBadge status={request.status} journey={request.journeyStatus} />
-      </div>
-      <p className="lead-request-card__organisation">{request.organisation}</p>
-      <dl className="lead-request-card__facts">
+    <RowLink to={`/coordinator-lead/unassigned-requests/${request.requestId}`} className="card dash-row-card"
+      titleAs={headingLevel === 3 ? 'h3' : 'h2'} title={request.eventName?.trim() || 'Untitled request'}
+      badges={<StatusBadge status={request.status} journey={request.journeyStatus} />}
+      state={linkState}>
+      <p>{request.organisation}</p>
+      <dl className="dash-figures dash-facts">
         <div>
           <dt>When (Singapore time)</dt>
           <dd>
@@ -54,12 +52,6 @@ export function LeadRequestCard({ request, submittedAt, timeLabel = 'Submitted',
           </div>
         ) : null}
       </dl>
-      <Link className="button button--secondary lead-request-card__review"
-        to={`/coordinator-lead/unassigned-requests/${request.requestId}`}
-        state={coordinatorName ? { coordinator: { id: request.coordinatorId, name: coordinatorName } } : undefined}
-        aria-label={`${action}: ${request.eventName?.trim() || 'Untitled request'}`}>
-        {action}
-      </Link>
-    </Card>
+    </RowLink>
   )
 }

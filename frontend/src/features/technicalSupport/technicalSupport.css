@@ -1,3 +1,6 @@
+/* Shared dashboard rules first, so the TS-only overrides below win ties. */
+@import '../../components/ui/dashboard.css';
+
 .tech-card {
   padding: 1.25rem;
   display: flex;
@@ -88,49 +91,6 @@
   margin: 0;
 }
 
-.tech-badge {
-  display: inline-block;
-  padding: 0.1rem 0.55rem;
-  border-radius: 999px;
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.tech-badge--danger {
-  background: var(--danger-soft);
-  color: var(--danger);
-}
-
-.tech-badge--success {
-  background: var(--success-soft);
-  color: var(--success);
-}
-
-.tech-badge--warning {
-  background: var(--warning-soft);
-  color: var(--warning);
-}
-
-.tech-figures {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.75rem;
-  margin: 0;
-}
-
-.tech-figures dt {
-  color: var(--ink-soft);
-  font-size: 0.85rem;
-}
-
-.tech-figures dd {
-  margin: 0.2rem 0 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-}
-
 .tech-heading-row {
   display: flex;
   flex-wrap: wrap;
@@ -141,21 +101,6 @@
 .tech-heading-row h2 {
   margin: 0;
   margin-inline-end: auto;
-}
-
-.tech-facts dd {
-  font-size: 0.95rem;
-}
-
-.tech-load-error {
-  display: grid;
-  justify-items: start;
-  gap: 0.5rem;
-}
-
-.tech-load-error p {
-  margin: 0;
-  color: var(--danger);
 }
 
 .tech-filters {
@@ -180,7 +125,6 @@
 
 .tech-kind {
   flex: 1;
-  align-items: flex-start;
   padding: 1rem;
 }
 
@@ -194,279 +138,42 @@
   font-size: 1.4rem;
 }
 
-.tech-kind .tech-figures {
+.tech-kind .dash-figures {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr));
   margin-top: 0.35rem;
   gap: 0.5rem 0.75rem;
 }
 
-.tech-kind .tech-figures dd {
+.tech-kind .dash-figures dd {
   font-size: 1rem;
 }
 
-.tech-badge--neutral {
-  background: var(--paper);
-  color: var(--ink-soft);
-  box-shadow: inset 0 0 0 1px var(--hairline-strong);
-}
-
-/* A row or card that opens a page (shared/RowLink): one link over the whole
- * surface, no underline, a hover tint, a focus ring and a trailing chevron. */
-.row-link {
-  display: flex;
-  align-items: center;
-  gap: 0.875rem;
-  color: inherit;
-  text-decoration: none;
-  border-radius: var(--radius-md);
-  overflow-wrap: anywhere;
-  transition: background-color 120ms ease, border-color 120ms ease;
-}
-
-.row-link:hover {
-  background: var(--paper);
-}
-
-.row-link.card:hover {
-  border-color: var(--hairline-strong);
-}
-
-.row-link:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-.row-link__media {
-  flex-shrink: 0;
-  align-self: flex-start;
-  display: flex;
-}
-
-.row-link__main {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-}
-
-.row-link__top {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.3rem 0.6rem;
-}
-
-.row-link__title {
-  margin: 0;
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.35;
-  color: var(--ink);
-}
-
-h2.row-link__title {
-  font-size: 1.05rem;
-}
-
-.row-link__badges {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: 0.35rem;
-}
-
-.row-link__details {
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.875rem;
-  color: var(--ink-soft);
-}
-
-.row-link__details p {
-  margin: 0;
-}
-
-.row-link__details dd {
-  color: var(--ink);
-}
-
-.row-link__chevron {
-  flex-shrink: 0;
-  font-size: 1.5rem;
-  line-height: 1;
-  color: var(--ink-faint);
-  transition: color 120ms ease, transform 120ms ease;
-}
-
-.row-link:hover .row-link__chevron,
-.row-link:focus-visible .row-link__chevron {
-  color: var(--accent-strong);
-  transform: translateX(2px);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .row-link,
-  .row-link__chevron {
-    transition: none;
-  }
-
-  .row-link:hover .row-link__chevron,
-  .row-link:focus-visible .row-link__chevron {
-    transform: none;
-  }
-}
-
-/* List pages: each entry is a card-sized RowLink. */
-.tech-row-card {
-  padding: 1rem 1.25rem;
-}
-
-.tech-row-card .equipment-damage__photo {
+/* List-card photos (the card itself is in components/ui/dashboard.css). */
+.dash-row-card .equipment-damage__photo {
   width: 4.5rem;
   height: 4.5rem;
   font-size: 1.6rem;
 }
 
-.tech-row-card__hint {
-  font-size: 0.82rem;
-  color: var(--ink-soft);
-}
-
 @media (max-width: 640px) {
-  .tech-row-card {
-    padding: 0.875rem 1rem;
-    gap: 0.75rem;
-  }
-
-  .tech-row-card .equipment-damage__photo {
+  .dash-row-card .equipment-damage__photo {
     width: 3.5rem;
     height: 3.5rem;
   }
 }
 
-/* The front page (dashboard): a work queue in three blocks. Requests span
- * the full width; today's stock and faulty equipment sit side by side. */
-.tech-home {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.25rem;
-  align-items: start;
-}
-
-.tech-home__wide {
-  grid-column: 1 / -1;
-}
-
-.tech-panel {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.tech-panel__head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem 0.75rem;
-  border-bottom: 1px solid var(--hairline);
-}
-
-.tech-panel__head h2 {
-  font-size: 1.05rem;
-}
-
-.tech-panel__action {
-  flex-shrink: 0;
-  padding: 0.35rem 0.6rem;
-  font-size: 0.85rem;
-  color: var(--accent-strong);
-}
-
-.tech-panel__action:hover {
-  background: var(--accent-soft);
-}
-
-.tech-panel__action:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
-}
-
-/* Room for a few rows while loading, so the page does not jump. */
-.tech-panel__body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 7rem;
-  padding: 0.5rem;
-}
-
-.tech-panel__body > [role='status'],
-.tech-panel__body > .tech-load-error {
-  padding: 0.75rem;
-  color: var(--ink-soft);
-}
-
-.tech-empty {
-  margin: 0.25rem;
-  padding: 1.75rem 1rem;
-  border: 1px dashed var(--hairline-strong);
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  color: var(--ink-soft);
-  text-align: center;
-}
-
-.tech-queue {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.tech-queue > li + li {
-  border-top: 1px solid var(--hairline);
-}
-
-.tech-queue__row {
-  padding: 0.75rem;
-  border-radius: var(--radius-sm);
-}
-
-.tech-queue > li + li .tech-queue__row:focus-visible {
-  outline-offset: -2px;
-}
-
-.tech-queue__row .equipment-damage__photo {
+.dash-queue__row .equipment-damage__photo {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: var(--radius-sm);
   font-size: 1.1rem;
 }
 
-.tech-queue__row--compact {
-  padding-block: 0.5rem;
-}
-
-.tech-queue__row--compact .equipment-damage__photo {
+.dash-queue__row--compact .equipment-damage__photo {
   width: 2.25rem;
   height: 2.25rem;
   font-size: 0.95rem;
-}
-
-/* When, then who and what: one line on a wide screen, wrapping below. */
-.tech-queue__meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.15rem 1.25rem;
-}
-
-.tech-queue__when {
-  color: var(--ink);
-  font-weight: 500;
 }
 
 .tech-nowrap {
@@ -496,10 +203,6 @@ h2.row-link__title {
   color: var(--ink-soft);
 }
 
-.row-link__aside {
-  flex-shrink: 0;
-}
-
 .tech-left {
   font-size: 0.875rem;
   font-weight: 600;
@@ -512,18 +215,3 @@ h2.row-link__title {
   color: var(--danger);
 }
 
-@media (max-width: 720px) {
-  .tech-home {
-    grid-template-columns: minmax(0, 1fr);
-  }
-}
-
-@media (max-width: 640px) {
-  .tech-panel__head {
-    padding: 0.875rem 1rem 0.625rem;
-  }
-
-  .tech-queue__row {
-    padding: 0.75rem 0.5rem;
-  }
-}

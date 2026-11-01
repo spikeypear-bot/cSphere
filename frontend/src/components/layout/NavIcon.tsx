@@ -29,6 +29,18 @@ const SHAPES = {
       <path d="M3 6l7 3.5L17 6M10 9.5v8" strokeLinejoin="round" />
     </>
   ),
+  calendar: (
+    <>
+      <rect x="3" y="4" width="14" height="13" rx="2" />
+      <path d="M3 8h14M7 2.5v3M13 2.5v3" />
+    </>
+  ),
+  search: (
+    <>
+      <circle cx="8.5" cy="8.5" r="5" />
+      <path d="m12.2 12.2 4.8 4.8" />
+    </>
+  ),
 } as const
 
 export type NavIconName = keyof typeof SHAPES

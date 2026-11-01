@@ -12,6 +12,7 @@ import { HOME_BY_ROLE, useSession } from '../../lib/sessionContext'
 import { CHANGE_STATUS_LABELS, type ChangeRequestView } from '../../types/changeRequest'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import { changesPathFor, shownChanges } from './changeRequestFields'
+import '../../components/ui/dashboard.css'
 import './ChangeRequests.css'
 
 /** "/change-requests/:requestId" (the link in every change-request
@@ -106,7 +107,7 @@ export function ChangeRequestsPage() {
       <div className="page">
         <div role="alert" className="change-request__error">
           <p>You can't view these change requests. The event belongs to another organisation, or it no longer exists.</p>
-          <Link className="button button--secondary" to={base || '/'}>Back to your console</Link>
+          <Link className="button button--secondary" to={base || '/'}>Back to dashboard</Link>
         </div>
       </div>
     )
@@ -117,7 +118,7 @@ export function ChangeRequestsPage() {
   return (
     <div className="page change-request">
       <PageHeader
-        eyebrow={<Link to={base}>Back to your console</Link>}
+        eyebrow={<Link to={base}>Back to dashboard</Link>}
         title="Change requests"
         description={name}
         actions={organiser && views && !hasPending ? (
@@ -140,7 +141,7 @@ export function ChangeRequestsPage() {
       <ul className="plain-list change-request__list">
         {views?.map((v) => (
           <li key={v.changeRequestId}>
-            <Card className="change-request__card" data-status={v.status}>
+            <Card className="dash-row-card change-request__card" data-status={v.status}>
               <div className="change-request__head">
                 <span className={`change-request__status change-request__status--${v.status}`}>
                   {v.closedReason ? 'Closed' : CHANGE_STATUS_LABELS[v.status]}

@@ -1,82 +1,86 @@
-import { Link } from 'react-router-dom'
-import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
-import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
-import { EVENT_STATUS_LABELS } from '../../types/event'
 import { JourneyStatusBadge } from '../../components/ui/JourneyStatus'
+import { Panel } from '../../components/ui/Panel'
+import { ResourceView } from '../../components/ui/ResourceView'
+import { RowLink } from '../../components/ui/RowLink'
+import { apiClient } from '../../lib/apiClient'
+import { useSession } from '../../lib/sessionContext'
+import { useResource, type Resource } from '../../lib/useResource'
+import { countOf, greetingFor } from '../../lib/greeting'
+import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import type { SafetyEventListItem } from './readinessTypes'
-import { useSafetyData } from './useSafetyData'
-import './safetyOfficer.css'
 
+/** How many rows each panel shows before "View all". */
+const TOP = 5
+const read = (path: string) => () => apiClient.get<SafetyEventListItem[]>(path, { cache: 'no-store' })
+// EC08: only events actually sent are the Safety Officer's queue (as on Safety reviews).
+const isAwaiting = (event: SafetyEventListItem) => event.status === 'awaiting_safety_review'
+
+/** SO-C1: the Safety Officer console's front page — the top of each Safety
+ * reviews section, from the same reads that page uses. */
 export function SafetyOfficerHomePage() {
-  const planning = useSafetyData<SafetyEventListItem[]>('/safety/events/planning')
-  const confirmed = useSafetyData<SafetyEventListItem[]>('/safety/events/confirmed')
-  // EC08: only events actually sent are the Safety Officer's queue; a
-  // withdrawn event (back in Planning) leaves it.
-  const waiting = planning.data?.filter((e) => e.status === 'awaiting_safety_review')
-  const stillPlanning = planning.data?.filter((e) => e.status !== 'awaiting_safety_review')
+  const { username } = useSession()
+  const planning = useResource(read('/safety/events/planning'), 'planning')
+  const confirmed = useResource(read('/safety/events/confirmed'), 'confirmed')
+  const greeting = greetingFor()
 
   return (
-    <div className="page">
+    <section className="page">
       <PageHeader
-        title="Safety Officer console"
-        description="Review planned events and monitor confirmed event readiness."
+        title={username ? `${greeting}, ${username}` : greeting}
+        description={<p className="page-header__description" aria-live="polite">{summarise(planning)}</p>}
       />
-
-      <section className="safety-section" aria-labelledby="safety-review-heading">
-        <h2 id="safety-review-heading">Waiting for your safety review</h2>
-        <p className="field-hint">Events the Event Coordinator has sent for the Operational Safety Check.</p>
-        {planning.error ? <p role="alert">Could not load planning events. {planning.error}</p> : null}
-        {planning.loading && !planning.data ? <p role="status">Loading planning events…</p> : null}
-        {waiting?.length === 0 ? <p>No events are waiting for your safety review.</p> : null}
-        {waiting && waiting.length > 0 ? <EventList events={waiting} /> : null}
-      </section>
-
-      <section className="safety-section" aria-labelledby="safety-planning-heading">
-        <h2 id="safety-planning-heading">Still being planned</h2>
-        <p className="field-hint">Not sent to you yet, sent back for changes, or approved and waiting for the coordinator to confirm. You can start on the checklist early.</p>
-        {stillPlanning?.length === 0 ? <p>No other events are being planned.</p> : null}
-        {stillPlanning && stillPlanning.length > 0 ? <EventList events={stillPlanning} /> : null}
-      </section>
-
-      <section className="safety-section" aria-labelledby="safety-confirmed-heading">
-        <h2 id="safety-confirmed-heading">Confirmed events</h2>
-        {confirmed.error ? <p role="alert">Could not load confirmed events. {confirmed.error}</p> : null}
-        {confirmed.loading && !confirmed.data ? <p role="status">Loading confirmed events…</p> : null}
-        {confirmed.data?.length === 0 ? (
-          <Card><p>No confirmed events to show.</p></Card>
-        ) : null}
-        {confirmed.data && confirmed.data.length > 0 ? <EventList events={confirmed.data} /> : null}
-      </section>
-    </div>
+      <div className="dash-grid">
+        <EventPanel title="Awaiting your review" actionName="View all events awaiting your review" className="dash-grid__wide"
+          resource={planning} pick={(list) => list.filter(isAwaiting)}
+          errorText="Events awaiting your review could not be loaded." emptyText="No events are waiting for your safety review." />
+        <EventPanel title="In planning" actionName="View all events in planning"
+          resource={planning} pick={(list) => list.filter((event) => !isAwaiting(event))}
+          errorText="Events in planning could not be loaded." emptyText="No other events are being planned." />
+        <EventPanel title="Confirmed" actionName="View all confirmed events"
+          resource={confirmed} pick={(list) => list}
+          errorText="Confirmed events could not be loaded." emptyText="No confirmed events to show." />
+      </div>
+    </section>
   )
 }
 
-function EventList({ events }: { events: SafetyEventListItem[] }) {
+function EventPanel({ title, actionName, className, resource, pick, errorText, emptyText }: {
+  title: string
+  actionName: string
+  className?: string
+  resource: Resource<SafetyEventListItem[]>
+  pick: (list: SafetyEventListItem[]) => SafetyEventListItem[]
+  errorText: string
+  emptyText: string
+}) {
   return (
-    <ul className="safety-event-list">
-      {events.map((event) => (
-        <li key={event.eventId}>
-          <Card className="safety-event-card">
-            <div>
-              <h3>{event.eventName}</h3>
-              {event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : event.status !== 'confirmed' ? (
-                <span className={`status-badge status-badge--${event.status === 'awaiting_safety_review' ? 'pending' : 'approved'}`}
-                  data-status={event.status}>
-                  {EVENT_STATUS_LABELS[event.status] ?? event.status}
-                </span>
-              ) : null}
-              <dl className="safety-event-facts">
-                <div><dt>Date and time</dt><dd>{formatEventTimeRange(event.startDatetime, event.endDatetime)}</dd></div>
-                <div><dt>Venue</dt><dd>{event.venueAddress || 'Not finalised'}</dd></div>
-              </dl>
-            </div>
-            <Link className="button button--secondary" to={`/safety-officer/events/${event.eventId}`}>
-              View event
-            </Link>
-          </Card>
-        </li>
-      ))}
-    </ul>
+    <Panel title={title} action="View all" actionName={actionName} to="/safety-officer/reviews" className={className}>
+      <ResourceView resource={resource} loadingText="Loading events…" errorText={errorText}
+        emptyText={emptyText} emptyClassName="dash-empty" isEmpty={(list) => pick(list).length === 0}>
+        {(list) => (
+          <ul className="dash-queue" aria-label={title}>
+            {pick(list).slice(0, TOP).map((event) => (
+              <li key={event.eventId}>
+                <RowLink to={`/safety-officer/events/${event.eventId}`} className="dash-queue__row" title={event.eventName}
+                  badges={event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : null}>
+                  <p className="dash-queue__meta">
+                    <span className="dash-queue__when">{formatEventTimeRange(event.startDatetime, event.endDatetime)}</span>
+                    <span>{event.venueAddress || 'Venue not finalised'}</span>
+                  </p>
+                </RowLink>
+              </li>
+            ))}
+          </ul>
+        )}
+      </ResourceView>
+    </Panel>
   )
+}
+
+/** "2 events awaiting your review", once the planning list has loaded. */
+function summarise(planning: Resource<SafetyEventListItem[]>): string {
+  if (planning.loading) return 'Checking what needs your attention…'
+  if (!planning.data) return 'Events awaiting your review could not be loaded.'
+  return `${countOf(planning.data.filter(isAwaiting).length, 'event')} awaiting your review`
 }

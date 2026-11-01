@@ -1,10 +1,11 @@
-// @stories DEV16 AU04
+// @stories DEV16 AU04 VS02
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import { VenueMapExplorer } from './VenueMapExplorer'
 import { VenueStaffHomePage } from '../venueStaff/VenueStaffHomePage'
 import { jsonResponse } from '../../test/apiStubs'
+import { SessionProvider } from '../../lib/session'
 import type { VenueDto } from '../../types/venue'
 import type { VenueMapActivity, VenueMapBooking } from './mapData'
 
@@ -27,6 +28,7 @@ function setup(options: { home?: boolean; readVenues?: () => Response; readBooki
   const fetch = vi.fn(async (input: RequestInfo | URL) => {
     const url = String(input)
     if (url === '/api/venues') return options.readVenues?.() ?? jsonResponse(200, venues)
+    if (url === '/api/venue-staff/booking-requests') return jsonResponse(200, [])
     if (url.startsWith('/api/venue-staff/map/activity')) return options.readActivity?.(url) ?? jsonResponse(200, [
       { venueId: 'v0', eventCount: 1, pendingBookingCount: 0, matchingBookingCount: 1 },
     ] satisfies VenueMapActivity[])
@@ -34,22 +36,22 @@ function setup(options: { home?: boolean; readVenues?: () => Response; readBooki
     throw new Error(`Unexpected request ${url}`)
   })
   vi.stubGlobal('fetch', fetch)
-  render(<MemoryRouter>{options.home ? <VenueStaffHomePage /> : <VenueMapExplorer />}</MemoryRouter>)
+  render(<MemoryRouter>{options.home ? <SessionProvider><VenueStaffHomePage /></SessionProvider> : <VenueMapExplorer />}</MemoryRouter>)
   return fetch
 }
 async function catalogue() { return screen.findByRole('button', { name: /Alpha.*Building 0/ }) }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.useRealTimers() })
 
 describe('DEV16 Venue Staff map', () => {
-  it('DEV16 (happy): console keeps workflow cards above the map and fetches no booking details initially', async () => {
+  it('DEV16 VS02 (happy): console keeps the booking requests panel above the map and fetches no booking details initially', async () => {
     const fetch = setup({ home: true })
     await catalogue()
     expect(screen.getByLabelText('Minimum capacity')).toHaveAttribute('placeholder', 'e.g. 100')
     expect(screen.getByLabelText('Minimum capacity')).toHaveValue(null)
-    expect(screen.getByRole('link', { name: /Venue catalogue/ })).toHaveAttribute('href', '/venue-staff/catalogue')
-    const consoleHeading = screen.getByRole('heading', { name: 'Venue Staff console' })
+    expect(screen.getByRole('link', { name: 'View all booking requests' })).toHaveAttribute('href', '/venue-staff/booking-approvals')
+    const consoleHeading = screen.getByRole('heading', { level: 1 })
     expect(consoleHeading.compareDocumentPosition(screen.getByRole('heading', { name: 'Explore venues' })) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
-    expect(fetch.mock.calls.map(c => String(c[0]))).toEqual(['/api/venues', '/api/venue-staff/map/activity'])
+    expect(fetch.mock.calls.map(c => String(c[0])).sort()).toEqual(['/api/venue-staff/booking-requests', '/api/venue-staff/map/activity', '/api/venues'])
   })
   it('DEV16 (happy): catalogue and marker selection agree and booking links use distinct booking IDs', async () => {
     setup({ readBookings: () => jsonResponse(200, [booking, { ...booking, bookingId: 'b2' }]) })

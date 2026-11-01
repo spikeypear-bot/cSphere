@@ -1,4 +1,4 @@
-// @stories ECL-C4 TS09
+// @stories ECL-C4 TS09 EC09 AT04 EO15 ECL-C1 VS02
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -6,7 +6,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import App from '../../App'
 import { AUTH_STORAGE_KEY, type Role } from '../../lib/authTokens'
 import { SessionProvider } from '../../lib/session'
-import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
+import { emptyBody, jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { JourneyCode } from '../../types/status'
 import { ActiveEventsPage } from './ActiveEventsPage'
 
@@ -80,22 +80,25 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
   })
 
   it.each([
-    ['coordinator', 'ec1', /Event Coordinator console/i],
-    ['organiser', 'eo1', /Your event requests/i],
-    ['venue-staff', 'vs1', /Venue Staff console/i],
-    ['technical-support', 'ts1', /^Good \w+, ts1$/],
-    ['attendee', 'att1', /^Welcome$/i],
-  ] as const)('ECL-C4 AC1 (negative): a signed-in %s opening the URL directly is sent to their own console, told why, and no events are read', async (role, username, ownConsole) => {
+    ['coordinator', 'ec1', /^Good \w+, ec1$/, 'Event Coordinator'],
+    ['organiser', 'eo1', /^Good \w+, eo1$/, 'Event Organiser'],
+    ['venue-staff', 'vs1', /^Good \w+, vs1$/, 'Venue Staff'],
+    ['technical-support', 'ts1', /^Good \w+, ts1$/, 'Technical Support'],
+    ['attendee', 'att1', /^Good \w+, att1$/, 'Attendee'],
+    ['safety-officer', 'so1', /^Good \w+, so1$/, 'Safety Officer'],
+  ] as const)('ECL-C4 AC1 (negative): a signed-in %s opening the URL directly is sent to their own console, told why, and no events are read', async (role, username, ownConsole, ownNav) => {
     window.localStorage.clear()
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       fetched.push(String(input))
-      return jsonResponse(200, [])
+      return jsonResponse(200, emptyBody(String(input)))
     }))
     signInAs(role, username)
     render(<MemoryRouter initialEntries={['/coordinator-lead/active-events']}><App /></MemoryRouter>)
 
     expect(await screen.findByRole('heading', { level: 1, name: ownConsole })).toBeInTheDocument()
+    // The user's own console, not just any dashboard with their name on it.
+    expect(screen.getByRole('navigation', { name: ownNav })).toBeInTheDocument()
     expect(screen.queryByRole('heading', { level: 1, name: 'Active events' })).not.toBeInTheDocument()
     expect(screen.getByRole('alert')).toHaveTextContent('Access denied')
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator-lead/active-events')
@@ -109,7 +112,8 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     const user = userEvent.setup()
     render(<MemoryRouter initialEntries={['/coordinator-lead']}><App /></MemoryRouter>)
 
-    const link = await screen.findByRole('link', { name: 'Active events' })
+    const nav = await screen.findByRole('navigation', { name: 'Event Coordinator Lead' })
+    const link = within(nav).getByRole('link', { name: 'Active events' })
     expect(link).toHaveAttribute('href', '/coordinator-lead/active-events')
     await user.click(link)
 
@@ -225,12 +229,14 @@ describe('ECL-C4 ActiveEventsPage — the Lead sees every assigned active event'
     renderPage()
 
     const card = await cardFor('Offsite')
-    expect(within(card).getAllByRole('link').map((link) => link.textContent)).toEqual(['View event'])
+    // The whole card is the one link, named by the event.
+    expect(within(card).getAllByRole('link')).toHaveLength(1)
+    expect(within(card).getByRole('link', { name: 'Offsite' })).toHaveAttribute('href', '/coordinator-lead/events/e1')
     expect(within(card).queryAllByRole('button')).toHaveLength(0)
     expect(screen.queryByRole('button', { name: /approve|book|confirm|reassign/i })).not.toBeInTheDocument()
     expect(screen.queryByRole('link', { name: /approve|book|confirm|reassign/i })).not.toBeInTheDocument()
 
-    await user.click(within(card).getByRole('link', { name: 'View event: Offsite' }))
+    await user.click(within(card).getByRole('link', { name: 'Offsite' }))
     expect(await screen.findByRole('heading', { name: 'Event oversight page' })).toBeInTheDocument()
   })
 

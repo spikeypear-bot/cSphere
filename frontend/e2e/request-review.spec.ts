@@ -32,7 +32,7 @@ test('ECL-C1 ECL-C6 EC01 EO26 EO19 (happy): a request is found, assigned, questi
   })
 
   await test.step('ECL-C6 AC7, AC12 / ECL-C1 AC7: once assigned it leaves the list, with a confirmation naming the coordinator', async () => {
-    await lead.getByLabel('Event Coordinator').selectOption({ label: 'ec1' })
+    await lead.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec1' })
     await lead.getByRole('button', { name: 'Assign request' }).click()
     await expect(lead.getByText(`“${eventName}” was assigned to ec1. The organiser has been notified.`)).toBeVisible()
     await expect(lead.getByRole('listitem').filter({ hasText: eventName })).toHaveCount(0)
@@ -69,7 +69,7 @@ test('ECL-C1 ECL-C6 EC01 EO26 EO19 (happy): a request is found, assigned, questi
     const panel = await openBell(organiser)
     await expect(panel.getByText(`Clarification needed on "${eventName}"`)).toBeVisible()
     await organiser.keyboard.press('Escape')
-    await organiser.goto('/organiser')
+    await organiser.goto('/organiser/requests')
     await organiser.getByRole('listitem').filter({ hasText: eventName }).getByRole('link', { name: 'Respond' }).click()
     await expect(organiser).toHaveURL(new RegExp(`/organiser/requests/${requestId}/respond$`))
     await expect(organiser.getByText('Requested by your coordinator')).toBeVisible()
@@ -113,14 +113,14 @@ test('ECL-C5 EO19 (happy): the Lead moves a request to another coordinator; the 
   const lead = await signedIn(browser, 'ecl1')
   await test.step('ECL-C5 AC2, AC3 (negative): from Coordinator assignments, reassigning without a choice is blocked', async () => {
     await lead.goto('/coordinator-lead/assignments')
-    await lead.getByRole('link', { name: `View request: ${eventName}` }).click()
+    await lead.getByRole('link', { name: eventName, exact: true }).click()
     await lead.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Reassign' }).click()
     await lead.getByRole('button', { name: 'Reassign request' }).click()
     await expect(lead.getByText('Choose an Event Coordinator before reassigning.')).toBeVisible()
   })
 
   await test.step('ECL-C5 AC13: reassigned to ec2, with a confirmation naming the request and coordinator', async () => {
-    await lead.getByLabel('Event Coordinator').selectOption({ label: 'ec2' })
+    await lead.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec2' })
     await lead.getByRole('button', { name: 'Reassign request' }).click()
     await expect(lead.getByText(`“${eventName}” was reassigned to ec2. The organiser has been notified.`)).toBeVisible()
   })

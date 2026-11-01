@@ -2,7 +2,8 @@ import { Fragment, useEffect, useRef, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { EquipmentPhoto } from '../damage/EquipmentPhoto'
-import { countOf, describeWhen } from '../shared/format'
+import { countOf } from '../../../lib/greeting'
+import { describeWhen } from '../shared/format'
 import {
   describeReserved,
   groupReservations,
@@ -109,7 +110,7 @@ export function ReserveCard({ request, rows, lines, reservations, loaded, loadFa
       <div className="tech-heading-row">
         <h2 id="reserve-heading">{editable ? 'Reserve equipment' : 'Equipment'}</h2>
         {rows && lines.length > 0 ? (
-          <span className={`tech-badge${toReserve === 0 ? ' tech-badge--success' : ' tech-badge--neutral'}`}>
+          <span className={`dash-badge${toReserve === 0 ? ' dash-badge--success' : ' dash-badge--neutral'}`}>
             {toReserve === 0 ? 'All reserved' : `${countOf(toReserve, 'item')} to reserve`}
           </span>
         ) : null}
@@ -149,7 +150,7 @@ export function ReserveCard({ request, rows, lines, reservations, loaded, loadFa
       ) : null}
 
       {loadFailed ? (
-        <div role="alert" className="tech-load-error">
+        <div role="alert" className="dash-load-error">
           <p>The equipment figures could not be loaded.</p>
           <Button variant="secondary" type="button" onClick={onRetry}>Try again</Button>
         </div>

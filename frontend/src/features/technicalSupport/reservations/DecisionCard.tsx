@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Button } from '../../../components/ui/Button'
 import { Card } from '../../../components/ui/Card'
 import { Notice } from '../../../components/ui/Notice'
-import { countOf } from '../shared/format'
+import { countOf } from '../../../lib/greeting'
 import type {
   EquipmentRequestDecision,
   EquipmentReservation,

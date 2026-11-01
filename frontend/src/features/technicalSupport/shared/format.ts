@@ -16,7 +16,6 @@ export function requesterName(requestedBy: { name: string } | null | undefined):
 // everywhere (formatEventDateTime), so "today" is a Singapore day too.
 const ZONE = 'Asia/Singapore'
 const dayKeyFormat = new Intl.DateTimeFormat('en-CA', { timeZone: ZONE, year: 'numeric', month: '2-digit', day: '2-digit' })
-const hourFormat = new Intl.DateTimeFormat('en-GB', { timeZone: ZONE, hour: 'numeric', hourCycle: 'h23' })
 const timeFormat = new Intl.DateTimeFormat('en-SG', { timeZone: ZONE, hour: 'numeric', minute: '2-digit', hour12: true })
 const dayFormat = new Intl.DateTimeFormat('en-GB', { timeZone: ZONE, weekday: 'short', day: 'numeric', month: 'short' })
 const dayYearFormat = new Intl.DateTimeFormat('en-GB', { timeZone: ZONE, weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' })
@@ -55,19 +54,6 @@ export function describeWhen(start: string, end: string, now = new Date()): stri
 /** "Until Sat 20 Mar", or "No end date" for a block until further notice. */
 export function describeUntil(end: string | null, now = new Date()): string {
   return end === null ? 'No end date' : `Until ${shortDate(end, now)}`
-}
-
-/** "Good morning" before noon, "Good afternoon" before 6 pm, else evening. */
-export function greetingFor(now = new Date()): string {
-  const hour = Number(hourFormat.format(now))
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
-}
-
-/** "1 request", "2 requests". */
-export function countOf(count: number, noun: string): string {
-  return `${count} ${noun}${count === 1 ? '' : 's'}`
 }
 
 /** The first three lines of a request ("2 × Projector, 1 × Webcam") and

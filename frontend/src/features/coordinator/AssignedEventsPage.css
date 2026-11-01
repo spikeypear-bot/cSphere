@@ -19,51 +19,7 @@
 
 .assigned-events__card {
   flex: 1;
-  padding: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
   min-width: 0;
-}
-
-.assigned-events__card-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.75rem;
-}
-
-.assigned-events__card-head h2 {
-  margin: 0;
-  font-size: 1.1rem;
-  overflow-wrap: anywhere;
-}
-
-.assigned-events__organisation {
-  margin: 0;
-  color: var(--ink-soft);
-}
-
-.assigned-events__facts {
-  margin: 0.25rem 0 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.assigned-events__facts dt {
-  font-size: 0.78rem;
-  color: var(--ink-faint);
-}
-
-.assigned-events__facts dd {
-  margin: 0;
-}
-
-/* Pinned to the bottom so the links line up across a row of cards. */
-.assigned-events__open {
-  margin-top: auto;
-  align-self: flex-start;
 }
 
 /* EC-NEW3 AC3: change requests waiting for the coordinator, oldest first. */
@@ -74,10 +30,6 @@
 .assigned-events__changes ol {
   display: grid;
   gap: 8px;
-}
-
-.assigned-events__change p {
-  margin: 4px 0 0;
 }
 
 /* A reason can be 2,000 characters; the review page shows it in full. */

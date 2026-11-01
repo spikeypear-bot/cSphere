@@ -126,7 +126,7 @@ describe('TS09 Technical Support front page', () => {
     expect(within(rows[0]).getByRole('link', { name: 'Event 1' })).toHaveAccessibleDescription(/Shortfall/)
     expect(rows[0]).toHaveTextContent('Today, 5:00 pm – 8:00 pm')
     expect(rows[0]).toHaveTextContent('ec1 · 2 × Projector')
-    expect(within(rows[0]).getByText('Shortfall')).toHaveClass('tech-badge')
+    expect(within(rows[0]).getByText('Shortfall')).toHaveClass('dash-badge')
     expect(rows[1]).toHaveTextContent('Tomorrow, 9:00 am – 12:00 pm')
     expect(rows[1]).toHaveTextContent('No coordinator assigned · No itemised equipment')
     expect(rows[1]).not.toHaveTextContent('Shortfall')

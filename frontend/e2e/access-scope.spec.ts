@@ -29,7 +29,7 @@ test('reassigning an event moves it from one coordinator to another at once (ECL
     await held.getByRole('link', { name: `Reassign: ${eventName}` }).click()
     await expect(lead.getByText(/the current coordinator loses access straight away/)).toBeVisible()
     await lead.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Reassign' }).click()
-    await lead.getByLabel('Event Coordinator').selectOption({ label: 'ec2' })
+    await lead.getByLabel('Event Coordinator', { exact: true }).selectOption({ label: 'ec2' })
     await lead.getByRole('button', { name: 'Reassign request' }).click()
     await expect(lead.getByRole('list', { name: 'Events held by ec2' }).getByText(eventName)).toBeVisible()
   })
@@ -46,7 +46,7 @@ test('reassigning an event moves it from one coordinator to another at once (ECL
   await test.step('ECL-C7 AC15, AC8: the new coordinator has it in My events and can open it', async () => {
     const next = await signedIn(browser, 'ec2')
     await next.goto('/coordinator/my-events')
-    await next.getByRole('link', { name: `Open event ${eventName}` }).click()
+    await next.getByRole('link', { name: eventName, exact: true }).click()
     await expect(next.getByRole('heading', { name: eventName })).toBeVisible()
     await expect(next.getByRole('region', { name: 'Ready for confirmation?' })).toBeVisible()
   })

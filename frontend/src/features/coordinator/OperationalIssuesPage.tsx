@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import type { CoordinatorVenueOperationalIssueDto } from '../../types/venueOperationalIssue'
 import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
@@ -64,18 +64,22 @@ export function OperationalIssuesPage() {
         <ul className="plain-list">
           {issues.map(issue => (
             <li key={issue.issueId}>
-              <Card className="operational-issue">
-                <h2>{issue.venueAddress}</h2>
+              <Card className="dash-row-card operational-issue">
+                <h2 className="row-link__title">{issue.venueAddress}</h2>
                 <p>{issue.description}</p>
-                <p><strong>Affected period:</strong> {periodLabel(issue)}</p>
+                <dl className="dash-figures dash-facts">
+                  <div><dt>Affected period</dt><dd>{periodLabel(issue)}</dd></div>
+                  <div><dt>Reported</dt><dd>{formatEventDateTime(issue.createdAt)}</dd></div>
+                </dl>
                 {issue.overlappingEvents.length > 0 ? (
                   <div>
-                    <h3>Overlapping managed events</h3>
-                    <ul>
+                    <h3 className="dash-section-label">Overlapping managed events</h3>
+                    <ul className="dash-queue">
                       {issue.overlappingEvents.map(event => (
                         <li key={event.eventId}>
-                          <Link to={`/coordinator/events/${event.eventId}`}>{event.eventName}</Link>
-                          {' '}(occupied: {formatEventDateTime(event.effectiveStart ?? event.startDatetime)} – {formatEventDateTime(event.effectiveEnd ?? event.endDatetime)})
+                          <RowLink to={`/coordinator/events/${event.eventId}`} className="dash-queue__row" title={event.eventName}>
+                            <p>Occupied {formatEventDateTime(event.effectiveStart ?? event.startDatetime)} – {formatEventDateTime(event.effectiveEnd ?? event.endDatetime)}</p>
+                          </RowLink>
                         </li>
                       ))}
                     </ul>
@@ -86,7 +90,6 @@ export function OperationalIssuesPage() {
                 ) : (
                   <p className="field-hint">No event with an approved booking overlaps this period.</p>
                 )}
-                <p className="field-hint">Reported {formatEventDateTime(issue.createdAt)}</p>
               </Card>
             </li>
           ))}

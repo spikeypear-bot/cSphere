@@ -13,6 +13,8 @@ test('VS17 (cross-cutting): the same operating hours update live for organiser, 
  const staff = await signedIn(browser, 'vs1'); const coordinator = await signedIn(browser, 'ec1'); const organiser = await signedIn(browser, 'eo1')
  await staff.goto(`/venue-staff/bookings/${bookingId}`); await coordinator.goto(`/coordinator/events/${eventId}`); await organiser.goto(`/organiser/events/${eventId}`)
  await expect(organiser.getByRole('heading', { name: 'Confirmed arrangements' })).toBeVisible()
+ // The coordinator's event page keeps a booking's hours in its details window; it stays open and updates live.
+ await coordinator.getByRole('button', { name: 'View venue details' }).first().click()
  for (const [openTime, closeTime, expectedStatus] of [['08:00','18:00','approved'], ['10:00','11:00','attention']]) {
   if (openTime === '08:00') {
    // Exercise the real edit form and return navigation from booking details.

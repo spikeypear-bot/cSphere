@@ -15,6 +15,8 @@ async function signIn(page: Page, username: string) {
 test('an organiser signs in and lands on their own event requests', async ({ page }) => {
   await signIn(page, 'eo1')
 
+  await expect(page.getByRole('heading', { level: 1, name: /^Good \w+, eo1$/ })).toBeVisible()
+  await page.getByRole('navigation', { name: 'Event Organiser' }).getByRole('link', { name: 'My requests' }).click()
   await expect(page.getByRole('heading', { name: 'Your event requests' })).toBeVisible()
   // Scoped to their own organisation (D20): the page names it.
   await expect(page.getByText('Acme Pte Ltd', { exact: true })).toBeVisible()
@@ -28,7 +30,7 @@ test('a wrong password is refused and the person stays on the sign-in page', asy
 
   await expect(page.getByRole('alert')).toHaveText('Invalid username or password')
   await expect(page.getByRole('heading', { name: 'Sign in to ConnectSphere' })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Your event requests' })).toHaveCount(0)
+  await expect(page.getByRole('heading', { level: 1, name: /^Good \w+, eo1$/ })).toHaveCount(0)
 })
 
 test("an organiser's draft is saved to the server and listed with their requests (EO02/EO15)", async ({ page }) => {

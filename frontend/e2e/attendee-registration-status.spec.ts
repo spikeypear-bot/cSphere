@@ -40,7 +40,7 @@ test('AT04 AT01 AT02 (happy): register, view own status, open latest event detai
     await expect(card.getByText(own.reference, { exact: true })).toBeVisible()
     await expect(card.getByText('Registration status', { exact: true })).toBeVisible()
     await expect(card.getByText('Event status', { exact: true })).toBeVisible()
-    await card.getByRole('link', { name: 'View registration' }).click()
+    await card.getByRole('link', { name: eventName }).click()
     await expect(attendee.getByText('Withdrawal availability', { exact: true })).toBeVisible()
     await expect(attendee.getByText('Available. Withdrawal is available before the event starts.', { exact: true })).toBeVisible()
     await attendee.screenshot({ path: testInfo.outputPath('registration-details-desktop.png'), fullPage: true })

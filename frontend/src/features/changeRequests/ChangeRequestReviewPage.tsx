@@ -11,6 +11,7 @@ import { isNotAssigned } from '../../lib/notAssigned'
 import { HOME_BY_ROLE, useSession } from '../../lib/sessionContext'
 import { CHANGE_STATUS_LABELS, type ChangeRequestView, type ImpactItem } from '../../types/changeRequest'
 import { ChangesTable, When } from './ChangeRequestsPage'
+import '../../components/ui/dashboard.css'
 import './ChangeRequests.css'
 
 const MAX_REASON = 2000
@@ -155,14 +156,14 @@ export function ChangeRequestReviewPage() {
         <Notice tone="info">You can see this change and its impact; only the event's coordinator can decide it.</Notice>
       ) : null}
 
-      <Card>
+      <Card className="dash-row-card change-request__card">
         <p className="field-hint">Asked by {view.requestedByName}, <When iso={view.requestedAt} /></p>
         <ChangesTable view={view} />
         <p className="change-request__reason"><strong>The organiser's reason:</strong> {view.reason}</p>
       </Card>
 
       {view.impact ? (
-        <Card>
+        <Card className="dash-row-card change-request__card">
           <h2>What this change would affect</h2>
           <p className="field-hint">Checked against the current arrangements just now, including each venue's setup and turnaround time.</p>
           <ImpactList items={view.impact} ticked={ticked} onToggle={view.canDecide ? toggle : undefined} />
@@ -170,7 +171,7 @@ export function ChangeRequestReviewPage() {
       ) : null}
 
       {view.status !== 'pending' && view.decidedAt ? (
-        <Card>
+        <Card className="dash-row-card change-request__card">
           <p>{view.status === 'withdrawn' ? 'Withdrawn by the organiser' : `${CHANGE_STATUS_LABELS[view.status]} by ${view.decidedByName}`}, <When iso={view.decidedAt} /></p>
           {view.decisionReason ? <p><strong>Reason:</strong> {view.decisionReason}</p> : null}
           {view.followUps.length > 0 ? (
@@ -192,7 +193,7 @@ export function ChangeRequestReviewPage() {
             {!allTicked ? <p className="field-hint" role="status">Tick each item that needs attention to approve.</p> : null}
           </div>
         ) : (
-          <Card>
+          <Card className="dash-row-card change-request__card">
             <TextField id="reject-reason" label="Why can't this change be made?" multiline value={rejectReason}
               onChange={setRejectReason} hint={`${rejectLength} / ${MAX_REASON} characters. The organiser sees this.`}
               error={rejectLength > MAX_REASON ? `Keep it to ${MAX_REASON} characters.` : undefined} />

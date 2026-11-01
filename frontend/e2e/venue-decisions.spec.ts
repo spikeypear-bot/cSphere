@@ -1,6 +1,6 @@
 // @stories EC04 EC05 VS04 VS09 EC10 VS25 EC-C4 EC-C3 VS-C4 EC-NEW4
 import { expect, test, type APIRequestContext } from '@playwright/test'
-import { apiGet, apiToken, createVenue, openBell, planningEventByApi, signedIn, uniqueName } from './support.ts'
+import { apiGet, apiToken, createVenue, openBell, planningEventByApi, signedIn, uniqueName, addVenueToRequest } from './support.ts'
 
 // Finding, comparing, booking and losing venues, through the coordinator's and
 // Venue Staff's screens. Expected wording comes from the EC04, EC05, VS04,
@@ -47,23 +47,23 @@ test('EC04 (happy): venue search keeps only venues that are free, big enough and
 
   await test.step('EC04 AC3, AC4, AC5 (boundary): a venue whose capacity equals the requirement is included; one more and it is not', async () => {
     await search('777')
-    await expect(results.getByRole('heading', { name: exact })).toBeVisible()
+    await expect(results.getByRole('button', { name: exact })).toBeVisible()
     await search('778')
-    await expect(results.getByRole('heading', { name: noStage })).toBeVisible()
-    await expect(results.getByRole('heading', { name: exact })).toHaveCount(0)
+    await expect(results.getByRole('button', { name: noStage })).toBeVisible()
+    await expect(results.getByRole('button', { name: exact })).toHaveCount(0)
   })
 
   await test.step('EC04 AC6, AC7, AC8: with Stage required as well, only venues with a stage remain', async () => {
     await coordinator.getByRole('checkbox', { name: 'Stage' }).check()
     await search('800')
-    await expect(results.getByRole('heading', { name: stage })).toBeVisible()
-    await expect(results.getByRole('heading', { name: noStage })).toHaveCount(0)
+    await expect(results.getByRole('button', { name: stage })).toBeVisible()
+    await expect(results.getByRole('button', { name: noStage })).toHaveCount(0)
   })
 
   await test.step('EC04 AC1, AC2: a venue unavailable at that time drops out of the same search', async () => {
     await markUnavailable(request, stageId, '2027-11-02T08:00:00+08:00', '2027-11-02T13:00:00+08:00', 'Repainting')
     await search('800')
-    await expect(results.getByRole('heading', { name: stage })).toHaveCount(0)
+    await expect(results.getByRole('button', { name: stage })).toHaveCount(0)
   })
 
   await test.step('EC04 AC10, AC11 (negative): an end before the start, and a capacity of 0, are refused with a reason', async () => {
@@ -97,7 +97,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
     await coordinator.getByPlaceholder('Search by address or details').fill(small)
     await expect(coordinator.getByText('No venues match. Try showing unavailable venues to see why.')).toBeVisible()
     await coordinator.getByRole('checkbox', { name: 'Show unavailable venues' }).check()
-    await coordinator.getByRole('button', { name: new RegExp(small) }).first().click()
+    await addVenueToRequest(coordinator, new RegExp(small))
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('150 people')
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('100 ✗')
     await expect(coordinator.getByText('Capacity 100 is below the expected attendance of 150.').first()).toBeVisible()
@@ -108,7 +108,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
   await test.step('EC05 AC3, AC4, AC7: a suitable, free venue shows every requirement met, and can be requested', async () => {
     await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
     await coordinator.getByPlaceholder('Search by address or details').fill(hall)
-    await coordinator.getByRole('button', { name: new RegExp(hall) }).first().click()
+    await addVenueToRequest(coordinator, new RegExp(hall))
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('300 ✓')
     await expect(compare.getByRole('row', { name: /Availability/ })).toContainText('Available ✓')
     await expect(compare.getByRole('row', { name: /Required facilities/ })).toContainText('All provided ✓')
@@ -165,7 +165,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
     await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
     await coordinator.getByRole('link', { name: 'Replace or reschedule this booking' }).click()
     await coordinator.getByPlaceholder('Search by address or details').fill(marina)
-    await coordinator.getByRole('button', { name: new RegExp(marina) }).first().click()
+    await addVenueToRequest(coordinator, new RegExp(marina))
     await expect(coordinator.getByRole('heading', { name: 'Review replacement venue' })).toBeVisible()
     await expect(coordinator.getByText('The original booking stays unchanged until Venue Staff approves a replacement.')).toBeVisible()
     await coordinator.getByRole('button', { name: 'Request replacement' }).click()

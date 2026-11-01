@@ -3,48 +3,6 @@
   color: var(--ink-soft);
 }
 
-.review-queue__row {
-  padding: 1.25rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.review-queue__summary {
-  flex: 1 1 16rem;
-  min-width: 0;
-}
-
-.review-queue__summary h3 {
-  margin: 0 0 0.25rem;
-}
-
-.review-queue__actions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  align-items: flex-end;
-  min-width: 12rem;
-}
-
-/* On a phone the status and action sit under the summary, left aligned. */
-@media (max-width: 640px) {
-  .review-queue__row {
-    padding: 1rem;
-  }
-
-  .review-queue__actions {
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: space-between;
-    min-width: 0;
-    width: 100%;
-  }
-}
-
 .review-queue__section { margin-top: 0.25rem; }
 .review-queue__section h2 { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; font-size: 1.1rem; }
 .review-queue__count {

@@ -114,20 +114,6 @@
   gap: 0.75rem;
 }
 
-.page-section--divided {
-  margin-block-start: 1rem;
-  padding-block-start: 1.5rem;
-  border-top: 1px solid var(--hairline);
-  display: flex;
-  flex-direction: column;
-  gap: 0.4rem;
-}
-
-.page-section--divided h2 {
-  font-size: 1.05rem;
-  margin: 0;
-}
-
 /* --percent is set inline by the caller. */
 .completion-ring {
   display: inline-block;

@@ -1,12 +1,13 @@
-import { useEffect, useState, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
+import { useEffect, useState } from 'react'
 import { Card } from '../../components/ui/Card'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { StatusBadge } from '../../components/ui/StatusBadge'
 import { StatusFilter } from '../../components/ui/JourneyStatus'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { formatRelativeTime } from '../../lib/relativeTime'
 import type { EventRequestDto } from '../../types/eventRequest'
+import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './ReviewQueuePage.css'
 
 /** Mirrors backend ReviewQueueDto (EC02). */
@@ -70,21 +71,11 @@ export function ReviewQueuePage() {
             title="Needs your review"
             hint="Submitted and assigned to you."
             requests={queue.needsReview.filter(matches)}
-            renderAction={(request) => (
-              <Link className="button button--primary" to={`/coordinator/requests/${request.requestId}`}>
-                Review
-              </Link>
-            )}
           />
           <QueueSection
             title="Waiting for the organiser"
             hint="Clarification was asked for; these come back to you when the organiser resubmits."
             requests={queue.awaitingOrganiser.filter(matches)}
-            renderAction={(request) => (
-              <Link className="button button--secondary" to={`/coordinator/requests/${request.requestId}`}>
-                View
-              </Link>
-            )}
           />
         </>
       ) : null}
@@ -92,11 +83,10 @@ export function ReviewQueuePage() {
   )
 }
 
-function QueueSection({ title, hint, requests, renderAction }: {
+function QueueSection({ title, hint, requests }: {
   title: string
   hint: string
   requests: EventRequestDto[]
-  renderAction: (request: EventRequestDto) => ReactNode
 }) {
   if (requests.length === 0) return null
   const headingId = `queue-${title.toLowerCase().replace(/\W+/g, '-')}`
@@ -109,21 +99,16 @@ function QueueSection({ title, hint, requests, renderAction }: {
       <ul className="plain-list">
         {requests.map((request) => (
           <li key={request.requestId}>
-            <Card className="review-queue__row">
-              <div className="review-queue__summary">
-                <h3>{request.eventName || 'Untitled request'}</h3>
-                <p className="field-hint">{request.organisation}</p>
-                <p className="field-hint">
-                  {request.expectedAttendance ?? '—'} attendees ·{' '}
-                  {request.startDatetime ? new Date(request.startDatetime).toLocaleDateString() : 'no date given'}
-                  {' · '}updated {formatRelativeTime(request.updatedAt)}
-                </p>
-              </div>
-              <div className="review-queue__actions">
-                <StatusBadge status={request.status} journey={request.journeyStatus} />
-                {renderAction(request)}
-              </div>
-            </Card>
+            <RowLink to={`/coordinator/requests/${request.requestId}`} className="card dash-row-card" titleAs="h3"
+              title={request.eventName || 'Untitled request'}
+              badges={<StatusBadge status={request.status} journey={request.journeyStatus} />}>
+              <p>{request.organisation}</p>
+              <p>
+                {request.expectedAttendance ?? '—'} attendees ·{' '}
+                {request.startDatetime ? formatEventDateTime(request.startDatetime) : 'no date given'}
+                {' · '}updated {formatRelativeTime(request.updatedAt)}
+              </p>
+            </RowLink>
           </li>
         ))}
       </ul>

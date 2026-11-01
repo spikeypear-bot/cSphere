@@ -23,7 +23,7 @@
 }
 
 /* ECL-C7: the events each coordinator holds. */
-.lead-event-card { padding: 1rem 1.1rem; display: grid; gap: 0.5rem; }
+.lead-event-card { display: grid; gap: 0.5rem; }
 .lead-event-card__head { display: flex; justify-content: space-between; gap: 0.75rem; align-items: center; flex-wrap: wrap; }
 .lead-event-card__head h3 { margin: 0; font-size: 1rem; }
 .lead-event-card p { margin: 0; }

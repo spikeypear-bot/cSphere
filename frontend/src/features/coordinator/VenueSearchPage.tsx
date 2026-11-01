@@ -1,9 +1,11 @@
-import { OperatingHours } from '../../components/OperatingHours'
 import { useLiveRefresh } from '../../lib/useLiveRefresh'
 import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
+import { Modal } from '../../components/ui/Modal'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
+import { VenueDetails } from '../../components/venue/VenueDetails'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { venueFacilityLabels, type Facility, type VenueDto } from '../../types/venue'
 import { VenueFacilitiesFilter, VenueSearchField } from '../../components/venue/VenueSearchFilters'
@@ -43,6 +45,11 @@ export function VenueSearchPage() {
   const [textQuery, setTextQuery] = useState('')
   const [mapFocusId, setMapFocusId] = useState<string>()
   const visible = useMemo(() => (venues ?? []).filter(venue => venueMatchesSearch(venue, textQuery)), [venues, textQuery])
+  // The venue whose details window is open; looked up live so a refresh shows in it.
+  const [detailsId, setDetailsId] = useState<string | null>(null)
+  const details = visible.find(venue => venue.venueId === detailsId) ?? null
+  // Forget a window whose venue a refresh or filter removed, so it never reopens by itself.
+  if (detailsId && !details) setDetailsId(null)
 
   useEffect(() => {
     if (!searchQuery || liveRevision === 0) return
@@ -162,35 +169,41 @@ export function VenueSearchPage() {
         <section className="venue-search__results" aria-labelledby="venue-search-results">
           <h2 id="venue-search-results">Search results</h2>
           {visible.length === 0 ? (
-            <Card><p role="status">No matching venues found.</p></Card>
+            <Card className="dash-row-card"><p role="status">No matching venues found.</p></Card>
           ) : (
             <ul>
               {visible.map(venue => (
                 <li key={venue.venueId}>
-                  <Card data-map-focused={venue.venueId === mapFocusId}>
-                    <h3>{venue.venueAddress}</h3>
+                  <RowLink onClick={() => setDetailsId(venue.venueId)} className="card dash-row-card"
+                    title={venue.venueAddress} data-map-focused={venue.venueId === mapFocusId}>
                     <p>{venue.venueCapacity === null
                       ? 'Capacity not recorded'
-                      : `${venue.venueCapacity.toLocaleString()} people capacity`}</p>
-                    <p>{venue.venueFacilities.length > 0
-                      ? venue.venueFacilities.map(facility => venueFacilityLabels[facility]).join(', ')
-                      : 'No facilities listed'}</p>
-                    <OperatingHours hours={venue.operatingHours} />
-                    {startDatetime && endDatetime && <BookingTimingSummary timing={{
-                      setupDurationMinutes: venue.setupMinutes ?? 0, turnaroundDurationMinutes: venue.turnaroundMinutes ?? 0,
-                      startDatetime: parseLocalDateTime(startDatetime)!.toISOString(), endDatetime: parseLocalDateTime(endDatetime)!.toISOString(),
-                      ...occupiedPeriod(parseLocalDateTime(startDatetime)!.toISOString(), parseLocalDateTime(endDatetime)!.toISOString(),
-                        venue.setupMinutes ?? 0, venue.turnaroundMinutes ?? 0), timingNote: null, conflicts: [],
-                    }} />}
-                    {hasCoordinates(venue) ? <Button variant="ghost" aria-pressed={venue.venueId === mapFocusId}
-                      onClick={() => setMapFocusId(venue.venueId)}>Show on map</Button>
-                      : <p className="field-hint">Map location unavailable</p>}
-                  </Card>
+                      : `${venue.venueCapacity.toLocaleString()} people`}
+                      {' · '}{venue.venueFacilities.length > 0
+                        ? venue.venueFacilities.map(facility => venueFacilityLabels[facility]).join(', ')
+                        : 'No facilities listed'}</p>
+                    {hasCoordinates(venue) ? null : <p className="dash-row-card__hint">Map location unavailable</p>}
+                  </RowLink>
                 </li>
               ))}
             </ul>
           )}
         </section>
+      ) : null}
+      {details ? (
+        <Modal title={details.venueAddress} onClose={() => setDetailsId(null)}
+          footer={hasCoordinates(details) ? (close) => (
+            <Button variant="secondary" onClick={() => { setMapFocusId(details.venueId); close() }}>Show on map</Button>
+          ) : null}>
+          <VenueDetails venue={details}>
+            {startDatetime && endDatetime && <BookingTimingSummary timing={{
+              setupDurationMinutes: details.setupMinutes ?? 0, turnaroundDurationMinutes: details.turnaroundMinutes ?? 0,
+              startDatetime: parseLocalDateTime(startDatetime)!.toISOString(), endDatetime: parseLocalDateTime(endDatetime)!.toISOString(),
+              ...occupiedPeriod(parseLocalDateTime(startDatetime)!.toISOString(), parseLocalDateTime(endDatetime)!.toISOString(),
+                details.setupMinutes ?? 0, details.turnaroundMinutes ?? 0), timingNote: null, conflicts: [],
+            }} />}
+          </VenueDetails>
+        </Modal>
       ) : null}
     </section>
   )

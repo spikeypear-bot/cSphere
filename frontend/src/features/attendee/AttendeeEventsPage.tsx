@@ -1,15 +1,15 @@
-import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { Notice } from '../../components/ui/Notice'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { RowLink } from '../../components/ui/RowLink'
 import { useAttendeeResource } from './useAttendeeResource'
 import { AttendeeStatusBadges } from './AttendeeStatusBadges'
 import { registrationDateTime } from './registrationView'
 import type { AttendeeStatusInput } from './attendeeStatus'
 import './AttendeePages.css'
 
-interface AttendeeEventListItem extends Omit<AttendeeStatusInput, 'eventStatus'> {
+export interface AttendeeEventListItem extends Omit<AttendeeStatusInput, 'eventStatus'> {
   eventId: string
   eventName: string
   startDatetime: string
@@ -30,18 +30,13 @@ export function AttendeeEventsPage() {
       <Card className="attendee-state-card"><h2>No events yet</h2><p>Confirmed events will appear here when they are ready for attendees.</p></Card> :
       <ul className="attendee-events__list">
         {events.map(event => <li key={event.eventId}>
-          <Card className="attendee-events__card">
-            <div className="attendee-events__card-heading">
-              <h2><Link to={`/attendee/events/${encodeURIComponent(event.eventId)}`}>{event.eventName}</Link></h2>
-            </div>
+          <RowLink to={`/attendee/events/${encodeURIComponent(event.eventId)}`} className="card dash-row-card attendee-events__card"
+            titleAs="h2" title={event.eventName}>
             <AttendeeStatusBadges value={{ ...event, eventStatus: event.status }} />
-            <div className="attendee-events__facts">
-              <p><span className="attendee-events__fact-label">When</span>{registrationDateTime(event.startDatetime)} – {registrationDateTime(event.endDatetime)}</p>
-            </div>
-            <Link className="button button--secondary attendee-events__open" to={`/attendee/events/${encodeURIComponent(event.eventId)}`}>
-              View event details<span aria-hidden="true">→</span>
-            </Link>
-          </Card>
+            <dl className="dash-figures dash-facts">
+              <div><dt>When</dt><dd>{registrationDateTime(event.startDatetime)} – {registrationDateTime(event.endDatetime)}</dd></div>
+            </dl>
+          </RowLink>
         </li>)}
       </ul>}
   </main>

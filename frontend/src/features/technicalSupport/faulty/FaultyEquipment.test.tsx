@@ -198,6 +198,6 @@ describe('TS09 faulty equipment and the report-a-problem form', () => {
     expect(within(report).getAllByRole('link')).toHaveLength(1)
     expect(within(report).getByRole('link', { name: 'HDMI Cable · 2 damaged' }))
       .toHaveAttribute('href', '/technical-support/faulty/reports/rep-1')
-    expect(within(report).getByText('Closed')).toHaveClass('tech-badge--neutral')
+    expect(within(report).getByText('Closed')).toHaveClass('dash-badge--neutral')
   })
 })

@@ -1,40 +1,129 @@
-import { Link } from 'react-router-dom'
-import { SkeletonFeatureGrid } from '../../components/SkeletonFeatureGrid'
-import { coordinatorFeatures } from './coordinatorFeatures'
 import { PageHeader } from '../../components/ui/PageHeader'
+import { JourneyStatusBadge } from '../../components/ui/JourneyStatus'
+import { Panel } from '../../components/ui/Panel'
+import { ResourceView } from '../../components/ui/ResourceView'
+import { RowLink } from '../../components/ui/RowLink'
+import { apiClient } from '../../lib/apiClient'
+import { useSession } from '../../lib/sessionContext'
+import { useResource, type Resource } from '../../lib/useResource'
+import type { ChangeRequestView } from '../../types/changeRequest'
+import type { EventDto } from '../../types/event'
+import type { CoordinatorVenueOperationalIssueDto } from '../../types/venueOperationalIssue'
+import { countOf, greetingFor } from '../../lib/greeting'
+import { formatEventDateTime, formatEventTimeRange } from '../venueStaff/formatEventDateTime'
+import type { ReviewQueue } from './ReviewQueuePage'
 
-/** EC01/EC02's real entry point — mirrors OrganiserHomePage's own "New event
- * request" button sitting above its skeleton grid, rather than a "Skeleton"
- * card for a page that now actually exists. */
+/** How many rows each panel shows before "View all". */
+const TOP = 5
+const read = <T,>(path: string) => () => apiClient.get<T>(path, { cache: 'no-store' })
+
+/** EC09: the coordinator console's front page — what needs their attention,
+ * from the same reads the full pages use. */
 export function CoordinatorHomePage() {
-  return (
-    <div className="page">
-      <PageHeader
-        title="Event Coordinator console"
-        description="Review the event requests assigned to you and plan their events."
-        actions={
-          <>
-            <Link to="/coordinator/review-queue" className="button button--primary">
-              Review requests
-            </Link>
-            <Link to="/coordinator/my-events" className="button button--secondary">
-              My events
-            </Link>
-            <Link to="/coordinator/operational-issues" className="button button--secondary">
-              Venue issues
-            </Link>
-            <Link to="/coordinator/venue-search" className="button button--secondary">
-              Search venues
-            </Link>
-          </>
-        }
-      />
+  const { username } = useSession()
+  const queue = useResource(read<ReviewQueue>('/event-requests/queue'), 'queue')
+  const events = useResource(read<EventDto[]>('/events/assigned'), 'events')
+  const changes = useResource(read<ChangeRequestView[]>('/change-requests'), 'changes')
+  const issues = useResource(read<CoordinatorVenueOperationalIssueDto[]>('/coordinator/operational-issues'), 'issues')
+  const greeting = greetingFor()
 
-      <div className="page-section--divided">
-        <h2>More Event Coordinator stories</h2>
-        <p className="field-hint">Not built yet — pick one up next sprint.</p>
-        <SkeletonFeatureGrid basePath="/coordinator" features={coordinatorFeatures} />
+  return (
+    <section className="page">
+      <PageHeader
+        title={username ? `${greeting}, ${username}` : greeting}
+        description={<p className="page-header__description" aria-live="polite">{summarise(queue, changes)}</p>}
+      />
+      <div className="dash-grid">
+        <Panel title="Requests to review" action="View all" actionName="View all requests to review"
+          to="/coordinator/review-queue" className="dash-grid__wide">
+          <ResourceView resource={queue} loadingText="Loading requests…" errorText="The review queue could not be loaded."
+            emptyText="No requests waiting for your review." emptyClassName="dash-empty" isEmpty={(q) => q.needsReview.length === 0}>
+            {(q) => (
+              <ul className="dash-queue" aria-label="Requests to review">
+                {q.needsReview.slice(0, TOP).map((request) => (
+                  <li key={request.requestId}>
+                    <RowLink to={`/coordinator/requests/${request.requestId}`} className="dash-queue__row"
+                      title={request.eventName ?? 'Untitled request'}>
+                      <p className="dash-queue__meta">
+                        {request.startDatetime && request.endDatetime
+                          ? <span className="dash-queue__when">{formatEventTimeRange(request.startDatetime, request.endDatetime)}</span>
+                          : null}
+                        <span>{request.organisation}</span>
+                      </p>
+                    </RowLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
+
+        <Panel title="Upcoming events" action="View all" actionName="View all my events" to="/coordinator/my-events">
+          <ResourceView resource={events} loadingText="Loading your events…" errorText="Your events could not be loaded."
+            emptyText="No events are assigned to you right now." emptyClassName="dash-empty" isEmpty={(list) => list.length === 0}>
+            {(list) => (
+              <ul className="dash-queue" aria-label="Upcoming events">
+                {list.slice(0, TOP).map((event) => (
+                  <li key={event.eventId}>
+                    <RowLink to={`/coordinator/events/${event.eventId}`} className="dash-queue__row" title={event.eventName}
+                      badges={event.journeyStatus ? <JourneyStatusBadge status={event.journeyStatus} /> : null}>
+                      <p className="dash-queue__when">{formatEventTimeRange(event.startDatetime, event.endDatetime)}</p>
+                    </RowLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
+
+        <Panel title="Change requests waiting" action="View events" actionName="View my events" to="/coordinator/my-events">
+          <ResourceView resource={changes} loadingText="Loading change requests…" errorText="Change requests could not be loaded."
+            emptyText="No change requests waiting." emptyClassName="dash-empty" isEmpty={(list) => list.length === 0}>
+            {(list) => (
+              <ul className="dash-queue" aria-label="Change requests waiting">
+                {list.slice(0, TOP).map((change) => (
+                  <li key={change.changeRequestId}>
+                    <RowLink to={`/coordinator/change-requests/${change.changeRequestId}`} className="dash-queue__row"
+                      title={`Change to ${change.eventName}`}>
+                      <p>Requested by {change.requestedByName} · {formatEventDateTime(change.requestedAt)}</p>
+                    </RowLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
+
+        <Panel title="Venue issues" action="View all" actionName="View all venue issues" to="/coordinator/operational-issues">
+          <ResourceView resource={issues} loadingText="Loading venue issues…" errorText="Venue issues could not be loaded."
+            emptyText="No venue issues affect your events." emptyClassName="dash-empty" isEmpty={(list) => list.length === 0}>
+            {(list) => (
+              <ul className="dash-queue" aria-label="Venue issues">
+                {list.slice(0, TOP).map((issue) => (
+                  <li key={issue.issueId}>
+                    <RowLink to="/coordinator/operational-issues" className="dash-queue__row" title={issue.venueAddress}>
+                      <p>{issue.description}</p>
+                      {issue.overlappingEvents.length > 0
+                        ? <p>Affects {issue.overlappingEvents.map((event) => event.eventName).join(', ')}</p>
+                        : null}
+                    </RowLink>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </ResourceView>
+        </Panel>
       </div>
-    </div>
+    </section>
   )
+}
+
+/** "3 requests to review · 1 change waiting", from whichever has loaded. */
+function summarise(queue: Resource<ReviewQueue>, changes: Resource<ChangeRequestView[]>): string {
+  if (queue.loading && changes.loading) return 'Checking what needs your attention…'
+  const parts = [
+    queue.data ? `${countOf(queue.data.needsReview.length, 'request')} to review` : null,
+    changes.data ? `${countOf(changes.data.length, 'change')} waiting` : null,
+  ].filter(Boolean)
+  return parts.length > 0 ? parts.join(' · ') : 'Some of what needs your attention could not be loaded.'
 }

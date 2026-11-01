@@ -1,13 +1,18 @@
-import { useId, type ReactNode } from 'react'
+import { useId, type HTMLAttributes, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import '../technicalSupport.css'
+import './dashboard.css'
 
-/** One row or card that opens a page: the whole surface is a single link,
+/** One row or card that opens a page (or, with `onClick` and no `to`, a
+ * window such as a Modal): the whole surface is a single link or button,
  * with a trailing chevron. Its accessible name is the title alone (so a
  * screen reader hears "Gala dinner, link", not every figure); the badges, details and
  * aside are its description. */
-export function RowLink({ to, title, titleAs: Title = 'span', media, badges, aside, children, className }: {
-  to: string
+export function RowLink({ to, state, onClick, title, titleAs: Title = 'span', media, badges, aside, children, className, ...rest }: {
+  to?: string
+  /** Router state for the page `to` opens (link form only). */
+  state?: unknown
+  /** Without `to`: the row is a button that runs this. */
+  onClick?: () => void
   title: ReactNode
   /** A heading level when the row heads its own content (list pages). */
   titleAs?: 'h2' | 'h3' | 'span'
@@ -20,17 +25,18 @@ export function RowLink({ to, title, titleAs: Title = 'span', media, badges, asi
   /** Lines under the title. */
   children?: ReactNode
   className?: string
-}) {
+} & Omit<HTMLAttributes<HTMLElement>, 'title' | 'children' | 'className' | 'onClick'>) {
   const id = useId()
   const described = [badges ? `${id}-badges` : '', children ? `${id}-details` : '', aside ? `${id}-aside` : '']
     .filter(Boolean).join(' ')
-  return (
-    <Link
-      to={to}
-      className={className ? `row-link ${className}` : 'row-link'}
-      aria-labelledby={`${id}-title`}
-      aria-describedby={described || undefined}
-    >
+  const shared = {
+    ...rest,
+    className: className ? `row-link ${className}` : 'row-link',
+    'aria-labelledby': `${id}-title`,
+    'aria-describedby': described || undefined,
+  }
+  const content = (
+    <>
       {media ? <div className="row-link__media">{media}</div> : null}
       <div className="row-link__main">
         <div className="row-link__top">
@@ -41,6 +47,9 @@ export function RowLink({ to, title, titleAs: Title = 'span', media, badges, asi
       </div>
       {aside ? <span id={`${id}-aside`} className="row-link__aside">{aside}</span> : null}
       <span className="row-link__chevron" aria-hidden="true">›</span>
-    </Link>
+    </>
   )
+  return to === undefined
+    ? <button type="button" onClick={onClick} {...shared}>{content}</button>
+    : <Link to={to} state={state} {...shared}>{content}</Link>
 }

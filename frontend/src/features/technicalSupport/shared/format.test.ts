@@ -1,6 +1,7 @@
 // @stories TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { describe, expect, it } from 'vitest'
-import { countOf, describeUntil, describeWhen, greetingFor, previewItems, relativeDay } from './format'
+import { countOf, greetingFor } from '../../../lib/greeting'
+import { describeUntil, describeWhen, previewItems, relativeDay } from './format'
 
 // Wednesday 10 March 2027, 3:30 pm in Singapore.
 const NOW = new Date('2027-03-10T07:30:00Z')

@@ -27,7 +27,7 @@ export function UnassignedRequestsPage() {
   return (
     <div className="page">
       <PageHeader
-        eyebrow={<Link to="/coordinator-lead">Event Coordinator Lead console</Link>}
+        eyebrow={<Link to="/coordinator-lead">Dashboard</Link>}
         title="Unassigned requests"
         description="Event requests that no Event Coordinator has been assigned to yet, including any waiting for the organiser's clarification, longest-waiting first."
         actions={

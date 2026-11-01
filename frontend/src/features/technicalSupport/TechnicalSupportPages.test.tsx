@@ -200,7 +200,7 @@ describe('Technical Support UI integration', () => {
 
     expect(await screen.findByText('This request was rejected.')).toBeInTheDocument()
     expect(screen.getByText('Reason: Only one unit can be provided.')).toBeInTheDocument()
-    expect(screen.getByText('Rejected', { selector: '.tech-badge' })).toBeInTheDocument()
+    expect(screen.getByText('Rejected', { selector: '.dash-badge' })).toBeInTheDocument()
     expect(screen.queryByLabelText('Reserve now: Projector')).not.toBeInTheDocument()
     expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
     const patch = calls.find((call) => call.method === 'PATCH')

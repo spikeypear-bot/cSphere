@@ -1,4 +1,4 @@
-// @stories VS17 EC08 EO04 SO-C3 SO-C5 SO-C6 EC03 EC-NEW3  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+// @stories VS17 EC08 EO04 SO-C3 SO-C5 SO-C6 EC03 EC-NEW3 EC-C1  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { render, screen, cleanup, within } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
@@ -120,6 +120,31 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     expect(screen.getByText('Rejected')).toBeInTheDocument()
     expect(screen.getByText('Recheck the venue setup')).toBeInTheDocument()
     expect(screen.getByText(/by so1 · 22 Sept 2026, 10:00 am \(Singapore time\)/)).toBeInTheDocument()
+  })
+
+  it('EC-C1 (happy): the coordinator asks for reassignment from the event page', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return jsonResponse(200, url.endsWith('/readiness') ? readiness() : url.endsWith('/timeline') ? [] : pendingEvent())
+    }))
+
+    renderPage('/coordinator')
+
+    expect(await screen.findByRole('link', { name: 'Request reassignment' })).toHaveAttribute(
+      'href',
+      `/coordinator/events/${EVENT_ID}/reassignment-request`,
+    )
+  })
+
+  it('EC-C1 (negative): an organiser viewing the event is not offered reassignment', async () => {
+    seedSession('organiser')
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, pendingEvent())))
+
+    renderPage('/organiser')
+
+    expect(await screen.findByRole('heading', { name: 'Q1 Town Hall' })).toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Request reassignment' })).not.toBeInTheDocument()
   })
 
   it('EC-NEW3 (D36) (happy): a Confirmed event still links the coordinator to the equipment request page', async () => {
