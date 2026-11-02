@@ -11,7 +11,6 @@ import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
 import com.example.connect_sphere.venuebooking.dto.VenueBookingConflictResponse;
 import com.example.connect_sphere.venuebooking.service.VenueBookingConflictException;
 import com.example.connect_sphere.venuebooking.service.VenueBookingService;
-import com.example.connect_sphere.venuebooking.service.VenueBookingNotFoundException;
 
 /** Booking reads and Venue Staff decisions. Role access is enforced by SecurityConfig; ownership is deferred. */
 @RestController
@@ -59,11 +58,6 @@ public class VenueBookingController {
 
     @GetMapping("/venues/{venueId}/bookings")
     public List<VenueBookingDto> list(@PathVariable UUID venueId) { return service.listForVenue(venueId); }
-
-    @ExceptionHandler(VenueBookingNotFoundException.class)
-    public ResponseEntity<ApiError> notFound(VenueBookingNotFoundException ex) {
-        return ResponseEntity.status(404).body(ApiError.of(ex.getMessage()));
-    }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
     public ResponseEntity<ApiError> invalidId(MethodArgumentTypeMismatchException ex) {

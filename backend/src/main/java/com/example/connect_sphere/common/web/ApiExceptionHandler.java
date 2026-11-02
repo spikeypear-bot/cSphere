@@ -1,7 +1,6 @@
 package com.example.connect_sphere.common.web;
 
 import org.springframework.http.HttpStatus;
-import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -17,9 +16,9 @@ import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.event.service.RegistrationPeriodException;
 import com.example.connect_sphere.attendee.service.AttendeeRegistrationException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
-import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.event.service.EventReassignmentNotFoundException;
 import com.example.connect_sphere.event.service.EventReassignmentStateException;
+import com.example.connect_sphere.equipment.service.ReservationLineException;
 import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestStateException;
 import com.example.connect_sphere.equipmentrequest.service.InvalidEquipmentRequestException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotEditableException;
@@ -45,8 +44,9 @@ import com.example.connect_sphere.safety.service.IncompleteReadinessException;
 import com.example.connect_sphere.safety.service.InvalidReadinessUpdateException;
 
 /** One place that turns domain exceptions into HTTP responses, so every
- * controller can just let them propagate. Add a handler here per new domain
- * exception rather than catching in the controller. */
+ * controller can just let them propagate. A new domain exception whose body
+ * is just its message joins one of the grouped handlers below; give it its
+ * own handler only when the body carries more than the message. */
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
@@ -60,30 +60,46 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(ex.getStatus()).body(ApiError.of(ex.getMessage()));
     }
 
-    @ExceptionHandler(VenueNotFoundException.class)
-    public ResponseEntity<ApiError> handleVenueNotFound(VenueNotFoundException ex) {
+    @ExceptionHandler({
+            VenueNotFoundException.class,
+            EventRequestNotFoundException.class,
+            VenueBookingNotFoundException.class,
+            EventNotFoundException.class,
+            EventReassignmentNotFoundException.class,
+            EventCancellationNotFoundException.class,
+            NotificationNotFoundException.class})
+    public ResponseEntity<ApiError> handleNotFound(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
     }
 
-    @ExceptionHandler(InvalidVenueException.class)
-    public ResponseEntity<ApiError> handleInvalidVenue(InvalidVenueException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidVenueOperationalIssueException.class)
-    public ResponseEntity<ApiError> handleInvalidVenueOperationalIssue(InvalidVenueOperationalIssueException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventRequestNotFoundException.class)
-    public ResponseEntity<ApiError> handleNotFound(EventRequestNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventRequestNotEditableException.class)
-    public ResponseEntity<ApiError> handleNotEditable(EventRequestNotEditableException ex) {
+    /** Wrong state for this action: already decided, not editable, or (EC08,
+     * EO07) the event is not in a status where this can happen. The message
+     * names the current status. */
+    @ExceptionHandler({
+            EventRequestNotEditableException.class,
+            EventRequestNotPendingException.class,
+            EventRequestStateException.class,
+            VenueBookingStateException.class,
+            EventLifecycleException.class,
+            EventCancellationStateException.class,
+            EventReassignmentStateException.class,
+            EquipmentRequestStateException.class})
+    public ResponseEntity<ApiError> handleConflict(RuntimeException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
+    }
+
+    @ExceptionHandler({
+            InvalidVenueException.class,
+            InvalidVenueOperationalIssueException.class,
+            InvalidVenueBookingException.class,
+            InvalidMessageException.class,
+            InvalidCoordinatorException.class,
+            MissingRejectionReasonException.class,
+            EventLifecycleValidationException.class,
+            InvalidReadinessUpdateException.class,
+            InvalidEquipmentRequestException.class})
+    public ResponseEntity<ApiError> handleUnprocessable(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
     }
 
     @ExceptionHandler(IncompleteEventRequestException.class)
@@ -103,11 +119,6 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(ApiError.of(ex.getMessage()));
     }
 
-    @ExceptionHandler(EventRequestNotPendingException.class)
-    public ResponseEntity<ApiError> handleNotPending(EventRequestNotPendingException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
     /**
      * 403, not 409. This used to be treated as a state conflict, but EC02's
      * refined ACs say a coordinator who "cannot open or act on a request not
@@ -121,48 +132,6 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ApiError.of(ex.getMessage()));
     }
 
-    @ExceptionHandler(EventRequestStateException.class)
-    public ResponseEntity<ApiError> handleRequestState(EventRequestStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidVenueBookingException.class)
-    public ResponseEntity<ApiError> handleInvalidVenueBooking(InvalidVenueBookingException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(VenueBookingNotFoundException.class)
-    public ResponseEntity<ApiError> handleVenueBookingNotFound(VenueBookingNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(VenueBookingStateException.class)
-    public ResponseEntity<ApiError> handleVenueBookingState(VenueBookingStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidMessageException.class)
-    public ResponseEntity<ApiError> handleInvalidMessage(InvalidMessageException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidCoordinatorException.class)
-    public ResponseEntity<ApiError> handleInvalidCoordinator(InvalidCoordinatorException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(MissingRejectionReasonException.class)
-    public ResponseEntity<ApiError> handleMissingRejectionReason(MissingRejectionReasonException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    /** EC08: wrong status for this action (already confirmed, not in
-     * Planning, …). The message names the current status. */
-    @ExceptionHandler(EventLifecycleException.class)
-    public ResponseEntity<ApiError> handleEventLifecycle(EventLifecycleException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
     /** EC08: not ready yet; every outstanding prerequisite is listed. */
     @ExceptionHandler(EventNotReadyException.class)
     public ResponseEntity<ApiError> handleEventNotReady(EventNotReadyException ex) {
@@ -170,66 +139,10 @@ public class ApiExceptionHandler {
                 .body(ApiError.missingFields(ex.getMessage(), ex.getBlockers()));
     }
 
-    @ExceptionHandler(EventLifecycleValidationException.class)
-    public ResponseEntity<ApiError> handleEventLifecycleValidation(EventLifecycleValidationException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventNotFoundException.class)
-    public ResponseEntity<ApiError> handleEventNotFound(EventNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventNotPendingException.class)
-    public ResponseEntity<ApiError> handleEventNotPending(EventNotPendingException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventReassignmentNotFoundException.class)
-    public ResponseEntity<ApiError> handleEventReassignmentNotFound(EventReassignmentNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventCancellationNotFoundException.class)
-    public ResponseEntity<ApiError> handleEventCancellationNotFound(EventCancellationNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
-    }
-
-    /** EO07: wrong status, already decided, or one already pending. */
-    @ExceptionHandler(EventCancellationStateException.class)
-    public ResponseEntity<ApiError> handleEventCancellationState(EventCancellationStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EventReassignmentStateException.class)
-    public ResponseEntity<ApiError> handleEventReassignmentState(EventReassignmentStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
     @ExceptionHandler(IncompleteReadinessException.class)
     public ResponseEntity<ApiError> handleIncompleteReadiness(IncompleteReadinessException ex) {
         return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
                 .body(ApiError.missingFields(ex.getMessage(), ex.getOutstandingItems()));
-    }
-
-    @ExceptionHandler(InvalidReadinessUpdateException.class)
-    public ResponseEntity<ApiError> handleInvalidReadinessUpdate(InvalidReadinessUpdateException ex) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(EquipmentRequestStateException.class)
-    public ResponseEntity<ApiError> handleEquipmentRequestState(EquipmentRequestStateException ex) {
-        return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(InvalidEquipmentRequestException.class)
-    public ResponseEntity<ApiError> handleInvalidEquipmentRequest(InvalidEquipmentRequestException ex) {
-        return ResponseEntity.status(HttpStatusCode.valueOf(422)).body(ApiError.of(ex.getMessage()));
-    }
-
-    @ExceptionHandler(NotificationNotFoundException.class)
-    public ResponseEntity<ApiError> handleNotificationNotFound(NotificationNotFoundException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiError.of(ex.getMessage()));
     }
 
     /**
@@ -279,8 +192,8 @@ public class ApiExceptionHandler {
     }
 
     /** D33: a refused reservation line names its equipment item. */
-    @ExceptionHandler(com.example.connect_sphere.equipment.service.ReservationLineException.class)
-    public ResponseEntity<ApiError> handleReservationLine(com.example.connect_sphere.equipment.service.ReservationLineException ex) {
+    @ExceptionHandler(ReservationLineException.class)
+    public ResponseEntity<ApiError> handleReservationLine(ReservationLineException ex) {
         return ResponseEntity.status(ex.getStatusCode()).body(ApiError.forEquipment(ex.getReason(), ex.getEquipmentId()));
     }
 

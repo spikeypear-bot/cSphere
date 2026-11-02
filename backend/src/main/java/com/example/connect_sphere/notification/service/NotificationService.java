@@ -282,8 +282,6 @@ public class NotificationService {
         repository.saveAndFlush(notification);
     }
 
-    private static final java.time.format.DateTimeFormatter SINGAPORE_TIME = SingaporeTime.DISPLAY;
-
     /** EC-C3: remind the coordinator before a hold expires. Like the expiry notice it commits
      * with the hold's reminded mark, so a failed insert leaves the hold to be reminded again. */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -293,7 +291,7 @@ public class NotificationService {
         notification.setEventId(eventId);
         notification.setVenueBookingId(bookingId);
         notification.setMessage("The tentative hold on " + venueName + " for \"" + eventName + "\" expires on "
-                + SINGAPORE_TIME.format(expiry) + " (Singapore time). Ask Venue Staff to confirm the booking before then,"
+                + SingaporeTime.DISPLAY.format(expiry) + " (Singapore time). Ask Venue Staff to confirm the booking before then,"
                 + " or look for an alternative venue.");
         repository.saveAndFlush(notification);
     }
@@ -545,9 +543,9 @@ public class NotificationService {
             notification.setCoordinatorEmail(review.getCoordinatorEmail());
             notification.setOccurredAt(review.getApprovedAt());
             notification.setMessage("Review required for " + review.getVenueAddress() + " (venue " + review.getVenueId()
-                    + ", booking " + review.getBookingId() + "). Approved at " + SINGAPORE_TIME.format(review.getApprovedAt())
-                    + " (Singapore time). " + changes + ". Reserved " + SINGAPORE_TIME.format(review.getReservedStart())
-                    + " to " + SINGAPORE_TIME.format(review.getReservedEnd()) + " (Singapore time), with "
+                    + ", booking " + review.getBookingId() + "). Approved at " + SingaporeTime.DISPLAY.format(review.getApprovedAt())
+                    + " (Singapore time). " + changes + ". Reserved " + SingaporeTime.DISPLAY.format(review.getReservedStart())
+                    + " to " + SingaporeTime.DISPLAY.format(review.getReservedEnd()) + " (Singapore time), with "
                     + review.getSetupDurationMinutes() + " minutes setup and " + review.getTurnaroundDurationMinutes()
                     + " minutes turnaround. Coordinator: " + review.getCoordinatorName() + " (" + review.getCoordinatorEmail()
                     + "). Review the venue requirements; reservations have not been moved.");
