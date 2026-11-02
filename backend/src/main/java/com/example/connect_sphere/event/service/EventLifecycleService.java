@@ -17,6 +17,7 @@ import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
@@ -86,15 +87,6 @@ public class EventLifecycleService {
     private final VenueHoldService holds;
     @Autowired private com.example.connect_sphere.venue.repository.VenueRepository cancellationVenues;
 
-    @Autowired
-    public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
-            EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
-            AvailabilityService availability, ActivityService activity, NotificationService notifications,
-            UserRepository users, JourneyStatusResolver statuses, VenueHoldService holds) {
-        this(events, bookings, equipmentRequests, eventRequests, availability, activity, notifications, users,
-                statuses, Clock.systemUTC(), holds);
-    }
-
     /** Without EO07's hold release, for callers built before it. */
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
             EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
@@ -104,6 +96,7 @@ public class EventLifecycleService {
                 statuses, clock, null);
     }
 
+    @Autowired
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
             EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
             AvailabilityService availability, ActivityService activity, NotificationService notifications,
@@ -503,7 +496,7 @@ public class EventLifecycleService {
 
     // ---- helpers --------------------------------------------------------------
 
-    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
+    private static final ZoneId SINGAPORE = SingaporeTime.ZONE;
 
     /** The event's calendar date as people in Singapore read it. Stored times come back from
      * Postgres in UTC, so a plain toLocalDate() puts an event before 8 am SGT on the previous day. */

@@ -2,19 +2,18 @@ package com.example.connect_sphere.changerequest.service;
 
 import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
 import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 
 /**
@@ -33,8 +32,7 @@ final class ChangeFields {
     static final Set<String> AFFECTS_ARRANGEMENTS = Set.of("startDatetime", "endDatetime", "expectedAttendance",
             "venueRequirements", "equipmentRequirements", "accessibilityNeeds", "requiredFacilities");
 
-    private static final DateTimeFormatter SINGAPORE = DateTimeFormatter
-            .ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH).withZone(ZoneId.of("Asia/Singapore"));
+    private static final DateTimeFormatter SINGAPORE = SingaporeTime.DISPLAY;
 
     private ChangeFields() {
     }

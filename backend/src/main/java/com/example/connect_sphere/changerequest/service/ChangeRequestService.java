@@ -88,16 +88,7 @@ public class ChangeRequestService {
     /** EC-NEW3 (D37): absent in plain unit tests, where no equipment is flagged. */
     @Autowired(required = false) private EquipmentRequestAttentionService equipmentAttention;
 
-    @Autowired
     public ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
-            EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
-            ChangeImpactService impact, ActivityService activity, NotificationService notifications,
-            UserRepository users, VenueRequirementChangeService venueRequirements) {
-        this(changeRequests, requests, events, requestRules, lifecycle, impact, activity, notifications, users,
-                Clock.systemUTC(), venueRequirements);
-    }
-
-    ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
             EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
             ChangeImpactService impact, ActivityService activity, NotificationService notifications,
             UserRepository users, Clock clock, VenueRequirementChangeService venueRequirements) {

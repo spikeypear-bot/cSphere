@@ -7,6 +7,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -70,7 +71,7 @@ class VenueBookingWordingTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
-                activityService, notificationService, operationalIssues, null, availability, org.mockito.Mockito.mock(com.example.connect_sphere.event.service.EventLifecycleService.class));
+                activityService, notificationService, operationalIssues, null, availability, org.mockito.Mockito.mock(com.example.connect_sphere.event.service.EventLifecycleService.class), Clock.systemUTC());
         org.springframework.test.util.ReflectionTestUtils.setField(service,"plan",org.mockito.Mockito.mock(BookingPlanService.class));
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(availability.settings(any())).thenReturn(new AvailabilityModels.Settings(0, 0));

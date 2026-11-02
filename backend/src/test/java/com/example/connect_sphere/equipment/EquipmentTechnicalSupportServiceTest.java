@@ -116,7 +116,7 @@ class EquipmentTechnicalSupportServiceTest {
         Instant earlier = START.minusSeconds(3600);
         Instant later = END.plusSeconds(3600);
         EquipmentStatusPeriod existing = new EquipmentStatusPeriod(
-                EQUIPMENT_ID, "P-01", EquipmentStatus.FAULTY, earlier, later);
+                EQUIPMENT_ID, "P-01", EquipmentStatus.FAULTY, earlier, later, Instant.now());
         when(periodRepository.findOverlappingForUnit(EQUIPMENT_ID, "P-01", START, END))
                 .thenReturn(List.of(existing));
 

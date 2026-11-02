@@ -63,7 +63,7 @@ class EquipmentAvailabilityServiceTest {
     }
 
     private static EquipmentStatusPeriod block(Equipment kind, String serial) {
-        return new EquipmentStatusPeriod(kind.getId(), serial, EquipmentStatus.FAULTY, START, null);
+        return new EquipmentStatusPeriod(kind.getId(), serial, EquipmentStatus.FAULTY, START, null, Instant.now());
     }
 
     @Test

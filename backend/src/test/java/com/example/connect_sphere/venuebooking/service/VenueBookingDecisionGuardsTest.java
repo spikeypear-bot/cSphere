@@ -3,6 +3,7 @@ package com.example.connect_sphere.venuebooking.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import java.time.Clock;
 import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import com.example.connect_sphere.venueavailability.service.TimingConflictService;
 import java.time.OffsetDateTime;
@@ -33,7 +34,7 @@ class VenueBookingDecisionGuardsTest {
     private final AvailabilityService availability=mock(AvailabilityService.class);
     private final NotificationService notifications=mock(NotificationService.class);
     private final ApplicationEventPublisher changes=mock(ApplicationEventPublisher.class);
-    private final VenueBookingService service=new VenueBookingService(reads,venues,mock(VenueMapper.class),records,events,availability,mock(TimingConflictService.class));
+    private final VenueBookingService service=new VenueBookingService(reads,venues,mock(VenueMapper.class),records,events,availability,mock(TimingConflictService.class), Clock.systemUTC());
     private final UUID id=UUID.randomUUID(), eventId=UUID.randomUUID(), venueId=UUID.randomUUID();
     private VenueBookingRecord booking;
 

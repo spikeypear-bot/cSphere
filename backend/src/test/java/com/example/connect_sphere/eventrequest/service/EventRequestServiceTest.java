@@ -13,6 +13,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -96,7 +97,7 @@ class EventRequestServiceTest {
             }
         };
         service = new EventRequestService(
-                repository, mapper, eventRepository, userRepository, notificationService, activityService);
+                repository, mapper, eventRepository, userRepository, notificationService, activityService, Clock.systemUTC());
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
         // State changes load the row with findForUpdate (row lock); these
         // tests stub findById, so route one to the other.

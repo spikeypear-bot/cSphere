@@ -68,7 +68,7 @@ final class ClassDiagrams {
     static final String NOT_DOMAIN = String.join("|",
             NOT_DESIGN,
             ".*\\$.*",
-            ".*\\.(mock|config|common\\.web|controller|service|repository|dto|mapper)\\..*",
+            ".*\\.(mock|config|common\\.web|common\\.time|controller|service|repository|dto|mapper)\\..*",
             ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job|VenueSafetyChecklist)",
             ".*\\.(Add|Create|Reserve|Submit|Update|SafetyApproval)\\w*",
             // VS17: retry orchestration is application plumbing, not a domain object.

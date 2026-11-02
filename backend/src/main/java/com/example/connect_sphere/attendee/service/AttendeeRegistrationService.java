@@ -9,7 +9,6 @@ import java.time.OffsetDateTime;
 import java.util.UUID;
 
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -32,13 +31,7 @@ public class AttendeeRegistrationService {
     private final NotificationService notifications;
     private final Clock clock;
 
-    @Autowired
     public AttendeeRegistrationService(AttendeeRegistrationRepository registrations, EventRepository events,
-            UserRepository users, JourneyStatusResolver statuses, NotificationService notifications) {
-        this(registrations, events, users, statuses, notifications, Clock.systemUTC());
-    }
-
-    AttendeeRegistrationService(AttendeeRegistrationRepository registrations, EventRepository events,
             UserRepository users, JourneyStatusResolver statuses, NotificationService notifications, Clock clock) {
         this.registrations = registrations;
         this.events = events;

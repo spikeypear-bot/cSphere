@@ -9,6 +9,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -78,7 +79,7 @@ class EventRequestAssignmentsServiceTest {
                 e.getRegistrationNeeds(), e.getStatus(), e.getCreatedAt(), e.getUpdatedAt(), e.getOrganisation(),
                 e.getCoordinatorId(), e.getRejectionReason(), null);
         service = new EventRequestService(
-                repository, mapper, eventRepository, userRepository, notificationService, activityService);
+                repository, mapper, eventRepository, userRepository, notificationService, activityService, Clock.systemUTC());
         // Stored in no particular order, so the name order is the service's doing.
         when(userRepository.findByRole(UserRole.ec)).thenReturn(List.of(chen, aisha, bala));
     }

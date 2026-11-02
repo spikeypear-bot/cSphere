@@ -11,13 +11,13 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.activity.dto.ActivityDto;
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
@@ -69,18 +69,6 @@ public class EventRequestService {
     /** EO-C2: "in the future" is judged against this clock, so tests can pin "now". */
     private final Clock clock;
 
-    @Autowired
-    public EventRequestService(
-            EventRequestRepository repository,
-            EventRequestMapper mapper,
-            EventRepository eventRepository,
-            UserRepository userRepository,
-            NotificationService notificationService,
-            ActivityService activityService) {
-        this(repository, mapper, eventRepository, userRepository, notificationService, activityService,
-                Clock.systemUTC());
-    }
-
     public EventRequestService(
             EventRequestRepository repository,
             EventRequestMapper mapper,
@@ -107,7 +95,7 @@ public class EventRequestService {
         entity.setOrganisation(organisation);
         entity.setCreatedBy(createdBy);
         entity.setStatus(EventRequestStatus.draft);
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
         applyFields(entity, request);
@@ -122,7 +110,7 @@ public class EventRequestService {
         requireOrganisation(organisation);
         EventRequest entity = findOwnedEditable(organisation, requestId);
         applyFields(entity, request);
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         // If this save fails (e.g. the transaction rolls back for any reason),
         // Spring/JPA leaves the previously committed row untouched — EO01's
         // "does not overwrite the last successfully saved version if a later
@@ -151,7 +139,7 @@ public class EventRequestService {
         EventRequest entity = findOwnedDraft(organisation, requestId);
         requireSubmittable(entity);
         entity.setStatus(EventRequestStatus.pending);
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null, ActivityType.submitted,
                 actingUserId, null, null, EventRequestStatus.draft.name(), EventRequestStatus.pending.name()));
@@ -167,7 +155,7 @@ public class EventRequestService {
 
     /** EC-NEW4: "10 Mar 2027, 9:00 AM to 12:00 PM (Singapore time)". */
     private static String when(EventRequest r) {
-        var format = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+        var format = SingaporeTime.DISPLAY;
         return format.format(r.getStartDatetime()) + " to " + format.format(r.getEndDatetime()) + " (Singapore time)";
     }
 
@@ -211,7 +199,7 @@ public class EventRequestService {
         }
         requireSubmittable(entity);
         entity.setStatus(EventRequestStatus.pending);
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
                 ActivityType.clarification_responded, actingUserId, reply, null,
@@ -340,7 +328,7 @@ public class EventRequestService {
     private EventRequestDto applyClarification(EventRequest entity, UUID actorId, String text,
             List<String> flags, Map<String, String> questions) {
         entity.setStatus(EventRequestStatus.clarification_required);
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
                 ActivityType.clarification_requested, actorId, text, flags,
@@ -399,7 +387,7 @@ public class EventRequestService {
 
         entity.setStatus(EventRequestStatus.approved);
         entity.setEventId(savedEvent.getEventId());
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), savedEvent.getEventId(),
                 ActivityType.approved, actingCoordinatorId, null, null,
@@ -430,7 +418,7 @@ public class EventRequestService {
         EventRequestStatus previous = entity.getStatus();
         entity.setStatus(EventRequestStatus.rejected);
         entity.setRejectionReason(reason);
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         EventRequest saved = repository.save(entity);
         activityService.record(new ActivityService.Entry(saved.getRequestId(), null,
                 ActivityType.rejected, actorId, reason, null,
@@ -534,7 +522,7 @@ public class EventRequestService {
                 : "Assigned to " + coordinator.getUsername();
 
         entity.setCoordinatorId(coordinatorUserId);
-        entity.setUpdatedAt(OffsetDateTime.now());
+        entity.setUpdatedAt(OffsetDateTime.now(clock));
         EventRequest saved = repository.save(entity);
         // ECL-C7: an approved request's event moves with it, in the same
         // transaction and under the event's row lock, so the previous
@@ -603,13 +591,13 @@ public class EventRequestService {
     }
 
     /** Not cancelled, and not finished (a confirmed event whose end has passed is Completed). */
-    private static boolean stillActive(Event event) {
+    private boolean stillActive(Event event) {
         EventStatus status = event.getStatus();
         if (status == EventStatus.cancelled || status == EventStatus.completed) {
             return false;
         }
         return !(status == EventStatus.confirmed && event.getEndDatetime() != null
-                && event.getEndDatetime().isBefore(OffsetDateTime.now()));
+                && event.getEndDatetime().isBefore(OffsetDateTime.now(clock)));
     }
 
     /** ECL-C3: the Lead filters out a request before anyone is assigned. */
@@ -666,7 +654,7 @@ public class EventRequestService {
         boolean underReview = entity.getStatus() == EventRequestStatus.pending
                 || entity.getStatus() == EventRequestStatus.clarification_required;
         boolean activeEvent = entity.getStatus() == EventRequestStatus.approved && entity.getEventId() != null
-                && eventRepository.findById(entity.getEventId()).map(EventRequestService::stillActive).orElse(false);
+                && eventRepository.findById(entity.getEventId()).map(this::stillActive).orElse(false);
         if (!underReview && !activeEvent) {
             throw new EventRequestStateException(
                     "This request can no longer be reassigned (current status: "

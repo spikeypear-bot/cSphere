@@ -10,6 +10,7 @@ import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -83,7 +84,7 @@ class EventRequestLeadReviewServiceTest {
                 e.getRegistrationNeeds(), e.getStatus(), e.getCreatedAt(), e.getUpdatedAt(), e.getOrganisation(),
                 e.getCoordinatorId(), e.getRejectionReason(), null);
         service = new EventRequestService(
-                repository, mapper, eventRepository, userRepository, notificationService, activityService);
+                repository, mapper, eventRepository, userRepository, notificationService, activityService, Clock.systemUTC());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
         when(userRepository.findByRoleAndOrganisation(UserRole.eo, ORG))
                 .thenReturn(List.of(organiser(ORGANISER), organiser(SECOND_ORGANISER)));

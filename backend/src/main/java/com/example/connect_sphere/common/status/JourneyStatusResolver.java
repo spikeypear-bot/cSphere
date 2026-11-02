@@ -4,7 +4,6 @@ import java.time.Clock;
 import java.time.OffsetDateTime;
 
 import org.mapstruct.Named;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 
 import com.example.connect_sphere.event.entity.Event;
@@ -24,11 +23,6 @@ public class JourneyStatusResolver {
 
     private final EventRepository events;
     private final Clock clock;
-
-    @Autowired
-    public JourneyStatusResolver(EventRepository events) {
-        this(events, Clock.systemUTC());
-    }
 
     public JourneyStatusResolver(EventRepository events, Clock clock) {
         this.events = events;

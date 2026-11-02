@@ -1,5 +1,6 @@
 package com.example.connect_sphere.activity.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -39,8 +40,11 @@ public class ActivityService {
     private final UserRepository userRepository;
     private final EventRepository events;
 
+    private final Clock clock;
+
     public ActivityService(RequestActivityRepository repository, UserRepository userRepository,
-            EventRepository events) {
+            EventRepository events, Clock clock) {
+        this.clock = clock;
         this.repository = repository;
         this.userRepository = userRepository;
         this.events = events;
@@ -95,7 +99,7 @@ public class ActivityService {
         row.setFromStatus(entry.fromStatus());
         row.setToStatus(entry.toStatus());
         row.setAudienceRoles(entry.type().audience().stream().map(Enum::name).sorted().toList());
-        row.setOccurredAt(OffsetDateTime.now());
+        row.setOccurredAt(OffsetDateTime.now(clock));
         row.setFieldQuestions(entry.fieldQuestions());
         row.setFieldValues(entry.fieldValues());
         repository.save(row);
@@ -141,7 +145,7 @@ public class ActivityService {
         }
         return events.findById(eventId)
                 .filter(e -> (e.getStatus() == EventStatus.confirmed || e.getStatus() == EventStatus.completed)
-                        && e.getEndDatetime() != null && e.getEndDatetime().isBefore(OffsetDateTime.now()))
+                        && e.getEndDatetime() != null && e.getEndDatetime().isBefore(OffsetDateTime.now(clock)))
                 .map(e -> new ActivityDto(null, ActivityType.event_completed.name(), "ConnectSphere", null,
                         "The event took place and is now Completed.", List.of(), "CONFIRMED", "COMPLETED",
                         e.getEndDatetime(), null, null, "normal"));

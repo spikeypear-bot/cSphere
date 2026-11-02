@@ -43,14 +43,14 @@ public class EquipmentStatusPeriod {
     protected EquipmentStatusPeriod() {}
 
     public EquipmentStatusPeriod(UUID equipmentId, String serialNumber,
-                                 EquipmentStatus status, Instant periodStart, Instant periodEnd) {
+                                 EquipmentStatus status, Instant periodStart, Instant periodEnd, Instant createdAt) {
         this.id = UUID.randomUUID();
         this.equipmentId = equipmentId;
         this.serialNumber = serialNumber;
         this.status = status;
         this.periodStart = periodStart;
         this.periodEnd = periodEnd;
-        this.createdAt = Instant.now();
+        this.createdAt = createdAt;
     }
 
     public UUID getId() { return id; }

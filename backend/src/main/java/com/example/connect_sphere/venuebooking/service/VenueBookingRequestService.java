@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venuebooking.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.event.entity.EventStatus;
@@ -87,6 +89,8 @@ public class VenueBookingRequestService {
     private final VenueOperatingHourRepository operatingHours;
     private final com.example.connect_sphere.event.service.EventLifecycleService lifecycle;
 
+    private final Clock clock;
+
     @Autowired
     public VenueBookingRequestService(
             EventRepository events,
@@ -100,7 +104,8 @@ public class VenueBookingRequestService {
             VenueOperationalIssueRepository operationalIssues,
             VenueOperatingHourRepository operatingHours,
             com.example.connect_sphere.venueavailability.service.AvailabilityService availability,
-            com.example.connect_sphere.event.service.EventLifecycleService lifecycle) {
+            com.example.connect_sphere.event.service.EventLifecycleService lifecycle, Clock clock) {
+        this.clock = clock;
         this.lifecycle = lifecycle;
         this.availability = availability;
         this.events = events;
@@ -303,7 +308,7 @@ public class VenueBookingRequestService {
         booking.setBookingNotes(notes);
         booking.setSuitabilityNote(suitability.needsJustification() ? justification : null);
         booking.setSubmittedBy(coordinatorId);
-        booking.setSubmittedAt(OffsetDateTime.now());
+        booking.setSubmittedAt(OffsetDateTime.now(clock));
         VenueBookingRecord saved = bookings.save(booking);
         if(replacement) lifecycle.returnToPlanning(eventId,coordinatorId,"A replacement venue arrangement requires a new safety review.");
 
@@ -579,7 +584,7 @@ public class VenueBookingRequestService {
 
     /** Trimmed; blank becomes null; over the limit is refused. */
     private static final java.time.format.DateTimeFormatter SGT = java.time.format.DateTimeFormatter
-            .ofPattern("d MMM yyyy, hh:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+            .ofPattern("d MMM yyyy, hh:mm a", java.util.Locale.ENGLISH).withZone(SingaporeTime.ZONE);
 
     /** "15 Feb 2027, 08:00 am – 15 Feb 2027, 06:00 pm (Singapore time): Carpet replacement", as the screens write times. */
     private static String describe(com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Period period) {

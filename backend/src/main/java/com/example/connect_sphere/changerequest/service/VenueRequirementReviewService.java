@@ -1,5 +1,6 @@
 package com.example.connect_sphere.changerequest.service;
 
+import java.time.Clock;
 import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
 import com.example.connect_sphere.changerequest.entity.VenueRequirementReview;
 import com.example.connect_sphere.changerequest.repository.VenueRequirementReviewRepository;
@@ -40,9 +41,12 @@ public class VenueRequirementReviewService {
     private final ActivityService activity;
     private final EventRequestRepository requests;
 
+    private final Clock clock;
+
     public VenueRequirementReviewService(VenueRequirementReviewRepository reviews, VenueBookingRecordRepository bookings,
             EventRepository events, VenueRepository venues, ChangeImpactService impact, UserRepository users,
-            NotificationService notifications, ActivityService activity, EventRequestRepository requests) {
+            NotificationService notifications, ActivityService activity, EventRequestRepository requests, Clock clock) {
+        this.clock = clock;
         this.reviews=reviews; this.bookings=bookings; this.events=events; this.venues=venues; this.impact=impact;
         this.users=users; this.notifications=notifications; this.activity=activity; this.requests=requests;
     }
@@ -80,7 +84,7 @@ public class VenueRequirementReviewService {
         if ("suitable".equals(decision.outcome()) && checks.stream().anyMatch(c -> "attention".equals(c.status())))
             throw new VenueBookingStateException("Current venue checks require attention. Refresh the checks and record coordinator action required.");
         review.setStatus(decision.outcome()); review.setReviewNote(note); review.setReviewedBy(actor);
-        review.setReviewerName(users.findById(actor).orElseThrow().getUsername()); review.setReviewedAt(OffsetDateTime.now());
+        review.setReviewerName(users.findById(actor).orElseThrow().getUsername()); review.setReviewedAt(OffsetDateTime.now(clock));
         review.setReviewedChecks(checks.stream().map(c -> Map.of("key",c.key(),"area",c.area(),"status",c.status(),"title",c.title(),"detail",c.detail())).toList());
         reviews.saveAndFlush(review);
         String message="Venue review for " + review.getVenueAddress() + " (booking " + bookingId + "): "
@@ -115,10 +119,10 @@ public class VenueRequirementReviewService {
                     OR EXISTS(SELECT 1 FROM venue_requirement_reviews WHERE booking_id=? AND review_id<>? AND approved_at>=?)
                     """,Boolean.class,booking.getBookingId(),review.getReviewedAt()==null ? review.getApprovedAt() : review.getReviewedAt(),booking.getBookingId(),review.getReviewId(),review.getApprovedAt())));
     }
-    private static boolean active(VenueBookingRecord b, Event e) {
+    private boolean active(VenueBookingRecord b, Event e) {
         return (b.getStatus()==VenueBookingStatus.pending || b.getStatus()==VenueBookingStatus.approved || b.getStatus()==VenueBookingStatus.attention)
                 && e.getStatus()!=EventStatus.cancelled && e.getStatus()!=EventStatus.completed
-                && e.getEndDatetime().isAfter(OffsetDateTime.now());
+                && e.getEndDatetime().isAfter(OffsetDateTime.now(clock));
     }
     private VenueBookingRecord booking(UUID id) { return bookings.findById(id).orElseThrow(() -> new VenueBookingNotFoundException(id)); }
     private Event event(UUID id) { return events.findById(id).orElseThrow(() -> new VenueBookingNotFoundException(id)); }

@@ -1,10 +1,9 @@
 package com.example.connect_sphere.event.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
-import java.util.Locale;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -13,6 +12,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
@@ -39,8 +39,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Component
 public class OrganiserVenueNotices {
 
-    private static final DateTimeFormatter SINGAPORE = DateTimeFormatter
-            .ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH).withZone(ZoneId.of("Asia/Singapore"));
+    private static final DateTimeFormatter SINGAPORE = SingaporeTime.DISPLAY;
 
     private final EventRepository events;
     private final VenueBookingRecordRepository bookings;
@@ -48,8 +47,11 @@ public class OrganiserVenueNotices {
     private final UserRepository users;
     private final NotificationService notifications;
 
+    private final Clock clock;
+
     public OrganiserVenueNotices(EventRepository events, VenueBookingRecordRepository bookings, VenueRepository venues,
-            UserRepository users, NotificationService notifications) {
+            UserRepository users, NotificationService notifications, Clock clock) {
+        this.clock = clock;
         this.events = events;
         this.bookings = bookings;
         this.venues = venues;
@@ -69,7 +71,7 @@ public class OrganiserVenueNotices {
         String message = change.what() + (affected.isEmpty() ? "" : " Affected venue" + (affected.size() == 1 ? ": " : "s: ")
                 + String.join("; ", affected) + ".")
                 + (change.reason() == null || change.reason().isBlank() ? "" : " Reason: " + change.reason().strip() + ".")
-                + " Recorded " + SINGAPORE.format(OffsetDateTime.now()) + " (Singapore time)."
+                + " Recorded " + SINGAPORE.format(OffsetDateTime.now(clock)) + " (Singapore time)."
                 + " Your event's arrangements are being re-confirmed; until then, treat " + (affected.size() == 1
                         ? "this venue" : "these venues") + " as not confirmed."
                 + (othersStillConfirmed(event, change.bookingIds()) ? " Its other venues stay as confirmed." : "");
@@ -112,7 +114,7 @@ public class OrganiserVenueNotices {
                 .filter(Objects::nonNull).distinct().sorted().toList());
         String previous = event.getConfirmedVenues();
         boolean changed = previous != null && !current.isEmpty() && !venueSet(previous).equals(venueSet(current));
-        if (changed && event.getStartDatetime() != null && event.getStartDatetime().isAfter(OffsetDateTime.now())) {
+        if (changed && event.getStartDatetime() != null && event.getStartDatetime().isAfter(OffsetDateTime.now(clock))) {
             notifications.createAttendeeVenueChangeNotifications(event.getEventId(), event.getEventName(),
                     previous, current, at);
         }
@@ -133,10 +135,10 @@ public class OrganiserVenueNotices {
     }
 
     /** Confirmed at least once, and still to happen. */
-    private static boolean applies(Event event) {
+    private boolean applies(Event event) {
         return event != null && event.getFirstConfirmedAt() != null
                 && event.getStatus() != EventStatus.cancelled && event.getStatus() != EventStatus.completed
-                && event.getEndDatetime() != null && event.getEndDatetime().isAfter(OffsetDateTime.now());
+                && event.getEndDatetime() != null && event.getEndDatetime().isAfter(OffsetDateTime.now(clock));
     }
 
     private List<UUID> organisers(Event event) {

@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venueavailability.repository;
 
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.venueavailability.entity.EffectivePeriod;
 import com.example.connect_sphere.venueavailability.service.OperatingHours;
 import java.time.OffsetDateTime;
@@ -111,7 +112,7 @@ public class AvailabilityRepository {
     }
 
     private static String sgt(OffsetDateTime t) {
-        return t.atZoneSameInstant(java.time.ZoneId.of("Asia/Singapore"))
+        return t.atZoneSameInstant(SingaporeTime.ZONE)
                 .format(java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
     }
 

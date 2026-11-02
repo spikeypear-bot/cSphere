@@ -112,11 +112,11 @@ class EquipmentConsoleReadsTest {
                 unit(projectorsId, "PJ-1"), unit(projectorsId, "PJ-2"), unit(projectorsId, "PJ-3"));
         when(units.findByIdEquipmentIdOrderByIdSerialNumberAsc(projectorsId)).thenReturn(three);
         EquipmentStatusPeriod startsNow = new EquipmentStatusPeriod(projectorsId, "PJ-1", EquipmentStatus.UNAVAILABLE,
-                NOW, null);
+                NOW, null, Instant.now());
         EquipmentStatusPeriod endedNow = new EquipmentStatusPeriod(projectorsId, "PJ-2", EquipmentStatus.FAULTY,
-                FROM, NOW);
+                FROM, NOW, Instant.now());
         EquipmentStatusPeriod later = new EquipmentStatusPeriod(projectorsId, "PJ-2", EquipmentStatus.FAULTY,
-                NOW.plusSeconds(1), null);
+                NOW.plusSeconds(1), null, Instant.now());
         when(periods.findByEquipmentIdOrderByPeriodStartAsc(projectorsId))
                 .thenReturn(List.of(endedNow, startsNow, later));
 

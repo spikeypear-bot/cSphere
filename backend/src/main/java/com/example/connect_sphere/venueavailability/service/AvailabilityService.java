@@ -1,5 +1,7 @@
 package com.example.connect_sphere.venueavailability.service;
 
+import java.time.Clock;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.venueavailability.entity.EffectivePeriod;
 import com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged;
 import com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable;
@@ -38,8 +40,11 @@ public class AvailabilityService {
     private final AvailabilityRepository repository;
     private final VenueRepository venues;
     private final ApplicationEventPublisher publisher;
+    private final Clock clock;
+
     public AvailabilityService(AvailabilityRepository repository, VenueRepository venues,
-            ApplicationEventPublisher publisher) {
+            ApplicationEventPublisher publisher, Clock clock) {
+        this.clock = clock;
         this.repository = repository; this.venues = venues; this.publisher = publisher;
     }
     private void requireVenue(UUID id) {
@@ -96,7 +101,7 @@ public class AvailabilityService {
     }
 
     public Preview preview(UUID id, Request r) {
-        requireVenue(id); validate(r, java.time.LocalDate.now(java.time.ZoneId.of("Asia/Singapore")));
+        requireVenue(id); validate(r, java.time.LocalDate.now(clock.withZone(SingaporeTime.ZONE)));
         if (repository.periods(id).stream().anyMatch(p -> overlaps(
                 p.startDateTime(), p.endDateTime(), r.startDateTime(), r.endDateTime())))
             throw new VenueBookingStateException("This period overlaps an existing unavailable period for this venue. Choose dates and times outside the recorded periods.");
@@ -122,7 +127,7 @@ public class AvailabilityService {
                     "A venue for this event became unavailable: " + r.reason().strip()));
             // EO-C1: one notice per affected event, naming only its affected bookings
             // (occupied times include setup and turnaround; times that only touch do not count).
-            var format = java.time.format.DateTimeFormatter.ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+            var format = SingaporeTime.DISPLAY;
             p.affectedBookings().stream().collect(java.util.stream.Collectors.groupingBy(Booking::eventId,
                     java.util.LinkedHashMap::new, java.util.stream.Collectors.mapping(Booking::bookingId,
                             java.util.stream.Collectors.toList())))
@@ -182,7 +187,7 @@ public class AvailabilityService {
     static void validate(Request r, java.time.LocalDate today) {
         if (r == null || r.startDateTime() == null || r.endDateTime() == null)
             throw new InvalidVenueBookingException("Start and end date/time are required.");
-        if (r.startDateTime().atZoneSameInstant(java.time.ZoneId.of("Asia/Singapore")).toLocalDate().isBefore(today))
+        if (r.startDateTime().atZoneSameInstant(SingaporeTime.ZONE).toLocalDate().isBefore(today))
             throw new InvalidVenueBookingException("Start date cannot be before today (Singapore time).");
         if (!r.endDateTime().isAfter(r.startDateTime()))
             throw new InvalidVenueBookingException("End date/time must be strictly later than start date/time.");

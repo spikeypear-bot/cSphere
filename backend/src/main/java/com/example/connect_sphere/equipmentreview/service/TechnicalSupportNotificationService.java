@@ -1,15 +1,14 @@
 package com.example.connect_sphere.equipmentreview.service;
 
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.equipmentreview.entity.EquipmentChangeReview;
 import com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -59,8 +58,7 @@ public class TechnicalSupportNotificationService {
 
     private static final Logger log = LoggerFactory.getLogger(TechnicalSupportNotificationService.class);
 
-    static final DateTimeFormatter SINGAPORE = DateTimeFormatter
-            .ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH).withZone(ZoneId.of("Asia/Singapore"));
+    static final DateTimeFormatter SINGAPORE = SingaporeTime.DISPLAY;
 
     /** What to tell Technical Support, and which request or review it is about. */
     record Notice(UUID referenceId, UUID eventId, String eventName, String message) {
