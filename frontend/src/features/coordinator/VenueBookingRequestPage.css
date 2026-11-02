@@ -127,6 +127,38 @@
 .venue-request__compare thead th { color: var(--ink-soft); font-size: 0.8rem; }
 .venue-request__compare tr[data-ok='false'] td:last-child { color: var(--danger); font-weight: 600; }
 .venue-request__compare tr[data-ok='true'] td:last-child { color: var(--success); }
+.venue-request__compare tbody th { white-space: nowrap; overflow-wrap: normal; width: 1%; padding-inline-end: 1rem; }
+.venue-request__compare thead th { white-space: nowrap; overflow-wrap: normal; }
+.venue-request__compare thead th:last-child { white-space: normal; }
+.venue-request__compare thead th small { display: block; margin-top: 0.15rem; font-weight: 400; color: var(--ink-faint); }
+.venue-request__compare tbody tr:last-child th, .venue-request__compare tbody tr:last-child td { border-bottom: 0; }
+.venue-request__offers { display: grid; gap: 0.35rem; margin: 0; }
+.venue-request__offers div { display: grid; grid-template-columns: 5.5rem minmax(0, 1fr); gap: 0.5rem; }
+.venue-request__offers dt { color: var(--ink-soft); font-weight: 600; }
+.venue-request__offers dd { margin: 0; }
+
+.venue-request__requirements .venue-request__hint { color: var(--ink-soft); font-size: 0.78rem; font-weight: 400; }
+.venue-request__requirements label.venue-request__toggle,
+.venue-request__requirements label.venue-request__choice {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  cursor: pointer;
+}
+.venue-request__requirements label.venue-request__toggle { padding-top: 0.5rem; border-top: 1px solid var(--hairline); }
+.venue-request__requirements input[type='checkbox'] { width: 1.05rem; height: 1.05rem; padding: 0; flex: none; accent-color: var(--accent); }
+.venue-request__choices { display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.5rem; }
+.venue-request__requirements label.venue-request__choice {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: var(--panel);
+  font-weight: 500;
+}
+.venue-request__requirements label.venue-request__choice:has(input:checked) {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 10%, var(--panel));
+}
 
 .venue-request__summary {
   display: grid;
@@ -175,7 +207,17 @@
 
 .venue-request__field { display: flex; flex-direction: column; gap: 0.35rem; margin-bottom: 0.9rem; }
 .venue-request__field label { font-weight: 600; }
-.venue-request__field textarea { font: inherit; width: 100%; box-sizing: border-box; }
+.venue-request__field textarea {
+  font: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+}
+.venue-request__field textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
 .venue-request__timings {
   display: grid;
   gap: 0.85rem;
@@ -258,8 +300,58 @@
   border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--accent) 2%, var(--panel));
 }
-.venue-request__review > ul[aria-label='Selected venues'] > li > strong { display: block; overflow-wrap: anywhere; }
-.venue-request__venue-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 0.25rem; }
+.venue-request__review > ul[aria-label='Selected venues'] > li > strong {
+  display: block;
+  overflow-wrap: anywhere;
+  margin-bottom: 0.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--hairline);
+  font-size: 1rem;
+  line-height: 1.4;
+}
+.venue-request__review > ul[aria-label='Selected venues'] > li { display: grid; gap: 0.9rem; }
+.venue-request__review > ul[aria-label='Selected venues'] > li > * { margin-block: 0; }
+.venue-request__venue-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; padding-top: 0.9rem; border-top: 1px solid var(--hairline); }
+
+/* Nested sections inside a selected venue: flat, with a small caps title, instead of boxes within boxes. */
+.venue-request__review .venue-request__timings { margin: 0; padding: 0; border: 0; background: none; gap: 1rem; min-width: 0; }
+.venue-request__review .venue-request__timings legend {
+  float: left;
+  width: 100%;
+  margin: 0 0 0.75rem;
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.venue-request__review .venue-request__timings legend + * { clear: both; }
+.venue-request__review .venue-request__timings legend span { text-transform: none; letter-spacing: 0; font-size: 0.78rem; }
+.venue-request__review .venue-request__buffer-fields label { padding: 0; border: 0; background: none; }
+.venue-request__review .venue-request__buffer-fields label span { font-size: 0.76rem; }
+.venue-request__review .venue-request__requirements { padding-top: 0.9rem; border-top: 1px solid var(--hairline); }
+
+/* Booking timing summary: three compact tiles instead of a tall stacked list. */
+.venue-request__timings section[aria-label='Booking timings'] {
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--accent) 4%, var(--panel));
+}
+.venue-request__timings section[aria-label='Booking timings'] h3 {
+  margin: 0 0 0.6rem;
+  color: var(--ink-soft);
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+.venue-request__timings section[aria-label='Booking timings'] .venue-card-preview__information {
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 0.75rem 1.25rem;
+  margin: 0;
+}
+.venue-request__timings section[aria-label='Booking timings'] dt { margin-bottom: 0.15rem; color: var(--ink-faint); font-size: 0.75rem; font-weight: 600; }
+.venue-request__timings section[aria-label='Booking timings'] dd { color: var(--ink); font-size: 0.88rem; line-height: 1.4; }
 .venue-request__submit-note { margin: 0 0 0.75rem; color: var(--ink-soft); font-size: 0.85rem; line-height: 1.5; }
 .venue-request__submit-button { min-height: 2.75rem; }
 
