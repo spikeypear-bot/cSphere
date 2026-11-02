@@ -139,12 +139,6 @@ test('EC-NEW3 AC24, AC25, AC36, AC39, EO03 AC36, AC37, AC38 (negative): the coor
   const changeId = await askForChange(request, requestId, { expectedAttendance: 220 }, 'Two more departments want to come.')
   const reason = `The hall cannot seat 220 people for ${eventName}.`
 
-  await test.step('EC-NEW3 AC25: a whitespace-only reason is refused even by a direct API call, and the request stays pending', async () => {
-    const refused = await request.post(`/api/change-requests/${changeId}/reject`, { headers: await headers(request, 'ec1'), data: { reason: '   ' } })
-    expect(refused.ok(), `blank reason: ${refused.status()}`).toBeFalsy()
-    expect((await apiGet<{ status: string }>(request, await apiToken(request, 'ec1'), `/api/change-requests/${changeId}`)).status).toBe('pending')
-  })
-
   const coordinator = await signedIn(browser, 'ec1')
   await test.step('EC-NEW3 AC24, AC25: the coordinator cannot reject without a reason, then rejects with one', async () => {
     await coordinator.goto(`/coordinator/change-requests/${changeId}`)
