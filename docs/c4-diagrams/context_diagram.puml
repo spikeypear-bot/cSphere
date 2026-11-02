@@ -5,17 +5,24 @@ LAYOUT_WITH_LEGEND()
 
 title System Context diagram for ConnectSphere
 
-Person(organiser, "Event Organiser", "Creates and tracks event requests")
-Person(coordinator, "Event Coordinator", "Reviews requests and confirms events")
-Person(venueStaff, "Venue Staff", "Manages venues and approves bookings")
-Person(techSupport, "Technical Support Staff", "Keeps equipment status up to date")
-Person(attendee, "Attendee", "Views and signs up for events")
+Person(organiser, "Event Organiser", "Submits event requests and tracks them through to confirmation")
+Person(lead, "Event Coordinator Lead", "Screens new requests and assigns or reassigns them to coordinators")
+Person(coordinator, "Event Coordinator", "Reviews assigned requests, books venues and equipment, confirms events")
+Person(venueStaff, "Venue Staff", "Manages venues, approves bookings, marks venues unavailable")
+Person(techSupport, "Technical Support Staff", "Manages equipment, decides equipment requests, reports damage")
+Person(safety, "Safety Officer", "Runs the Operational Safety Check before an event proceeds to preparation")
+Person(attendee, "Attendee", "Browses confirmed events and registers or withdraws")
 
-System(connectSphere, "ConnectSphere", "Helps plan events and book venues")
+System(connectSphere, "ConnectSphere", "Plans events end to end: requests, venue bookings, equipment, safety checks, registrations and in-app notifications")
+
+System_Ext(osm, "OpenStreetMap tile server", "Serves the map tiles behind the venue map")
 
 Rel(organiser, connectSphere, "Submits and tracks event requests")
-Rel(coordinator, connectSphere, "Reviews and confirms events")
+Rel(lead, connectSphere, "Assigns and reassigns requests")
+Rel(coordinator, connectSphere, "Reviews requests, books venues and equipment")
 Rel(venueStaff, connectSphere, "Manages venues and bookings")
-Rel(techSupport, connectSphere, "Updates equipment status")
-Rel(attendee, connectSphere, "Views and signs up for events")
+Rel(techSupport, connectSphere, "Manages equipment and requests")
+Rel(safety, connectSphere, "Approves, rejects or requests changes")
+Rel(attendee, connectSphere, "Registers for events")
+Rel(connectSphere, osm, "Loads map tiles from", "HTTPS")
 @enduml
