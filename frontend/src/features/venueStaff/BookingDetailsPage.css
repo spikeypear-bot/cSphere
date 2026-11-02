@@ -20,10 +20,12 @@
 .booking-context-card .booking-context-card__id { font-size: .8rem; color: var(--ink-faint); }
 .booking-related-list { display: grid; gap: 1rem; list-style: none; padding: 0; margin: 0; }
 .booking-related-list > li { min-width: 0; }
-.booking-related-card__header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .5rem 1rem; }
-.booking-related-card__header h3 { min-width: 0; flex: 1 1 12rem; margin: 0; font-size: 1rem; font-weight: 600; white-space: pre-line; }
+.booking-related-card__header { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; gap: 1rem; }
+.booking-related-list h3 { min-width: 0; margin: 0; font-size: 1rem; font-weight: 600; white-space: pre-line; }
 .booking-related-card__header .booking-status-tag { flex-shrink: 0; }
-.booking-context-card .booking-related-card__id { margin: .5rem 0 1.25rem; }
+.booking-context-card .booking-related-card__id { margin: 0; }
+.booking-related-list .booking-context-card { display: grid; gap: 1rem; }
+.booking-related-list .booking-context-card > .button { justify-self: start; }
 .booking-context-section__empty { margin: 0; color: var(--ink-soft); font-size: .9rem; }
 @media (max-width: 640px) {
   .booking-context-card .booking-identity-fields,
@@ -179,3 +181,8 @@
 .venue-assessment > .venue-card-preview__id { margin-bottom: .75rem; }
 .venue-assessment details ul { padding-left: 1.25rem; }
 .venue-assessment details p { white-space: pre-wrap; }
+
+/* Approval details use the same field typography and spacing as event requirements. */
+.booking-approval__confirmation .booking-approval__summary dt { margin-bottom: .25rem; }
+.booking-approval__confirmation .booking-approval__summary dd { margin: 0; }
+.booking-approval__summary + .booking-approval__actions { margin-top: 1.75rem; }

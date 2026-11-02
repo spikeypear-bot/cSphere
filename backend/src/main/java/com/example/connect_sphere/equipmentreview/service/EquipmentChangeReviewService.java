@@ -58,6 +58,8 @@ public class EquipmentChangeReviewService {
     private final EquipmentReservationService reservations;
     private final UserRepository users;
     private final Clock clock;
+    @Autowired(required = false)
+    private com.example.connect_sphere.equipment.repository.EquipmentRepository equipmentCatalogue;
     // Setter-injected, as in EquipmentRequestService; absent in plain unit tests.
     private EquipmentRequestRepository requests;
     private ApplicationEventPublisher changeLog;
@@ -134,8 +136,12 @@ public class EquipmentChangeReviewService {
     /** Still suitable means the bookings as they stand fit the event as it now is. */
     private boolean reservationsCoverEvent(UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        return reservations.reservationsForEvent(eventId).stream()
-                .allMatch(r -> r.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()));
+        var held = reservations.reservationsForEvent(eventId);
+        return held.stream().allMatch(r -> r.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))
+                && com.example.connect_sphere.equipmentrequest.service.EquipmentRequirementCoverage.covered(event,
+                    id -> held.stream().filter(r -> id.equals(r.equipmentId())
+                            && r.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))
+                            .mapToLong(r -> r.quantity()).sum());
     }
 
     /** AC13 (amended, EC-NEW3 D37): Technical Support judged the equipment
@@ -207,9 +213,18 @@ public class EquipmentChangeReviewService {
                 r.loanedUntil(), flagged);
     }
 
-    private static Values values(Map<String, Object> v) {
+    @SuppressWarnings("unchecked")
+    private Values values(Map<String, Object> v) {
+        var items = v.get("equipmentItems") instanceof List<?> list ? (List<Map<String,Object>>) list : List.<Map<String,Object>>of();
         return new Values(time(v.get(EquipmentChangeImpact.START)), time(v.get(EquipmentChangeImpact.END)),
-                (String) v.get(EquipmentChangeImpact.REQUIREMENTS));
+                (String) v.get(EquipmentChangeImpact.REQUIREMENTS),
+                items.stream().map(item -> {
+                    var named = new java.util.LinkedHashMap<>(item);
+                    String id = item.get("equipmentId").toString();
+                    named.put("equipmentName", equipmentCatalogue == null ? id : equipmentCatalogue.findById(UUID.fromString(id))
+                            .map(com.example.connect_sphere.equipment.entity.Equipment::getName).orElse("Unavailable equipment (" + id + ")"));
+                    return (Map<String,Object>) named;
+                }).toList());
     }
 
     private static OffsetDateTime time(Object value) {

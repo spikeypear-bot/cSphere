@@ -152,7 +152,7 @@ export function ReportProblemPage() {
   }
 
   return (
-    <section className="page page--compact">
+    <section className="page page--compact equipment-problem-page">
       <PageHeader
         title="Report a problem"
         description="Mark a unit Faulty or Unavailable, or report damaged equipment. If an event relies on it, a damage report is opened so each affected event can be decided."
@@ -235,6 +235,7 @@ export function ReportProblemPage() {
             <label className="equipment-damage__field">
               Description
               <textarea rows={4} value={description} maxLength={DESCRIPTION_MAX}
+                placeholder="Describe the fault or damage and how it affects the equipment…"
                 onChange={(e) => setDescription(e.target.value)} aria-invalid={Boolean(show('description'))} />
             </label>
             {show('description') ? <p className="field-error">{show('description')}</p> : null}

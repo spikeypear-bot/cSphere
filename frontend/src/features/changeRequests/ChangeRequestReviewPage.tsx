@@ -1,5 +1,6 @@
-import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { useState } from 'react'
+import { useRefreshingResource } from '../../lib/useRefreshingResource'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
 import { TextField } from '../../components/ui/fields'
@@ -19,6 +20,11 @@ const AREA_LABELS: Record<string, string> = {
   arrangements: 'Arrangements', venue: 'Venues', equipment: 'Equipment', safety: 'Safety check and confirmation',
 }
 
+// Older API versions included internal story references in impact copy.
+function impactCopy(text: string): string {
+  return text.replace(/\s*\((?:EC|EO|VS|TS|SO|AT|AU|DEV|ECL|ELC)(?:-C|-NEW)?\d{1,2}(?:\s*[/,]\s*(?:EC|EO|VS|TS|SO|AT|AU|DEV|ECL|ELC)(?:-C|-NEW)?\d{1,2})*\)/g, '')
+}
+
 /** The impact, grouped by area; "attention" items can be ticked when `onToggle` is given. */
 export function ImpactList({ items, ticked, onToggle }: {
   items: ImpactItem[]
@@ -36,8 +42,8 @@ export function ImpactList({ items, ticked, onToggle }: {
               <li key={i.key} className={`change-request__impact-item change-request__impact-item--${i.status}`}>
                 <span className="change-request__impact-status">{i.status === 'ok' ? 'OK' : 'Needs attention'}</span>
                 <div>
-                  <p className="change-request__impact-title">{i.title}</p>
-                  <p className="field-hint">{i.detail}</p>
+                  <p className="change-request__impact-title">{impactCopy(i.title)}</p>
+                  <p className="field-hint">{impactCopy(i.detail)}</p>
                   {i.status === 'attention' && onToggle ? (
                     <label className="change-request__ack">
                       <input type="checkbox" checked={ticked?.has(i.key) ?? false} onChange={() => onToggle(i.key)} />
@@ -61,12 +67,13 @@ export function ImpactList({ items, ticked, onToggle }: {
  * rejects with a reason. The Lead sees the same, read-only (ECL-C7).
  */
 export function ChangeRequestReviewPage() {
+  const navigate = useNavigate()
   const { changeRequestId } = useParams<{ changeRequestId: string }>()
   const { role } = useSession()
-  const [view, setView] = useState<ChangeRequestView | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [notAssigned, setNotAssigned] = useState(false)
-  const [attempt, setAttempt] = useState(0)
+  const resource = useRefreshingResource(() => apiClient.get<ChangeRequestView>(`/change-requests/${changeRequestId}`), changeRequestId ?? null)
+  const view = resource.data
+  const error = resource.error
+  const notAssigned = isNotAssigned(resource.cause)
   const [ticked, setTicked] = useState<Set<string>>(new Set())
   const [mode, setMode] = useState<'review' | 'reject'>('review')
   const [rejectReason, setRejectReason] = useState('')
@@ -74,30 +81,13 @@ export function ChangeRequestReviewPage() {
   const [notice, setNotice] = useState<{ tone: 'success' | 'info' | 'danger'; text: string } | null>(null)
   const base = role ? HOME_BY_ROLE[role] : ''
 
-  useEffect(() => {
-    let cancelled = false
-    apiClient.get<ChangeRequestView>(`/change-requests/${changeRequestId}`)
-      .then((result) => {
-        if (!cancelled) {
-          setView(result)
-          setError(null)
-        }
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        if (isNotAssigned(err)) setNotAssigned(true)
-        setError(err instanceof ApiClientError ? err.message : 'This change request could not be loaded.')
-      })
-    return () => { cancelled = true }
-  }, [changeRequestId, attempt])
-
   if (notAssigned) return <NotAssignedNotice what="request" />
   if (error) {
     return (
       <div className="page">
         <div role="alert" className="change-request__error">
           <p>This change request or its impact could not be loaded.</p>
-          <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+          <Button variant="secondary" onClick={resource.retry}>Try again</Button>
         </div>
       </div>
     )
@@ -122,15 +112,18 @@ export function ChangeRequestReviewPage() {
     setNotice(null)
     try {
       const decided = await apiClient.post<ChangeRequestView>(`/change-requests/${changeRequestId}/${path}`, body)
-      setView(decided)
+      resource.setData(decided)
       setNotice({ tone: 'success', text: path === 'approve'
         ? 'Change approved and applied. The organiser has been told.'
         : 'Change rejected. The organiser has been told why.' })
+      if (path === 'approve' && decided.eventId) {
+        navigate(`${base}/events/${decided.eventId}`, { state: { changeApproved: true } })
+      }
     } catch (err) {
       if (err instanceof ApiClientError && err.status === 409) {
         // The impact or the request changed while this page was open: show the latest.
         setTicked(new Set())
-        setAttempt((n) => n + 1)
+        resource.retry()
         setNotice({ tone: 'info', text: err.message })
       } else {
         setNotice({ tone: 'danger', text: err instanceof ApiClientError ? err.message
@@ -157,6 +150,7 @@ export function ChangeRequestReviewPage() {
       ) : null}
 
       <Card className="dash-row-card change-request__card">
+        <h2>Requested changes</h2>
         <p className="field-hint">Asked by {view.requestedByName}, <When iso={view.requestedAt} /></p>
         <ChangesTable view={view} />
         <p className="change-request__reason"><strong>The organiser's reason:</strong> {view.reason}</p>

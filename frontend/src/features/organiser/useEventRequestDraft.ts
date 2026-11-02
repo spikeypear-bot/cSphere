@@ -23,6 +23,7 @@ export interface DraftFields {
   expectedAttendance: number | null
   venueRequirements: string | null
   equipmentRequirements: string | null
+  equipmentItems?: { equipmentId: string; quantity: number }[]
   accessibilityNeeds: AccessibilityFeature[]
   requiredFacilities?: Facility[]
   registrationNeeds: boolean | null
@@ -119,6 +120,7 @@ function toDraftFields(dto: EventRequestDto): DraftFields {
     expectedAttendance: dto.expectedAttendance,
     venueRequirements: dto.venueRequirements,
     equipmentRequirements: dto.equipmentRequirements,
+    equipmentItems: dto.equipmentItems,
     accessibilityNeeds: dto.accessibilityNeeds,
     requiredFacilities: dto.requiredFacilities ?? [],
     registrationNeeds: dto.registrationNeeds ?? true,

@@ -69,6 +69,9 @@ public class EventRequestService {
     /** EO-C2: "in the future" is judged against this clock, so tests can pin "now". */
     private final Clock clock;
 
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.connect_sphere.equipment.repository.EquipmentRepository equipmentCatalogue;
+
     public EventRequestService(
             EventRequestRepository repository,
             EventRequestMapper mapper,
@@ -372,6 +375,7 @@ public class EventRequestService {
         event.setExpectedAttendance(entity.getExpectedAttendance());
         event.setVenueRequirements(entity.getVenueRequirements());
         event.setEquipmentRequirements(entity.getEquipmentRequirements());
+        event.setEquipmentItems(entity.getEquipmentItems());
         event.setAccessibilityNeeds(entity.getAccessibilityNeeds().stream().map(Enum::name).toList());
         event.setRequiredFacilities(entity.getRequiredFacilities() == null ? List.of() : entity.getRequiredFacilities());
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
@@ -725,6 +729,19 @@ public class EventRequestService {
      */
     private Map<String, String> scheduleProblems(EventRequest entity) {
         Map<String, String> problems = new LinkedHashMap<>();
+        var items = entity.getEquipmentItems();
+        if (items != null && !items.isEmpty()) {
+            var seen = new java.util.HashSet<UUID>();
+            for (var item : items) {
+                if (item == null || item.equipmentId() == null || item.quantity() < 1 || !seen.add(item.equipmentId())) {
+                    problems.put("equipmentItems", "Choose each equipment type once with a positive whole-number quantity.");
+                    break;
+                }
+                if (equipmentCatalogue != null && !equipmentCatalogue.existsById(item.equipmentId())) {
+                    problems.put("equipmentItems", "One of the selected equipment types no longer exists.");
+                }
+            }
+        }
         OffsetDateTime start = entity.getStartDatetime();
         OffsetDateTime end = entity.getEndDatetime();
         if (start != null && !start.toInstant().isAfter(clock.instant())) {
@@ -841,7 +858,7 @@ public class EventRequestService {
                 e.getRequiredFacilities() == null ? List.of()
                         : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
                 e.getRegistrationNeeds(), e.getRegistrationCapacity(), e.getRegistrationOpensAt(),
-                e.getRegistrationClosesAt(), e.getAttendeeInstructions());
+                e.getRegistrationClosesAt(), e.getAttendeeInstructions(), e.getEquipmentItems());
     }
 
     /** EO03: proposed details must be submittable exactly as a new request is
@@ -867,15 +884,14 @@ public class EventRequestService {
             event.setExpectedAttendance(request.getExpectedAttendance());
             event.setVenueRequirements(request.getVenueRequirements());
             event.setEquipmentRequirements(request.getEquipmentRequirements());
+            event.setEquipmentItems(request.getEquipmentItems());
             event.setAccessibilityNeeds(request.getAccessibilityNeeds().stream().map(Enum::name).toList());
             event.setRequiredFacilities(request.getRequiredFacilities() == null ? List.of() : request.getRequiredFacilities());
             event.setRegistrationNeeds(request.getRegistrationNeeds());
             event.setRegistrationCapacity(request.getRegistrationCapacity());
             event.setRegistrationOpensAt(request.getRegistrationOpensAt());
-            if (event.getRegistrationClosesAt() == null
-                    || event.getRegistrationClosesAt().isAfter(request.getStartDatetime())) {
-                event.setRegistrationClosesAt(request.getStartDatetime());
-            }
+            event.setRegistrationClosesAt(request.getRegistrationClosesAt() == null
+                    ? request.getStartDatetime() : request.getRegistrationClosesAt());
             event.setAttendeeInstructions(request.getAttendeeInstructions());
             eventRepository.save(event);
         }
@@ -890,6 +906,7 @@ public class EventRequestService {
         entity.setExpectedAttendance(request.expectedAttendance());
         entity.setVenueRequirements(request.venueRequirements());
         entity.setEquipmentRequirements(request.equipmentRequirements());
+        if (request.equipmentItems() != null) entity.setEquipmentItems(new java.util.ArrayList<>(request.equipmentItems()));
         entity.setAccessibilityNeeds(
                 request.accessibilityNeeds() == null ? List.of() : request.accessibilityNeeds());
         entity.setRequiredFacilities(request.requiredFacilities() == null

@@ -6,6 +6,7 @@ export interface ComparedValues {
   start: string | null
   end: string | null
   equipmentRequirements: string | null
+  equipmentItems?: { equipmentId: string; equipmentName?: string; quantity: number }[]
 }
 
 export interface ReviewReservation {

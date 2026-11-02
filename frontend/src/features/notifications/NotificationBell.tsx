@@ -32,6 +32,8 @@ const MESSAGE_TYPES = new Set(['request_submitted', 'request_assigned', 'request
   'event_reassignment_approved', 'event_reassignment_declined', 'change_request_decided'])
 
 function describe(n: NotificationDto): string {
+  if (n.type === 'safety_review_requested') return `"${n.eventName}" is waiting for your safety review`
+  if (n.type === 'safety_review_withdrawn') return `"${n.eventName}" was withdrawn from safety review`
   if (n.type === 'attendee_event_changed') return `Important updates for "${n.eventName}"`
   if (n.type === 'attendee_event_cancelled') return `"${n.eventName}" has been cancelled`
   if (n.type === 'confirmed_venue_changed') return `Venue update for your confirmed event "${n.eventName}"`
@@ -196,7 +198,7 @@ export function NotificationBell() {
                         <span className="notification-bell__item-reason">“{n.message}”</span>
                       ) : null}
                       {/* EC-C4 AC6: the reason Venue Staff gave for the unavailability. */}
-                      {n.type === 'venue_unavailable' && n.reason ? (
+                      {(n.type === 'venue_unavailable' || n.type === 'safety_review_withdrawn') && n.reason ? (
                         <span className="notification-bell__item-reason">Reason: {n.reason}</span>
                       ) : null}
                       {n.type === 'attendee_event_changed' && n.changes?.length ? (

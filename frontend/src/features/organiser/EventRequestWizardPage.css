@@ -42,24 +42,6 @@
   gap: 0.75rem;
 }
 
-.wizard__equipment-option {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(10rem, 12rem);
-  align-items: center;
-  gap: 0.75rem;
-}
-
-.wizard__equipment-option label {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.wizard__equipment-option input[type='number'] {
-  width: 100%;
-  min-width: 0;
-}
-
 .wizard__missing {
   background: var(--danger-soft);
   color: var(--danger);
@@ -115,11 +97,6 @@
   white-space: nowrap;
 }
 
-.wizard__quantity-input[aria-invalid='true'] {
-  border-color: var(--danger);
-  background: var(--danger-soft);
-}
-
 .wizard__quantity-error {
   background: var(--danger-soft);
   border-left: 3px solid var(--danger);
@@ -159,108 +136,6 @@
   border-top: 1px solid var(--hairline-strong);
 }
 
-.wizard__equipment-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.wizard__equipment-search {
-  flex: 1;
-  min-width: 0;
-  background: var(--paper);
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius-sm);
-  padding: 0.55rem 0.7rem;
-  color: var(--ink);
-}
-
-.wizard__equipment-count {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--ink-soft);
-  white-space: nowrap;
-}
-
-.wizard__equipment-grid {
-  display: flex;
-  flex-direction: column;
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius-sm);
-  overflow: hidden;
-}
-
-.wizard__equipment-grid .wizard__equipment-option {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  min-height: 3rem;
-  padding: 0.4rem 0.9rem;
-  border: 0;
-  border-bottom: 1px solid var(--hairline);
-  border-radius: 0;
-}
-
-.wizard__equipment-grid .wizard__equipment-option:last-child {
-  border-bottom: 0;
-}
-
-.wizard__equipment-grid .wizard__equipment-option:hover {
-  background: color-mix(in srgb, var(--ink) 4%, transparent);
-}
-
-.wizard__equipment-option[data-selected='true'] {
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  box-shadow: inset 3px 0 0 var(--accent);
-}
-
-.wizard__equipment-name {
-  flex: 1;
-  min-width: 0;
-  cursor: pointer;
-}
-
-.wizard__stepper {
-  display: flex;
-  flex: none;
-  width: 8.5rem;
-  align-items: center;
-  gap: 0.4rem;
-}
-
-.wizard__stepper button {
-  width: 2rem;
-  height: 2rem;
-  flex: none;
-  border: 1px solid var(--hairline-strong);
-  border-radius: var(--radius-sm);
-  background: var(--paper);
-  color: var(--ink);
-  font-size: 1.1rem;
-  cursor: pointer;
-}
-
-.wizard__stepper input[type='number'] {
-  text-align: center;
-  appearance: textfield;
-  -moz-appearance: textfield;
-}
-
-.wizard__stepper input[type='number']::-webkit-inner-spin-button,
-.wizard__stepper input[type='number']::-webkit-outer-spin-button {
-  -webkit-appearance: none;
-  margin: 0;
-}
-
-.wizard__equipment-summary {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--ink-soft);
-}
-
 .wizard__summary-row dd .field-hint {
   color: var(--danger);
 }
@@ -276,3 +151,6 @@
   border-radius: var(--radius-sm);
   font-size: 0.9rem;
 }
+
+/* Keep short and long organiser pages aligned when the scrollbar appears. */
+html:has(.app-shell[data-role='organiser']) { scrollbar-gutter: stable; }

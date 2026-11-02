@@ -113,6 +113,35 @@ class EventRequestServiceTest {
     // ---- EO01/EO02 (unchanged behaviour, updated call shape only) --------
 
     @Test
+    @org.junit.jupiter.api.DisplayName("EO01 (happy): the picker stores catalogue IDs and quantities alongside compatible requirements text")
+    void pickerItemsAreRetainedOnDraftSave() {
+        var item = new com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item(UUID.randomUUID(), 3);
+        var input = new SaveEventRequestRequest("Workshop", null, null, null, null, null, null,
+                "Equipment items:\n3 × Audio mixer\n\nAdditional notes:\nBring cables", List.of(), List.of(),
+                false, null, null, null, null, List.of(item));
+        service.saveNewDraft(ORG, CREATED_BY, input);
+        var saved = ArgumentCaptor.forClass(EventRequest.class);
+        verify(repository).save(saved.capture());
+        assertThat(saved.getValue().getEquipmentItems()).containsExactly(item);
+        assertThat(saved.getValue().getEquipmentRequirements()).contains("Bring cables");
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("EO01 (boundary): legacy saves retain selected items and an explicit empty selection clears them")
+    void equipmentSelectionIsNotLostByALegacyDraftEdit() {
+        UUID id = UUID.randomUUID();
+        EventRequest existing = draftEntity(id, ORG);
+        var item = new com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item(UUID.randomUUID(), 2);
+        existing.setEquipmentItems(new java.util.ArrayList<>(List.of(item)));
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+        service.updateDraft(ORG, id, blankRequest());
+        assertThat(existing.getEquipmentItems()).containsExactly(item);
+        service.updateDraft(ORG, id, new SaveEventRequestRequest(null, null, null, null, null, null,
+                null, null, List.of(), List.of(), false, null, null, null, null, List.of()));
+        assertThat(existing.getEquipmentItems()).isEmpty();
+    }
+
+    @Test
     void savingANewDraftSucceedsWithEveryFieldMissing() {
         EventRequestDto dto = service.saveNewDraft(ORG, CREATED_BY, blankRequest());
 

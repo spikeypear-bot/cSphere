@@ -13,6 +13,8 @@ import { SafetyDecisionSummary } from './SafetyDecisionSummary'
 import type { ReadinessDto, ReadinessItem } from './readinessTypes'
 import './safetyOfficer.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
+import { EquipmentSummary } from '../../components/equipment/EquipmentPicker'
+import { equipmentDraftFrom } from '../../lib/equipmentRequirements'
 
 interface EquipmentRequest {
   requestId: string
@@ -138,9 +140,9 @@ export function SafetyEventDetailsPage() {
         {equipmentState.data?.map((request) => (
           <div key={request.requestId} className="safety-resource">
             <h3>Request: {request.status}</h3>
-            <p>{request.technicalRequirement || 'No additional requirements.'}</p>
+            <p>{equipmentDraftFrom(request.technicalRequirement, request.lines).notes || 'No additional requirements.'}</p>
             {request.rejectReason ? <p>Reason: {request.rejectReason}</p> : null}
-            <ul>{request.lines.map((line) => <li key={line.equipmentId}>{line.equipmentName} × {line.quantity}</li>)}</ul>
+            <EquipmentSummary items={request.lines} />
           </div>
         ))}
         {reservationsState.error ? <p role="alert">Could not load equipment reservations. {reservationsState.error}</p> : null}
@@ -179,7 +181,7 @@ export function SafetyEventDetailsPage() {
           {awaitingDecision ? (
             <>
               <label htmlFor="safety-review-note">Note for the Event Coordinator</label>
-              <textarea id="safety-review-note" maxLength={2000} value={reviewNote} onChange={(e) => setReviewNote(e.target.value)}
+              <textarea id="safety-review-note" className="safety-note-field" maxLength={2000} value={reviewNote} onChange={(e) => setReviewNote(e.target.value)}
                 aria-describedby="safety-review-note-hint" />
               <p id="safety-review-note-hint" className="field-hint">
                 Optional when approving. Required to request changes or reject, so the coordinator knows what to fix.

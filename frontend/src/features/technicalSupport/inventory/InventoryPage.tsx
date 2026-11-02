@@ -35,7 +35,7 @@ export function InventoryPage() {
   return (
     <section className="page">
       <PageHeader title="Inventory" description="What is reserved, out of action and still available over the dates you choose." />
-      <div className="tech-filters">
+      <div className="tech-filters inventory-filters">
         <DateRangeFields value={range} onChange={(next) => setParams({ from: next.from, to: next.to }, { replace: true })} />
         <div className="field">
           <label htmlFor="inventory-category">Category</label>
@@ -46,7 +46,8 @@ export function InventoryPage() {
         </div>
         <div className="field">
           <label htmlFor="inventory-search">Search</label>
-          <input id="inventory-search" type="search" value={search} onChange={(e) => setSearch(e.target.value)} />
+          <input id="inventory-search" type="search" placeholder="Search equipment by name…"
+            value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
       </div>
       {span ? (

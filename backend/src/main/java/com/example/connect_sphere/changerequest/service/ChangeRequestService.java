@@ -87,6 +87,8 @@ public class ChangeRequestService {
     private final VenueRequirementChangeService venueRequirements;
     /** EC-NEW3 (D37): absent in plain unit tests, where no equipment is flagged. */
     @Autowired(required = false) private EquipmentRequestAttentionService equipmentAttention;
+    @Autowired private com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository registrations;
+    @Autowired private com.example.connect_sphere.equipment.repository.EquipmentRepository equipmentCatalogue;
 
     public ChangeRequestService(ChangeRequestRepository changeRequests, EventRequestRepository requests,
             EventRepository events, EventRequestService requestRules, EventLifecycleService lifecycle,
@@ -119,6 +121,11 @@ public class ChangeRequestService {
 
     @Transactional
     public View create(Caller organiser, UUID requestId, String rawReason, SaveEventRequestRequest details) {
+        return create(organiser, requestId, rawReason, details, false);
+    }
+
+    @Transactional
+    public View create(Caller organiser, UUID requestId, String rawReason, SaveEventRequestRequest details, boolean capacityConfirmed) {
         String reason = requiredText(rawReason, "Please say why the change is needed.");
         if (details == null) {
             throw new InvalidMessageException("Please include the event's details as they should be.");
@@ -137,9 +144,11 @@ public class ChangeRequestService {
         }
         // Same rules as submitting the request (EO02, EO-C2): 422 per field.
         requestRules.requireValidDetails(details);
+        validateRegistrationChange(origin, event, details, capacityConfirmed);
 
         Map<String, Object> before = ChangeFields.valuesOf(EventRequestService.detailsOf(origin));
         Map<String, Object> after = ChangeFields.valuesOf(details);
+        if (details.equipmentItems() == null) after.put("equipmentItems", before.get("equipmentItems"));
         List<FieldChange> changes = ChangeFields.changes(before, after);
         if (changes.isEmpty()) {
             throw new InvalidMessageException("Nothing was changed. Change at least one detail, or cancel.");
@@ -175,6 +184,22 @@ public class ChangeRequestService {
                 NotificationType.change_request_submitted, requestId, origin.getEventId(), name,
                 "Change requested: " + ChangeFields.describe(changes) + ". Reason: " + reason);
         return view(saved, organiser, origin, event);
+    }
+
+    private void validateRegistrationChange(EventRequest origin, Event event, SaveEventRequestRequest proposed, boolean confirmed) {
+        boolean attendanceChanged = !java.util.Objects.equals(origin.getExpectedAttendance(), proposed.expectedAttendance());
+        Integer currentCapacity = event == null ? origin.getRegistrationCapacity() : event.getRegistrationCapacity();
+        if (Boolean.TRUE.equals(proposed.registrationNeeds()) && attendanceChanged
+                && java.util.Objects.equals(currentCapacity, proposed.registrationCapacity()) && !confirmed) {
+            throw new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException(Map.of(
+                    "registrationCapacity", "Confirm the registration capacity for the changed expected attendance, or provide a new capacity."));
+        }
+        long count = event == null || registrations == null ? 0 : registrations.countByEventIdAndStatus(event.getEventId(), "confirmed");
+        if (count > 0 && (!Boolean.TRUE.equals(proposed.registrationNeeds()) || proposed.registrationCapacity() == null
+                || proposed.registrationCapacity() < count)) {
+            throw new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException(Map.of(
+                    "registrationCapacity", "Capacity cannot be lower than the " + count + " active confirmed registration(s), and registration cannot be disabled while they exist."));
+        }
     }
 
     // ---- EO03: withdraw ----------------------------------------------------------
@@ -224,14 +249,20 @@ public class ChangeRequestService {
         // the request has changed since (e.g. a clarification answered), applying it would
         // silently undo those edits, so the organiser must withdraw and ask again.
         Map<String, Object> currentValues = ChangeFields.valuesOf(EventRequestService.detailsOf(origin));
-        if (!ChangeFields.changes(change.getOriginalValues(), currentValues).isEmpty()) {
+        Map<String, Object> baseline = new java.util.LinkedHashMap<>(currentValues);
+        baseline.keySet().retainAll(change.getOriginalValues().keySet());
+        if (!ChangeFields.changes(change.getOriginalValues(), baseline).isEmpty()) {
             throw new ChangeRequestException.State(REQUEST_CHANGED_SINCE);
         }
-        SaveEventRequestRequest proposed = ChangeFields.detailsOf(change.getProposedValues());
+        Map<String, Object> proposedValues = new java.util.LinkedHashMap<>(change.getProposedValues());
+        proposedValues.putIfAbsent("registrationClosesAt", currentValues.get("registrationClosesAt"));
+        proposedValues.putIfAbsent("equipmentItems", currentValues.get("equipmentItems"));
+        SaveEventRequestRequest proposed = ChangeFields.detailsOf(proposedValues);
         // Re-checked now: a proposed start may have passed while it waited.
         requestRules.requireValidDetails(proposed);
+        validateRegistrationChange(origin, event, proposed, true);
 
-        List<FieldChange> changes = ChangeFields.changes(currentValues, change.getProposedValues());
+        List<FieldChange> changes = ChangeFields.changes(currentValues, proposedValues);
         Set<String> changed = fields(changes);
         List<ImpactItem> current = impact.assess(event, proposed, changed);
         Set<String> confirmed = acknowledged == null ? Set.of() : new HashSet<>(acknowledged);
@@ -268,7 +299,7 @@ public class ChangeRequestService {
 
         if (published != null && origin.getEventId() != null) {
             published.publishEvent(new ChangeApproved(saved.getChangeRequestId(), origin.getEventId(),
-                    Map.copyOf(withoutNulls(currentValues)), Map.copyOf(withoutNulls(saved.getProposedValues())),
+                    Map.copyOf(withoutNulls(currentValues)), Map.copyOf(withoutNulls(proposedValues)),
                     Set.copyOf(changed), saved.getDecidedAt()));
         }
 
@@ -478,8 +509,24 @@ public class ChangeRequestService {
                 change.getStatus().name(), closed.orElse(null), change.getReason(),
                 nameOf(change.getRequestedBy()), change.getRequestedAt(),
                 change.getDecidedBy() == null ? null : nameOf(change.getDecidedBy()), change.getDecidedAt(),
-                change.getDecisionReason(), changes, impactNow, followUps(change), canDecide,
+                change.getDecisionReason(), changes.stream().map(this::displayChange).toList(), impactNow, followUps(change), canDecide,
                 pending && caller.role() == UserRole.eo && sameOrganisation(caller, origin));
+    }
+
+    private FieldChange displayChange(FieldChange change) {
+        if (!"equipmentItems".equals(change.field())) return change;
+        return new FieldChange(change.field(), change.label(), namedItems(change.before()), namedItems(change.after()));
+    }
+
+    private Object namedItems(Object value) {
+        if (!(value instanceof List<?> list)) return value;
+        return list.stream().map(row -> {
+            var item = (Map<?,?>) row;
+            String id = item.get("equipmentId").toString();
+            String name = equipmentCatalogue == null ? id : equipmentCatalogue.findById(UUID.fromString(id))
+                    .map(com.example.connect_sphere.equipment.entity.Equipment::getName).orElse("Unavailable equipment (" + id + ")");
+            return Map.of("equipmentId", id, "equipmentName", name, "quantity", item.get("quantity"));
+        }).toList();
     }
 
     private static List<ImpactItem> followUps(ChangeRequest change) {

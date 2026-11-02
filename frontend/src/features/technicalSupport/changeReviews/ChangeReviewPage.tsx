@@ -8,7 +8,7 @@ import { formatEventDateTime } from '../../venueStaff/formatEventDateTime'
 import { TS } from '../shared/faultyEquipment'
 import { describeWhen } from '../shared/format'
 import { ResourceView } from '../../../components/ui/ResourceView'
-import { useResource } from '../../../lib/useResource'
+import { useRefreshingResource } from '../../../lib/useRefreshingResource'
 import { fetchChangeReview, recordOutcome } from './changeReviewApi'
 import { OUTCOME_LABELS, type ChangeReviewDetail, type ComparedValues, type ReviewOutcome } from './changeReview.types'
 import { ReviewBadge } from './ChangeReviewsPage'
@@ -32,7 +32,11 @@ function Comparison({ previous, updated }: { previous: ComparedValues; updated: 
   add('Start', previous.start, updated.start, true)
   add('End', previous.end, updated.end, true)
   add('Equipment requirements', previous.equipmentRequirements, updated.equipmentRequirements, false)
+  const equipment = (items: ComparedValues['equipmentItems']) => items?.length
+    ? items.map(item => item.quantity + ' × ' + (item.equipmentName ?? item.equipmentId)).join(', ') : null
+  add('Equipment items and quantities', equipment(previous.equipmentItems), equipment(updated.equipmentItems), false)
   return (
+    <div className="change-review-comparison" role="region" aria-label="Equipment change comparison" tabIndex={0}>
     <table className="change-review-table">
       <thead>
         <tr><th scope="col">Detail</th><th scope="col">Before</th><th scope="col">After</th></tr>
@@ -43,6 +47,7 @@ function Comparison({ previous, updated }: { previous: ComparedValues; updated: 
         ))}
       </tbody>
     </table>
+    </div>
   )
 }
 
@@ -50,20 +55,19 @@ function Comparison({ previous, updated }: { previous: ComparedValues; updated: 
  * ones flagged, and Technical Support's review outcome. */
 export function ChangeReviewPage() {
   const { reviewId = '' } = useParams<{ reviewId: string }>()
-  const review = useResource(() => fetchChangeReview(reviewId), reviewId)
+  const review = useRefreshingResource(() => fetchChangeReview(reviewId), reviewId)
 
   return (
     <ResourceView resource={review} loadingText="Loading the change…"
       errorText="Could not load this equipment change review."
       emptyText="This change review could not be found."
       isEmpty={() => false}>
-      {(loaded) => <ReviewWorkspace key={loaded.reviewId} initial={loaded} />}
+      {(loaded) => <ReviewWorkspace key={loaded.reviewId} initial={loaded} onSaved={review.setData} />}
     </ResourceView>
   )
 }
 
-function ReviewWorkspace({ initial }: { initial: ChangeReviewDetail }) {
-  const [review, setReview] = useState(initial)
+function ReviewWorkspace({ initial: review, onSaved }: { initial: ChangeReviewDetail; onSaved: (value: ChangeReviewDetail) => void }) {
   const [outcome, setOutcome] = useState<ReviewOutcome | null>(null)
   const [note, setNote] = useState('')
   const [formError, setFormError] = useState<string | null>(null)
@@ -86,7 +90,7 @@ function ReviewWorkspace({ initial }: { initial: ChangeReviewDetail }) {
     setFormError(null)
     setSaving(true)
     try {
-      setReview(await recordOutcome(review.reviewId, outcome, note))
+      onSaved(await recordOutcome(review.reviewId, outcome, note))
     } catch (error) {
       setFormError(error instanceof ApiClientError && error.message
         ? error.message
@@ -97,7 +101,7 @@ function ReviewWorkspace({ initial }: { initial: ChangeReviewDetail }) {
   }
 
   return (
-    <section className="page request-page">
+    <section className="page request-page change-review-page">
       <Link className="request-page__back" to={`${TS}/change-reviews`}><span aria-hidden="true">‹ </span>All change reviews</Link>
       <header className="card tech-card request-head">
         <div className="request-head__title">
@@ -132,7 +136,7 @@ function ReviewWorkspace({ initial }: { initial: ChangeReviewDetail }) {
                   {r.quantity} × {r.equipmentName}{r.serialNumber ? ` (${r.serialNumber})` : ''}
                   {' '}— {formatEventDateTime(r.loanedFrom)} to {formatEventDateTime(r.loanedUntil)}
                 </span>
-                {r.flagged && <span className="tech-badge tech-badge--warning">Needs review: no longer covers the event</span>}
+                {r.flagged && <span className="dash-badge dash-badge--warning">Needs review: no longer covers the event</span>}
               </li>
             ))}
           </ul>

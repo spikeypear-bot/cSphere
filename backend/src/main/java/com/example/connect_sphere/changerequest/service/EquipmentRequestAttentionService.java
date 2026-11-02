@@ -52,8 +52,9 @@ public class EquipmentRequestAttentionService {
         // Re-checked after the change applied, like BookingAssessmentService, not from approve()'s earlier snapshot.
         boolean coverageBroken = timesChanged && reservations.reservationsForEvent(event.getEventId()).stream()
                 .anyMatch(r -> !r.covers(proposed.startDatetime().toInstant(), proposed.endDatetime().toInstant()));
-        if (!coverageBroken && !changedFields.contains("equipmentRequirements")) return;
-        String reason = coverageBroken ? COVERAGE_BROKEN : REQUIREMENTS_CHANGED;
+        if (!coverageBroken && !changedFields.contains("equipmentRequirements") && !changedFields.contains("equipmentItems")) return;
+        String reason = coverageBroken ? COVERAGE_BROKEN : changedFields.contains("equipmentItems")
+                ? "The event's equipment items or quantities changed." : REQUIREMENTS_CHANGED;
         // A reservation the event no longer fits outranks a wording change, whichever came first.
         active.forEach(r -> r.flagAttention(COVERAGE_BROKEN.equals(r.getAttentionReason()) ? COVERAGE_BROKEN : reason));
         requests.saveAll(active);

@@ -27,7 +27,18 @@ public record SaveEventRequestRequest(
         Integer registrationCapacity,
         OffsetDateTime registrationOpensAt,
         OffsetDateTime registrationClosesAt,
-        String attendeeInstructions) {
+        String attendeeInstructions,
+        List<com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item> equipmentItems) {
+
+    public SaveEventRequestRequest(String eventName, String purpose, String description,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,
+            String venueRequirements, String equipmentRequirements, List<AccessibilityFeature> accessibilityNeeds,
+            List<Facility> requiredFacilities, Boolean registrationNeeds, Integer registrationCapacity,
+            OffsetDateTime registrationOpensAt, OffsetDateTime registrationClosesAt, String attendeeInstructions) {
+        this(eventName, purpose, description, startDatetime, endDatetime, expectedAttendance, venueRequirements,
+                equipmentRequirements, accessibilityNeeds, requiredFacilities, registrationNeeds, registrationCapacity,
+                registrationOpensAt, registrationClosesAt, attendeeInstructions, null);
+    }
 
     public SaveEventRequestRequest(String eventName, String purpose, String description,
             OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance,

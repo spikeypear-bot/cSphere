@@ -25,7 +25,7 @@ final class EquipmentChangeImpact {
     static final String END = "endDatetime";
     static final String REQUIREMENTS = "equipmentRequirements";
     /** The fields a Technical Support notice compares (AC8). */
-    static final List<String> FIELDS = List.of(START, END, REQUIREMENTS);
+    static final List<String> FIELDS = List.of(START, END, REQUIREMENTS, "equipmentItems");
 
     record Result(List<EquipmentReservationResponse> uncovered, boolean requirementsChanged) {
     }
@@ -42,7 +42,7 @@ final class EquipmentChangeImpact {
         if (timesChanged && start != null && end != null) {
             uncovered = reservations.stream().filter(r -> !r.covers(start, end)).toList();
         }
-        boolean requirementsChanged = changedFields.contains(REQUIREMENTS);
+        boolean requirementsChanged = changedFields.contains(REQUIREMENTS) || changedFields.contains("equipmentItems");
         if (uncovered.isEmpty() && !requirementsChanged) {
             return Optional.empty();
         }

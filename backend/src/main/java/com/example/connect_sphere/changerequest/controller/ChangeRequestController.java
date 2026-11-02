@@ -43,7 +43,7 @@ public class ChangeRequestController {
             throw new ChangeRequestException.NotFound(null);
         }
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(service.create(caller(jwt), body.requestId(), body.reason(), body.details()));
+                .body(service.create(caller(jwt), body.requestId(), body.reason(), body.details(), Boolean.TRUE.equals(body.capacityConfirmed())));
     }
 
     /** {@code ?requestId=} or {@code ?eventId=}: that request's history, newest

@@ -378,6 +378,7 @@ class Event <<Entity>>  {
 	{field} +coordinatorId : UUID
 	{field} +description : String
 	{field} +endDatetime : OffsetDateTime
+	{field} +equipmentItems : List<SubmitEquipmentRequest.Item>
 	{field} +equipmentRequirements : String
 	{field} +eventId : UUID {id}
 	{field} +eventName : String
@@ -463,6 +464,7 @@ class EventRequest <<Entity>>  {
 	{field} +createdBy : UUID
 	{field} +description : String
 	{field} +endDatetime : OffsetDateTime
+	{field} +equipmentItems : List<SubmitEquipmentRequest.Item>
 	{field} +equipmentRequirements : String
 	{field} +eventId : UUID
 	{field} +eventName : String
@@ -559,6 +561,7 @@ enum NotificationType {
 	{field} +request_cancelled
 	{field} +request_handed_over
 	{field} +request_submitted
+	{field} +safety_review_requested
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved

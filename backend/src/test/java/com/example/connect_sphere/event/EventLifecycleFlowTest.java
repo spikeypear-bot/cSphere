@@ -52,6 +52,7 @@ import jakarta.persistence.EntityManager;
 @Tag("EO04")
 @Tag("EC-NEW2")
 @Tag("SO-C4")
+@Tag("SO-C1")
 @Tag("VS-C1")
 class EventLifecycleFlowTest {
     @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
@@ -100,6 +101,23 @@ class EventLifecycleFlowTest {
     private String eventStatus(UUID eventId) {
         sync();
         return jdbc.queryForObject("SELECT status::text FROM events WHERE event_id = ?", String.class, eventId);
+    }
+
+    @Test
+    @DisplayName("EC08 SO-C1 (conflict): repeated submission creates no duplicate SO notice, but a new review cycle does")
+    void safetyReviewNotifiesOncePerCycle() throws Exception {
+        UUID eventId = readyEvent();
+        String path = "/api/events/" + eventId + "/safety-review";
+        mvc.perform(post(path).with(flow.as("ec1"))).andExpect(status().isOk());
+        mvc.perform(post(path).with(flow.as("ec1"))).andExpect(status().isConflict());
+        sync();
+        String sql = "SELECT count(*) FROM notification_outbox WHERE payload->>'event_id'=? AND payload->>'type'='safety_review_requested' AND payload->>'recipient_user_id'=?";
+        assertThat(jdbc.queryForObject(sql, Integer.class, eventId.toString(), flow.idOf("so1").toString())).isEqualTo(1);
+        mvc.perform(post(path + "/withdraw").with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"reason\":\"Coordinator needs another check\"}")).andExpect(status().isOk());
+        mvc.perform(post(path).with(flow.as("ec1"))).andExpect(status().isOk());
+        sync();
+        assertThat(jdbc.queryForObject(sql, Integer.class, eventId.toString(), flow.idOf("so1").toString())).isEqualTo(2);
     }
 
     @Test
@@ -167,14 +185,30 @@ class EventLifecycleFlowTest {
     void withdrawingNeedsAReasonAndReturnsTheEventToPlanning() throws Exception {
         UUID eventId = readyEvent();
         mvc.perform(post("/api/events/" + eventId + "/safety-review").with(flow.as("ec1"))).andExpect(status().isOk());
+        UUID officer = flow.idOf("so1");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'event_id'=? AND payload->>'recipient_user_id'=? AND payload->>'type'='safety_review_requested'",
+                Integer.class, eventId.toString(), officer.toString())).isEqualTo(1);
 
         mvc.perform(post("/api/events/" + eventId + "/safety-review/withdraw").with(flow.as("ec1"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"  \"}"))
                 .andExpect(status().isUnprocessableEntity());
+        assertThat(eventStatus(eventId)).isEqualTo("awaiting_safety_review");
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'event_id'=? AND payload->>'type'='safety_review_withdrawn'",
+                Integer.class, eventId.toString())).isZero();
         mvc.perform(post("/api/events/" + eventId + "/safety-review/withdraw").with(flow.as("ec1"))
                         .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Date is changing\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.journeyStatus.code").value("PLANNING"));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'event_id'=? AND payload->>'recipient_user_id'=? AND payload->>'type'='safety_review_withdrawn' AND payload->>'reason'='Date is changing'",
+                Integer.class, eventId.toString(), officer.toString())).isEqualTo(1);
+        mvc.perform(get("/api/safety/events/planning").with(flow.as("so1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.eventId == '" + eventId + "')].status").value("pending"));
+        mvc.perform(post("/api/events/" + eventId + "/safety-review/withdraw").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"Again\"}"))
+                .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notification_outbox WHERE payload->>'event_id'=? AND payload->>'recipient_user_id'=? AND payload->>'type'='safety_review_withdrawn'",
+                Integer.class, eventId.toString(), officer.toString())).isEqualTo(1);
     }
 
     @Test

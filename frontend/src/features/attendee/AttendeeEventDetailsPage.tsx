@@ -25,6 +25,7 @@ interface AttendeeEventDetails extends Omit<AttendeeStatusInput, 'eventStatus'> 
   registrationRequired: boolean | null
   registrationOpensAt: string | null
   registrationClosesAt: string | null
+  expectedAttendance?: number | null
   registrationCapacity: number | null
   availablePlaces: number | null
   attendeeInstructions: string | null
@@ -143,6 +144,7 @@ function AttendeeEventDetails({ eventId }: { eventId: string }) {
           <h2>Event information</h2>
           {event.description && <p className="attendee-details-card__description">{event.description}</p>}
           <dl className="attendee-event-details__facts">
+            {event.expectedAttendance != null && <div><dt>Expected attendance</dt><dd>{event.expectedAttendance}</dd></div>}
             <div><dt>Starts</dt><dd>{dateTime(event.startDatetime)}</dd></div>
             <div><dt>Ends</dt><dd>{dateTime(event.endDatetime)}</dd></div>
             <div><dt>Last confirmed update</dt><dd>{event.updatedAt ? dateTime(event.updatedAt) : 'Not available'}</dd></div>
@@ -185,7 +187,7 @@ function AttendeeEventDetails({ eventId }: { eventId: string }) {
           {showRegistrationDetails && (event.registrationOpensAt || event.registrationClosesAt || capacity !== null) && <dl className="attendee-event-details__facts">
             {event.registrationOpensAt && <div><dt>Opens</dt><dd>{dateTime(event.registrationOpensAt)}</dd></div>}
             {event.registrationClosesAt && <div><dt>Closes</dt><dd>{dateTime(event.registrationClosesAt)}</dd></div>}
-            {capacity !== null && <div><dt>Capacity</dt><dd>{capacity}</dd></div>}
+            {capacity !== null && <div><dt>Registration capacity</dt><dd>{capacity}</dd></div>}
           </dl>}
           {registration && !registration.registrationId && <p>Registration reference: <strong>{registration.reference}</strong></p>}
           {!registration && availabilityNotice && <Notice tone={availabilityNotice.tone}>{availabilityNotice.text}</Notice>}

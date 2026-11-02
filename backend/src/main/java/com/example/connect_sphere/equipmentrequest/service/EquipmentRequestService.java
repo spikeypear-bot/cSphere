@@ -160,7 +160,7 @@ public class EquipmentRequestService {
         if (shortfall != null) {
             shortfalls.linkAdditionalRequest(shortfall, requestId);
         }
-        int units = validated.items().stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
+        long units = validated.items().stream().mapToLong(SubmitEquipmentRequest.Item::quantity).sum();
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_requested, coordinatorId,
                 "Requested " + units + (units == 1 ? " item" : " items") + " of equipment"
                         + (validated.requirement().isBlank() ? "" : ": " + validated.requirement()));
@@ -211,7 +211,7 @@ public class EquipmentRequestService {
             // TS11 AC1: the revision is a new request Technical Support must review.
             changeLog.publishEvent(new EquipmentRequestSubmitted(requestId, eventId));
         }
-        int units = validated.items().stream().mapToInt(SubmitEquipmentRequest.Item::quantity).sum();
+        long units = validated.items().stream().mapToLong(SubmitEquipmentRequest.Item::quantity).sum();
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_revised, coordinatorId,
                 "Revised the equipment request: now " + units + (units == 1 ? " item" : " items")
                         + " of equipment, replacing the previous request"
@@ -246,6 +246,12 @@ public class EquipmentRequestService {
         if (newestOutcomeNeedsCoordinator(eventId)) {
             throw new EquipmentRequestStateException(
                     "Technical Support said this request needs changing. Revise the request instead.");
+        }
+        var held = reservations.reservationsForEvent(eventId);
+        if (!EquipmentRequirementCoverage.covered(event, id -> held.stream()
+                .filter(row -> id.equals(row.equipmentId()) && row.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))
+                .mapToLong(row -> row.quantity()).sum())) {
+            throw new EquipmentRequestStateException("The approved equipment items and quantities are not reserved. Revise the request for Technical Support review.");
         }
         String note = rawNote == null ? "" : rawNote.strip();
         if (note.isEmpty() || note.length() > MAX_REQUIREMENT_LENGTH) {

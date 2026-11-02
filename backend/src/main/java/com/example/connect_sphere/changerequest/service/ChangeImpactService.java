@@ -272,9 +272,9 @@ public class ChangeImpactService {
                                         + period(start, end) + ". Technical Support may not be able to move it."));
             }
         }
-        if (changedFields.contains("equipmentRequirements")) {
+        if ((changedFields.contains("equipmentRequirements") || changedFields.contains("equipmentItems"))) {
             items.add(new ImpactItem("equipment:requirements", "equipment", ATTENTION, "Equipment requirements change",
-                    "Update the event's equipment request to match (EC07)."));
+                    "Update the event's equipment request to match."));
         }
     }
 
@@ -286,7 +286,7 @@ public class ChangeImpactService {
         items.add(replan
                 ? new ImpactItem("safety:replan", "safety", ATTENTION, "The event goes back to Planning",
                         "Approving undoes its safety approval or confirmation; it must pass the safety check "
-                                + "and be confirmed again (EC08).")
+                                + "and be confirmed again.")
                 : new ImpactItem("safety:kept", "safety", OK, "Safety approval and confirmation are kept",
                         "Only details that do not affect arrangements change."));
     }

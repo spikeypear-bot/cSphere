@@ -1,3 +1,5 @@
+import { EquipmentPicker } from '../../components/equipment/EquipmentPicker'
+import { equipmentDraftFrom, equipmentRequirementsFrom } from '../../lib/equipmentRequirements'
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
@@ -34,45 +36,6 @@ interface EquipmentCatalogueItem {
   serialised: boolean
 }
 
-const EQUIPMENT_ITEMS_HEADING = 'Equipment items:'
-const EQUIPMENT_NOTES_HEADING = 'Additional notes:'
-
-function equipmentRequirementsFrom(
-  selected: Record<string, string>,
-  notes: string,
-  catalogue: EquipmentCatalogueItem[],
-): string | null {
-  const lines = catalogue.flatMap((equipment) => {
-    const quantity = selected[equipment.equipmentId]
-    return quantity === undefined ? [] : [`${quantity} × ${equipment.equipmentName}`]
-  })
-  const sections = [
-    lines.length ? `${EQUIPMENT_ITEMS_HEADING}\n${lines.join('\n')}` : '',
-    notes.trim() ? `${EQUIPMENT_NOTES_HEADING}\n${notes.trim()}` : '',
-  ].filter(Boolean)
-  return sections.length ? sections.join('\n\n') : null
-}
-
-function equipmentDraftFrom(
-  value: string | null,
-  catalogue: EquipmentCatalogueItem[],
-): { selected: Record<string, string>; notes: string } {
-  if (!value?.startsWith(`${EQUIPMENT_ITEMS_HEADING}\n`)) {
-    return { selected: {}, notes: value ?? '' }
-  }
-
-  const [itemsSection, ...notesSections] = value.split(`\n\n${EQUIPMENT_NOTES_HEADING}\n`)
-  const selected: Record<string, string> = {}
-  const lines = itemsSection.slice(EQUIPMENT_ITEMS_HEADING.length).trim().split('\n').filter(Boolean)
-  for (const line of lines) {
-    const match = /^(\d+)\s+×\s+(.+)$/.exec(line)
-    const equipment = match && catalogue.find((item) => item.equipmentName === match[2])
-    if (match && equipment) selected[equipment.equipmentId] = match[1]
-    else return { selected: {}, notes: value }
-  }
-  return { selected, notes: notesSections.join(`\n\n${EQUIPMENT_NOTES_HEADING}\n`) }
-}
-
 /** Why a request that has left draft can't be edited here, naming its
  * actual status (EC-NEW2): a rejected request was not "submitted". */
 const NOT_EDITABLE: Partial<Record<EventRequestStatus, string>> = {
@@ -105,7 +68,6 @@ export function EventRequestWizardPage() {
   const [catalogueError, setCatalogueError] = useState<string | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<Record<string, string>>({})
   const [equipmentNotes, setEquipmentNotes] = useState('')
-  const [equipmentSearch, setEquipmentSearch] = useState('')
   const [choosingClose, setChoosingClose] = useState(false)
   const equipmentDraftInitialized = useRef(false)
   // EO-C2: date, time and attendance problems, checked as the organiser types,
@@ -142,10 +104,11 @@ export function EventRequestWizardPage() {
   useEffect(() => {
     if (!equipmentCatalogue || equipmentDraftInitialized.current) return
     const draft = equipmentDraftFrom(fields.equipmentRequirements, equipmentCatalogue)
-    setSelectedEquipment(draft.selected)
+    setSelectedEquipment(fields.equipmentItems?.length
+      ? Object.fromEntries(fields.equipmentItems.map(item => [item.equipmentId, String(item.quantity)])) : draft.selected)
     setEquipmentNotes(draft.notes)
     equipmentDraftInitialized.current = true
-  }, [equipmentCatalogue, fields.equipmentRequirements])
+  }, [equipmentCatalogue, fields.equipmentRequirements, fields.equipmentItems])
 
   // Pre-fill the registration window and capacity the first time the
   // organiser reaches this step, so they only adjust values, not invent them.
@@ -213,6 +176,7 @@ export function EventRequestWizardPage() {
   function updateEquipmentRequirements(selected: Record<string, string>, notes: string) {
     setFields({
       equipmentRequirements: equipmentRequirementsFrom(selected, notes, equipmentCatalogue ?? []),
+      equipmentItems: Object.entries(selected).map(([equipmentId, quantity]) => ({ equipmentId, quantity: Number(quantity) || 0 })),
     })
   }
 
@@ -295,16 +259,6 @@ export function EventRequestWizardPage() {
       setSubmitting(false)
     }
   }
-
-  const searchTerm = equipmentSearch.trim().toLowerCase()
-  const visibleEquipment = (equipmentCatalogue ?? []).filter((equipment) =>
-    !searchTerm || equipment.equipmentName.toLowerCase().includes(searchTerm)
-      || selectedEquipment[equipment.equipmentId] !== undefined)
-  const selectedCount = Object.keys(selectedEquipment).length
-  const selectedSummary = (equipmentCatalogue ?? [])
-    .filter((equipment) => selectedEquipment[equipment.equipmentId] !== undefined)
-    .map((equipment) => `${equipment.equipmentName} ×${selectedEquipment[equipment.equipmentId]}`)
-    .join(', ')
 
   return (
     <div className="page">
@@ -433,95 +387,11 @@ export function EventRequestWizardPage() {
 
         {stepIndex === 3 && (
           <>
-            <fieldset className="wizard__choice-group">
-              <legend>Equipment requirements</legend>
-              <p className="field-hint">Select catalogue items and enter the quantity needed for each.</p>
-              {equipmentCatalogue === null && !catalogueError
-                ? <p role="status">Loading equipment options…</p>
-                : null}
-              {catalogueError ? (
-                <p role="alert">
-                  {catalogueError}{' '}
-                  <Button type="button" variant="secondary" onClick={() => setCatalogueError(null)}>
-                    Retry
-                  </Button>
-                </p>
-              ) : null}
-              {equipmentCatalogue?.length === 0 ? <p>No equipment types are currently listed.</p> : null}
-              {equipmentCatalogue && equipmentCatalogue.length > 0 ? (
-                <div className="wizard__equipment-toolbar">
-                  <input
-                    type="search"
-                    className="wizard__equipment-search"
-                    placeholder="Search equipment"
-                    aria-label="Search equipment"
-                    value={equipmentSearch}
-                    onChange={(event) => setEquipmentSearch(event.target.value)}
-                  />
-                  <span className="wizard__equipment-count" role="status">
-                    {selectedCount} selected
-                  </span>
-                </div>
-              ) : null}
-              <div className="wizard__equipment-grid">
-                {visibleEquipment.map((equipment) => {
-                  const checked = selectedEquipment[equipment.equipmentId] !== undefined
-                  const quantity = selectedEquipment[equipment.equipmentId]
-                  const invalid = checked && !/^[1-9]\d*$/.test(quantity)
-                  return (
-                    <div className="wizard__equipment-option" data-selected={checked} key={equipment.equipmentId}>
-                      <label className="wizard__equipment-name">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          onChange={(event) => toggleEquipment(equipment.equipmentId, event.target.checked)}
-                        />
-                        {equipment.equipmentName}
-                      </label>
-                      {checked ? (
-                        <div className="wizard__stepper">
-                          <button
-                            type="button"
-                            aria-label={`Decrease ${equipment.equipmentName} quantity`}
-                            onClick={() => updateEquipmentQuantity(equipment.equipmentId, String(Math.max(1, (Number(quantity) || 1) - 1)))}
-                          >
-                            −
-                          </button>
-                          <input
-                            type="number"
-                            min="1"
-                            step="1"
-                            value={quantity}
-                            onChange={(event) => updateEquipmentQuantity(equipment.equipmentId, event.target.value)}
-                            aria-label={`${equipment.equipmentName} quantity`}
-                            aria-invalid={invalid}
-                            className="wizard__quantity-input"
-                          />
-                          <button
-                            type="button"
-                            aria-label={`Increase ${equipment.equipmentName} quantity`}
-                            onClick={() => updateEquipmentQuantity(equipment.equipmentId, String((Number(quantity) || 0) + 1))}
-                          >
-                            +
-                          </button>
-                        </div>
-                      ) : null}
-                    </div>
-                  )
-                })}
-              </div>
-              {equipmentCatalogue && equipmentSearch.trim() && visibleEquipment.length === 0
-                ? <p className="field-hint">No equipment matches “{equipmentSearch.trim()}”.</p>
-                : null}
-              {invalidEquipmentQuantity ? (
-                <p role="alert" className="field-error wizard__quantity-error">
-                  Enter a whole quantity of at least 1 for each selected item.
-                </p>
-              ) : null}
-              {selectedSummary ? (
-                <p className="wizard__equipment-summary"><strong>Selected:</strong> {selectedSummary}</p>
-              ) : null}
-            </fieldset>
+            {equipmentCatalogue === null && !catalogueError ? <p role="status">Loading equipment options…</p> : null}
+            {catalogueError ? <p role="alert">{catalogueError} <Button type="button" variant="secondary" onClick={() => setCatalogueError(null)}>Try again</Button></p> : null}
+            <EquipmentPicker catalogue={equipmentCatalogue ?? []} selected={selectedEquipment}
+              onToggle={toggleEquipment} onQuantityChange={updateEquipmentQuantity} />
+            {invalidEquipmentQuantity ? <p role="alert" className="field-error wizard__quantity-error">Enter a whole quantity of at least 1 for each selected item.</p> : null}
             <TextField
               id="equipmentRequirementsNotes"
               label="Additional equipment notes"

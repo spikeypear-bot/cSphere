@@ -617,3 +617,15 @@ individual popup toggles use the existing request selection logic. EC reads only
 its existing search/assigned-event options, never the VS map-summary endpoints.
 No backend permissions or booking rules change. Shared map/filter coverage and
 the EC map adapter are gated at 100%; see `docs/dev16-coordinator-map.md`.
+
+## Release 1 integration repairs (3 November 2026)
+
+User-authorised EO03/EC-NEW3/EC07/EC08/TS01/TS02/SO-C1/AT01/AT02 repair.
+Expected attendance and registration capacity remain independent: an unchanged
+capacity requires explicit confirmation when attendance changes, and approval
+rechecks current confirmed registrations. V69 adds structured approved equipment
+requirements using catalogue IDs/quantities, while retaining legacy text and the
+existing EC/TS request and reservation responsibilities. V70 adds durable SO
+review-submission notices. Staff reads reuse useRefreshingResource for background
+refresh and response ordering; attendee reads retain useAttendeeResource.
+See docs/release1-integration-repairs.md for contracts, migrations and evidence.

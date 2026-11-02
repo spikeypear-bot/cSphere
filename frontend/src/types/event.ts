@@ -39,6 +39,7 @@ export interface EventDto {
   registrationNeeds: boolean | null
   organisation: string | null
   venueRequirements: string
+  equipmentItems?: { equipmentId: string; quantity: number }[]
   equipmentRequirements: string | null
   status: EventStatus
   coordinatorName: string | null

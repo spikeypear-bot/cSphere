@@ -93,10 +93,12 @@ export function BookingDetailsPage() {
             {data.relatedBookings.map(related => <li key={related.bookingId}>
               <Card className="feature-skeleton__body booking-context-card">
                 <div className="booking-related-card__header">
-                  <h3>{related.venueAddress}</h3>
+                  <p className="venue-card-preview__id booking-related-card__id">Booking ID: {related.bookingId}</p>
                   <span className="venue-card-preview__tag booking-status-tag" data-booking-status={related.status}>{BOOKING_STATUS_LABELS[related.status]}</span>
                 </div>
-                <p className="venue-card-preview__id booking-related-card__id">Booking ID: {related.bookingId}</p>
+                <h3>{related.venueAddress}</h3>
+                <Link className="button button--secondary" to={`/venue-staff/bookings/${related.bookingId}`}
+                  aria-label={`View Booking for ${related.venueAddress}`}>View Booking</Link>
                 <dl className="venue-card-preview__information booking-related-card__timings">
                   <div><dt>Booking window (SGT)</dt><dd>{formatEventTimeRange(related.startDatetime, related.endDatetime)}</dd></div>
                   <div><dt>Venue occupied (SGT)</dt><dd>{formatEventTimeRange(related.effectiveStart, related.effectiveEnd)}</dd></div>

@@ -1,4 +1,4 @@
-// @stories DEV16 VS17 VS02 VS03 VS04 VS09 VS-C3 VS-C4
+// @stories VS16 DEV16 VS17 VS02 VS03 VS04 VS09 VS-C3 VS-C4
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -30,7 +30,7 @@ function page(path = '/venue-staff/catalogue') {
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
-describe('DEV16 booking detail coverage', () => {
+describe('VS16 DEV16 booking detail coverage', () => {
   it('DEV16 (boundary): previous on the first booking cannot navigate to an undefined record', async () => {
     const fetch = vi.fn(async (url: string) => response(url.endsWith('/bookings') ? [booking] : booking))
     vi.stubGlobal('fetch', fetch)
@@ -881,7 +881,7 @@ it.each([{facilities: ['stage']}, {facilities: []}])('VS02 (boundary): details d
     .toHaveTextContent(facilities.length ? 'Stage' : 'None specified')
 })
 
-it('VS02 VS03 (cross-cutting): shows identity and read-only related booking windows without additional decision controls', async () => {
+it('VS16 VS02 VS03 (cross-cutting): shows identity and related booking links without additional decision controls', async () => {
   const current = {...booking, relatedBookings: [{bookingId: 'b2', venueId: 'v2', venueAddress: 'Breakout room', status: 'pending',
     startDatetime: '2027-04-01T02:00:00Z', endDatetime: '2027-04-01T03:00:00Z', effectiveStart: '2027-04-01T01:30:00Z', effectiveEnd: '2027-04-01T03:30:00Z'}]}
   vi.stubGlobal('fetch', vi.fn(async () => response(current)))
@@ -897,5 +897,23 @@ it('VS02 VS03 (cross-cutting): shows identity and read-only related booking wind
   expect(related).toHaveTextContent('10:00 am')
   expect(related).toHaveTextContent('09:30 am')
   expect(within(related).queryByRole('button')).not.toBeInTheDocument()
-  expect(within(related).queryByRole('link')).not.toBeInTheDocument()
+  expect(within(related).getByRole('link', { name: 'View Booking for Breakout room' })).toHaveAttribute('href', '/venue-staff/bookings/b2')
+})
+
+describe('VS16 related booking navigation', () => {
+  it('VS16 (happy): opens the selected booking among multiple venues', async () => {
+    const relatedBookings = ['b2', 'b3'].map((id, index) => ({
+      bookingId: id, venueId: 'v' + (index + 2), venueAddress: 'Room ' + id, status: 'pending' as const,
+      startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime,
+      effectiveStart: booking.event.startDatetime, effectiveEnd: booking.event.endDatetime,
+    }))
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => response(url.endsWith('/bookings') ? [booking] : { ...booking,
+      bookingId: url.includes('/venue-bookings/b3') ? 'b3' : 'b1', relatedBookings,
+    })))
+    page('/venue-staff/bookings/b1?from=booking-approvals')
+    const related = await screen.findByRole('region', { name: 'Other bookings for this event' })
+    expect(within(related).getByRole('link', { name: 'View Booking for Room b2' })).toHaveAttribute('href', '/venue-staff/bookings/b2')
+    await userEvent.click(within(related).getByRole('link', { name: 'View Booking for Room b3' }))
+    await vi.waitFor(() => expect(screen.getByRole('region', { name: 'Booking identity' })).toHaveTextContent('Booking ID: b3'))
+  })
 })

@@ -46,7 +46,7 @@ export function OperationalIssuesPage() {
   }, [])
 
   return (
-    <div className="page">
+    <div className="page operational-issues-page">
       <PageHeader
         title="Venue operational issues"
         description="Issues affecting venues with your approved bookings."

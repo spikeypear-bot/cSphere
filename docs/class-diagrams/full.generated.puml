@@ -164,6 +164,7 @@ class AttendeeEventDetailsDto {
 	{field} -endDatetime : OffsetDateTime
 	{field} -eventId : UUID
 	{field} -eventName : String
+	{field} -expectedAttendance : Integer
 	{field} -registeredAt : OffsetDateTime
 	{field} -registrationCapacity : Integer
 	{field} -registrationClosesAt : OffsetDateTime
@@ -342,6 +343,7 @@ class ChangeRequestDto.Approve {
 
 
 class ChangeRequestDto.Create {
+	{field} -capacityConfirmed : Boolean
 	{field} -reason : String
 	{field} -requestId : UUID
 }
@@ -540,6 +542,7 @@ class ChangeRequestService {
 	{field} -published : ApplicationEventPublisher
 	{method} +approve ( coordinator : Caller , changeRequestId : UUID , acknowledged : List ) : View
 	{method} +create ( organiser : Caller , requestId : UUID , rawReason : String , details : SaveEventRequestRequest ) : View
+	{method} +create ( organiser : Caller , requestId : UUID , rawReason : String , details : SaveEventRequestRequest , capacityConfirmed : boolean ) : View
 	{method} +forEvent ( caller : Caller , eventId : UUID ) : List
 	{method} +forRequest ( caller : Caller , requestId : UUID ) : List
 	{method} +get ( caller : Caller , changeRequestId : UUID ) : View
@@ -1431,6 +1434,11 @@ class EquipmentRequestStateException {
 }
 
 
+class EquipmentRequirementCoverage {
+	{method}  {static} +covered ( event : Event , heldThroughout : ToLongFunction ) : boolean
+}
+
+
 class InvalidEquipmentRequestException {
 }
 
@@ -1498,6 +1506,7 @@ class EquipmentChangeReviewDto.Summary {
 
 class EquipmentChangeReviewDto.Values {
 	{field} -end : OffsetDateTime
+	{field} -equipmentItems : List<Map<String, Object>>
 	{field} -equipmentRequirements : String
 	{field} -start : OffsetDateTime
 }
@@ -2173,6 +2182,7 @@ interface EventRequestRepository {
 	{method}  {abstract} +findByOrganisationOrderByCreatedAtDesc ( organisation : String ) : List
 	{method}  {abstract} +findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc ( statuses : Collection ) : List
 	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+	{method}  {abstract} +findRequestIdByEventId ( eventId : UUID ) : Optional
 }
 
 
@@ -2357,6 +2367,7 @@ enum NotificationType {
 	{field} +request_cancelled
 	{field} +request_handed_over
 	{field} +request_submitted
+	{field} +safety_review_requested
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved
@@ -2433,6 +2444,7 @@ class NotificationService {
 	{method} +createRequestSubmittedNotifications ( leads : List , eventRequestId : UUID , eventName : String , message : String ) : void
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
+	{method} +createSafetyReviewRequestedNotifications ( recipients : List , eventId : UUID , eventName : String ) : void
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
 	{method} +createVenueBookingApprovedNotification ( coordinator : UUID , bookingId : UUID , eventId : UUID , eventName : String , venue : String ) : void
 	{method} +createVenueBookingCancelledNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String , reason : String ) : void
@@ -3695,7 +3707,9 @@ ChangeRequestService --> EventRequestRepository : requests
 ChangeRequestService --> EventRequestService : requestRules
 ChangeRequestService --> NotificationService : notifications
 ChangeRequestService --> UserRepository : users
+ChangeRequestService --> AttendeeRegistrationRepository : registrations
 ChangeRequestService --> EquipmentRequestAttentionService : equipmentAttention
+ChangeRequestService --> EquipmentRepository : equipmentCatalogue
 ChangeRequestService.Caller --> UserRole : role
 EquipmentRequestAttentionService --> EquipmentReservationService : reservations
 EquipmentRequestAttentionService --> EquipmentRequestRepository : requests
@@ -3831,6 +3845,7 @@ EquipmentChangeReviewService --> EquipmentReservationService : reservations
 EquipmentChangeReviewService --> EquipmentChangeReviewRepository : reviews
 EquipmentChangeReviewService --> EventRepository : events
 EquipmentChangeReviewService --> UserRepository : users
+EquipmentChangeReviewService --> EquipmentRepository : equipmentCatalogue
 EquipmentChangeReviewService --> EquipmentRequestRepository : requests
 TechnicalSupportNotificationService --> EquipmentRepository : equipment
 TechnicalSupportNotificationService --> EquipmentReservationService : reservations
@@ -3853,6 +3868,7 @@ EventReassignmentController --> EventReassignmentService : service
 CoordinatorEventsDto --> "0..*" CoordinatorEventsDto.HeldEvent : events
 CoordinatorEventsDto.HeldEvent --> EventDto : event
 EventCancellationRequestDto --> EventCancellationStatus : status
+EventDto --> "0..*" SubmitEquipmentRequest.Item : equipmentItems
 EventDto --> StatusView : journeyStatus
 EventReadinessDto --> "0..*" EventReadinessDto.Item : items
 EventReadinessDto --> StatusView : journeyStatus
@@ -3862,6 +3878,7 @@ OrganiserArrangementsDto --> "0..*" OrganiserArrangementsDto.Venue : venues
 OrganiserArrangementsDto --> StatusView : journeyStatus
 OrganiserArrangementsDto.Venue --> "0..*" VenueOperatingHourDto : operatingHours
 RegistrationInfoDto --> "0..*" RegistrationInfoDto.Attendee : attendees
+Event --> "0..*" SubmitEquipmentRequest.Item : equipmentItems
 Event --> EventStatus : status
 EventCancellationRequest --> EventCancellationStatus : status
 EventReassignmentRequest --> EventReassignmentStatus : status
@@ -3912,6 +3929,7 @@ EventRegistrationPeriodService --> EventRegistrationService : registrationInfo
 EventRegistrationPeriodService --> EventRequestRepository : eventRequests
 EventRegistrationService --> EventRegistrationRepository : registrations
 EventRegistrationService --> EventRepository : events
+EventRegistrationService --> EventRequestRepository : eventRequests
 EventService --> "0..*" EventStatus : ACTIVE_STATUSES
 EventService --> JourneyStatusResolver : statuses
 EventService --> EventRepository : repository
@@ -3928,6 +3946,7 @@ EventRequestController --> EventRequestService : service
 CoordinatorAssignmentsDto --> "0..*" CoordinatorAssignmentsDto.AssignedRequest : requests
 CoordinatorAssignmentsDto.AssignedRequest --> EventRequestDto : request
 EventRequestDto --> "0..*" AccessibilityFeature : accessibilityNeeds
+EventRequestDto --> "0..*" SubmitEquipmentRequest.Item : equipmentItems
 EventRequestDto --> StatusView : journeyStatus
 EventRequestDto --> EventRequestStatus : status
 EventRequestReviewDto --> "0..*" ActivityDto : timeline
@@ -3937,7 +3956,9 @@ ReviewQueueDto --> "0..*" EventRequestDto : awaitingOrganiser
 ReviewQueueDto --> "0..*" EventRequestDto : needsReview
 SaveEventRequestRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
 SaveEventRequestRequest --> "0..*" Facility : requiredFacilities
+SaveEventRequestRequest --> "0..*" SubmitEquipmentRequest.Item : equipmentItems
 EventRequest --> "0..*" AccessibilityFeature : accessibilityNeeds
+EventRequest --> "0..*" SubmitEquipmentRequest.Item : equipmentItems
 EventRequest --> EventRequestStatus : status
 UserNameLookup --> UserRepository : users
 EventRequestService --> ActivityService : activityService
@@ -3946,6 +3967,7 @@ EventRequestService --> EventRequestMapper : mapper
 EventRequestService --> EventRequestRepository : repository
 EventRequestService --> NotificationService : notificationService
 EventRequestService --> UserRepository : userRepository
+EventRequestService --> EquipmentRepository : equipmentCatalogue
 NotificationController --> NotificationService : service
 NotificationDto --> "0..*" NotificationChange : changes
 Notification --> "0..*" NotificationChange : notificationChanges

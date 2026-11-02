@@ -24,7 +24,8 @@ public record AttendeeEventDetailsDto(
         OffsetDateTime registeredAt,
         List<AttendeeVenue> venues,
         UUID registrationId,
-        String registrationStatus) {
+        String registrationStatus,
+        Integer expectedAttendance) {
 
     public record AttendeeVenue(UUID venueId, String name, String address, boolean unavailable) { }
 }

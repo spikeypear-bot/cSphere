@@ -68,6 +68,10 @@ public class EventRequest {
     @Column(name = "equipment_requirements")
     private String equipmentRequirements;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "equipment_items", columnDefinition = "jsonb")
+    private List<com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item> equipmentItems = new java.util.ArrayList<>();
+
     // This column is text[], not the shared `accessibilities` enum-array type
     // — see V4__event_request_accessibility_needs_as_text.sql and
     // docs/decision-log.md for why: Hibernate 7's array machinery could not

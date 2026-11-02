@@ -12,7 +12,10 @@ public final class EquipmentChangeReviewDto {
     }
 
     /** The compared fields before or after the change (AC8). */
-    public record Values(OffsetDateTime start, OffsetDateTime end, String equipmentRequirements) {
+    public record Values(OffsetDateTime start, OffsetDateTime end, String equipmentRequirements, List<java.util.Map<String,Object>> equipmentItems) {
+        public Values(OffsetDateTime start, OffsetDateTime end, String equipmentRequirements) {
+            this(start, end, equipmentRequirements, List.of());
+        }
     }
 
     /** A reservation; {@code flagged} while it no longer covered the event and is not yet reviewed (AC10, AC14). */

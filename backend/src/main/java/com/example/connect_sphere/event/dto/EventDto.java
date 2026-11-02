@@ -36,7 +36,19 @@ public record EventDto(
         /** EC08: the Safety Officer's latest feedback, when changes were requested. */
         String safetyFeedback,
         OffsetDateTime safetyApprovedAt,
-        OffsetDateTime confirmedAt) {
+        OffsetDateTime confirmedAt,
+        List<com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item> equipmentItems) {
+
+    public EventDto(UUID eventId, String eventName, String purpose, String description,
+            OffsetDateTime startDatetime, OffsetDateTime endDatetime, Integer expectedAttendance, UUID venueId,
+            List<String> accessibilityNeeds, List<String> requiredFacilities, Boolean registrationNeeds,
+            String organisation, String venueRequirements, String equipmentRequirements, String status,
+            String coordinatorName, String coordinatorEmail, StatusView journeyStatus, String safetyFeedback,
+            OffsetDateTime safetyApprovedAt, OffsetDateTime confirmedAt) {
+        this(eventId, eventName, purpose, description, startDatetime, endDatetime, expectedAttendance, venueId,
+                accessibilityNeeds, requiredFacilities, registrationNeeds, organisation, venueRequirements, equipmentRequirements,
+                status, coordinatorName, coordinatorEmail, journeyStatus, safetyFeedback, safetyApprovedAt, confirmedAt, List.of());
+    }
 
     /** Without the EC-NEW2/EC08 additions, for callers built before them. */
     public EventDto(UUID eventId, String eventName, String purpose, String description,

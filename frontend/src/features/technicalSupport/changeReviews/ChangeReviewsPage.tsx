@@ -1,32 +1,35 @@
+import { Link } from 'react-router-dom'
 import { PageHeader } from '../../../components/ui/PageHeader'
 import { formatEventDateTime } from '../../venueStaff/formatEventDateTime'
 import { TS } from '../shared/faultyEquipment'
 import { ResourceView } from '../../../components/ui/ResourceView'
 import { RowLink } from '../../../components/ui/RowLink'
-import { useResource } from '../../../lib/useResource'
+import { useRefreshingResource } from '../../../lib/useRefreshingResource'
 import { fetchChangeReviews } from './changeReviewApi'
 import { OUTCOME_LABELS, type ChangeReviewSummary } from './changeReview.types'
 import '../technicalSupport.css'
+import './changeReviews.css'
 
 export function ReviewBadge({ review }: { review: Pick<ChangeReviewSummary, 'needsReview' | 'outcome'> }) {
-  if (review.needsReview) return <span className="tech-badge tech-badge--warning">Needs review</span>
+  if (review.needsReview || !review.outcome) return <span className="dash-badge dash-badge--warning">Needs review</span>
   return (
-    <span className={`tech-badge ${review.outcome === 'needs_coordinator_action' ? 'tech-badge--danger' : 'tech-badge--success'}`}>
-      {OUTCOME_LABELS[review.outcome ?? 'still_suitable']}
+    <span className={`dash-badge ${review.outcome === 'needs_coordinator_action' ? 'dash-badge--danger' : 'dash-badge--success'}`}>
+      Recorded outcome: <span>{OUTCOME_LABELS[review.outcome]}</span>
     </span>
   )
 }
 
 /** TS11: approved event changes that affect equipment; those still needing review come first. */
 export function ChangeReviewsPage() {
-  const reviews = useResource(fetchChangeReviews, 'change-reviews')
+  const reviews = useRefreshingResource(fetchChangeReviews, 'change-reviews')
 
   return (
-    <section className="page">
+    <section className="page change-reviews-page">
       <PageHeader
         title="Change reviews"
         description="Approved event changes that affect equipment. Check each one against the event's reservations."
       />
+      <p className="field-hint">Reviewed badges show the outcome recorded for that change. Later changes or revised requests may have resolved it. See <Link to={`${TS}/requests?status=all`}>Equipment requests</Link> for current request statuses.</p>
       <ResourceView resource={reviews} loadingText="Loading change reviews…"
         errorText="The change reviews could not be loaded."
         emptyText="No approved changes have affected equipment yet."
@@ -38,6 +41,7 @@ export function ChangeReviewsPage() {
                 <RowLink to={`${TS}/change-reviews/${review.reviewId}`} className="card tech-row-card" titleAs="h2"
                   title={review.eventName} badges={<ReviewBadge review={review} />}>
                   <p>Change approved {formatEventDateTime(review.changedAt)}</p>
+                  {review.reviewedAt && <p>Reviewed {formatEventDateTime(review.reviewedAt)}{review.reviewedByName ? ` by ${review.reviewedByName}` : ''}</p>}
                 </RowLink>
               </li>
             ))}

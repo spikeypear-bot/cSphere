@@ -67,6 +67,37 @@ class EquipmentAvailabilityServiceTest {
     }
 
     @Test
+    @DisplayName("TS02 TS03 TS09 (negative): open damage excludes an unreserved unit from inventory and automatic allocation")
+    void openDamageExcludesUnreservedUnit() {
+        Equipment mixers = kind(3, true);
+        UUID id = mixers.getId();
+        when(equipment.openlyDamagedUnits(anyCollection(), eq(START), eq(END)))
+                .thenReturn(List.<Object[]>of(new Object[] {id, "MX-1"}));
+        when(equipment.openlyDamagedSerials(mixers.getId(), START, END)).thenReturn(List.of("MX-1"));
+
+        assertThat(calculator.forEquipment(mixers, START, END))
+                .isEqualTo(new EquipmentAvailabilityService.Availability(3, 0, 1, 2));
+        assertThat(calculator.unitsNotFree(mixers.getId(), START, END)).containsExactly("MX-1");
+        verify(logs, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("TS02 TS03 TS09 (boundary): a faulty reserved unit and duplicate damage reports consume stock once")
+    void faultyReservedUnitConsumesStockOnce() {
+        Equipment mixers = kind(3, true);
+        UUID id = mixers.getId();
+        List<EquipmentStatusPeriod> blocked = List.of(block(mixers, "MX-1"));
+        when(logs.findOverlappingForEquipments(anyCollection(), eq(START), eq(END)))
+                .thenReturn(List.of(new EquipmentLog(UUID.randomUUID(), id, 1, "MX-1", START, END)));
+        when(periods.findOverlapping(START, END)).thenReturn(blocked);
+        when(equipment.openlyDamagedUnits(anyCollection(), eq(START), eq(END)))
+                .thenReturn(List.<Object[]>of(new Object[] {id, "MX-1"}, new Object[] {id, "MX-1"}));
+
+        assertThat(calculator.forEquipment(mixers, START, END))
+                .isEqualTo(new EquipmentAvailabilityService.Availability(3, 1, 1, 2));
+    }
+
+    @Test
     @DisplayName("TS09 (happy): 10 owned, 3 + 2 reserved and 1 damaged leaves 4 available")
     void nonSerialisedKindSubtractsReservationsAndDamage() {
         Equipment mics = kind(10, false);
@@ -109,7 +140,7 @@ class EquipmentAvailabilityServiceTest {
     }
 
     @Test
-    @DisplayName("TS09 (cross-cutting): many kinds are worked out with one query each for reservations, blocks and damage, in the order given")
+    @DisplayName("TS09 (cross-cutting): many kinds use one query each for reservations, blocks, serialised damage and quantity damage, in the order given")
     void manyKindsUseOneQueryEach() {
         Equipment first = kind(5, false);
         Equipment second = kind(2, true);
@@ -122,6 +153,7 @@ class EquipmentAvailabilityServiceTest {
         verify(logs, times(1)).findOverlappingForEquipments(anyCollection(), any(), any());
         verify(periods, times(1)).findOverlapping(START, END);
         verify(equipment, times(1)).damagedQuantities(anyCollection(), any(), any());
+        verify(equipment, times(1)).openlyDamagedUnits(anyCollection(), any(), any());
     }
 
     @Test
@@ -132,5 +164,6 @@ class EquipmentAvailabilityServiceTest {
         verify(logs, never()).findOverlappingForEquipments(anyCollection(), any(), any());
         verify(periods, never()).findOverlapping(any(), any());
         verify(equipment, never()).damagedQuantities(anyCollection(), any(), any());
+        verify(equipment, never()).openlyDamagedUnits(anyCollection(), any(), any());
     }
 }

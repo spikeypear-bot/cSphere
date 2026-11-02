@@ -10,6 +10,7 @@ import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import { EVENT_BADGES, registrationBadge } from './attendeeStatus'
 import type { AttendeeEventListItem } from './AttendeeEventsPage'
 import type { RegistrationDetails } from './registrationView'
+import './AttendeePages.css'
 
 /** How many rows each panel shows before "View all". */
 const TOP = 5
@@ -31,7 +32,7 @@ export function AttendeeHomePage() {
   const greeting = greetingFor()
 
   return (
-    <section className="page">
+    <section className="page attendee-overview attendee-home">
       <PageHeader
         title={username ? `${greeting}, ${username}` : greeting}
         description={<p className="page-header__description" aria-live="polite">{summarise(registrations, events)}</p>}

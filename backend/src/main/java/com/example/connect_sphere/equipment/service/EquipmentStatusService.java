@@ -6,6 +6,7 @@ import com.example.connect_sphere.equipment.dto.UnitStatusPeriodResponse;
 import com.example.connect_sphere.equipment.entity.EquipmentStatus;
 import com.example.connect_sphere.equipment.entity.EquipmentStatusPeriod;
 import com.example.connect_sphere.equipment.entity.SerialisedEquipmentId;
+import com.example.connect_sphere.equipment.entity.SerialisedEquipment;
 import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
 import com.example.connect_sphere.equipment.repository.EquipmentRepository;
 import com.example.connect_sphere.equipment.repository.EquipmentStatusPeriodRepository;
@@ -65,8 +66,16 @@ public class EquipmentStatusService {
                     new SerialisedEquipmentId(p.getEquipmentId(), p.getSerialNumber()),
                     p.getStatus());
         }
+        List<SerialisedEquipment> units = unitRepository.findAll();
+        List<UUID> kindIds = units.stream().map(unit -> unit.getId().getEquipmentId()).distinct().toList();
+        if (!kindIds.isEmpty()) {
+            for (Object[] row : equipmentRepository.openlyDamagedUnits(kindIds, start, end)) {
+                blocked.putIfAbsent(new SerialisedEquipmentId((UUID) row[0], (String) row[1]),
+                        row[2] == null ? EquipmentStatus.FAULTY : EquipmentStatus.valueOf(row[2].toString()));
+            }
+        }
 
-        return unitRepository.findAll().stream()
+        return units.stream()
                 .map(unit -> EquipmentUnitResponse.from(
                         unit, blocked.getOrDefault(unit.getId(), EquipmentStatus.AVAILABLE)))
                 .sorted(Comparator.comparing(EquipmentUnitResponse::equipmentName)

@@ -53,7 +53,7 @@ public class ActivityService {
     /** Week 4 (Event Change Requests): the information whose change "may require
      * existing arrangements to be reconsidered". A change to any of these is Major. */
     static final List<String> IMPORTANT_FIELDS = List.of(
-            "startDatetime", "endDatetime", "expectedAttendance", "venueRequirements", "equipmentRequirements");
+            "startDatetime", "endDatetime", "expectedAttendance", "venueRequirements", "equipmentRequirements", "equipmentItems");
 
     /** What a caller says happened. {@code message}/{@code flaggedFields}/
      * statuses are optional per type; {@code eventId} is set once an Event
@@ -189,9 +189,21 @@ public class ActivityService {
         if (a instanceof Number na && b instanceof Number nb) {
             return new java.math.BigDecimal(na.toString()).compareTo(new java.math.BigDecimal(nb.toString())) == 0;
         }
+        if (a instanceof Map<?, ?> ma && b instanceof Map<?, ?> mb) {
+            return ma.keySet().equals(mb.keySet()) && ma.keySet().stream().allMatch(key -> sameValue(ma.get(key), mb.get(key)));
+        }
         if (a instanceof Collection<?> ca && b instanceof Collection<?> cb) {
-            return ca.stream().map(String::valueOf).sorted().toList()
-                    .equals(cb.stream().map(String::valueOf).sorted().toList());
+            if (ca.size() != cb.size()) return false;
+            var remaining = new java.util.ArrayList<>(cb);
+            for (Object value : ca) {
+                int match = -1;
+                for (int index = 0; index < remaining.size(); index++) {
+                    if (sameValue(value, remaining.get(index))) { match = index; break; }
+                }
+                if (match < 0) return false;
+                remaining.remove(match);
+            }
+            return true;
         }
         return java.util.Objects.equals(a, b);
     }
