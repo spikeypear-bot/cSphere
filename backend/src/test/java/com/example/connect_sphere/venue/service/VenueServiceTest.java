@@ -163,7 +163,7 @@ class VenueServiceTest {
     void returnsFieldMessagesInExistingApiErrorShape() {
         var exception = catchThrowableOfType(() -> service.createVenue(
                 new CreateVenueDto(null, null, null, null, null, null, null)), InvalidVenueException.class);
-        var response = new ApiExceptionHandler().handleInvalidVenue(exception);
+        var response = new ApiExceptionHandler().handleUnprocessable(exception);
         assertThat(response.getStatusCode().value()).isEqualTo(422);
         assertThat(response.getBody().message()).contains("venueAddress", "venueCapacity",
                 "supportedLayouts");
