@@ -206,7 +206,7 @@
 							<rules>
 								<rule>
 									<element>PACKAGE</element>
-									<includes><include>com/example/connect_sphere/venuemap</include></includes>
+									<includes><include>com.example.connect_sphere.venuemap.*</include></includes>
 									<limits>
 										<limit><counter>INSTRUCTION</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
 										<limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>

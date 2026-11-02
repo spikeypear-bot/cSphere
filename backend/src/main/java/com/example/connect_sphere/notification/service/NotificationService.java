@@ -16,8 +16,8 @@ import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationChange;
 import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
-import com.example.connect_sphere.attendee.AttendeeRegistration;
-import com.example.connect_sphere.attendee.AttendeeRegistrationRepository;
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
 
 /** Database notices join the triggering transaction through a durable outbox.
  * Delivery retries after commit; transactional requirement and hold notices remain atomic. */
@@ -531,7 +531,7 @@ public class NotificationService {
     /** VS17: database notification and review commit with approval, like hold expiry. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void createVenueRequirementChangedNotifications(List<UUID> recipients,
-            com.example.connect_sphere.changerequest.VenueRequirementReview review, String changes) {
+            com.example.connect_sphere.changerequest.entity.VenueRequirementReview review, String changes) {
         for (UUID recipient : recipients) {
             var notification = base(recipient, NotificationType.venue_requirement_changed, review.getEventName());
             notification.setRequirementReviewId(review.getReviewId());
@@ -554,7 +554,7 @@ public class NotificationService {
     /** VS17: notify the current assigned coordinator in the outcome transaction. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void createVenueRequirementReviewedNotification(UUID coordinator,
-            com.example.connect_sphere.changerequest.VenueRequirementReview review, String message) {
+            com.example.connect_sphere.changerequest.entity.VenueRequirementReview review, String message) {
         if (coordinator == null) return;
         var n=base(coordinator,NotificationType.venue_requirement_reviewed,review.getEventName());
         n.setEventId(review.getEventId()); n.setVenueBookingId(review.getBookingId());

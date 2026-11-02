@@ -2,18 +2,20 @@ package com.example.connect_sphere.changerequest;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
+import com.example.connect_sphere.changerequest.service.ChangeImpactService;
 import java.time.OffsetDateTime;
 import java.util.*;
 import org.junit.jupiter.api.*;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.Booking;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 import com.example.connect_sphere.venuebooking.hold.VenueHoldRepository;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 
 @Tag("VS17") @Tag("unit")
 class VenueSuitabilitySummaryTest {

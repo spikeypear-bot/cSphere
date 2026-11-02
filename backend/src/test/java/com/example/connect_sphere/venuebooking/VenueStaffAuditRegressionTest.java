@@ -18,7 +18,7 @@ import com.example.connect_sphere.venuebooking.dto.*;
 import com.example.connect_sphere.venuebooking.service.*;
 import com.example.connect_sphere.venuebooking.hold.*;
 import com.example.connect_sphere.event.service.EventLifecycleService;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 
 /** VS17 audit regressions exercise actual PostgreSQL transactions and row locks. */
 @SpringBootTest @Tag("integration") @Tag("VS17") @Tag("EC-C2") @Tag("VS-C3")
@@ -198,9 +198,9 @@ class VenueStaffAuditRegressionTest {
         UUID v=venue();UUID issue=UUID.randomUUID();
         jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,affected_from,affected_until,created_by) VALUES (?,?,'Setup restriction',?,?,?)",issue,v,at(9),at(10),vs);
         jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,created_by) VALUES (?,?,'Information',?)",UUID.randomUUID(),v,vs);
-        var durations=new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(30,0);
+        var durations=new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(30,0);
         assertThat(availability.schedule(v,at(8),at(12)).operationalIssues()).extracting(i -> i.issueId()).containsExactly(issue);
         assertThat(availability.hasOperationalIssue(v,at(10),at(12),durations)).isTrue();
-        assertThat(availability.hasOperationalIssue(v,at(10),at(12),new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0,0))).isFalse();
+        assertThat(availability.hasOperationalIssue(v,at(10),at(12),new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(0,0))).isFalse();
     }
 }

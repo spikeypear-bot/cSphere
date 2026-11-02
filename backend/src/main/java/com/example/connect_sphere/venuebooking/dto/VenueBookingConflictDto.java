@@ -14,7 +14,7 @@ public record VenueBookingConflictDto(UUID bookingId, String eventName,
                 start.minusMinutes(setup), end.plusMinutes(turnaround));
     }
 
-    public static VenueBookingConflictDto from(com.example.connect_sphere.venueavailability.AvailabilityModels.Booking b) {
+    public static VenueBookingConflictDto from(com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking b) {
         return new VenueBookingConflictDto(b.bookingId(), b.eventName(), b.startDateTime(), b.endDateTime(),
                 Math.toIntExact(java.time.Duration.between(b.effectiveStart(), b.startDateTime()).toMinutes()),
                 Math.toIntExact(java.time.Duration.between(b.endDateTime(), b.effectiveEnd()).toMinutes()),

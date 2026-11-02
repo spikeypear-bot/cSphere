@@ -15,13 +15,13 @@ import com.example.connect_sphere.event.service.EventLifecycleException;
 import com.example.connect_sphere.event.service.EventLifecycleValidationException;
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.event.service.RegistrationPeriodException;
-import com.example.connect_sphere.attendee.AttendeeRegistrationException;
+import com.example.connect_sphere.attendee.service.AttendeeRegistrationException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.event.service.EventReassignmentNotFoundException;
 import com.example.connect_sphere.event.service.EventReassignmentStateException;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStateException;
-import com.example.connect_sphere.equipmentrequest.InvalidEquipmentRequestException;
+import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestStateException;
+import com.example.connect_sphere.equipmentrequest.service.InvalidEquipmentRequestException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotEditableException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotFoundException;
 import com.example.connect_sphere.eventrequest.service.EventRequestNotPendingException;
@@ -41,8 +41,8 @@ import com.example.connect_sphere.venue.service.InvalidVenueException;
 import com.example.connect_sphere.user.service.InvalidRefreshTokenException;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venueissue.service.InvalidVenueOperationalIssueException;
-import com.example.connect_sphere.safety.IncompleteReadinessException;
-import com.example.connect_sphere.safety.InvalidReadinessUpdateException;
+import com.example.connect_sphere.safety.service.IncompleteReadinessException;
+import com.example.connect_sphere.safety.service.InvalidReadinessUpdateException;
 
 /** One place that turns domain exceptions into HTTP responses, so every
  * controller can just let them propagate. Add a handler here per new domain
@@ -279,8 +279,8 @@ public class ApiExceptionHandler {
     }
 
     /** D33: a refused reservation line names its equipment item. */
-    @ExceptionHandler(com.example.connect_sphere.equipment.ReservationLineException.class)
-    public ResponseEntity<ApiError> handleReservationLine(com.example.connect_sphere.equipment.ReservationLineException ex) {
+    @ExceptionHandler(com.example.connect_sphere.equipment.service.ReservationLineException.class)
+    public ResponseEntity<ApiError> handleReservationLine(com.example.connect_sphere.equipment.service.ReservationLineException ex) {
         return ResponseEntity.status(ex.getStatusCode()).body(ApiError.forEquipment(ex.getReason(), ex.getEquipmentId()));
     }
 

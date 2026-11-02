@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.connect_sphere.attendee.service.AttendeeRegistrationService;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;

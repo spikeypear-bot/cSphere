@@ -1,0 +1,42 @@
+package com.example.connect_sphere.attendee.controller;
+
+import com.example.connect_sphere.attendee.dto.AttendeeEventDetailsDto;
+import com.example.connect_sphere.attendee.dto.AttendeeEventListItemDto;
+import com.example.connect_sphere.attendee.dto.AttendeeRegistrationDto;
+import com.example.connect_sphere.attendee.service.AttendeeEventDetailsService;
+import com.example.connect_sphere.attendee.service.AttendeeRegistrationService;
+import java.util.UUID;
+
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.PostMapping;
+
+@RestController
+@RequestMapping("/api/attendee/events")
+public class AttendeeEventDetailsController {
+    private final AttendeeEventDetailsService service;
+    private final AttendeeRegistrationService registrations;
+
+    public AttendeeEventDetailsController(AttendeeEventDetailsService service, AttendeeRegistrationService registrations) {
+        this.service = service;
+        this.registrations = registrations;
+    }
+
+    @GetMapping
+    public java.util.List<AttendeeEventListItemDto> list(Authentication authentication) {
+        return service.list(UUID.fromString(authentication.getName()));
+    }
+
+    @GetMapping("/{eventId}")
+    public AttendeeEventDetailsDto get(@PathVariable UUID eventId, Authentication authentication) {
+        return service.get(eventId, UUID.fromString(authentication.getName()));
+    }
+
+    @PostMapping("/{eventId}/registrations")
+    public AttendeeRegistrationDto register(@PathVariable UUID eventId, Authentication authentication) {
+        return registrations.register(eventId, UUID.fromString(authentication.getName()));
+    }
+}

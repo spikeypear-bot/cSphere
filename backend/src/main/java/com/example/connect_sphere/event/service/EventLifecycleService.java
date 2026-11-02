@@ -17,9 +17,9 @@ import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.event.dto.EventReadinessDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
@@ -31,7 +31,7 @@ import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.hold.VenueHoldService;
@@ -79,7 +79,7 @@ public class EventLifecycleService {
     private final JourneyStatusResolver statuses;
     private final Clock clock;
     @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.venuebooking.service.BookingPlanService bookingPlan;
-    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.VenueSafetyChecklist venueChecklist;
+    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.service.VenueSafetyChecklist venueChecklist;
 
     /** EO07: releases a cancelled event's active venue holds. Null only for
      * callers built before EO07 that never cancel an event. */

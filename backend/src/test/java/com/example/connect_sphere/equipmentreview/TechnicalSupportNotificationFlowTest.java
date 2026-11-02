@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.example.connect_sphere.equipmentreview.service.TechnicalSupportNotificationService;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -28,8 +29,8 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.example.connect_sphere.changerequest.ChangeApproved;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestSubmitted;
+import com.example.connect_sphere.changerequest.entity.ChangeApproved;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestSubmitted;
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
