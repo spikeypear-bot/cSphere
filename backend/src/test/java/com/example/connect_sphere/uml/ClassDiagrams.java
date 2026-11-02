@@ -58,8 +58,8 @@ final class ClassDiagrams {
 
     // Domain level: drop web/service/persistence plumbing (including
     // configuration and scheduled jobs kept next to a feature, like
-    // HoldClockConfig and VenueHoldExpiryJob), request/response shapes, the
-    // mock scaffolding and nested helper types. The last line names
+    // VenueHoldExpiryJob), request/response shapes and nested helper types,
+    // and the shared time constants (common.time). The last line names
     // the @Components that live outside a service package, AvailabilityModels
     // (it only holds nested records), StatusView (the status shape every API
     // response carries) and OperatingHours (a static helper with no state).
@@ -68,17 +68,16 @@ final class ClassDiagrams {
     static final String NOT_DOMAIN = String.join("|",
             NOT_DESIGN,
             ".*\\$.*",
-            ".*\\.(mock|config|common\\.web|common\\.time|controller|service|repository|dto|mapper)\\..*",
+            ".*\\.(config|common\\.web|common\\.time|controller|service|repository|dto|mapper)\\..*",
             ".*(Controller|Service|Repository|Dto|Response|Exception|Seeder|Application|MapperImpl|Config|Job|VenueSafetyChecklist)",
             ".*\\.(Add|Create|Reserve|Submit|Update|SafetyApproval)\\w*",
             // VS17: retry orchestration is application plumbing, not a domain object.
             ".*\\.(JourneyStatusResolver|ExistingTimingConflictScan|AvailabilityModels|StatusView|OperatingHours|VenueReplanQueue|VenueReplanWorker|AttendeeWithdrawalPolicy)");
 
-    // Full level: everything except the mock scaffolding and MapStruct's
-    // generated *MapperImpl classes (the hand-written mapper interfaces stay).
+    // Full level: everything except MapStruct's generated *MapperImpl classes
+    // (the hand-written mapper interfaces stay).
     private static final String NOT_HAND_WRITTEN = String.join("|",
             NOT_DESIGN,
-            ".*\\.mock\\..*",
             ".*MapperImpl");
 
     // Auth level: user/, config/ and common/web/ hold the auth classes, minus

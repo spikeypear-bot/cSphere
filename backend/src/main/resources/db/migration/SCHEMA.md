@@ -477,9 +477,9 @@ a notification is a historical record) and three `notification_type` values:
 
 ---
 
-### `mock`, `mock_references` (V1)
-Scaffolding from the mock API used to demonstrate the MVC layering. Not part of the domain —
-delete once real entities exist.
+### `mock`, `mock_references` (V1, dropped in V68)
+Scaffolding from the mock API used to demonstrate the MVC layering. Not part of the domain;
+dropped by V68 together with the backend `mock` package.
 
 ---
 
@@ -876,3 +876,10 @@ V53 added `notification_type` `equipment_request_attention` (EC-NEW3, D37) but n
 equipment request needing attention was refused on delivery and stayed in `notification_outbox`.
 V67 extends the constraint in place (V65's pattern, keeping every prior branch): an
 `equipment_request_attention` notice needs `event_id` and `message`.
+
+## V68 update — the mock scaffolding is gone
+
+V68 drops `mock_references` and `mock` (V1). They backed a demo slice (the backend `mock`
+package: controller → service → repository → entity → DTO → mapper) that showed the MVC layering
+before real entities existed; the package was removed in the same change. V1 itself is unchanged,
+since applied migrations are never edited.
