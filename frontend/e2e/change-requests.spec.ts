@@ -130,7 +130,7 @@ async function reservationWindows(request: APIRequestContext, eventId: string) {
     .map((r) => `${r.quantity} ${new Date(r.loanedFrom).toISOString()}–${new Date(r.loanedUntil).toISOString()}`)
 }
 
-test('EC-NEW3 AC24, AC25, AC36, AC39 (negative): the coordinator rejects a change with a reason; the event keeps its details and the organiser is told why', async ({ browser, request }) => {
+test('EC-NEW3 AC24, AC25, AC36, AC39, EO03 AC36, AC37, AC38 (negative): the coordinator rejects a change with a reason; the event keeps its details and the organiser is told why', async ({ browser, request }) => {
   test.setTimeout(180_000)
   const day = uniqueDay()
   const eventName = uniqueName('E2E Rejected Change')
@@ -165,7 +165,7 @@ test('EC-NEW3 AC24, AC25, AC36, AC39 (negative): the coordinator rejects a chang
     expect(event.status).toBe('pending')
   })
 
-  await test.step('EC-NEW3 AC39: the organiser is told of the rejection and its reason', async () => {
+  await test.step('EC-NEW3 AC39, EO03 AC36, AC37, AC38: the organiser is told of the rejection and its reason, and sees who rejected it', async () => {
     const organiser = await signedIn(browser, 'eo1')
     await expect((await openBell(organiser)).getByRole('listitem').filter({ hasText: `Your change request was rejected: ${reason}` })).toHaveCount(1)
     await organiser.goto(`/organiser/requests/${requestId}/changes`)
