@@ -108,6 +108,7 @@ interface RequestActivityRepository {
 
 class ActivityService {
 	{field} {static} ~IMPORTANT_FIELDS : List<String>
+	{field} -clock : Clock
 	{method} +record ( entry : Entry ) : void
 	{method}  {static} +sameValue ( a : Object , b : Object ) : boolean
 	{method} +submittedAt ( requestIds : Collection ) : Map
@@ -467,6 +468,7 @@ interface VenueRequirementReviewRepository {
 
 
 class BookingAssessmentService {
+	{field} -clock : Clock
 	{field} -jdbc : JdbcTemplate
 	{field} -publisher : ApplicationEventPublisher
 	{method} +forCoordinator ( eventId : UUID , actor : UUID ) : List
@@ -568,6 +570,7 @@ class VenueRequirementChangeService {
 
 
 class VenueRequirementReviewService {
+	{field} -clock : Clock
 	{field} -jdbc : JdbcTemplate
 	{method} +decide ( bookingId : UUID , reviewId : UUID , actor : UUID , decision : Decision ) : View
 	{method} +forBooking ( bookingId : UUID ) : List
@@ -659,6 +662,12 @@ class StatusView {
 }
 
 
+class SingaporeTime {
+	{field} {static} +DISPLAY : DateTimeFormatter
+	{field} {static} +ZONE : ZoneId
+}
+
+
 class ApiError {
 	{field} -equipmentId : UUID
 	{field} -fieldErrors : Map<String, String>
@@ -730,11 +739,20 @@ class AuthenticationConfig {
 }
 
 
+class ClockConfig {
+	{method} +clock () : Clock
+}
+
+
 class JwtConfig {
 	{field} -key : SecretKey
 	{method} +jwtAuthenticationConverter () : JwtAuthenticationConverter
 	{method} +jwtDecoder () : JwtDecoder
 	{method} +jwtEncoder () : JwtEncoder
+}
+
+
+class SchedulingConfig {
 }
 
 
@@ -1997,6 +2015,7 @@ class EventService {
 
 class OrganiserVenueNotices {
 	{field} {static} -SINGAPORE : DateTimeFormatter
+	{field} -clock : Clock
 	{method} +confirmed ( event : Event , at : OffsetDateTime ) : void
 	{method} +on ( change : VenueArrangementChanged ) : void
 	{method} +reconfirmed ( event : Event ) : void
@@ -2410,6 +2429,7 @@ class NotificationOutbox {
 
 class NotificationService {
 	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
+	{field} -clock : Clock
 	{field} {static} -log : Logger
 	{method} +createAttendeeEventCancellationNotifications ( eventId : UUID , eventName : String , originalStart : OffsetDateTime , originalEnd : OffsetDateTime , reason : String , cancelledAt : OffsetDateTime ) : void
 	{method} +createAttendeeEventChangeNotifications ( changeRequestId : UUID , eventId : UUID , eventName : String , changes : List , committedAt : OffsetDateTime ) : void
@@ -2687,6 +2707,7 @@ class InvalidRefreshTokenException {
 
 class RefreshTokenService {
 	{field} {static} -TOKEN_BYTES : int
+	{field} -clock : Clock
 	{field} {static} -log : Logger
 	{field} -random : SecureRandom
 	{field} -ttl : Duration
@@ -2702,6 +2723,7 @@ class RefreshTokenService.Rotation {
 
 
 class TokenService {
+	{field} -clock : Clock
 	{field} -encoder : JwtEncoder
 	{field} -issuer : String
 	{field} -ttl : Duration
@@ -2995,6 +3017,7 @@ class AvailabilityRepository {
 
 
 class AvailabilityService {
+	{field} -clock : Clock
 	{field} -publisher : ApplicationEventPublisher
 	{method} +affected ( bookingId : UUID ) : boolean
 	{method} +conflicts ( venueId : UUID , eventId : UUID , start : OffsetDateTime , end : OffsetDateTime ) : List
@@ -3231,7 +3254,6 @@ class VenueOptionDto {
 
 class VenueOptionDto.ConflictDto {
 	{field} {static} +ANOTHER_EVENT : String
-	{field} {static} -WHEN : DateTimeFormatter
 	{field} -description : String
 	{field} -endDatetime : OffsetDateTime
 	{field} -startDatetime : OffsetDateTime
@@ -3315,11 +3337,6 @@ class VenueEvent <<Entity>>  {
 	{field} -requiredFacilities : List<String>
 	{field} -startDatetime : OffsetDateTime
 	{field} -venueRequirements : String
-}
-
-
-class HoldClockConfig {
-	{method} +venueHoldClock () : Clock
 }
 
 
@@ -3461,6 +3478,7 @@ class VenueBookingRequestService {
 	{field} {static} ~MAX_TEXT_LENGTH : int
 	{field} {static} -SGT : DateTimeFormatter
 	{field} -arrangementEvents : ApplicationEventPublisher
+	{field} -clock : Clock
 	{method} +bookingsForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +bookingsForSafetyOfficer ( eventId : UUID ) : List
 	{method} +cancel ( coordinatorId : UUID , eventId : UUID , bookingId : UUID , reason : String ) : EventVenueBookingDto
@@ -3478,6 +3496,7 @@ class VenueBookingRequestService {
 class VenueBookingService {
 	{field} {static} -MAX_TEXT_LENGTH : int
 	{field} -changeLog : ApplicationEventPublisher
+	{field} -clock : Clock
 	{field} -entityManager : EntityManager
 	{method} +approve ( bookingId : UUID ) : VenueBookingDto
 	{method} +approve ( bookingId : UUID , convertingHoldId : UUID ) : VenueBookingDto
@@ -3632,6 +3651,7 @@ class VenueMapRepository {
 
 class VenueMapService {
 	{field} {static} -SINGAPORE : ZoneId
+	{field} -clock : Clock
 	{method} +activity ( date : LocalDate ) : List
 	{method} +bookings ( venueId : UUID , date : LocalDate , includePast : boolean ) : List
 }
