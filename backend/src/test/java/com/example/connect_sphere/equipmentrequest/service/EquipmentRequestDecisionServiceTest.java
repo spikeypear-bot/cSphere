@@ -7,9 +7,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentLog;
-import com.example.connect_sphere.equipment.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.entity.EquipmentLog;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
 import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestDetailsResponse;
 import com.example.connect_sphere.equipmentrequest.dto.UpdateEquipmentRequestStatus;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;

@@ -12,7 +12,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
 
 @Tag("unit")
 @Tag("TS11")

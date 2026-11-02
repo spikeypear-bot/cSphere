@@ -22,8 +22,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.EventChange;
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Detail;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.OutcomeRequest;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Reservation;

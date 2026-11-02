@@ -1,8 +1,8 @@
 package com.example.connect_sphere.equipmentrequest.service;
 
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentRepository;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestDetailsResponse;
 import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestLineResponse;
 import com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest;

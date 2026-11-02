@@ -30,7 +30,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
-import com.example.connect_sphere.equipment.Equipment;
+import com.example.connect_sphere.equipment.entity.Equipment;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;

@@ -27,8 +27,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.OutcomeRequest;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;

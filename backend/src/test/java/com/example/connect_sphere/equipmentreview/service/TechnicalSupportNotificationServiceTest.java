@@ -25,11 +25,11 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.example.connect_sphere.changerequest.service.ChangeApproved;
-import com.example.connect_sphere.equipment.EquipmentRepository;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository;
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;

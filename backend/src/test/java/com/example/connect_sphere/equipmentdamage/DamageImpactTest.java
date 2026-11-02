@@ -17,9 +17,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentLog;
-import com.example.connect_sphere.equipment.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.entity.EquipmentLog;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageReport;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageReportRepository;
 import com.example.connect_sphere.equipmentdamage.service.DamageImpact;

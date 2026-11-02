@@ -25,10 +25,10 @@ import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
 import com.example.connect_sphere.changerequest.service.ChangeApproved;
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentRepository;
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;

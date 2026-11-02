@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.EventChange;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;

@@ -2,6 +2,8 @@ package com.example.connect_sphere.equipment;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.connect_sphere.equipment.entity.EquipmentLog;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
 import java.time.Instant;
 import java.util.List;
 import java.util.UUID;

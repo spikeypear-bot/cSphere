@@ -7,7 +7,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
 
 /**
  * TS11 AC4/AC6: does an approved change affect an event's equipment? It does

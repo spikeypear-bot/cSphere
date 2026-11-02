@@ -15,7 +15,7 @@ import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booki
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 import com.example.connect_sphere.venuebooking.hold.VenueHoldRepository;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 
 @Tag("VS17") @Tag("unit")
 class VenueSuitabilitySummaryTest {

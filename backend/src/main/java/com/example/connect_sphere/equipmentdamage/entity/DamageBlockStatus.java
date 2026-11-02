@@ -1,6 +1,6 @@
 package com.example.connect_sphere.equipmentdamage.entity;
 
-import com.example.connect_sphere.equipment.EquipmentStatus;
+import com.example.connect_sphere.equipment.entity.EquipmentStatus;
 
 /**
  * TS09 (V39): the TS03 block a damage report asks to put on the damaged unit

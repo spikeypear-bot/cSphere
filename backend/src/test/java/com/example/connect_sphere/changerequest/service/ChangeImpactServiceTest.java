@@ -18,8 +18,8 @@ import org.junit.jupiter.api.Test;
 
 import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.ImpactItem;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
-import com.example.connect_sphere.equipment.EquipmentReservationResponse;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;

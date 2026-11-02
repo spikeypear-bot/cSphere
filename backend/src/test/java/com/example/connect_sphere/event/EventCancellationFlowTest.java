@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.connect_sphere.equipment.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
 import com.example.connect_sphere.event.service.EventLifecycleService;
 import com.example.connect_sphere.event.service.EventLifecycleService.SafetyDecision;
 import com.example.connect_sphere.testsupport.FlowSupport;

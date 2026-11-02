@@ -13,8 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.EventChange;
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentRepository;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
 import com.example.connect_sphere.equipmentdamage.dto.EventEquipmentDamageDto;
 import com.example.connect_sphere.equipmentdamage.dto.ResolveShortfallRequest;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome;

@@ -1,6 +1,6 @@
 package com.example.connect_sphere.equipmentrequest.entity;
 
-import com.example.connect_sphere.equipment.Equipment;
+import com.example.connect_sphere.equipment.entity.Equipment;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;

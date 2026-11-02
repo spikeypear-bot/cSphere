@@ -6,9 +6,9 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentRepository;
-import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestLineResponse;
 import com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
