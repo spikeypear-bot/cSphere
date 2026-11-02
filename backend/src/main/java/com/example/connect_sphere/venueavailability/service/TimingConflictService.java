@@ -1,5 +1,6 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.service;
 
+import com.example.connect_sphere.venueavailability.repository.AvailabilityRepository;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.Booking;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking;
 
 /** Detects existing overlaps without changing any booking or event. */
 @Service

@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.service;
 
 import java.time.LocalTime;
 import java.time.ZoneId;

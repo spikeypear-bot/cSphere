@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.service;
 
 import static org.assertj.core.api.Assertions.*;
 import java.time.LocalDate;
@@ -7,7 +7,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.Request;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Request;
 
 @Tag("unit")
 @Tag("VS01")

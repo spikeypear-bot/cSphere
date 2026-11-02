@@ -3,6 +3,8 @@ package com.example.connect_sphere.venuebooking.service;
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
 import static org.mockito.Mockito.*;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.TimingConflictService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -19,7 +21,6 @@ import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
-import com.example.connect_sphere.venueavailability.*;
 import com.example.connect_sphere.venuebooking.entity.*;
 import com.example.connect_sphere.venuebooking.repository.*;
 

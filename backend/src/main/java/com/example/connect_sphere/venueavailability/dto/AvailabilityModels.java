@@ -1,5 +1,6 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.dto;
 
+import com.example.connect_sphere.venueavailability.service.TimingConflictService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;

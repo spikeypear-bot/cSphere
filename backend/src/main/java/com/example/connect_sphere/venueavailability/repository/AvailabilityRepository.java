@@ -1,11 +1,13 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.repository;
 
+import com.example.connect_sphere.venueavailability.service.EffectivePeriod;
+import com.example.connect_sphere.venueavailability.service.OperatingHours;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.*;
 
 /** SQL read models share the JPA transaction and connection through JpaTransactionManager. */
 @Repository

@@ -1,5 +1,6 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.service;
 
+import com.example.connect_sphere.venueavailability.repository.AvailabilityRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,7 +15,7 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venuebooking.service.InvalidVenueBookingException;
 import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.*;
 
 @Service
 @Transactional(readOnly = true)

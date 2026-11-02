@@ -45,8 +45,8 @@ public class VenueService {
         validate(input);
         if (input.operatingHours() == null || input.operatingHours().isEmpty()) throw new InvalidVenueException(List.of("operatingHours must contain at least one operating day"));
         Venue venue = new Venue();
-        venue.setSetupMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.setupMinutes(), 0));
-        venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.turnaroundMinutes(), 0));
+        venue.setSetupMinutes(com.example.connect_sphere.venueavailability.service.EffectivePeriod.minutes(input.setupMinutes(), 0));
+        venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.service.EffectivePeriod.minutes(input.turnaroundMinutes(), 0));
         venue.setVenueId(UUID.randomUUID());
         venue.setVenueAddress(input.venueAddress().strip());
         venue.setVenueName(input.venueName() == null || input.venueName().isBlank()
@@ -89,8 +89,8 @@ public class VenueService {
                 || !new HashSet<>(current.venueAccessibilities()).equals(new HashSet<>(merged.venueAccessibilities()))
                 || !new HashSet<>(current.venueFacilities()).equals(new HashSet<>(merged.venueFacilities()))
                 || input.getOperatingHours()!=null && !new HashSet<>(current.operatingHours()).equals(new HashSet<>(input.getOperatingHours()));
-        venue.setSetupMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.getSetupMinutes(), venue.getSetupMinutes()));
-        venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(input.getTurnaroundMinutes(), venue.getTurnaroundMinutes()));
+        venue.setSetupMinutes(com.example.connect_sphere.venueavailability.service.EffectivePeriod.minutes(input.getSetupMinutes(), venue.getSetupMinutes()));
+        venue.setTurnaroundMinutes(com.example.connect_sphere.venueavailability.service.EffectivePeriod.minutes(input.getTurnaroundMinutes(), venue.getTurnaroundMinutes()));
         if (input.getVenueCapacity() != null) venue.setVenueCapacity(merged.venueCapacity());
         if (input.getSupportedLayouts() != null) venue.setSupportedLayouts(labels(merged.supportedLayouts()));
         if (input.getVenueAccessibilities() != null) venue.setVenueAccessibilities(labels(merged.venueAccessibilities()));

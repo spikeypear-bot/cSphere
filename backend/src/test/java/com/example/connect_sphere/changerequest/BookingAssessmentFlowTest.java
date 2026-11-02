@@ -20,7 +20,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.dto.*;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import jakarta.persistence.EntityManager;
 
 @Tag("VS17") @Tag("VS07") @Tag("EO04") @Tag("EC08") @Tag("integration")
@@ -67,7 +67,7 @@ class BookingAssessmentFlowTest {
    .andExpect(jsonPath("$.items[?(@.key == 'venues')].state").value(org.hamcrest.Matchers.contains("outstanding")));
   assertThat(notifications()).isEqualTo(1);
   assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=? AND type::text='venue_arrangements_changed'",Integer.class,booking)).isGreaterThan(0);
-  assertThat(availability.conflictsForBooking(venue,UUID.randomUUID(),java.time.OffsetDateTime.parse("2027-03-10T01:00Z"),java.time.OffsetDateTime.parse("2027-03-10T04:00Z"),new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0,0))).hasSize(1);
+  assertThat(availability.conflictsForBooking(venue,UUID.randomUUID(),java.time.OffsetDateTime.parse("2027-03-10T01:00Z"),java.time.OffsetDateTime.parse("2027-03-10T04:00Z"),new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(0,0))).hasSize(1);
  }
  @Test @Transactional @DisplayName("VS17 (boundary): harmless capacity changes preserve approval and repeated invalid edits produce one alert")
  void deduplicate() throws Exception {
@@ -151,7 +151,7 @@ class BookingAssessmentFlowTest {
   mvc.perform(post("/api/events/"+event+"/venue-bookings/"+booking+"/cancel").with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isOk());
   em.flush();
   assertThat(statusOf(booking)).isEqualTo("cancelled"); assertThat(statusOf(other)).isEqualTo("approved");
-  assertThat(availability.conflictsForBooking(venue,UUID.randomUUID(),java.time.OffsetDateTime.parse("2027-03-10T01:00Z"),java.time.OffsetDateTime.parse("2027-03-10T04:00Z"),new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0,0))).isEmpty();
+  assertThat(availability.conflictsForBooking(venue,UUID.randomUUID(),java.time.OffsetDateTime.parse("2027-03-10T01:00Z"),java.time.OffsetDateTime.parse("2027-03-10T04:00Z"),new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(0,0))).isEmpty();
  }
  @Test @Transactional @DisplayName("VS17 (cross-cutting): approval snapshots and staff decisions survive a venue invalidation and assessment snapshots capture the edit")
  void preservedHistory() throws Exception {

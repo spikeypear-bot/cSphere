@@ -4,6 +4,8 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
@@ -20,7 +22,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
-import com.example.connect_sphere.venueavailability.*;
 import com.example.connect_sphere.venuebooking.hold.*;
 import com.example.connect_sphere.venuebooking.service.*;
 

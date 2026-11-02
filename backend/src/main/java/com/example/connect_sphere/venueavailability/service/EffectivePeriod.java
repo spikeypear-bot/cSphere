@@ -1,7 +1,7 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.service;
 
 import java.time.OffsetDateTime;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.Settings;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings;
 import com.example.connect_sphere.venuebooking.service.InvalidVenueBookingException;
 
 /** Operational occupancy; the advertised event timestamps are never changed. */

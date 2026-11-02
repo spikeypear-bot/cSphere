@@ -23,8 +23,8 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.*;
 import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.service.*;
 

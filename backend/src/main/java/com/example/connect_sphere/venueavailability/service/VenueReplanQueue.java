@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.service;
 
 import java.util.UUID;
 import org.springframework.context.event.EventListener;

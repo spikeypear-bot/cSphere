@@ -2,6 +2,10 @@ package com.example.connect_sphere.venuebooking;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.example.connect_sphere.venueavailability.controller.TimingConflictController;
+import com.example.connect_sphere.venueavailability.repository.AvailabilityRepository;
+import com.example.connect_sphere.venueavailability.service.EffectivePeriod;
+import com.example.connect_sphere.venueavailability.service.TimingConflictService;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -11,8 +15,7 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.jdbc.core.JdbcTemplate;
 import com.example.connect_sphere.venue.repository.VenueRepository;
-import com.example.connect_sphere.venueavailability.*;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.*;
 
 @Tag("unit")
 @Tag("VS-C4")

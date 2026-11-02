@@ -22,12 +22,12 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Service
 public class VenueSearchService {
     private final VenueRepository venues;
-    private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
+    private final com.example.connect_sphere.venueavailability.service.AvailabilityService availability;
     private final VenueMapper mapper;
 
     public VenueSearchService(
             VenueRepository venues,
-            com.example.connect_sphere.venueavailability.AvailabilityService availability,
+            com.example.connect_sphere.venueavailability.service.AvailabilityService availability,
             VenueMapper mapper) {
         this.venues = venues;
         this.availability = availability;

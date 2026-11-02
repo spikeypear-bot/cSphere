@@ -1,12 +1,13 @@
-package com.example.connect_sphere.venueavailability;
+package com.example.connect_sphere.venueavailability.controller;
 
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.*;
 
 @RestController
 @RequestMapping("/api/venues/{venueId}")

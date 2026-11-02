@@ -25,7 +25,7 @@ import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.hold.VenueHold;

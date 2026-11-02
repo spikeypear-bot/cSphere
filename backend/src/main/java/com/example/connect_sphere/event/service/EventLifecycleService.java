@@ -31,7 +31,7 @@ import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.hold.VenueHoldService;
