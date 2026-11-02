@@ -1,5 +1,6 @@
 package com.example.connect_sphere.notification.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
@@ -11,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.notification.dto.NotificationDto;
 import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationChange;
@@ -48,7 +50,10 @@ public class NotificationService {
             NotificationType.attendee_registration_withdrawn,
             NotificationType.equipment_request_attention);
 
-    public NotificationService(NotificationRepository repository) {
+    private final Clock clock;
+
+    public NotificationService(NotificationRepository repository, Clock clock) {
+        this.clock = clock;
         this.repository = repository;
     }
 
@@ -120,7 +125,7 @@ public class NotificationService {
      * the reader has seen); anything newer stays unread. Returns how many. */
     @Transactional
     public int markAllRead(UUID recipientUserId, OffsetDateTime upTo) {
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         return repository.markAllRead(recipientUserId, upTo == null || upTo.isAfter(now) ? now : upTo, now);
     }
 
@@ -139,7 +144,7 @@ public class NotificationService {
         notification.setEventName(eventName);
         notification.setNewStatus(newStatus);
         notification.setReason(reason);
-        notification.setOccurredAt(OffsetDateTime.now());
+        notification.setOccurredAt(OffsetDateTime.now(clock));
         saveBestEffort(notification);
     }
 
@@ -160,7 +165,7 @@ public class NotificationService {
         notification.setCoordinatorName(coordinatorName);
         notification.setCoordinatorEmail(coordinatorEmail);
         notification.setIsReassignment(isReassignment);
-        notification.setOccurredAt(OffsetDateTime.now());
+        notification.setOccurredAt(OffsetDateTime.now(clock));
         saveBestEffort(notification);
     }
 
@@ -277,8 +282,7 @@ public class NotificationService {
         repository.saveAndFlush(notification);
     }
 
-    private static final java.time.format.DateTimeFormatter SINGAPORE_TIME = java.time.format.DateTimeFormatter
-            .ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+    private static final java.time.format.DateTimeFormatter SINGAPORE_TIME = SingaporeTime.DISPLAY;
 
     /** EC-C3: remind the coordinator before a hold expires. Like the expiry notice it commits
      * with the hold's reminded mark, so a failed insert leaves the hold to be reminded again. */
@@ -579,13 +583,13 @@ public class NotificationService {
         }
     }
 
-    private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
+    private Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
         notification.setRecipientUserId(recipientUserId);
         notification.setType(type);
         notification.setEventName(eventName);
-        notification.setOccurredAt(OffsetDateTime.now());
+        notification.setOccurredAt(OffsetDateTime.now(clock));
         return notification;
     }
 
@@ -640,7 +644,7 @@ public class NotificationService {
                 .filter(n -> n.getRecipientUserId().equals(recipientUserId))
                 .orElseThrow(() -> new NotificationNotFoundException(notificationId));
         if (notification.getReadAt() == null) {
-            notification.setReadAt(OffsetDateTime.now());
+            notification.setReadAt(OffsetDateTime.now(clock));
             repository.save(notification);
         }
         return toDto(notification);

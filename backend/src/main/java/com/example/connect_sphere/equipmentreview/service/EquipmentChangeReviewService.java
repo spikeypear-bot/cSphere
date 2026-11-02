@@ -62,13 +62,7 @@ public class EquipmentChangeReviewService {
     private EquipmentRequestRepository requests;
     private ApplicationEventPublisher changeLog;
 
-    @Autowired
     public EquipmentChangeReviewService(EquipmentChangeReviewRepository reviews, EventRepository events,
-            EquipmentReservationService reservations, UserRepository users) {
-        this(reviews, events, reservations, users, Clock.systemUTC());
-    }
-
-    EquipmentChangeReviewService(EquipmentChangeReviewRepository reviews, EventRepository events,
             EquipmentReservationService reservations, UserRepository users, Clock clock) {
         this.reviews = reviews;
         this.events = events;

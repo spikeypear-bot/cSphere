@@ -4,12 +4,12 @@ import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
+import com.example.connect_sphere.testsupport.MutableClock;
 import com.example.connect_sphere.venueavailability.dto.AvailabilityModels;
 import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -31,13 +31,7 @@ import com.example.connect_sphere.venuebooking.service.*;
 @AutoConfigureMockMvc
 @Import(VenueHoldFlowTest.TimeConfig.class)
 class VenueHoldFlowTest {
-    static class MutableClock extends Clock {
-        final AtomicReference<Instant> time=new AtomicReference<>(Instant.parse("2027-03-01T00:00:00Z"));
-        public ZoneId getZone(){return ZoneOffset.UTC;}
-        public Clock withZone(ZoneId zone){return this;}
-        public Instant instant(){return time.get();}
-    }
-    @TestConfiguration static class TimeConfig { @Bean @Primary MutableClock testHoldClock(){return new MutableClock();} }
+    @TestConfiguration static class TimeConfig { @Bean @Primary MutableClock testHoldClock(){return new MutableClock(Instant.parse("2027-03-01T00:00:00Z"));} }
     @Autowired MutableClock clock;
     @Autowired JdbcTemplate jdbc;
     @Autowired VenueService venues;
@@ -52,7 +46,7 @@ class VenueHoldFlowTest {
     UUID actor,coordinator;
     OffsetDateTime expiry;
     @BeforeEach void setup(){
-        clock.time.set(Instant.parse("2027-03-01T00:00:00Z"));
+        clock.set(Instant.parse("2027-03-01T00:00:00Z"));
         expiry=OffsetDateTime.now(clock).plusHours(1);
         actor=jdbc.queryForObject("SELECT user_id FROM users WHERE username='vs1'",UUID.class);
         coordinator=jdbc.queryForObject("SELECT user_id FROM users WHERE username='ec1'",UUID.class);
@@ -93,9 +87,9 @@ class VenueHoldFlowTest {
         assertThat(hold.status()).isEqualTo("active");
         assertThat(hold.expiresAt().toInstant()).isEqualTo(expiry.toInstant());
         assertThatThrownBy(()->bookings.approve(competitor)).isInstanceOf(VenueBookingConflictException.class);
-        clock.time.set(expiry.toInstant().minusNanos(1000));
+        clock.set(expiry.toInstant().minusNanos(1000));
         assertThat(repository.blocking(v)).hasSize(1);
-        clock.time.set(expiry.toInstant());
+        clock.set(expiry.toInstant());
         assertThat(repository.blocking(v)).isEmpty();
         assertThat(holds.history(b).getFirst().status()).isEqualTo("expired");
         assertThatThrownBy(()->bookings.approve(b,hold.holdId())).isInstanceOf(VenueBookingStateException.class);
@@ -137,7 +131,7 @@ class VenueHoldFlowTest {
                 .andExpect(jsonPath("$.holds[0].status").value("active"))
                 .andExpect(jsonPath("$.activeConflicts.length()").value(1));
         }
-        clock.time.set(expiry.toInstant());
+        clock.set(expiry.toInstant());
         assertThat(availability.schedule(v).holds()).isEmpty();
         assertThat(availability.schedule(v).activeConflicts()).hasSize(1);
         assertThat(holds.history(pending).getFirst().endedAt()).isNull();
@@ -192,7 +186,7 @@ class VenueHoldFlowTest {
     }
     @Test @DisplayName("VS-C3 expiry (failure): failed notification rolls back persisted expiry and retries once, but never blocks availability")
     void notificationRetry(){
-        UUID v=venue(),b=booking(v);var hold=holds.create(b,expiry,actor);clock.time.set(expiry.toInstant());
+        UUID v=venue(),b=booking(v);var hold=holds.create(b,expiry,actor);clock.set(expiry.toInstant());
         jdbc.execute("CREATE FUNCTION vsc3_fail_notification() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'test failure'; END $$");
         jdbc.execute("CREATE TRIGGER vsc3_fail_notification BEFORE INSERT ON notifications FOR EACH ROW EXECUTE FUNCTION vsc3_fail_notification()");
         assertThatThrownBy(()->holds.expire(hold.holdId())).isInstanceOf(RuntimeException.class);
@@ -253,7 +247,7 @@ class VenueHoldFlowTest {
     }
     @Test @DisplayName("VS-C3 expiry/conversion (conflict): at deadline only expiry can succeed")
     void expiryVersusConversion() throws Exception {
-        UUID b=booking(venue());var hold=holds.create(b,expiry,actor);clock.time.set(expiry.toInstant());
+        UUID b=booking(venue());var hold=holds.create(b,expiry,actor);clock.set(expiry.toInstant());
         assertThat(race(()->{holds.expire(hold.holdId());return null;},()->bookings.approve(b,hold.holdId()))).isEqualTo(1);
         assertThat(statusOf(b)).isEqualTo("pending");
         assertThat(holds.history(b).getFirst().status()).isEqualTo("expired");

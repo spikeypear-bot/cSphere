@@ -9,6 +9,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -51,7 +52,7 @@ class CoordinatorNotificationsTest {
 
     private final NotificationRepository repository = mock(NotificationRepository.class);
     private final UserRepository users = mock(UserRepository.class);
-    private final NotificationService service = new NotificationService(repository);
+    private final NotificationService service = new NotificationService(repository, Clock.systemUTC());
 
     @BeforeEach
     void setUp() {

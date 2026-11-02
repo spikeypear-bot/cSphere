@@ -1,5 +1,6 @@
 package com.example.connect_sphere.changerequest.service;
 
+import java.time.Clock;
 import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -32,9 +33,12 @@ public class BookingAssessmentService {
     private final JdbcTemplate jdbc;
     private final UserRepository users;
     private final org.springframework.context.ApplicationEventPublisher publisher;
+    private final Clock clock;
+
     public BookingAssessmentService(VenueBookingRecordRepository bookings, EventRepository events, VenueRepository venues,
             ChangeImpactService impact, EventLifecycleService lifecycle, JdbcTemplate jdbc, UserRepository users,
-            org.springframework.context.ApplicationEventPublisher publisher) {
+            org.springframework.context.ApplicationEventPublisher publisher, Clock clock) {
+        this.clock = clock;
         this.bookings=bookings; this.events=events; this.venues=venues; this.impact=impact;
         this.lifecycle=lifecycle; this.jdbc=jdbc; this.users=users; this.publisher=publisher;
     }
@@ -154,6 +158,6 @@ public class BookingAssessmentService {
     private VenueBookingRecord booking(UUID id) { return bookings.findById(id).orElseThrow(() -> new VenueBookingNotFoundException(id)); }
     private boolean active(VenueBookingRecord b, Event e) {
         return Set.of(VenueBookingStatus.pending,VenueBookingStatus.approved,VenueBookingStatus.attention).contains(b.getStatus())
-          && e.getStatus()!=EventStatus.cancelled && e.getStatus()!=EventStatus.completed && e.getEndDatetime().isAfter(OffsetDateTime.now());
+          && e.getStatus()!=EventStatus.cancelled && e.getStatus()!=EventStatus.completed && e.getEndDatetime().isAfter(OffsetDateTime.now(clock));
     }
 }

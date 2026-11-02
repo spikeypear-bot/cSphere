@@ -6,6 +6,7 @@ import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -49,7 +50,7 @@ class NotificationLinkTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new NotificationService(repository);
+        service = new NotificationService(repository, Clock.systemUTC());
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 

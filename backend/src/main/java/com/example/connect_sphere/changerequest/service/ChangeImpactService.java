@@ -2,17 +2,16 @@ package com.example.connect_sphere.changerequest.service;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
-import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Locale;
 import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.ImpactItem;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.event.entity.Event;
@@ -51,8 +50,7 @@ public class ChangeImpactService {
     private static final Set<VenueBookingStatus> ACTIVE_BOOKINGS = Set.of(VenueBookingStatus.pending, VenueBookingStatus.approved, VenueBookingStatus.attention);
     private static final Set<EventStatus> SAFETY_STAGES = Set.of(
             EventStatus.awaiting_safety_review, EventStatus.safety_approved, EventStatus.confirmed);
-    private static final DateTimeFormatter SINGAPORE = DateTimeFormatter
-            .ofPattern("d MMM yyyy, h:mm a", Locale.ENGLISH).withZone(ZoneId.of("Asia/Singapore"));
+    private static final DateTimeFormatter SINGAPORE = SingaporeTime.DISPLAY;
 
     private final VenueBookingRecordRepository bookings;
     private final VenueRepository venues;

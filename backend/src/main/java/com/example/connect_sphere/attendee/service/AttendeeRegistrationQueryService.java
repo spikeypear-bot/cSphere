@@ -11,7 +11,6 @@ import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +29,7 @@ public class AttendeeRegistrationQueryService {
     private final JourneyStatusResolver statuses;
     private final Clock clock;
 
-    @Autowired
     public AttendeeRegistrationQueryService(AttendeeRegistrationRepository registrations,
-            EventRepository events, JourneyStatusResolver statuses) {
-        this(registrations, events, statuses, Clock.systemUTC());
-    }
-
-    AttendeeRegistrationQueryService(AttendeeRegistrationRepository registrations,
             EventRepository events, JourneyStatusResolver statuses, Clock clock) {
         this.registrations = registrations;
         this.events = events;

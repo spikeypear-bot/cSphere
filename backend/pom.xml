@@ -179,8 +179,6 @@
 					<excludes>
 						<!-- MapStruct output isn't marked @Generated, so JaCoCo can't skip it on its own -->
 						<exclude>**/*MapperImpl.class</exclude>
-						<!-- MVC-convention scaffolding, not domain code -->
-						<exclude>com/example/connect_sphere/mock/**</exclude>
 						<exclude>com/example/connect_sphere/ConnectSphereApplication.class</exclude>
 					</excludes>
 				</configuration>

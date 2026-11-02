@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.connect_sphere.event.dto.RegistrationInfoDto;
 import com.example.connect_sphere.event.entity.Event;
@@ -24,12 +23,7 @@ public class EventRegistrationService {
     private final EventRegistrationRepository registrations;
     private final Clock clock;
 
-    @Autowired
-    public EventRegistrationService(EventRepository events, EventRegistrationRepository registrations) {
-        this(events, registrations, Clock.systemUTC());
-    }
-
-    EventRegistrationService(EventRepository events, EventRegistrationRepository registrations, Clock clock) {
+    public EventRegistrationService(EventRepository events, EventRegistrationRepository registrations, Clock clock) {
         this.events = events;
         this.registrations = registrations;
         this.clock = clock;

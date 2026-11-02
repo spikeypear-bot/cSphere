@@ -72,10 +72,6 @@ public class SecurityConfig {
 						// one would be a closed loop. Ordered above anyRequest()
 						// because the first matching rule wins.
 						.requestMatchers("/api/auth/**").permitAll()
-						// Demo vertical slice illustrating the MVC convention, not a
-						// product endpoint (D20 open question 4). denyAll rather than
-						// deleting the package, which is a separate call.
-						.requestMatchers("/api/mock", "/api/mock/**").denyAll()
 						.requestMatchers("/api/venue-bookings/*/history").hasRole("VS")
 						.requestMatchers("/api/venue-bookings/*/assessment", "/api/venue-bookings/*/reassess")
 						.hasRole("VS")

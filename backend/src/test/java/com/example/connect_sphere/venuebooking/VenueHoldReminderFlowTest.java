@@ -8,7 +8,6 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import java.time.*;
 import java.util.*;
 import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicReference;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.ValueSource;
@@ -23,6 +22,7 @@ import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
+import com.example.connect_sphere.testsupport.MutableClock;
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.notification.dto.NotificationDto;
@@ -40,13 +40,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 @AutoConfigureMockMvc
 @Import(VenueHoldReminderFlowTest.TimeConfig.class)
 class VenueHoldReminderFlowTest {
-    static class MutableClock extends Clock {
-        final AtomicReference<Instant> time=new AtomicReference<>(Instant.parse("2099-03-01T00:00:00Z"));
-        public ZoneId getZone(){return ZoneOffset.UTC;}
-        public Clock withZone(ZoneId zone){return this;}
-        public Instant instant(){return time.get();}
-    }
-    @TestConfiguration static class TimeConfig { @Bean @Primary MutableClock testReminderClock(){return new MutableClock();} }
+    @TestConfiguration static class TimeConfig { @Bean @Primary MutableClock testReminderClock(){return new MutableClock(Instant.parse("2099-03-01T00:00:00Z"));} }
     static final Instant T0=Instant.parse("2099-03-01T00:00:00Z");
     @Autowired MutableClock clock;
     @Autowired JdbcTemplate jdbc;
@@ -63,7 +57,7 @@ class VenueHoldReminderFlowTest {
     final List<UUID> eventIds=new ArrayList<>(),venueIds=new ArrayList<>();
     UUID staff,coordinator,otherCoordinator;
     @BeforeEach void setup(){
-        clock.time.set(T0);
+        clock.set(T0);
         staff=jdbc.queryForObject("SELECT user_id FROM users WHERE username='vs1'",UUID.class);
         coordinator=jdbc.queryForObject("SELECT user_id FROM users WHERE username='ec1'",UUID.class);
         otherCoordinator=jdbc.queryForObject("SELECT user_id FROM users WHERE username='ec2'",UUID.class);
@@ -142,7 +136,7 @@ class VenueHoldReminderFlowTest {
         assertThat(reminders(atEdge)).isEqualTo(1);
         assertThat(reminders(beyond)).isZero();
         assertThat(remindedAt(laterHold.holdId())).isNull();
-        clock.time.set(T0.plusSeconds(1));
+        clock.set(T0.plusSeconds(1));
         reminderJob.remind();
         assertThat(reminders(beyond)).isEqualTo(1);
         assertThat(reminders(atEdge)).isEqualTo(1);
@@ -154,7 +148,7 @@ class VenueHoldReminderFlowTest {
     void onlyOnce(){
         UUID b=booking(venue());hold(b,Duration.ofHours(5));
         reminderJob.remind();reminderJob.remind();
-        clock.time.set(T0.plus(Duration.ofHours(1)));
+        clock.set(T0.plus(Duration.ofHours(1)));
         reminderJob.remind();
         assertThat(reminders(b)).isEqualTo(1);
     }
@@ -197,7 +191,7 @@ class VenueHoldReminderFlowTest {
     @Test @DisplayName("EC-C3 AC4 AC6 (negative): a hold that expired before any check gets no reminder, only the expiry notice")
     void alreadyExpired(){
         UUID b=booking(venue());var hold=hold(b,Duration.ofHours(1));
-        clock.time.set(T0.plus(Duration.ofHours(1))); // exactly at expiry: it is no longer held
+        clock.set(T0.plus(Duration.ofHours(1))); // exactly at expiry: it is no longer held
         reminderJob.remind();
         assertThat(holds.remind(hold.holdId())).isFalse();
         assertThat(reminders(b)).isZero();
@@ -228,7 +222,7 @@ class VenueHoldReminderFlowTest {
     void expiryNotice(){
         UUID b=booking(venue());hold(b,Duration.ofHours(1));
         reminderJob.remind();
-        clock.time.set(T0.plus(Duration.ofHours(1)));
+        clock.set(T0.plus(Duration.ofHours(1)));
         expiryJob.expire();expiryJob.expire();
         reminderJob.remind();
         assertThat(recipients(b,"venue_hold_expired")).containsExactly(coordinator);
@@ -256,7 +250,7 @@ class VenueHoldReminderFlowTest {
             .andExpect(status().isOk());
         assertThat(jdbc.queryForObject("SELECT coordinator_id FROM events WHERE event_id=?",UUID.class,event)).isEqualTo(otherCoordinator);
         reminderJob.remind();
-        clock.time.set(T0.plus(Duration.ofHours(1)));
+        clock.set(T0.plus(Duration.ofHours(1)));
         expiryJob.expire();
         assertThat(recipients(b,"venue_hold_expiring")).containsExactly(otherCoordinator);
         assertThat(recipients(b,"venue_hold_expired")).containsExactly(otherCoordinator);

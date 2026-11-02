@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venuebooking.service;
 
+import java.time.Clock;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
 import java.util.List;
@@ -59,10 +60,13 @@ public class VenueBookingService {
         }
     }
 
+    private final Clock clock;
+
     public VenueBookingService(VenueBookingRepository bookings, VenueRepository venues, VenueMapper venueMapper,
             VenueBookingRecordRepository records,
             EventRepository events, com.example.connect_sphere.venueavailability.service.AvailabilityService availability,
-            com.example.connect_sphere.venueavailability.service.TimingConflictService timingConflicts) {
+            com.example.connect_sphere.venueavailability.service.TimingConflictService timingConflicts, Clock clock) {
+        this.clock = clock;
         this.timingConflicts = timingConflicts;
         this.availability = availability;
         this.bookings = bookings;
@@ -325,7 +329,7 @@ public class VenueBookingService {
         booking.setSetupDurationMinutes(setup);
         booking.setTurnaroundDurationMinutes(turnaround);
         booking.setTimingNote(note);
-        booking.setTimingUpdatedAt(java.time.OffsetDateTime.now());
+        booking.setTimingUpdatedAt(java.time.OffsetDateTime.now(clock));
         booking.setTimingUpdatedBy(actor);
         records.saveAndFlush(booking);
         lifecycle.returnToPlanning(eventId,actor,"Venue booking occupied times changed; reassess safety arrangements.");

@@ -6,6 +6,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -53,7 +54,7 @@ class ActivityServiceTest {
         actor.setUsername("vs1");
         actor.setRole(UserRole.vs);
         when(actors.findById(actorId)).thenReturn(Optional.of(actor));
-        var recording = new ActivityService(repository, actors, events);
+        var recording = new ActivityService(repository, actors, events, Clock.systemUTC());
         recording.record(new ActivityService.Entry(requestId, eventId, ActivityType.venue_hold_expired,
                 actorId, "System: hold expired.", null, "active", "expired"));
         var saved = org.mockito.ArgumentCaptor.forClass(RequestActivity.class);
@@ -66,7 +67,7 @@ class ActivityServiceTest {
 
     private final RequestActivityRepository repository = mock(RequestActivityRepository.class);
     private final EventRepository events = mock(EventRepository.class);
-    private final ActivityService service = new ActivityService(repository, mock(UserRepository.class), events);
+    private final ActivityService service = new ActivityService(repository, mock(UserRepository.class), events, Clock.systemUTC());
     private final UUID requestId = UUID.randomUUID();
     private final UUID eventId = UUID.randomUUID();
     private final List<RequestActivity> rows = new ArrayList<>();

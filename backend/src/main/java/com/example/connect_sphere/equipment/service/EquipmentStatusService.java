@@ -127,21 +127,22 @@ public class EquipmentStatusService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, UNIT_COMMITTED_MESSAGE);
         }
 
+        Instant now = Instant.now(clock);
         List<EquipmentStatusPeriod> preserved = new java.util.ArrayList<>();
         for (EquipmentStatusPeriod period : overlapping) {
             periodRepository.delete(period);
             if (period.getPeriodStart().isBefore(start)) {
                 preserved.add(new EquipmentStatusPeriod(equipmentId, serialNumber, period.getStatus(),
-                        period.getPeriodStart(), start));
+                        period.getPeriodStart(), start, now));
             }
             if (end != null && (period.getPeriodEnd() == null || period.getPeriodEnd().isAfter(end))) {
                 preserved.add(new EquipmentStatusPeriod(equipmentId, serialNumber, period.getStatus(),
-                        end, period.getPeriodEnd()));
+                        end, period.getPeriodEnd(), now));
             }
         }
         periodRepository.saveAll(preserved);
         if (status != EquipmentStatus.AVAILABLE) {
-            periodRepository.save(new EquipmentStatusPeriod(equipmentId, serialNumber, status, start, end));
+            periodRepository.save(new EquipmentStatusPeriod(equipmentId, serialNumber, status, start, end, now));
         }
     }
 

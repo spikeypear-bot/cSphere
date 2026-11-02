@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -35,7 +36,7 @@ class EventRegistrationServiceTest {
     private static final String ACME = "Acme Pte Ltd";
     private final EventRepository events = mock(EventRepository.class);
     private final EventRegistrationRepository regs = mock(EventRegistrationRepository.class);
-    private final EventRegistrationService service = new EventRegistrationService(events, regs);
+    private final EventRegistrationService service = new EventRegistrationService(events, regs, Clock.systemUTC());
     private final UUID id = UUID.randomUUID();
     private Event event;
 

@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -81,16 +80,7 @@ public class EventCancellationService {
     private final EventLifecycleService lifecycle;
     private final Clock clock;
 
-    @Autowired
     public EventCancellationService(EventRepository events, EventCancellationRequestRepository cancellations,
-            UserRepository users, EventRequestRepository eventRequests, EventRequestMapper requestMapper,
-            ActivityService activity, NotificationService notifications, JourneyStatusResolver statuses,
-            EventLifecycleService lifecycle) {
-        this(events, cancellations, users, eventRequests, requestMapper, activity, notifications, statuses,
-                lifecycle, Clock.systemUTC());
-    }
-
-    EventCancellationService(EventRepository events, EventCancellationRequestRepository cancellations,
             UserRepository users, EventRequestRepository eventRequests, EventRequestMapper requestMapper,
             ActivityService activity, NotificationService notifications, JourneyStatusResolver statuses,
             EventLifecycleService lifecycle, Clock clock) {

@@ -3,6 +3,7 @@ package com.example.connect_sphere.notification.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +21,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("AT08")
 class WithdrawalNotificationTest {
     private final NotificationRepository repository = mock(NotificationRepository.class);
-    private final NotificationService notifications = new NotificationService(repository);
+    private final NotificationService notifications = new NotificationService(repository, Clock.systemUTC());
 
     @Test
     @DisplayName("AT08 (happy): the withdrawal receipt carries its original reference and timestamp and opens the exact registration")
