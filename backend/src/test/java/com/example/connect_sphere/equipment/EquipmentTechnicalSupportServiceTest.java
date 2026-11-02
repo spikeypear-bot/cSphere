@@ -7,12 +7,12 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLine;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineId;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLineId;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import java.time.Clock;
 import java.time.Instant;

@@ -1,5 +1,7 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.dto;
 
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,7 +14,7 @@ public record EquipmentRequestDetailsResponse(
         String attentionReason,
         List<EquipmentRequestLineResponse> lines) {
 
-    static EquipmentRequestDetailsResponse from(
+    public static EquipmentRequestDetailsResponse from(
             EquipmentRequest request, List<EquipmentRequestLine> lines) {
         return new EquipmentRequestDetailsResponse(
                 request.getId(),

@@ -1,5 +1,7 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.repository;
 
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLineId;
 import java.util.Collection;
 import java.util.List;
 import org.springframework.data.jpa.repository.Query;

@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -9,6 +9,13 @@ import static org.mockito.Mockito.when;
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentRepository;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestLineResponse;
+import com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;

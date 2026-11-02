@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;

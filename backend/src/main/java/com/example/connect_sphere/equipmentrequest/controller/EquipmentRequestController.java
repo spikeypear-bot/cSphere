@@ -1,5 +1,14 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.controller;
 
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestDetailsResponse;
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestLineResponse;
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestResponse;
+import com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.dto.UpdateEquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestDecisionService;
+import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestQueueService;
+import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestService;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;

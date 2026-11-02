@@ -29,9 +29,9 @@ import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.O
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Reservation;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Summary;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Values;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.event.service.EventNotFoundException;

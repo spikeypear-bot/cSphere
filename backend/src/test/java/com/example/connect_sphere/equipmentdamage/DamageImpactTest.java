@@ -23,8 +23,8 @@ import com.example.connect_sphere.equipment.EquipmentLogRepository;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageReport;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageReportRepository;
 import com.example.connect_sphere.equipmentdamage.service.DamageImpact;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 
 /**
  * TS09 AC6, AC11: when a non-serialised kind's reservations exceed its

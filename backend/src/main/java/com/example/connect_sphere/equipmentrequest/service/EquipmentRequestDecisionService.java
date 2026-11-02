@@ -1,8 +1,15 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.service;
 
 import com.example.connect_sphere.equipment.EquipmentAvailabilityService;
 import com.example.connect_sphere.equipment.EquipmentLog;
 import com.example.connect_sphere.equipment.EquipmentLogRepository;
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestDetailsResponse;
+import com.example.connect_sphere.equipmentrequest.dto.UpdateEquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
 import java.time.Instant;

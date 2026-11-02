@@ -1,5 +1,7 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.repository;
 
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import java.util.List;
 import java.util.UUID;
 import java.util.Optional;

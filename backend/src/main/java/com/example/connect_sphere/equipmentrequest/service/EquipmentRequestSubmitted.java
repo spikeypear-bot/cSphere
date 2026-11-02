@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.service;
 
 import java.util.UUID;
 

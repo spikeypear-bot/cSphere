@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.dto;
 
 import java.util.List;
 import java.util.UUID;

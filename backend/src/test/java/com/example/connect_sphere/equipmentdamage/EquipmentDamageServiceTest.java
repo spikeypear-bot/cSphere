@@ -48,7 +48,7 @@ import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageRepo
 import com.example.connect_sphere.equipmentdamage.service.DamageImpact;
 import com.example.connect_sphere.equipmentdamage.service.EquipmentDamageService;
 import com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;

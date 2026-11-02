@@ -1,8 +1,17 @@
-package com.example.connect_sphere.equipmentrequest;
+package com.example.connect_sphere.equipmentrequest.service;
 
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentRepository;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestDetailsResponse;
+import com.example.connect_sphere.equipmentrequest.dto.EquipmentRequestLineResponse;
+import com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLineId;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
