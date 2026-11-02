@@ -1,5 +1,8 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.service;
 
+import com.example.connect_sphere.equipmentreview.entity.EquipmentChangeReview;
+import com.example.connect_sphere.equipmentreview.entity.ReviewOutcome;
+import com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -21,11 +24,11 @@ import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.EventChange;
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Detail;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.OutcomeRequest;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Reservation;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Summary;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Values;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Detail;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.OutcomeRequest;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Reservation;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Summary;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Values;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
 import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;

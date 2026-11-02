@@ -1,5 +1,6 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.controller;
 
+import com.example.connect_sphere.equipmentreview.service.EquipmentChangeReviewService;
 import java.util.List;
 import java.util.UUID;
 
@@ -12,9 +13,9 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Detail;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.OutcomeRequest;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.Summary;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Detail;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.OutcomeRequest;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.Summary;
 
 /**
  * TS11. {@code /api/equipment-change-reviews/**} is Technical Support's

@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.entity;
 
 import java.time.OffsetDateTime;
 import java.util.List;

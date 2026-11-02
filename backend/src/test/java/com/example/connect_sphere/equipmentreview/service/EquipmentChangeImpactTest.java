@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

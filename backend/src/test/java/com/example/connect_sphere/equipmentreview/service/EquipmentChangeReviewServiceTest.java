@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,6 +8,9 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.connect_sphere.equipmentreview.entity.EquipmentChangeReview;
+import com.example.connect_sphere.equipmentreview.entity.ReviewOutcome;
+import com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -26,7 +29,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
-import com.example.connect_sphere.equipmentreview.EquipmentChangeReviewDto.OutcomeRequest;
+import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.OutcomeRequest;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;

@@ -1,5 +1,6 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.repository;
 
+import com.example.connect_sphere.equipmentreview.entity.EquipmentChangeReview;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

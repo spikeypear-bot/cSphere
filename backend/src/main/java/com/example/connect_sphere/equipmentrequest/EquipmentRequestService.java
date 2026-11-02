@@ -44,10 +44,10 @@ public class EquipmentRequestService {
     private com.example.connect_sphere.equipmentdamage.service.EquipmentShortfallLedger shortfalls;
 
     /** TS11 (D34): Technical Support's reviews, which gate "mark still suitable". */
-    private com.example.connect_sphere.equipmentreview.EquipmentChangeReviewRepository changeReviews;
+    private com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository changeReviews;
 
     @org.springframework.beans.factory.annotation.Autowired(required = false)
-    void setChangeReviews(com.example.connect_sphere.equipmentreview.EquipmentChangeReviewRepository changeReviews) {
+    void setChangeReviews(com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository changeReviews) {
         this.changeReviews = changeReviews;
     }
 
@@ -100,7 +100,7 @@ public class EquipmentRequestService {
 
     private boolean newestOutcomeNeedsCoordinator(UUID eventId) {
         return changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
-                .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.ReviewOutcome.needs_coordinator_action)
+                .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.entity.ReviewOutcome.needs_coordinator_action)
                 .isPresent();
     }
 

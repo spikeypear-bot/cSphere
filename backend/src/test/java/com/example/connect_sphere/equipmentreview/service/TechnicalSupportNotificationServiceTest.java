@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatCode;
@@ -8,6 +8,8 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.connect_sphere.equipmentreview.entity.EquipmentChangeReview;
+import com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.util.List;

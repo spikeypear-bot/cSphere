@@ -1,5 +1,7 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.service;
 
+import com.example.connect_sphere.equipmentreview.entity.EquipmentChangeReview;
+import com.example.connect_sphere.equipmentreview.repository.EquipmentChangeReviewRepository;
 import java.time.Instant;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;

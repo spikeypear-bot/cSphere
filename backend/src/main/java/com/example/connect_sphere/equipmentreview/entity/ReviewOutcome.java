@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.entity;
 
 /** TS11 AC11: Technical Support's review of an approved change's equipment impact. */
 public enum ReviewOutcome {

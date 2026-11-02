@@ -1,4 +1,4 @@
-package com.example.connect_sphere.equipmentreview;
+package com.example.connect_sphere.equipmentreview.service;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
