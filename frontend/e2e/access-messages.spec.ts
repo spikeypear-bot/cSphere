@@ -30,10 +30,5 @@ test('AU06 AC4 (negative): a signed-out visitor is asked to sign in for that pag
   await expect(page.getByRole('heading', { name: 'Access denied' })).toHaveCount(0)
 })
 
-test('AU06 (cross-cutting): the API refuses the same person too, so the message is not just the screen hiding a link', async ({ request }) => {
-  const login = await request.post('/api/auth/login', { data: { username: 'eo1', password: '123456' } })
-  const token = (await login.json()).accessToken as string
-  const refused = await request.get('/api/venue-staff/booking-requests', { headers: { Authorization: `Bearer ${token}` } })
-  expect(refused.status()).toBe(403)
-  expect(await refused.text()).not.toContain('bookingId')
-})
+// The API side of AU06 (the same person is refused by the server too) is
+// backend/src/test/.../security/AccessMessagesApiTest.java: it needs no browser.

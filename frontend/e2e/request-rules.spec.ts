@@ -4,8 +4,9 @@ import { apiToken, signedIn, uniqueName } from './support.ts'
 
 // EO-C2 through the browser and the packaged backend: an organiser cannot
 // send a request that ends when it starts, starts in the past or expects
-// nobody; what they type is Singapore time; and the server refuses the same
-// request even when the page is bypassed. Expected values come from the ACs.
+// nobody, and what they type is Singapore time. Expected values come from the
+// ACs. The server refusing the same request when the page is bypassed (AC8)
+// needs no browser: RequestSubmissionRulesFlowTest checks it.
 
 const HOUR = 3_600_000
 const DAY = 24 * HOUR
@@ -15,7 +16,7 @@ function singaporeLocal(days: number, time: string): string {
   return `${new Date(Date.now() + 8 * HOUR + days * DAY).toISOString().slice(0, 10)}T${time}`
 }
 
-test('an organiser is shown each date, time and attendance problem and can only submit once it is fixed (EO-C2 AC1, AC2, AC4, AC5, AC6)', async ({ browser, request }) => {
+test('EO-C2 AC1, AC2, AC4, AC5, AC6 (negative): an organiser is shown each date, time and attendance problem and can only submit once it is fixed', async ({ browser, request }) => {
   test.setTimeout(90_000)
   const eventName = uniqueName('E2E Rules Gala')
   const page = await signedIn(browser, 'eo1')
@@ -77,26 +78,5 @@ test('an organiser is shown each date, time and attendance problem and can only 
     const sent = (await response.json() as { eventName: string; startDatetime: string }[])
       .find((r) => r.eventName === eventName)
     expect(sent?.startDatetime).toBe(`${singaporeLocal(7, '02:00').slice(0, 10)}T02:00:00Z`)
-  })
-})
-
-test('the server refuses an invalid request even when the page is bypassed, and says which field (EO-C2 AC8)', async ({ request }) => {
-  const token = await apiToken(request, 'eo1')
-  const headers = { Authorization: `Bearer ${token}` }
-  const lastYear = new Date(Date.now() - 365 * DAY).toISOString()
-  const draft = await request.post('/api/event-requests', { headers, data: {
-    eventName: uniqueName('E2E Bypass Gala'), purpose: 'Testing', startDatetime: lastYear, endDatetime: lastYear,
-    expectedAttendance: 0, venueRequirements: 'Theatre', accessibilityNeeds: ['none'], registrationNeeds: false,
-  } })
-  expect(draft.status()).toBe(201)
-  const { requestId } = await draft.json() as { requestId: string }
-
-  const submitted = await request.post(`/api/event-requests/${requestId}/submit`, { headers })
-
-  expect(submitted.status()).toBe(422)
-  expect((await submitted.json() as { fieldErrors: Record<string, string> }).fieldErrors).toEqual({
-    startDatetime: 'The start date & time must be in the future.',
-    endDatetime: 'The end date & time must be after the start date & time.',
-    expectedAttendance: 'Expected attendance must be at least 1.',
   })
 })

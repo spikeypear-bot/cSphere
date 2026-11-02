@@ -1,3 +1,4 @@
+// @stories AU02 AU04 EO01 EO02 EO15
 import { expect, test, type Page } from '@playwright/test'
 
 // IS212 Week 9: a few end-to-end tests for the journeys that matter most,
@@ -12,7 +13,7 @@ async function signIn(page: Page, username: string) {
   await page.getByRole('button', { name: 'Sign in' }).click()
 }
 
-test('an organiser signs in and lands on their own event requests', async ({ page }) => {
+test('AU02 EO15 (happy): an organiser signs in and lands on their own event requests', async ({ page }) => {
   await signIn(page, 'eo1')
 
   await expect(page.getByRole('heading', { level: 1, name: /^Good \w+, eo1$/ })).toBeVisible()
@@ -22,7 +23,7 @@ test('an organiser signs in and lands on their own event requests', async ({ pag
   await expect(page.getByText('Acme Pte Ltd', { exact: true })).toBeVisible()
 })
 
-test('a wrong password is refused and the person stays on the sign-in page', async ({ page }) => {
+test('AU02 (negative): a wrong password is refused and the person stays on the sign-in page', async ({ page }) => {
   await page.goto('/')
   await page.getByLabel('Username').fill('eo1')
   await page.getByLabel('Password').fill('not-the-password')
@@ -33,7 +34,7 @@ test('a wrong password is refused and the person stays on the sign-in page', asy
   await expect(page.getByRole('heading', { level: 1, name: /^Good \w+, eo1$/ })).toHaveCount(0)
 })
 
-test("an organiser's draft is saved to the server and listed with their requests (EO02/EO15)", async ({ page }) => {
+test("EO01 EO15 (happy): an organiser's draft is saved to the server and listed with their requests", async ({ page }) => {
   // Fresh, visible test data (Week 9): a unique name, so reruns never
   // depend on what an earlier run left behind.
   const eventName = `E2E Town Hall ${Date.now()}`

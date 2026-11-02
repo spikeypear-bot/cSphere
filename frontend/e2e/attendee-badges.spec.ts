@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test'
 
 for (const theme of ['light', 'dark'] as const) {
-  test(`AT02 AT03 AT04 (cross-cutting): exactly two consistent badges per attendee section with readable ${theme} colours`, async ({ page }, testInfo) => {
+  test(`AT02 AT03 AT04 (cross-cutting): exactly two consistent badges per attendee section with readable ${theme} colours`, { tag: '@ui' }, async ({ page }, testInfo) => {
     await page.emulateMedia({ colorScheme: theme })
     await page.addInitScript(() => localStorage.setItem('connectsphere.auth', JSON.stringify({
       accessToken: 'badge-test', refreshToken: 'badge-test', userId: 'att1', username: 'att1', role: 'attendee', organisation: 'Acme',

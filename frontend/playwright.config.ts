@@ -26,5 +26,12 @@ export default defineConfig({
     // tests are flaky tests).
     timezoneId: 'Asia/Singapore',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  // e2e: journeys through the real UI and the real backend. ui: tests tagged
+  // '@ui' that need a real browser (layout, scrolling, gestures, the map) but
+  // check one screen, often against mocked API responses, not a journey.
+  // `playwright test` runs both; pick one with --project.
+  projects: [
+    { name: 'e2e', grepInvert: /@ui/, use: { ...devices['Desktop Chrome'] } },
+    { name: 'ui', grep: /@ui/, use: { ...devices['Desktop Chrome'] } },
+  ],
 })
