@@ -868,3 +868,11 @@ including VS17's V42/V43/V51 additions below and TS09's `equipment_damage_outcom
 
 V65 was written as V36, then renumbered at each merge of `main`: for V34–V36, TS09's V37–V40,
 `main`'s V41–V51 (VS17 and others), and finally `main`'s V52–V64.
+
+## V67 update — the equipment-attention notice can be delivered
+
+V53 added `notification_type` `equipment_request_attention` (EC-NEW3, D37) but no migration let
+`chk_notification_shape` accept it, so every coordinator notice that an approved change left their
+equipment request needing attention was refused on delivery and stayed in `notification_outbox`.
+V67 extends the constraint in place (V65's pattern, keeping every prior branch): an
+`equipment_request_attention` notice needs `event_id` and `message`.
