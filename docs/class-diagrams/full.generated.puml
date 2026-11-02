@@ -148,6 +148,13 @@ class AttendeeEventDetailsController {
 }
 
 
+class AttendeeRegistrationController {
+	{method} +get ( registrationId : UUID , authentication : Authentication ) : AttendeeRegistrationDetailsDto
+	{method} +list ( authentication : Authentication ) : List
+	{method} +withdraw ( registrationId : UUID , authentication : Authentication ) : AttendeeRegistrationDetailsDto
+}
+
+
 class AttendeeEventDetailsDto {
 	{field} -accessibilityInformation : List<String>
 	{field} -attendeeInstructions : String
@@ -178,14 +185,6 @@ class AttendeeEventDetailsDto.AttendeeVenue {
 }
 
 
-class AttendeeEventDetailsService {
-	{method} +get ( eventId : UUID ) : AttendeeEventDetailsDto
-	{method} +get ( eventId : UUID , attendeeId : UUID ) : AttendeeEventDetailsDto
-	{method} +list () : List
-	{method} +list ( attendeeId : UUID ) : List
-}
-
-
 class AttendeeEventListItemDto {
 	{field} -availablePlaces : Integer
 	{field} -endDatetime : OffsetDateTime
@@ -198,26 +197,6 @@ class AttendeeEventListItemDto {
 	{field} -registrationStatus : String
 	{field} -startDatetime : OffsetDateTime
 	{field} -status : String
-}
-
-
-class AttendeeRegistration <<Entity>>  {
-	{field} +attendeeEmail : String
-	{field} +attendeeId : UUID
-	{field} +attendeeName : String
-	{field} +eventId : UUID
-	{field} +registeredAt : OffsetDateTime
-	{field} +registrationId : UUID {id}
-	{field} +registrationReference : String
-	{field} +status : String
-	{field} +withdrawnAt : OffsetDateTime
-}
-
-
-class AttendeeRegistrationController {
-	{method} +get ( registrationId : UUID , authentication : Authentication ) : AttendeeRegistrationDetailsDto
-	{method} +list ( authentication : Authentication ) : List
-	{method} +withdraw ( registrationId : UUID , authentication : Authentication ) : AttendeeRegistrationDetailsDto
 }
 
 
@@ -235,6 +214,7 @@ class AttendeeRegistrationDetailsDto {
 	{field} -withdrawalAvailable : boolean
 	{field} -withdrawalReason : String
 	{field} -withdrawnAt : OffsetDateTime
+	{method}  {static} +from ( registration : AttendeeRegistration , event : Event , journey : JourneyStatus , now : OffsetDateTime ) : AttendeeRegistrationDetailsDto
 }
 
 
@@ -248,15 +228,16 @@ class AttendeeRegistrationDto {
 }
 
 
-class AttendeeRegistrationException {
-	{field} -status : int
-}
-
-
-class AttendeeRegistrationQueryService {
-	{field} -clock : Clock
-	{method} +get ( attendeeId : UUID , registrationId : UUID ) : AttendeeRegistrationDetailsDto
-	{method} +list ( attendeeId : UUID ) : List
+class AttendeeRegistration <<Entity>>  {
+	{field} +attendeeEmail : String
+	{field} +attendeeId : UUID
+	{field} +attendeeName : String
+	{field} +eventId : UUID
+	{field} +registeredAt : OffsetDateTime
+	{field} +registrationId : UUID {id}
+	{field} +registrationReference : String
+	{field} +status : String
+	{field} +withdrawnAt : OffsetDateTime
 }
 
 
@@ -272,10 +253,40 @@ interface AttendeeRegistrationRepository {
 }
 
 
+class AttendeeEventDetailsService {
+	{method} +get ( eventId : UUID ) : AttendeeEventDetailsDto
+	{method} +get ( eventId : UUID , attendeeId : UUID ) : AttendeeEventDetailsDto
+	{method} +list () : List
+	{method} +list ( attendeeId : UUID ) : List
+}
+
+
+class AttendeeEventStatus {
+	{method}  {static} +of ( journey : JourneyStatus ) : String
+}
+
+
+class AttendeeRegistrationException {
+	{field} -status : int
+}
+
+
+class AttendeeRegistrationQueryService {
+	{field} -clock : Clock
+	{method} +get ( attendeeId : UUID , registrationId : UUID ) : AttendeeRegistrationDetailsDto
+	{method} +list ( attendeeId : UUID ) : List
+}
+
+
 class AttendeeRegistrationService {
 	{field} -clock : Clock
 	{method} +register ( eventId : UUID , attendeeId : UUID ) : AttendeeRegistrationDto
 	{method} +withdraw ( registrationId : UUID , attendeeId : UUID ) : AttendeeRegistrationDetailsDto
+}
+
+
+class AttendeeWithdrawalPolicy {
+	{method}  {static} +reason ( registration : AttendeeRegistration , event : Event , journey : JourneyStatus , now : OffsetDateTime ) : String
 }
 
 
@@ -290,80 +301,6 @@ class BookingAssessmentController {
 class BookingAssessmentController.Reassessment {
 	{field} -assessmentId : UUID
 	{field} -note : String
-}
-
-
-class BookingAssessmentService {
-	{field} -jdbc : JdbcTemplate
-	{field} -publisher : ApplicationEventPublisher
-	{method} +forCoordinator ( eventId : UUID , actor : UUID ) : List
-	{method} +lockVenueEvents ( venueId : UUID ) : Set
-	{method} +requirementsChanged ( event : Event , actor : UUID ) : void
-	{method} +restore ( bookingId : UUID , actor : UUID , expectedAssessmentId : UUID , note : String ) : View
-	{method} +venueChanged ( venueId : UUID , actor : UUID , layoutChanged : boolean , previousVenue : String , lockedEvents : Set ) : void
-	{method} +venueSnapshot ( venueId : UUID ) : String
-	{method} +view ( bookingId : UUID ) : View
-}
-
-
-class BookingAssessmentService.History {
-	{field} -actorName : String
-	{field} -assessmentId : UUID
-	{field} -createdAt : OffsetDateTime
-	{field} -outcome : String
-	{field} -reason : String
-	{field} -source : String
-}
-
-
-class BookingAssessmentService.View {
-	{field} -bookingId : UUID
-	{field} -canReassess : boolean
-	{field} -status : String
-}
-
-
-class ChangeApproved {
-	{field} -approvedAt : OffsetDateTime
-	{field} -changeRequestId : UUID
-	{field} -changedFields : Set<String>
-	{field} -eventId : UUID
-	{field} -previousValues : Map<String, Object>
-	{field} -updatedValues : Map<String, Object>
-}
-
-
-class ChangeImpactService {
-	{field} {static} ~ATTENTION : String
-	{field} {static} ~OK : String
-	{field} {static} -SINGAPORE : DateTimeFormatter
-	{method} +assess ( event : Event , proposed : SaveEventRequestRequest , changedFields : Set ) : List
-	{method} +assessBooking ( event : Event , booking : VenueBookingRecord ) : List
-	{method} +bookingSummary ( event : Event , booking : VenueBookingRecord , assessed : List ) : BookingSummary
-}
-
-
-class ChangeImpactService.BookingSummary {
-	{field} -occupiedEnd : OffsetDateTime
-	{field} -occupiedStart : OffsetDateTime
-	{field} -supportedLayouts : List<String>
-	{field} -venueRequirements : String
-}
-
-
-class ChangeRequest <<Entity>>  {
-	{field} +acknowledgedImpacts : List<Map<String, String>>
-	{field} +changeRequestId : UUID {id}
-	{field} +decidedAt : OffsetDateTime
-	{field} +decidedBy : UUID
-	{field} +decisionReason : String
-	{field} +eventId : UUID
-	{field} +originalValues : Map<String, Object>
-	{field} +proposedValues : Map<String, Object>
-	{field} +reason : String
-	{field} +requestId : UUID
-	{field} +requestedAt : OffsetDateTime
-	{field} +requestedBy : UUID
 }
 
 
@@ -383,6 +320,14 @@ class ChangeRequestController {
 
 class ChangeRequestController.ImpactChangedError {
 	{field} -message : String
+}
+
+
+class VenueRequirementReviewController {
+	{method} +booking ( bookingId : UUID ) : List
+	{method} +decide ( bookingId : UUID , reviewId : UUID , jwt : Jwt , decision : Decision ) : View
+	{method} +event ( eventId : UUID , jwt : Jwt ) : List
+	{method} +failure ( ex : RuntimeException ) : ResponseEntity
 }
 
 
@@ -443,50 +388,29 @@ class ChangeRequestDto.View {
 }
 
 
-class ChangeRequestException {
+class ChangeApproved {
+	{field} -approvedAt : OffsetDateTime
+	{field} -changeRequestId : UUID
+	{field} -changedFields : Set<String>
+	{field} -eventId : UUID
+	{field} -previousValues : Map<String, Object>
+	{field} -updatedValues : Map<String, Object>
 }
 
 
-class ChangeRequestException.ImpactChanged {
-}
-
-
-class ChangeRequestException.NotFound {
-}
-
-
-class ChangeRequestException.State {
-}
-
-
-interface ChangeRequestRepository {
-	{method}  {abstract} +findByRequestIdOrderByRequestedAtDesc ( requestId : UUID ) : List
-	{method}  {abstract} +findByStatusOrderByRequestedAtAsc ( status : ChangeRequestStatus ) : List
-	{method}  {abstract} +findFirstByRequestIdAndStatus ( requestId : UUID , status : ChangeRequestStatus ) : Optional
-	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
-}
-
-
-class ChangeRequestService {
-	{field} {static} -ATTENDEE_NOTIFICATION_FIELDS : Set<String>
-	{field} {static} ~MAX_TEXT : int
-	{field} {static} ~REQUEST_CHANGED_SINCE : String
-	{field} -clock : Clock
-	{field} -published : ApplicationEventPublisher
-	{method} +approve ( coordinator : Caller , changeRequestId : UUID , acknowledged : List ) : View
-	{method} +create ( organiser : Caller , requestId : UUID , rawReason : String , details : SaveEventRequestRequest ) : View
-	{method} +forEvent ( caller : Caller , eventId : UUID ) : List
-	{method} +forRequest ( caller : Caller , requestId : UUID ) : List
-	{method} +get ( caller : Caller , changeRequestId : UUID ) : View
-	{method} +pending ( caller : Caller ) : List
-	{method} +reject ( coordinator : Caller , changeRequestId : UUID , rawReason : String ) : View
-	{method} +withdraw ( organiser : Caller , changeRequestId : UUID ) : View
-}
-
-
-class ChangeRequestService.Caller {
-	{field} -organisation : String
-	{field} -userId : UUID
+class ChangeRequest <<Entity>>  {
+	{field} +acknowledgedImpacts : List<Map<String, String>>
+	{field} +changeRequestId : UUID {id}
+	{field} +decidedAt : OffsetDateTime
+	{field} +decidedBy : UUID
+	{field} +decisionReason : String
+	{field} +eventId : UUID
+	{field} +originalValues : Map<String, Object>
+	{field} +proposedValues : Map<String, Object>
+	{field} +reason : String
+	{field} +requestId : UUID
+	{field} +requestedAt : OffsetDateTime
+	{field} +requestedBy : UUID
 }
 
 
@@ -495,20 +419,6 @@ enum ChangeRequestStatus {
 	{field} +pending
 	{field} +rejected
 	{field} +withdrawn
-}
-
-
-class EquipmentRequestAttentionService {
-	{field} {static} ~COVERAGE_BROKEN : String
-	{field} {static} ~REQUIREMENTS_CHANGED : String
-	{field} -changeLog : ApplicationEventPublisher
-	{method} +approved ( change : ChangeRequest , event : Event , changedFields : Set , proposed : SaveEventRequestRequest ) : void
-}
-
-
-class VenueRequirementChangeService {
-	{field} {static} -FIELDS : Set<String>
-	{method} +approved ( change : ChangeRequest , event : Event , oldStart : OffsetDateTime , oldEnd : OffsetDateTime ) : void
 }
 
 
@@ -540,11 +450,11 @@ class VenueRequirementReview <<Entity>>  {
 }
 
 
-class VenueRequirementReviewController {
-	{method} +booking ( bookingId : UUID ) : List
-	{method} +decide ( bookingId : UUID , reviewId : UUID , jwt : Jwt , decision : Decision ) : View
-	{method} +event ( eventId : UUID , jwt : Jwt ) : List
-	{method} +failure ( ex : RuntimeException ) : ResponseEntity
+interface ChangeRequestRepository {
+	{method}  {abstract} +findByRequestIdOrderByRequestedAtDesc ( requestId : UUID ) : List
+	{method}  {abstract} +findByStatusOrderByRequestedAtAsc ( status : ChangeRequestStatus ) : List
+	{method}  {abstract} +findFirstByRequestIdAndStatus ( requestId : UUID , status : ChangeRequestStatus ) : Optional
+	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
 }
 
 
@@ -553,6 +463,107 @@ interface VenueRequirementReviewRepository {
 	{method}  {abstract} +findByBookingIdOrderByApprovedAtDescReviewIdAsc ( bookingId : UUID ) : List
 	{method}  {abstract} +findByEventIdOrderByApprovedAtDescReviewIdAsc ( eventId : UUID ) : List
 	{method}  {abstract} +findForUpdate ( id : UUID ) : Optional
+}
+
+
+class BookingAssessmentService {
+	{field} -jdbc : JdbcTemplate
+	{field} -publisher : ApplicationEventPublisher
+	{method} +forCoordinator ( eventId : UUID , actor : UUID ) : List
+	{method} +lockVenueEvents ( venueId : UUID ) : Set
+	{method} +requirementsChanged ( event : Event , actor : UUID ) : void
+	{method} +restore ( bookingId : UUID , actor : UUID , expectedAssessmentId : UUID , note : String ) : View
+	{method} +venueChanged ( venueId : UUID , actor : UUID , layoutChanged : boolean , previousVenue : String , lockedEvents : Set ) : void
+	{method} +venueSnapshot ( venueId : UUID ) : String
+	{method} +view ( bookingId : UUID ) : View
+}
+
+
+class BookingAssessmentService.History {
+	{field} -actorName : String
+	{field} -assessmentId : UUID
+	{field} -createdAt : OffsetDateTime
+	{field} -outcome : String
+	{field} -reason : String
+	{field} -source : String
+}
+
+
+class BookingAssessmentService.View {
+	{field} -bookingId : UUID
+	{field} -canReassess : boolean
+	{field} -status : String
+}
+
+
+class ChangeImpactService {
+	{field} {static} ~ATTENTION : String
+	{field} {static} ~OK : String
+	{field} {static} -SINGAPORE : DateTimeFormatter
+	{method} +assess ( event : Event , proposed : SaveEventRequestRequest , changedFields : Set ) : List
+	{method} +assessBooking ( event : Event , booking : VenueBookingRecord ) : List
+	{method} +bookingSummary ( event : Event , booking : VenueBookingRecord , assessed : List ) : BookingSummary
+}
+
+
+class ChangeImpactService.BookingSummary {
+	{field} -occupiedEnd : OffsetDateTime
+	{field} -occupiedStart : OffsetDateTime
+	{field} -supportedLayouts : List<String>
+	{field} -venueRequirements : String
+}
+
+
+class ChangeRequestException {
+}
+
+
+class ChangeRequestException.ImpactChanged {
+}
+
+
+class ChangeRequestException.NotFound {
+}
+
+
+class ChangeRequestException.State {
+}
+
+
+class ChangeRequestService {
+	{field} {static} -ATTENDEE_NOTIFICATION_FIELDS : Set<String>
+	{field} {static} ~MAX_TEXT : int
+	{field} {static} ~REQUEST_CHANGED_SINCE : String
+	{field} -clock : Clock
+	{field} -published : ApplicationEventPublisher
+	{method} +approve ( coordinator : Caller , changeRequestId : UUID , acknowledged : List ) : View
+	{method} +create ( organiser : Caller , requestId : UUID , rawReason : String , details : SaveEventRequestRequest ) : View
+	{method} +forEvent ( caller : Caller , eventId : UUID ) : List
+	{method} +forRequest ( caller : Caller , requestId : UUID ) : List
+	{method} +get ( caller : Caller , changeRequestId : UUID ) : View
+	{method} +pending ( caller : Caller ) : List
+	{method} +reject ( coordinator : Caller , changeRequestId : UUID , rawReason : String ) : View
+	{method} +withdraw ( organiser : Caller , changeRequestId : UUID ) : View
+}
+
+
+class ChangeRequestService.Caller {
+	{field} -organisation : String
+	{field} -userId : UUID
+}
+
+
+class EquipmentRequestAttentionService {
+	{field} {static} ~COVERAGE_BROKEN : String
+	{field} {static} ~REQUIREMENTS_CHANGED : String
+	{field} -changeLog : ApplicationEventPublisher
+	{method} +approved ( change : ChangeRequest , event : Event , changedFields : Set , proposed : SaveEventRequestRequest ) : void
+}
+
+
+class VenueRequirementChangeService {
+	{field} {static} -FIELDS : Set<String>
+	{method} +approved ( change : ChangeRequest , event : Event , oldStart : OffsetDateTime , oldEnd : OffsetDateTime ) : void
 }
 
 
@@ -733,29 +744,33 @@ class SecurityConfig {
 }
 
 
+class EquipmentCatalogueController {
+	{method} +catalogue ( from : Instant , to : Instant ) : List
+	{method} +detail ( equipmentId : UUID ) : EquipmentDetailResponse
+}
+
+
+class EquipmentReservationController {
+	{method} +availability ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
+	{method} +reservationsForEvent ( eventId : UUID ) : List
+	{method} +reserve ( request : ReserveEquipmentRequest ) : EquipmentReservationResponse
+	{method} +reserveBatch ( request : ReserveBatchRequest ) : List
+}
+
+
+class EquipmentStatusController {
+	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , request : AddStatusPeriodRequest ) : void
+	{method} +listAllPeriods ( current : boolean ) : List
+	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
+	{method} +listUnits ( start : Instant , end : Instant ) : List
+	{method} +removePeriod ( periodId : UUID ) : void
+}
+
+
 class AddStatusPeriodRequest {
 	{field} -end : Instant
 	{field} -start : Instant
-}
-
-
-class DevEquipmentSeeder {
-	{field} {static} ~ATTEMPTS_PER_UNIT : int
-	{field} {static} -GENERAL_EQUIPMENT_TYPE : char
-	{field} {static} ~SEED_EQUIPMENT : List<DevEquipmentSeeder.SeedEquipment>
-	{field} -jdbc : JdbcTemplate
-	{field} {static} -log : Logger
-	{field} -random : RandomGenerator
-	{method} +run ( args : String[] ) : void
-}
-
-
-class Equipment <<Entity>>  {
-	{field} -id : UUID {id}
-	{field} -name : String
-	{field} -quantity : int
-	{field} -serialised : Boolean
-	{field} -type : char
 }
 
 
@@ -768,36 +783,6 @@ class EquipmentAvailabilityResponse {
 }
 
 
-class EquipmentAvailabilityService {
-	{method} +forEquipment ( kinds : Collection , start : Instant , end : Instant ) : Map
-	{method} +forEquipment ( kind : Equipment , start : Instant , end : Instant ) : Availability
-	{method}  {static} +heldThroughout ( reservations : Collection , equipmentId : UUID , start : Instant , end : Instant ) : int
-	{method} +unitConflict ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : Optional
-	{method} +unitsNotFree ( equipmentId : UUID , start : Instant , end : Instant ) : Set
-}
-
-
-class EquipmentAvailabilityService.Availability {
-	{field} -availableQuantity : int
-	{field} -outOfActionQuantity : int
-	{field} -reservedQuantity : int
-	{field} -totalQuantity : int
-}
-
-
-enum EquipmentAvailabilityService.UnitConflict {
-	{field} +BLOCKED
-	{field} +DAMAGED
-	{field} +RESERVED
-}
-
-
-class EquipmentCatalogueController {
-	{method} +catalogue ( from : Instant , to : Instant ) : List
-	{method} +detail ( equipmentId : UUID ) : EquipmentDetailResponse
-}
-
-
 class EquipmentCatalogueResponse {
 	{field} -availableQuantity : Integer
 	{field} -equipmentId : UUID
@@ -806,13 +791,8 @@ class EquipmentCatalogueResponse {
 	{field} -reservedQuantity : Integer
 	{field} -serialised : boolean
 	{field} -totalQuantity : int
-}
-
-
-class EquipmentCatalogueService {
-	{field} -clock : Clock
-	{method} +catalogue ( from : Instant , to : Instant ) : List
-	{method} +detail ( equipmentId : UUID ) : EquipmentDetailResponse
+	{method}  {static} +of ( equipment : Equipment ) : EquipmentCatalogueResponse
+	{method}  {static} +of ( equipment : Equipment , availability : Availability ) : EquipmentCatalogueResponse
 }
 
 
@@ -829,46 +809,6 @@ class EquipmentDetailResponse.Unit {
 }
 
 
-class EquipmentLog <<Entity>>  {
-	{field} -equipmentId : UUID
-	{field} -eventId : UUID
-	{field} -id : UUID {id}
-	{field} -loanedFrom : Instant
-	{field} -loanedUntil : Instant
-	{field} -quantity : int
-	{field} -serialNumber : String
-	{field} -spare : boolean
-	{field} -technicalRequirements : String
-	{method} +reduceBy ( units : int ) : void
-	{method} +replaceUnit ( replacementSerialNumber : String ) : void
-}
-
-
-interface EquipmentLogRepository {
-	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
-	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
-	{method}  {abstract} +findOverlappingForEquipments ( equipmentIds : Collection , start : Instant , end : Instant ) : List
-	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
-}
-
-
-interface EquipmentRepository {
-	{method}  {abstract} +damagedQuantities ( equipmentIds : Collection , start : Instant , end : Instant ) : List
-	{method}  {abstract} +findForUpdate ( equipmentId : UUID ) : Optional
-	{method}  {abstract} +openlyDamagedSerials ( equipmentId : UUID , start : Instant , end : Instant ) : List
-	{method}  {abstract} +unitOpenlyDamaged ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : boolean
-}
-
-
-class EquipmentReservationController {
-	{method} +availability ( requestId : UUID , start : Instant , end : Instant ) : List
-	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
-	{method} +reservationsForEvent ( eventId : UUID ) : List
-	{method} +reserve ( request : ReserveEquipmentRequest ) : EquipmentReservationResponse
-	{method} +reserveBatch ( request : ReserveBatchRequest ) : List
-}
-
-
 class EquipmentReservationResponse {
 	{field} -equipmentId : UUID
 	{field} -equipmentName : String
@@ -881,72 +821,7 @@ class EquipmentReservationResponse {
 	{field} -serialNumber : String
 	{field} -spare : boolean
 	{method} +covers ( start : Instant , end : Instant ) : boolean
-}
-
-
-class EquipmentReservationService {
-	{method} +availabilityForEvent ( requestId : UUID , start : Instant , end : Instant ) : List
-	{method} +needsAt ( eventId : UUID , start : Instant , end : Instant ) : List
-	{method} +releaseAllForEvent ( eventId : UUID ) : void
-	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
-	{method} +reservationsForEvent ( eventId : UUID ) : List
-	{method} +reserve ( req : ReserveEquipmentRequest ) : EquipmentReservationResponse
-	{method} +reserveBatch ( req : ReserveBatchRequest ) : List
-}
-
-
-class EquipmentReservationService.NeedAt {
-	{field} -equipmentId : UUID
-	{field} -equipmentName : String
-	{field} -free : int
-	{field} -needed : int
-}
-
-
-enum EquipmentStatus {
-	{field} +AVAILABLE
-	{field} +FAULTY
-	{field} +UNAVAILABLE
-}
-
-
-class EquipmentStatusController {
-	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , request : AddStatusPeriodRequest ) : void
-	{method} +listAllPeriods ( current : boolean ) : List
-	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
-	{method} +listUnits ( start : Instant , end : Instant ) : List
-	{method} +removePeriod ( periodId : UUID ) : void
-}
-
-
-class EquipmentStatusPeriod <<Entity>>  {
-	{field} -createdAt : Instant
-	{field} -equipmentId : UUID
-	{field} -id : UUID {id}
-	{field} -periodEnd : Instant
-	{field} -periodStart : Instant
-	{field} -serialNumber : String
-}
-
-
-interface EquipmentStatusPeriodRepository {
-	{method}  {abstract} +findByEquipmentIdAndSerialNumberOrderByPeriodStartAsc ( equipmentId : UUID , serialNumber : String ) : List
-	{method}  {abstract} +findByEquipmentIdOrderByPeriodStartAsc ( equipmentId : UUID ) : List
-	{method}  {abstract} +findOverlapping ( start : Instant , end : Instant ) : List
-	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
-	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
-}
-
-
-class EquipmentStatusService {
-	{field} {static} +FAR_FUTURE : Instant
-	{field} {static} +UNIT_COMMITTED_MESSAGE : String
-	{field} -clock : Clock
-	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , status : EquipmentStatus , start : Instant , end : Instant ) : void
-	{method} +listAllPeriods ( current : boolean ) : List
-	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
-	{method} +listUnits ( start : Instant , end : Instant ) : List
-	{method} +removePeriod ( periodId : UUID ) : void
+	{method}  {static} +from ( log : EquipmentLog , equipmentName : String , eventName : String ) : EquipmentReservationResponse
 }
 
 
@@ -954,11 +829,7 @@ class EquipmentUnitResponse {
 	{field} -equipmentId : UUID
 	{field} -equipmentName : String
 	{field} -serialNumber : String
-}
-
-
-class ReservationLineException {
-	{field} -equipmentId : UUID
+	{method}  {static} +from ( unit : SerialisedEquipment , status : EquipmentStatus ) : EquipmentUnitResponse
 }
 
 
@@ -988,6 +859,66 @@ class ReserveEquipmentRequest {
 }
 
 
+class StatusPeriodResponse {
+	{field} -end : Instant
+	{field} -id : UUID
+	{field} -start : Instant
+	{method}  {static} +from ( p : EquipmentStatusPeriod ) : StatusPeriodResponse
+}
+
+
+class UnitStatusPeriodResponse {
+	{field} -end : Instant
+	{field} -equipmentId : UUID
+	{field} -equipmentName : String
+	{field} -id : UUID
+	{field} -serialNumber : String
+	{field} -start : Instant
+	{method}  {static} +from ( p : EquipmentStatusPeriod , equipmentName : String ) : UnitStatusPeriodResponse
+}
+
+
+class Equipment <<Entity>>  {
+	{field} -id : UUID {id}
+	{field} -name : String
+	{field} -quantity : int
+	{field} -serialised : Boolean
+	{field} -type : char
+}
+
+
+class EquipmentLog <<Entity>>  {
+	{field} -equipmentId : UUID
+	{field} -eventId : UUID
+	{field} -id : UUID {id}
+	{field} -loanedFrom : Instant
+	{field} -loanedUntil : Instant
+	{field} -quantity : int
+	{field} -serialNumber : String
+	{field} -spare : boolean
+	{field} -technicalRequirements : String
+	{method} +reduceBy ( units : int ) : void
+	{method} +replaceUnit ( replacementSerialNumber : String ) : void
+}
+
+
+enum EquipmentStatus {
+	{field} +AVAILABLE
+	{field} +FAULTY
+	{field} +UNAVAILABLE
+}
+
+
+class EquipmentStatusPeriod <<Entity>>  {
+	{field} -createdAt : Instant
+	{field} -equipmentId : UUID
+	{field} -id : UUID {id}
+	{field} -periodEnd : Instant
+	{field} -periodStart : Instant
+	{field} -serialNumber : String
+}
+
+
 class SerialisedEquipment <<Entity>>  {
 }
 
@@ -999,25 +930,111 @@ class SerialisedEquipmentId {
 }
 
 
+interface EquipmentLogRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForEquipments ( equipmentIds : Collection , start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
+}
+
+
+interface EquipmentRepository {
+	{method}  {abstract} +damagedQuantities ( equipmentIds : Collection , start : Instant , end : Instant ) : List
+	{method}  {abstract} +findForUpdate ( equipmentId : UUID ) : Optional
+	{method}  {abstract} +openlyDamagedSerials ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +unitOpenlyDamaged ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : boolean
+}
+
+
+interface EquipmentStatusPeriodRepository {
+	{method}  {abstract} +findByEquipmentIdAndSerialNumberOrderByPeriodStartAsc ( equipmentId : UUID , serialNumber : String ) : List
+	{method}  {abstract} +findByEquipmentIdOrderByPeriodStartAsc ( equipmentId : UUID ) : List
+	{method}  {abstract} +findOverlapping ( start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
+}
+
+
 interface SerialisedEquipmentRepository {
 	{method}  {abstract} +findByIdEquipmentIdOrderByIdSerialNumberAsc ( equipmentId : UUID ) : List
 }
 
 
-class StatusPeriodResponse {
-	{field} -end : Instant
-	{field} -id : UUID
-	{field} -start : Instant
+class DevEquipmentSeeder {
+	{field} {static} ~ATTEMPTS_PER_UNIT : int
+	{field} {static} -GENERAL_EQUIPMENT_TYPE : char
+	{field} {static} ~SEED_EQUIPMENT : List<DevEquipmentSeeder.SeedEquipment>
+	{field} -jdbc : JdbcTemplate
+	{field} {static} -log : Logger
+	{field} -random : RandomGenerator
+	{method} +run ( args : String[] ) : void
 }
 
 
-class UnitStatusPeriodResponse {
-	{field} -end : Instant
+class EquipmentAvailabilityService {
+	{method} +forEquipment ( kinds : Collection , start : Instant , end : Instant ) : Map
+	{method} +forEquipment ( kind : Equipment , start : Instant , end : Instant ) : Availability
+	{method}  {static} +heldThroughout ( reservations : Collection , equipmentId : UUID , start : Instant , end : Instant ) : int
+	{method} +unitConflict ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : Optional
+	{method} +unitsNotFree ( equipmentId : UUID , start : Instant , end : Instant ) : Set
+}
+
+
+class EquipmentAvailabilityService.Availability {
+	{field} -availableQuantity : int
+	{field} -outOfActionQuantity : int
+	{field} -reservedQuantity : int
+	{field} -totalQuantity : int
+}
+
+
+enum EquipmentAvailabilityService.UnitConflict {
+	{field} +BLOCKED
+	{field} +DAMAGED
+	{field} +RESERVED
+}
+
+
+class EquipmentCatalogueService {
+	{field} -clock : Clock
+	{method} +catalogue ( from : Instant , to : Instant ) : List
+	{method} +detail ( equipmentId : UUID ) : EquipmentDetailResponse
+}
+
+
+class EquipmentReservationService {
+	{method} +availabilityForEvent ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +needsAt ( eventId : UUID , start : Instant , end : Instant ) : List
+	{method} +releaseAllForEvent ( eventId : UUID ) : void
+	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
+	{method} +reservationsForEvent ( eventId : UUID ) : List
+	{method} +reserve ( req : ReserveEquipmentRequest ) : EquipmentReservationResponse
+	{method} +reserveBatch ( req : ReserveBatchRequest ) : List
+}
+
+
+class EquipmentReservationService.NeedAt {
 	{field} -equipmentId : UUID
 	{field} -equipmentName : String
-	{field} -id : UUID
-	{field} -serialNumber : String
-	{field} -start : Instant
+	{field} -free : int
+	{field} -needed : int
+}
+
+
+class EquipmentStatusService {
+	{field} {static} +FAR_FUTURE : Instant
+	{field} {static} +UNIT_COMMITTED_MESSAGE : String
+	{field} -clock : Clock
+	{method} +addPeriod ( equipmentId : UUID , serialNumber : String , status : EquipmentStatus , start : Instant , end : Instant ) : void
+	{method} +listAllPeriods ( current : boolean ) : List
+	{method} +listPeriods ( equipmentId : UUID , serialNumber : String ) : List
+	{method} +listUnits ( start : Instant , end : Instant ) : List
+	{method} +removePeriod ( periodId : UUID ) : void
+}
+
+
+class ReservationLineException {
+	{field} -equipmentId : UUID
 }
 
 
@@ -1260,19 +1277,6 @@ class EventEquipmentDamageService {
 }
 
 
-class EquipmentRequest <<Entity>>  {
-	{field} -attentionReason : String
-	{field} -eventId : UUID
-	{field} -id : UUID {id}
-	{field} -rejectReason : String
-	{field} -technicalRequirement : String
-	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
-	{method} +flagAttention ( reason : String ) : void
-	{method} +markStillSuitable () : void
-	{method} +supersede () : void
-}
-
-
 class EquipmentRequestController {
 	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
 	{method} +lines ( requestId : UUID ) : List
@@ -1285,13 +1289,6 @@ class EquipmentRequestController {
 }
 
 
-class EquipmentRequestDecisionService {
-	{field} {static} -MAX_REJECTION_REASON_LENGTH : int
-	{field} -changeLog : ApplicationEventPublisher
-	{method} +updateStatus ( requestId : UUID , input : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
-}
-
-
 class EquipmentRequestDetailsResponse {
 	{field} -attentionReason : String
 	{field} -eventId : UUID
@@ -1299,23 +1296,7 @@ class EquipmentRequestDetailsResponse {
 	{field} -requestId : UUID
 	{field} -status : String
 	{field} -technicalRequirement : String
-}
-
-
-class EquipmentRequestLine <<Entity>>  {
-	{field} -quantity : int
-}
-
-
-class EquipmentRequestLineId {
-	{field} -equipmentId : UUID
-	{field} -requestId : UUID
-}
-
-
-interface EquipmentRequestLineRepository {
-	{method}  {abstract} +findByIdRequestId ( requestId : UUID ) : List
-	{method}  {abstract} +findByRequestIds ( requestIds : Collection ) : List
+	{method}  {static} +from ( request : EquipmentRequest , lines : List ) : EquipmentRequestDetailsResponse
 }
 
 
@@ -1323,20 +1304,7 @@ class EquipmentRequestLineResponse {
 	{field} -equipmentId : UUID
 	{field} -equipmentName : String
 	{field} -quantity : int
-}
-
-
-class EquipmentRequestQueueService {
-	{method} +list ( status : String ) : List
-}
-
-
-interface EquipmentRequestRepository {
-	{method}  {abstract} +eventClosed ( eventId : UUID ) : boolean
-	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
-	{method}  {abstract} +findByEventIdForUpdate ( eventId : UUID ) : List
-	{method}  {abstract} +findByStatusIn ( statuses : Collection ) : List
-	{method}  {abstract} +findForUpdate ( requestId : UUID ) : Optional
+	{method}  {static} +from ( line : EquipmentRequestLine ) : EquipmentRequestLineResponse
 }
 
 
@@ -1368,40 +1336,6 @@ class EquipmentRequestResponse.Person {
 }
 
 
-class EquipmentRequestService {
-	{field} {static} -MAX_REQUIREMENT_LENGTH : int
-	{field} -changeLog : ApplicationEventPublisher
-	{method} +listForEvent ( coordinatorId : UUID , eventId : UUID ) : List
-	{method} +listForSafetyOfficer ( eventId : UUID ) : List
-	{method} +markStillSuitable ( coordinatorId : UUID , eventId : UUID , requestId : UUID , rawNote : String ) : EquipmentRequestDetailsResponse
-	{method} +revise ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
-	{method} +submit ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
-}
-
-
-class EquipmentRequestStateException {
-}
-
-
-enum EquipmentRequestStatus {
-	{field} +approved
-	{field} +attention
-	{field} +processing
-	{field} +rejected
-	{field} +superseded
-}
-
-
-class EquipmentRequestSubmitted {
-	{field} -eventId : UUID
-	{field} -requestId : UUID
-}
-
-
-class InvalidEquipmentRequestException {
-}
-
-
 class SubmitEquipmentRequest {
 	{field} -shortfallOutcomeId : UUID
 	{field} -technicalRequirement : String
@@ -1420,20 +1354,88 @@ class UpdateEquipmentRequestStatus {
 }
 
 
-class EquipmentChangeReview <<Entity>>  {
-	{field} +affectedReservations : List<Map<String, Object>>
-	{field} +changeRequestId : UUID
-	{field} +changedAt : OffsetDateTime
-	{field} +coordinatorId : UUID
-	{field} +eventId : UUID
-	{field} +outcomeNote : String
-	{field} +previousValues : Map<String, Object>
-	{field} +requirementsChanged : boolean
-	{field} +reviewId : UUID {id}
-	{field} +reviewedAt : OffsetDateTime
-	{field} +reviewedBy : UUID
-	{field} +updatedValues : Map<String, Object>
-	{method} +needsReview () : boolean
+class EquipmentRequest <<Entity>>  {
+	{field} -attentionReason : String
+	{field} -eventId : UUID
+	{field} -id : UUID {id}
+	{field} -rejectReason : String
+	{field} -technicalRequirement : String
+	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
+	{method} +flagAttention ( reason : String ) : void
+	{method} +markStillSuitable () : void
+	{method} +supersede () : void
+}
+
+
+class EquipmentRequestLine <<Entity>>  {
+	{field} -quantity : int
+}
+
+
+class EquipmentRequestLineId {
+	{field} -equipmentId : UUID
+	{field} -requestId : UUID
+}
+
+
+enum EquipmentRequestStatus {
+	{field} +approved
+	{field} +attention
+	{field} +processing
+	{field} +rejected
+	{field} +superseded
+}
+
+
+class EquipmentRequestSubmitted {
+	{field} -eventId : UUID
+	{field} -requestId : UUID
+}
+
+
+interface EquipmentRequestLineRepository {
+	{method}  {abstract} +findByIdRequestId ( requestId : UUID ) : List
+	{method}  {abstract} +findByRequestIds ( requestIds : Collection ) : List
+}
+
+
+interface EquipmentRequestRepository {
+	{method}  {abstract} +eventClosed ( eventId : UUID ) : boolean
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findByEventIdForUpdate ( eventId : UUID ) : List
+	{method}  {abstract} +findByStatusIn ( statuses : Collection ) : List
+	{method}  {abstract} +findForUpdate ( requestId : UUID ) : Optional
+}
+
+
+class EquipmentRequestDecisionService {
+	{field} {static} -MAX_REJECTION_REASON_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
+	{method} +updateStatus ( requestId : UUID , input : UpdateEquipmentRequestStatus ) : EquipmentRequestDetailsResponse
+}
+
+
+class EquipmentRequestQueueService {
+	{method} +list ( status : String ) : List
+}
+
+
+class EquipmentRequestService {
+	{field} {static} -MAX_REQUIREMENT_LENGTH : int
+	{field} -changeLog : ApplicationEventPublisher
+	{method} +listForEvent ( coordinatorId : UUID , eventId : UUID ) : List
+	{method} +listForSafetyOfficer ( eventId : UUID ) : List
+	{method} +markStillSuitable ( coordinatorId : UUID , eventId : UUID , requestId : UUID , rawNote : String ) : EquipmentRequestDetailsResponse
+	{method} +revise ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
+	{method} +submit ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
+}
+
+
+class EquipmentRequestStateException {
+}
+
+
+class InvalidEquipmentRequestException {
 }
 
 
@@ -1505,6 +1507,29 @@ class EquipmentChangeReviewDto.Values {
 }
 
 
+class EquipmentChangeReview <<Entity>>  {
+	{field} +affectedReservations : List<Map<String, Object>>
+	{field} +changeRequestId : UUID
+	{field} +changedAt : OffsetDateTime
+	{field} +coordinatorId : UUID
+	{field} +eventId : UUID
+	{field} +outcomeNote : String
+	{field} +previousValues : Map<String, Object>
+	{field} +requirementsChanged : boolean
+	{field} +reviewId : UUID {id}
+	{field} +reviewedAt : OffsetDateTime
+	{field} +reviewedBy : UUID
+	{field} +updatedValues : Map<String, Object>
+	{method} +needsReview () : boolean
+}
+
+
+enum ReviewOutcome {
+	{field} +needs_coordinator_action
+	{field} +still_suitable
+}
+
+
 interface EquipmentChangeReviewRepository {
 	{method}  {abstract} +existsByChangeRequestId ( changeRequestId : UUID ) : boolean
 	{method}  {abstract} +findAllByOrderByChangedAtDesc () : List
@@ -1521,12 +1546,6 @@ class EquipmentChangeReviewService {
 	{method} +forEvent ( callerId : UUID , lead : boolean , eventId : UUID ) : List
 	{method} +queue () : List
 	{method} +recordOutcome ( reviewerId : UUID , reviewId : UUID , input : OutcomeRequest ) : Detail
-}
-
-
-enum ReviewOutcome {
-	{field} +needs_coordinator_action
-	{field} +still_suitable
 }
 
 
@@ -2440,28 +2459,12 @@ class EventReadinessController {
 }
 
 
-class EventSafetyReview <<Entity>>  {
-	{field} -eventId : UUID {id}
-	{field} -flaggedItems : List<String>
-	{field} -note : String
-	{field} -reviewStatus : String
-	{field} -reviewedAt : OffsetDateTime
-	{field} -reviewedBy : UUID
-	{method} +update ( status : String , reason : String , flagged : List , reviewer : UUID , at : OffsetDateTime ) : void
-}
-
-
-interface EventSafetyReviewRepository {
-	{method}  {abstract} +findByEventId ( eventId : UUID ) : Optional
-}
-
-
-class IncompleteReadinessException {
-	{field} -outstandingItems : List<String>
-}
-
-
-class InvalidReadinessUpdateException {
+class SafetyOfficerController {
+	{method} +confirmedEvents () : List
+	{method} +planningEvents () : List
+	{method} +readiness ( eventId : UUID ) : ReadinessDto
+	{method} +review ( jwt : Jwt , eventId : UUID , request : SafetyApprovalRequest ) : ReadinessDto
+	{method} +updateItem ( jwt : Jwt , eventId : UUID , itemKey : String , request : UpdateReadinessItemRequest ) : ReadinessDto
 }
 
 
@@ -2489,38 +2492,6 @@ class ReadinessItemDto {
 }
 
 
-class ReadinessItemState <<Entity>>  {
-	{field} +arrangementFingerprint : String
-	{field} -checked : boolean
-	{field} -checkedAt : OffsetDateTime
-	{field} -checkedBy : UUID
-	{field} -eventId : UUID
-	{field} -itemId : UUID {id}
-	{field} -itemKey : String
-	{field} -note : String
-	{field} -updatedAt : OffsetDateTime
-	{field} -updatedBy : UUID
-	{method} +update ( nextChecked : boolean , nextNote : String , actor : UUID , at : OffsetDateTime ) : void
-}
-
-
-interface ReadinessItemStateRepository {
-	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
-	{method}  {abstract} +findByEventIdAndItemKey ( eventId : UUID , itemKey : String ) : Optional
-}
-
-
-class ReadinessService {
-	{field} {static} -MAX_NOTE_LENGTH : int
-	{field} {static} -STANDARD_ITEMS : List<ReadinessService.StandardItem>
-	{field} -clock : Clock
-	{method} +forCoordinator ( coordinatorId : UUID , eventId : UUID ) : ReadinessDto
-	{method} +forSafetyOfficer ( eventId : UUID ) : ReadinessDto
-	{method} +review ( safetyOfficerId : UUID , eventId : UUID , input : SafetyApprovalRequest ) : ReadinessDto
-	{method} +updateItem ( actorId : UUID , eventId : UUID , itemKey : String , input : UpdateReadinessItemRequest ) : ReadinessDto
-}
-
-
 class SafetyApprovalRequest {
 	{field} -decision : String
 	{field} -flaggedItems : List<String>
@@ -2538,18 +2509,66 @@ class SafetyEventListItemDto {
 }
 
 
-class SafetyOfficerController {
-	{method} +confirmedEvents () : List
-	{method} +planningEvents () : List
-	{method} +readiness ( eventId : UUID ) : ReadinessDto
-	{method} +review ( jwt : Jwt , eventId : UUID , request : SafetyApprovalRequest ) : ReadinessDto
-	{method} +updateItem ( jwt : Jwt , eventId : UUID , itemKey : String , request : UpdateReadinessItemRequest ) : ReadinessDto
-}
-
-
 class UpdateReadinessItemRequest {
 	{field} -checked : Boolean
 	{field} -note : String
+}
+
+
+class EventSafetyReview <<Entity>>  {
+	{field} -eventId : UUID {id}
+	{field} -flaggedItems : List<String>
+	{field} -note : String
+	{field} -reviewStatus : String
+	{field} -reviewedAt : OffsetDateTime
+	{field} -reviewedBy : UUID
+	{method} +update ( status : String , reason : String , flagged : List , reviewer : UUID , at : OffsetDateTime ) : void
+}
+
+
+class ReadinessItemState <<Entity>>  {
+	{field} +arrangementFingerprint : String
+	{field} -checked : boolean
+	{field} -checkedAt : OffsetDateTime
+	{field} -checkedBy : UUID
+	{field} -eventId : UUID
+	{field} -itemId : UUID {id}
+	{field} -itemKey : String
+	{field} -note : String
+	{field} -updatedAt : OffsetDateTime
+	{field} -updatedBy : UUID
+	{method} +update ( nextChecked : boolean , nextNote : String , actor : UUID , at : OffsetDateTime ) : void
+}
+
+
+interface EventSafetyReviewRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : Optional
+}
+
+
+interface ReadinessItemStateRepository {
+	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findByEventIdAndItemKey ( eventId : UUID , itemKey : String ) : Optional
+}
+
+
+class IncompleteReadinessException {
+	{field} -outstandingItems : List<String>
+}
+
+
+class InvalidReadinessUpdateException {
+}
+
+
+class ReadinessService {
+	{field} {static} -MAX_NOTE_LENGTH : int
+	{field} {static} -STANDARD_ITEMS : List<ReadinessService.StandardItem>
+	{field} -clock : Clock
+	{method} +forCoordinator ( coordinatorId : UUID , eventId : UUID ) : ReadinessDto
+	{method} +forSafetyOfficer ( eventId : UUID ) : ReadinessDto
+	{method} +review ( safetyOfficerId : UUID , eventId : UUID , input : SafetyApprovalRequest ) : ReadinessDto
+	{method} +updateItem ( actorId : UUID , eventId : UUID , itemKey : String , input : UpdateReadinessItemRequest ) : ReadinessDto
 }
 
 
@@ -2850,6 +2869,13 @@ class AvailabilityController {
 }
 
 
+class TimingConflictController {
+	{method} +list ( venueId : UUID ) : ResponseEntity
+	{method} +scan ( venueId : UUID ) : List
+	{method} +unavailable () : ApiError
+}
+
+
 class AvailabilityModels {
 }
 
@@ -2924,6 +2950,30 @@ class AvailabilityModels.Settings {
 }
 
 
+class EffectivePeriod {
+	{field} -end : OffsetDateTime
+	{field} -start : OffsetDateTime
+	{method}  {static} +minutes ( value : BigDecimal , fallback : int ) : int
+	{method}  {static} +of ( eventStart : OffsetDateTime , eventEnd : OffsetDateTime , durations : Settings ) : EffectivePeriod
+	{method}  {static} +validate ( durations : Settings ) : void
+}
+
+
+class VenueArrangementChanged {
+	{field} -bookingIds : List<UUID>
+	{field} -eventId : UUID
+	{field} -reason : String
+	{field} -what : String
+}
+
+
+class VenueBecameUnavailable {
+	{field} -actorId : UUID
+	{field} -eventIds : List<UUID>
+	{field} -reason : String
+}
+
+
 class AvailabilityRepository {
 	{field} -jdbc : JdbcTemplate
 	{method} +affected ( bookingId : UUID ) : boolean
@@ -2970,15 +3020,6 @@ class AvailabilityService {
 }
 
 
-class EffectivePeriod {
-	{field} -end : OffsetDateTime
-	{field} -start : OffsetDateTime
-	{method}  {static} +minutes ( value : BigDecimal , fallback : int ) : int
-	{method}  {static} +of ( eventStart : OffsetDateTime , eventEnd : OffsetDateTime , durations : Settings ) : EffectivePeriod
-	{method}  {static} +validate ( durations : Settings ) : void
-}
-
-
 class ExistingTimingConflictScan {
 	{method} +scan () : void
 }
@@ -2986,13 +3027,6 @@ class ExistingTimingConflictScan {
 
 class OperatingHours {
 	{method}  {static} +covers ( day : int , opens : LocalTime , closes : LocalTime , period : EffectivePeriod ) : boolean
-}
-
-
-class TimingConflictController {
-	{method} +list ( venueId : UUID ) : ResponseEntity
-	{method} +scan ( venueId : UUID ) : List
-	{method} +unavailable () : ApiError
 }
 
 
@@ -3007,21 +3041,6 @@ class TimingConflictService {
 class TimingConflictService.Overlap {
 	{method} +overlapEnd () : OffsetDateTime
 	{method} +overlapStart () : OffsetDateTime
-}
-
-
-class VenueArrangementChanged {
-	{field} -bookingIds : List<UUID>
-	{field} -eventId : UUID
-	{field} -reason : String
-	{field} -what : String
-}
-
-
-class VenueBecameUnavailable {
-	{field} -actorId : UUID
-	{field} -eventIds : List<UUID>
-	{field} -reason : String
 }
 
 
@@ -3631,6 +3650,8 @@ ChangeLogRecorder --> EventRequestRepository : eventRequests
 EventChange --> ActivityType : type
 AttendeeEventDetailsController --> AttendeeEventDetailsService : service
 AttendeeEventDetailsController --> AttendeeRegistrationService : registrations
+AttendeeRegistrationController --> AttendeeRegistrationQueryService : registrations
+AttendeeRegistrationController --> AttendeeRegistrationService : commands
 AttendeeEventDetailsDto --> "0..*" AttendeeEventDetailsDto.AttendeeVenue : venues
 AttendeeEventDetailsService --> AttendeeRegistrationRepository : registrations
 AttendeeEventDetailsService --> JourneyStatusResolver : statuses
@@ -3638,8 +3659,6 @@ AttendeeEventDetailsService --> EventRepository : events
 AttendeeEventDetailsService --> VenueRepository : venues
 AttendeeEventDetailsService --> AvailabilityService : availability
 AttendeeEventDetailsService --> VenueBookingRecordRepository : bookings
-AttendeeRegistrationController --> AttendeeRegistrationQueryService : registrations
-AttendeeRegistrationController --> AttendeeRegistrationService : commands
 AttendeeRegistrationQueryService --> AttendeeRegistrationRepository : registrations
 AttendeeRegistrationQueryService --> JourneyStatusResolver : statuses
 AttendeeRegistrationQueryService --> EventRepository : events
@@ -3649,14 +3668,22 @@ AttendeeRegistrationService --> EventRepository : events
 AttendeeRegistrationService --> NotificationService : notifications
 AttendeeRegistrationService --> UserRepository : users
 BookingAssessmentController --> BookingAssessmentService : service
+ChangeRequestController --> ChangeRequestService : service
+ChangeRequestController.ImpactChangedError --> "0..*" ChangeRequestDto.ImpactItem : impact
+VenueRequirementReviewController --> VenueRequirementReviewService : service
+ChangeRequestDto.Create --> SaveEventRequestRequest : details
+ChangeRequestDto.View --> "0..*" ChangeRequestDto.FieldChange : changes
+ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : followUps
+ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : impact
+ChangeRequest --> ChangeRequestStatus : status
 BookingAssessmentService --> ChangeImpactService : impact
 BookingAssessmentService --> EventRepository : events
 BookingAssessmentService --> EventLifecycleService : lifecycle
 BookingAssessmentService --> UserRepository : users
 BookingAssessmentService --> VenueRepository : venues
 BookingAssessmentService --> VenueBookingRecordRepository : bookings
-BookingAssessmentService.View --> "0..*" BookingAssessmentService.History : history
 BookingAssessmentService.View --> "0..*" ChangeRequestDto.ImpactItem : checks
+BookingAssessmentService.View --> "0..*" BookingAssessmentService.History : history
 ChangeImpactService --> "0..*" EventStatus : SAFETY_STAGES
 ChangeImpactService --> "0..*" VenueBookingStatus : ACTIVE_BOOKINGS
 ChangeImpactService --> EquipmentReservationService : equipment
@@ -3665,18 +3692,11 @@ ChangeImpactService --> AvailabilityService : availability
 ChangeImpactService --> VenueHoldRepository : holds
 ChangeImpactService --> VenueBookingRecordRepository : bookings
 ChangeImpactService.BookingSummary --> "0..*" ChangeRequestDto.ImpactItem : checks
-ChangeRequest --> ChangeRequestStatus : status
-ChangeRequestController --> ChangeRequestService : service
-ChangeRequestController.ImpactChangedError --> "0..*" ChangeRequestDto.ImpactItem : impact
-ChangeRequestDto.Create --> SaveEventRequestRequest : details
-ChangeRequestDto.View --> "0..*" ChangeRequestDto.FieldChange : changes
-ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : followUps
-ChangeRequestDto.View --> "0..*" ChangeRequestDto.ImpactItem : impact
 ChangeRequestException.ImpactChanged --> "0..*" ChangeRequestDto.ImpactItem : impact
 ChangeRequestException.ImpactChanged --|> ChangeRequestException.State
 ChangeRequestService --> ActivityService : activity
-ChangeRequestService --> ChangeImpactService : impact
 ChangeRequestService --> ChangeRequestRepository : changeRequests
+ChangeRequestService --> ChangeImpactService : impact
 ChangeRequestService --> VenueRequirementChangeService : venueRequirements
 ChangeRequestService --> EventRepository : events
 ChangeRequestService --> EventLifecycleService : lifecycle
@@ -3695,10 +3715,9 @@ VenueRequirementChangeService --> UserRepository : users
 VenueRequirementChangeService --> VenueRepository : venues
 VenueRequirementChangeService --> VenueBookingRecordRepository : bookings
 VenueRequirementChangeService --> BookingAssessmentService : assessments
-VenueRequirementReviewController --> VenueRequirementReviewService : service
 VenueRequirementReviewService --> ActivityService : activity
-VenueRequirementReviewService --> ChangeImpactService : impact
 VenueRequirementReviewService --> VenueRequirementReviewRepository : reviews
+VenueRequirementReviewService --> ChangeImpactService : impact
 VenueRequirementReviewService --> EventRepository : events
 VenueRequirementReviewService --> EventRequestRepository : requests
 VenueRequirementReviewService --> NotificationService : notifications
@@ -3707,43 +3726,43 @@ VenueRequirementReviewService --> VenueRepository : venues
 VenueRequirementReviewService --> VenueBookingRecordRepository : bookings
 VenueRequirementReviewService.View --> "0..*" ChangeRequestDto.FieldChange : changes
 VenueRequirementReviewService.View --> "0..*" ChangeRequestDto.ImpactItem : checks
-VenueRequirementReviewService.View --> ChangeImpactService.BookingSummary : suitability
 VenueRequirementReviewService.View --> VenueRequirementReview : review
+VenueRequirementReviewService.View --> ChangeImpactService.BookingSummary : suitability
 JourneyStatusResolver --> EventRepository : events
-AddStatusPeriodRequest --> EquipmentStatus : status
-EquipmentAvailabilityService --> EquipmentLogRepository : logs
-EquipmentAvailabilityService --> EquipmentRepository : equipment
-EquipmentAvailabilityService --> EquipmentStatusPeriodRepository : statusPeriods
 EquipmentCatalogueController --> EquipmentCatalogueService : service
-EquipmentCatalogueService --> EquipmentAvailabilityService : availability
-EquipmentCatalogueService --> EquipmentRepository : equipment
-EquipmentCatalogueService --> EquipmentStatusPeriodRepository : statusPeriods
-EquipmentCatalogueService --> SerialisedEquipmentRepository : units
+EquipmentReservationController --> EquipmentReservationService : service
+EquipmentStatusController --> EquipmentStatusService : service
+AddStatusPeriodRequest --> EquipmentStatus : status
 EquipmentDetailResponse --> "0..*" EquipmentDetailResponse.Unit : units
 EquipmentDetailResponse.Unit --> "0..*" StatusPeriodResponse : statusPeriods
 EquipmentDetailResponse.Unit --> EquipmentStatus : status
-EquipmentReservationController --> EquipmentReservationService : service
-EquipmentReservationService --> EquipmentAvailabilityService : availability
+EquipmentUnitResponse --> EquipmentStatus : status
+ReserveBatchRequest --> "0..*" ReserveBatchRequest.Line : lines
+StatusPeriodResponse --> EquipmentStatus : status
+UnitStatusPeriodResponse --> EquipmentStatus : status
+EquipmentStatusPeriod --> EquipmentStatus : status
+SerialisedEquipment --> Equipment : equipment
+SerialisedEquipment --> EquipmentStatus : status
+SerialisedEquipment *-- SerialisedEquipmentId : id
+EquipmentAvailabilityService --> EquipmentLogRepository : logs
+EquipmentAvailabilityService --> EquipmentRepository : equipment
+EquipmentAvailabilityService --> EquipmentStatusPeriodRepository : statusPeriods
+EquipmentCatalogueService --> EquipmentRepository : equipment
+EquipmentCatalogueService --> EquipmentStatusPeriodRepository : statusPeriods
+EquipmentCatalogueService --> SerialisedEquipmentRepository : units
+EquipmentCatalogueService --> EquipmentAvailabilityService : availability
 EquipmentReservationService --> EquipmentLogRepository : logRepository
 EquipmentReservationService --> EquipmentRepository : equipmentRepository
 EquipmentReservationService --> SerialisedEquipmentRepository : unitRepository
+EquipmentReservationService --> EquipmentAvailabilityService : availability
 EquipmentReservationService --> EquipmentRequestLineRepository : requestLineRepository
 EquipmentReservationService --> EquipmentRequestRepository : requestRepository
 EquipmentReservationService --> EventRepository : eventRepository
 EquipmentReservationService --> EquipmentShortfallLedger : shortfalls
-EquipmentStatusController --> EquipmentStatusService : service
-EquipmentStatusPeriod --> EquipmentStatus : status
 EquipmentStatusService --> EquipmentLogRepository : logRepository
 EquipmentStatusService --> EquipmentRepository : equipmentRepository
 EquipmentStatusService --> EquipmentStatusPeriodRepository : periodRepository
 EquipmentStatusService --> SerialisedEquipmentRepository : unitRepository
-EquipmentUnitResponse --> EquipmentStatus : status
-ReserveBatchRequest --> "0..*" ReserveBatchRequest.Line : lines
-SerialisedEquipment --> Equipment : equipment
-SerialisedEquipment --> EquipmentStatus : status
-SerialisedEquipment *-- SerialisedEquipmentId : id
-StatusPeriodResponse --> EquipmentStatus : status
-UnitStatusPeriodResponse --> EquipmentStatus : status
 EquipmentDamageController --> EquipmentDamageService : service
 EventEquipmentDamageController --> EventEquipmentDamageService : service
 DamageReportDto --> "0..*" DamageReportDto.AffectedEvent : affectedEvents
@@ -3757,11 +3776,11 @@ DamageImpact --> EquipmentDamageReportRepository : reports
 DamageImpact --> EquipmentRequestLineRepository : lines
 DamageImpact --> EquipmentRequestRepository : requests
 EquipmentDamageService --> JourneyStatusResolver : statuses
-EquipmentDamageService --> EquipmentAvailabilityService : availability
 EquipmentDamageService --> EquipmentLogRepository : logs
 EquipmentDamageService --> EquipmentRepository : equipment
-EquipmentDamageService --> EquipmentStatusService : statusService
 EquipmentDamageService --> SerialisedEquipmentRepository : units
+EquipmentDamageService --> EquipmentAvailabilityService : availability
+EquipmentDamageService --> EquipmentStatusService : statusService
 EquipmentDamageService --> EquipmentDamageOutcomeRepository : outcomes
 EquipmentDamageService --> EquipmentDamageReportRepository : reports
 EquipmentDamageService --> DamageImpact : impact
@@ -3780,20 +3799,23 @@ EventEquipmentDamageService --> EquipmentDamageReportRepository : reports
 EventEquipmentDamageService --> EquipmentShortfallLedger : ledger
 EventEquipmentDamageService --> EquipmentRequestRepository : requests
 EventEquipmentDamageService --> EventRepository : events
-EquipmentRequest --> EquipmentRequestStatus : status
-EquipmentRequestController --> EquipmentRequestDecisionService : decisionService
 EquipmentRequestController --> EquipmentRequestLineRepository : lineRepository
+EquipmentRequestController --> EquipmentRequestDecisionService : decisionService
 EquipmentRequestController --> EquipmentRequestQueueService : queue
 EquipmentRequestController --> EquipmentRequestService : service
+EquipmentRequestDetailsResponse --> "0..*" EquipmentRequestLineResponse : lines
+EquipmentRequestResponse --> "0..*" EquipmentRequestResponse.Item : items
+EquipmentRequestResponse --> EquipmentRequestResponse.Person : requestedBy
+SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
+EquipmentRequest --> EquipmentRequestStatus : status
+EquipmentRequestLine --> Equipment : equipment
+EquipmentRequestLine *-- EquipmentRequestLineId : id
 EquipmentRequestDecisionService --> EquipmentLogRepository : reservations
 EquipmentRequestDecisionService --> EquipmentRequestLineRepository : lines
 EquipmentRequestDecisionService --> EquipmentRequestRepository : requests
 EquipmentRequestDecisionService --> EventRepository : events
 EquipmentRequestDecisionService --> EquipmentShortfallLedger : shortfalls
 EquipmentRequestDecisionService --> NotificationService : notifications
-EquipmentRequestDetailsResponse --> "0..*" EquipmentRequestLineResponse : lines
-EquipmentRequestLine --> Equipment : equipment
-EquipmentRequestLine *-- EquipmentRequestLineId : id
 EquipmentRequestQueueService --> "0..*" EventStatus : CLOSED
 EquipmentRequestQueueService --> JourneyStatusResolver : statuses
 EquipmentRequestQueueService --> EquipmentDamageOutcomeRepository : outcomes
@@ -3801,8 +3823,6 @@ EquipmentRequestQueueService --> EquipmentRequestLineRepository : lines
 EquipmentRequestQueueService --> EquipmentRequestRepository : requests
 EquipmentRequestQueueService --> EventRepository : events
 EquipmentRequestQueueService --> UserRepository : users
-EquipmentRequestResponse --> "0..*" EquipmentRequestResponse.Item : items
-EquipmentRequestResponse --> EquipmentRequestResponse.Person : requestedBy
 EquipmentRequestService --> EquipmentRepository : equipment
 EquipmentRequestService --> EquipmentReservationService : reservations
 EquipmentRequestService --> EquipmentRequestLineRepository : lines
@@ -3810,13 +3830,12 @@ EquipmentRequestService --> EquipmentRequestRepository : requests
 EquipmentRequestService --> EventRepository : events
 EquipmentRequestService --> EquipmentShortfallLedger : shortfalls
 EquipmentRequestService --> EquipmentChangeReviewRepository : changeReviews
-SubmitEquipmentRequest --> "0..*" SubmitEquipmentRequest.Item : items
-EquipmentChangeReview --> ReviewOutcome : outcome
 EquipmentChangeReviewController --> EquipmentChangeReviewService : service
 EquipmentChangeReviewDto.Detail --> "0..*" EquipmentChangeReviewDto.Reservation : affectedAtChange
 EquipmentChangeReviewDto.Detail --> "0..*" EquipmentChangeReviewDto.Reservation : reservations
 EquipmentChangeReviewDto.Detail --> EquipmentChangeReviewDto.Values : previous
 EquipmentChangeReviewDto.Detail --> EquipmentChangeReviewDto.Values : updated
+EquipmentChangeReview --> ReviewOutcome : outcome
 EquipmentChangeReviewService --> EquipmentReservationService : reservations
 EquipmentChangeReviewService --> EquipmentChangeReviewRepository : reviews
 EquipmentChangeReviewService --> EventRepository : events
@@ -3947,7 +3966,14 @@ NotificationService --> AttendeeRegistrationRepository : attendeeRegistrations
 NotificationService --> NotificationOutbox : outbox
 NotificationService --> UserRepository : users
 EventReadinessController --> ReadinessService : readiness
+SafetyOfficerController --> "0..*" EventStatus : PRE_CONFIRMATION
+SafetyOfficerController --> JourneyStatusResolver : statuses
+SafetyOfficerController --> EventRepository : events
+SafetyOfficerController --> ReadinessService : readiness
+SafetyOfficerController --> VenueRepository : venues
+SafetyOfficerController --> VenueBookingRecordRepository : bookings
 ReadinessDto --> "0..*" ReadinessItemDto : items
+SafetyEventListItemDto --> StatusView : journeyStatus
 ReadinessService --> EventRepository : events
 ReadinessService --> EventLifecycleService : lifecycle
 ReadinessService --> EventRequestRepository : eventRequests
@@ -3956,13 +3982,6 @@ ReadinessService --> EventSafetyReviewRepository : reviews
 ReadinessService --> ReadinessItemStateRepository : itemStates
 ReadinessService --> UserRepository : users
 ReadinessService --> VenueSafetyChecklist : venueChecklist
-SafetyEventListItemDto --> StatusView : journeyStatus
-SafetyOfficerController --> "0..*" EventStatus : PRE_CONFIRMATION
-SafetyOfficerController --> JourneyStatusResolver : statuses
-SafetyOfficerController --> EventRepository : events
-SafetyOfficerController --> ReadinessService : readiness
-SafetyOfficerController --> VenueRepository : venues
-SafetyOfficerController --> VenueBookingRecordRepository : bookings
 AuthController --> RefreshTokenService : refreshTokenService
 AuthController --> TokenService : tokenService
 RefreshToken --> User : user
@@ -3997,6 +4016,7 @@ VenueService --> VenueOperatingHourRepository : hours
 VenueService --> VenueRepository : repository
 VenueService --> BookingAssessmentService : assessments
 AvailabilityController --> AvailabilityService : service
+TimingConflictController --> TimingConflictService : service
 AvailabilityModels.Preview --> "0..*" AvailabilityModels.Booking : affectedBookings
 AvailabilityModels.Schedule --> "0..*" AvailabilityModels.Booking : bookings
 AvailabilityModels.Schedule --> "0..*" AvailabilityModels.OperationalIssue : operationalIssues
@@ -4009,7 +4029,6 @@ AvailabilityService --> AvailabilityRepository : repository
 AvailabilityService --> VenueHoldRepository : holds
 ExistingTimingConflictScan --> VenueRepository : venues
 ExistingTimingConflictScan --> TimingConflictService : conflicts
-TimingConflictController --> TimingConflictService : service
 TimingConflictService --> VenueRepository : venues
 TimingConflictService --> AvailabilityRepository : availability
 TimingConflictService.Overlap --> AvailabilityModels.Booking : first
