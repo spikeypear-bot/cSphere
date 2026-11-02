@@ -1,5 +1,6 @@
-package com.example.connect_sphere.safety;
+package com.example.connect_sphere.safety.repository;
 
+import com.example.connect_sphere.safety.entity.ReadinessItemState;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

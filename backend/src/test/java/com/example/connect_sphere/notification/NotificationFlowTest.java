@@ -47,7 +47,7 @@ import com.example.connect_sphere.venue.service.VenueService;
 @Tag("EC08")
 @Tag("SO-C4")
 class NotificationFlowTest {
-    @Autowired com.example.connect_sphere.safety.ReadinessService venueReadiness;
+    @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
 
     @Autowired MockMvc mvc;
     @Autowired UserRepository users;
@@ -131,7 +131,7 @@ class NotificationFlowTest {
     }
 
     private void completeReadiness(UUID eventId) throws Exception {
-        for (String itemKey : venueReadiness.forSafetyOfficer(eventId).items().stream().map(com.example.connect_sphere.safety.ReadinessItemDto::itemKey).toList()) {
+        for (String itemKey : venueReadiness.forSafetyOfficer(eventId).items().stream().map(com.example.connect_sphere.safety.dto.ReadinessItemDto::itemKey).toList()) {
             mvc.perform(patch("/api/safety/events/" + eventId + "/readiness/items/" + itemKey)
                     .with(flow.as("so1"))
                     .contentType(MediaType.APPLICATION_JSON)

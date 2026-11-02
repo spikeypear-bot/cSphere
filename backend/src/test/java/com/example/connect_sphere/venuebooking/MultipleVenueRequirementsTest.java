@@ -3,6 +3,11 @@ package com.example.connect_sphere.venuebooking;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.example.connect_sphere.safety.dto.SafetyApprovalRequest;
+import com.example.connect_sphere.safety.dto.UpdateReadinessItemRequest;
+import com.example.connect_sphere.safety.service.IncompleteReadinessException;
+import com.example.connect_sphere.safety.service.ReadinessService;
+import com.example.connect_sphere.safety.service.VenueSafetyChecklist;
 import java.util.*;
 import java.time.*;
 import java.math.BigDecimal;
@@ -21,7 +26,6 @@ import com.example.connect_sphere.venue.service.VenueService;
 import com.example.connect_sphere.venuebooking.dto.*;
 import com.example.connect_sphere.venuebooking.service.*;
 import com.example.connect_sphere.event.service.EventLifecycleService;
-import com.example.connect_sphere.safety.*;
 
 @SpringBootTest @AutoConfigureMockMvc @Transactional
 @Tag("integration") @Tag("VS17") @Tag("EC-C2") @Tag("EC08") @Tag("EC10") @Tag("SO-C2") @Tag("VS04") @Tag("VS25")

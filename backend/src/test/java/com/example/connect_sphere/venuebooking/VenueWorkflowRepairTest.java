@@ -43,7 +43,7 @@ import com.example.connect_sphere.notification.service.*;
 @org.junit.jupiter.api.Tag("EC-C2")
 @org.junit.jupiter.api.Tag("EC10")
 class VenueWorkflowRepairTest {
-    @Autowired com.example.connect_sphere.safety.ReadinessService venueReadiness;
+    @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
     @Autowired jakarta.persistence.EntityManager entityManager;
     @Autowired JdbcTemplate jdbc;
     @Autowired MockMvc mvc;
@@ -126,7 +126,7 @@ class VenueWorkflowRepairTest {
     @Test @DisplayName("VS17 VS13 (boundary): untimed and touching issues leave existing arrangements ready")
     void nonBlockingIssuesDoNotReplan() {
         var f=fixture("pending","approved",0);
-        for(var item:venueReadiness.forSafetyOfficer(f.event()).items()) venueReadiness.updateItem(flow.idOf("so1"),f.event(),item.itemKey(),new com.example.connect_sphere.safety.UpdateReadinessItemRequest(true,"Verified"));
+        for(var item:venueReadiness.forSafetyOfficer(f.event()).items()) venueReadiness.updateItem(flow.idOf("so1"),f.event(),item.itemKey(),new com.example.connect_sphere.safety.dto.UpdateReadinessItemRequest(true,"Verified"));
         jdbc.update("UPDATE events SET status='safety_approved' WHERE event_id=?",f.event());
         entityManager.clear();
         issues.create(f.venue(),actor,new CreateVenueOperationalIssueRequest("Information only",null,null));

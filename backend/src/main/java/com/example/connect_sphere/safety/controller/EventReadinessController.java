@@ -1,5 +1,7 @@
-package com.example.connect_sphere.safety;
+package com.example.connect_sphere.safety.controller;
 
+import com.example.connect_sphere.safety.dto.ReadinessDto;
+import com.example.connect_sphere.safety.service.ReadinessService;
 import java.util.UUID;
 
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

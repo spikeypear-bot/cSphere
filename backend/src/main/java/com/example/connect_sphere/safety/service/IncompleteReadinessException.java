@@ -1,4 +1,4 @@
-package com.example.connect_sphere.safety;
+package com.example.connect_sphere.safety.service;
 
 import java.util.List;
 

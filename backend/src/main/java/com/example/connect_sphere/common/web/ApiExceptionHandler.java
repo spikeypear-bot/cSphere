@@ -41,8 +41,8 @@ import com.example.connect_sphere.venue.service.InvalidVenueException;
 import com.example.connect_sphere.user.service.InvalidRefreshTokenException;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venueissue.service.InvalidVenueOperationalIssueException;
-import com.example.connect_sphere.safety.IncompleteReadinessException;
-import com.example.connect_sphere.safety.InvalidReadinessUpdateException;
+import com.example.connect_sphere.safety.service.IncompleteReadinessException;
+import com.example.connect_sphere.safety.service.InvalidReadinessUpdateException;
 
 /** One place that turns domain exceptions into HTTP responses, so every
  * controller can just let them propagate. Add a handler here per new domain

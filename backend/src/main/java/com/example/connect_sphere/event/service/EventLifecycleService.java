@@ -79,7 +79,7 @@ public class EventLifecycleService {
     private final JourneyStatusResolver statuses;
     private final Clock clock;
     @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.venuebooking.service.BookingPlanService bookingPlan;
-    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.VenueSafetyChecklist venueChecklist;
+    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.service.VenueSafetyChecklist venueChecklist;
 
     /** EO07: releases a cancelled event's active venue holds. Null only for
      * callers built before EO07 that never cancel an event. */

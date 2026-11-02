@@ -54,10 +54,10 @@ import jakarta.persistence.EntityManager;
 @Tag("SO-C4")
 @Tag("VS-C1")
 class EventLifecycleFlowTest {
-    @Autowired com.example.connect_sphere.safety.ReadinessService venueReadiness;
+    @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
     private void attestVenues(UUID eventId) {
         for(var item:venueReadiness.forSafetyOfficer(eventId).items())
-            venueReadiness.updateItem(flow.idOf("so1"),eventId,item.itemKey(),new com.example.connect_sphere.safety.UpdateReadinessItemRequest(true,"Verified"));
+            venueReadiness.updateItem(flow.idOf("so1"),eventId,item.itemKey(),new com.example.connect_sphere.safety.dto.UpdateReadinessItemRequest(true,"Verified"));
     }
 
     private static final List<VenueOperatingHourDto> ALL_WEEK = IntStream.rangeClosed(1, 7)
