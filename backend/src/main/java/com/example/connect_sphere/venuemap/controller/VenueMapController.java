@@ -1,5 +1,6 @@
-package com.example.connect_sphere.venuemap;
+package com.example.connect_sphere.venuemap.controller;
 
+import com.example.connect_sphere.venuemap.service.VenueMapService;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
@@ -9,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 import com.example.connect_sphere.common.web.ApiError;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
-import static com.example.connect_sphere.venuemap.VenueMapDto.*;
+import static com.example.connect_sphere.venuemap.dto.VenueMapDto.*;
 
 /** VS-only read models; all booking decisions remain in their existing workflows. */
 @RestController

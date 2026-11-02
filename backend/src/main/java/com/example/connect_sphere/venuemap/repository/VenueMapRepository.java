@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venuemap;
+package com.example.connect_sphere.venuemap.repository;
 
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.UUID;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
-import static com.example.connect_sphere.venuemap.VenueMapDto.*;
+import static com.example.connect_sphere.venuemap.dto.VenueMapDto.*;
 
 @Repository
 public class VenueMapRepository {

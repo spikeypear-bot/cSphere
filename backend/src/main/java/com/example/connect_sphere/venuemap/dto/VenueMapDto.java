@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venuemap;
+package com.example.connect_sphere.venuemap.dto;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

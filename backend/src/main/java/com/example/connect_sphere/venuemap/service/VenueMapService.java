@@ -1,5 +1,6 @@
-package com.example.connect_sphere.venuemap;
+package com.example.connect_sphere.venuemap.service;
 
+import com.example.connect_sphere.venuemap.repository.VenueMapRepository;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneId;
@@ -9,7 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 import com.example.connect_sphere.venue.service.VenueNotFoundException;
-import static com.example.connect_sphere.venuemap.VenueMapDto.*;
+import static com.example.connect_sphere.venuemap.dto.VenueMapDto.*;
 
 @Service
 @Transactional(readOnly = true)
