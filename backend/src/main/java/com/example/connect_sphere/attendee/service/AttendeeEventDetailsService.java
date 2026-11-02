@@ -1,5 +1,9 @@
-package com.example.connect_sphere.attendee;
+package com.example.connect_sphere.attendee.service;
 
+import com.example.connect_sphere.attendee.dto.AttendeeEventDetailsDto;
+import com.example.connect_sphere.attendee.dto.AttendeeEventListItemDto;
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
 import java.util.List;
 import java.util.UUID;
 

@@ -1,4 +1,4 @@
-package com.example.connect_sphere.attendee;
+package com.example.connect_sphere.attendee.service;
 
 public class AttendeeRegistrationException extends RuntimeException {
     private final int status;

@@ -1,4 +1,4 @@
-package com.example.connect_sphere.attendee;
+package com.example.connect_sphere.attendee.dto;
 
 import java.time.OffsetDateTime;
 import java.util.UUID;

@@ -1,5 +1,8 @@
-package com.example.connect_sphere.attendee;
+package com.example.connect_sphere.attendee.dto;
 
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.service.AttendeeEventStatus;
+import com.example.connect_sphere.attendee.service.AttendeeWithdrawalPolicy;
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
@@ -13,7 +16,7 @@ public record AttendeeRegistrationDetailsDto(
         String eventStatus, boolean eventDetailsAvailable, boolean withdrawalAvailable, String withdrawalReason,
         OffsetDateTime withdrawnAt) {
 
-    static AttendeeRegistrationDetailsDto from(AttendeeRegistration registration, Event event,
+    public static AttendeeRegistrationDetailsDto from(AttendeeRegistration registration, Event event,
             JourneyStatus journey, OffsetDateTime now) {
         String reason = AttendeeWithdrawalPolicy.reason(registration, event, journey, now);
         String registrationStatus = journey == JourneyStatus.CANCELLED && "confirmed".equals(registration.getStatus())

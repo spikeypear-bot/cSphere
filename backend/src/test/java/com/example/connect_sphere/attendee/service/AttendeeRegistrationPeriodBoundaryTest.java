@@ -1,4 +1,4 @@
-package com.example.connect_sphere.attendee;
+package com.example.connect_sphere.attendee.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;

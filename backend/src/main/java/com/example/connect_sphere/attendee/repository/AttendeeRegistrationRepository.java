@@ -1,5 +1,6 @@
-package com.example.connect_sphere.attendee;
+package com.example.connect_sphere.attendee.repository;
 
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
 import java.util.Optional;
 import java.util.List;
 import java.util.UUID;

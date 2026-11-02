@@ -16,8 +16,8 @@ import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationChange;
 import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
-import com.example.connect_sphere.attendee.AttendeeRegistration;
-import com.example.connect_sphere.attendee.AttendeeRegistrationRepository;
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
 
 /** Database notices join the triggering transaction through a durable outbox.
  * Delivery retries after commit; transactional requirement and hold notices remain atomic. */

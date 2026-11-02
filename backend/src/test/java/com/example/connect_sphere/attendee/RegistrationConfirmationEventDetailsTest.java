@@ -3,6 +3,10 @@ package com.example.connect_sphere.attendee;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import com.example.connect_sphere.attendee.dto.AttendeeEventDetailsDto;
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
+import com.example.connect_sphere.attendee.service.AttendeeEventDetailsService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;

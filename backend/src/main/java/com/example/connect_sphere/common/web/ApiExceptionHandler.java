@@ -15,7 +15,7 @@ import com.example.connect_sphere.event.service.EventLifecycleException;
 import com.example.connect_sphere.event.service.EventLifecycleValidationException;
 import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.event.service.RegistrationPeriodException;
-import com.example.connect_sphere.attendee.AttendeeRegistrationException;
+import com.example.connect_sphere.attendee.service.AttendeeRegistrationException;
 import com.example.connect_sphere.event.service.EventNotReadyException;
 import com.example.connect_sphere.event.service.EventNotPendingException;
 import com.example.connect_sphere.event.service.EventReassignmentNotFoundException;
