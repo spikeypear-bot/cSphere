@@ -378,7 +378,8 @@ jobs:
           done
       - name: Run the browser tests
         working-directory: frontend
-        run: npx playwright test || { tail -n 80 ../app.log; exit 1; }
+        # Two browsers share the one backend; uniqueDay() gives each worker its own dates.
+        run: npx playwright test --workers=2 || { tail -n 80 ../app.log; exit 1; }
       - name: Keep the report and traces of a failed run
         if: failure()
         uses: actions/upload-artifact@v4
