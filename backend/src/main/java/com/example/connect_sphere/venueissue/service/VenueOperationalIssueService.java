@@ -63,13 +63,13 @@ public class VenueOperationalIssueService {
                 b.effectiveStart().isBefore(request.affectedUntil()) && b.effectiveEnd().isAfter(request.affectedFrom())).toList();
             // Same durable lifecycle handling as recorded unavailability; preserve all commitments.
             availability.notifyOperationalIssue(venueId,affected,request.description().strip());
-            if (!affected.isEmpty()) publisher.publishEvent(new com.example.connect_sphere.venueavailability.service.VenueBecameUnavailable(
+            if (!affected.isEmpty()) publisher.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable(
                 affected.stream().map(b -> b.eventId()).distinct().toList(),userId,"A venue operational issue requires review: "+request.description().strip()));
             // EO-C1: the organisers of affected events that have been confirmed.
             affected.stream().collect(java.util.stream.Collectors.groupingBy(b -> b.eventId(),
                     java.util.LinkedHashMap::new, java.util.stream.Collectors.mapping(b -> b.bookingId(),
                             java.util.stream.Collectors.toList())))
-                    .forEach((eventId, ids) -> publisher.publishEvent(new com.example.connect_sphere.venueavailability.service.VenueArrangementChanged(
+                    .forEach((eventId, ids) -> publisher.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged(
                             eventId, ids, "Venue Staff reported an operational issue at a venue for your event.",
                             request.description().strip())));
         }

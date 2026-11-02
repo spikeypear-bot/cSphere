@@ -1,5 +1,8 @@
 package com.example.connect_sphere.venueavailability.service;
 
+import com.example.connect_sphere.venueavailability.entity.EffectivePeriod;
+import com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged;
+import com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable;
 import com.example.connect_sphere.venueavailability.repository.AvailabilityRepository;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;

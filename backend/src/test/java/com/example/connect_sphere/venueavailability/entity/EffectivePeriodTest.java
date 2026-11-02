@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venueavailability.service;
+package com.example.connect_sphere.venueavailability.entity;
 
 import static org.assertj.core.api.Assertions.*;
 import java.time.OffsetDateTime;
@@ -7,6 +7,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import com.example.connect_sphere.venuebooking.service.InvalidVenueBookingException;
 
 @Tag("unit")

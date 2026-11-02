@@ -24,7 +24,7 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
-import com.example.connect_sphere.venueavailability.service.VenueBecameUnavailable;
+import com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable;
 
 /**
  * EC-NEW5: turning announced changes into log entries. ActivityService is a

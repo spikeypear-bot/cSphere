@@ -10,6 +10,7 @@ import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLineId;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestSubmitted;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.event.entity.Event;

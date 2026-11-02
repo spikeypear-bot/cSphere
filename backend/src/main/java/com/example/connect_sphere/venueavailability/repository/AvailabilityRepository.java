@@ -1,6 +1,6 @@
 package com.example.connect_sphere.venueavailability.repository;
 
-import com.example.connect_sphere.venueavailability.service.EffectivePeriod;
+import com.example.connect_sphere.venueavailability.entity.EffectivePeriod;
 import com.example.connect_sphere.venueavailability.service.OperatingHours;
 import java.time.OffsetDateTime;
 import java.util.List;

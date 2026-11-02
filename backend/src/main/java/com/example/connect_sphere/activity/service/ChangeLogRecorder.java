@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
-import com.example.connect_sphere.venueavailability.service.VenueBecameUnavailable;
+import com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable;
 
 /**
  * EC-NEW5: turns {@link EventChange}s (and venues becoming unavailable) into

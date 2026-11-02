@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venueavailability.service;
 
+import com.example.connect_sphere.venueavailability.entity.EffectivePeriod;
 import java.time.LocalTime;
 import java.time.ZoneId;
 

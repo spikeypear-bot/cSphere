@@ -1,4 +1,4 @@
-package com.example.connect_sphere.changerequest.service;
+package com.example.connect_sphere.changerequest.entity;
 
 import java.time.OffsetDateTime;
 import java.util.Map;

@@ -127,7 +127,7 @@ public class VenueBookingService {
         var end = booking.getEndDatetime() == null ? event.getEndDatetime() : booking.getEndDatetime();
         if (convertingHoldId != null) {
             var hold = holds.history(bookingId).stream().filter(h -> h.holdId().equals(convertingHoldId)).findFirst().orElseThrow();
-            var occupied = com.example.connect_sphere.venueavailability.service.EffectivePeriod.of(start, end,
+            var occupied = com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start, end,
                     new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(
                             booking.getSetupDurationMinutes(), booking.getTurnaroundDurationMinutes()));
             if (!hold.reservedStart().toInstant().equals(occupied.start().toInstant())
@@ -200,7 +200,7 @@ public class VenueBookingService {
                 event.getEventName(), approved.venue().venueAddress());
         if (replacedVenue != null && changeLog != null) {
             // EO-C1: approved, not yet confirmed; the follow-up comes on re-confirmation.
-            changeLog.publishEvent(new com.example.connect_sphere.venueavailability.service.VenueArrangementChanged(eventId,
+            changeLog.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged(eventId,
                     List.of(bookingId), "A replacement venue was approved for your event: " + approved.venue().venueAddress()
                             + ", replacing " + replacedVenue + ".", null));
         }
@@ -302,8 +302,8 @@ public class VenueBookingService {
         if (!java.util.Objects.equals(request.previousSetupDurationMinutes(), booking.getSetupDurationMinutes())
                 || !java.util.Objects.equals(request.previousTurnaroundDurationMinutes(), booking.getTurnaroundDurationMinutes()))
             throw new VenueBookingStateException("Booking timings changed. Refresh the booking before saving again.");
-        int setup = com.example.connect_sphere.venueavailability.service.EffectivePeriod.minutes(request.setupDurationMinutes(), 0);
-        int turnaround = com.example.connect_sphere.venueavailability.service.EffectivePeriod.minutes(request.turnaroundDurationMinutes(), 0);
+        int setup = com.example.connect_sphere.venueavailability.entity.EffectivePeriod.minutes(request.setupDurationMinutes(), 0);
+        int turnaround = com.example.connect_sphere.venueavailability.entity.EffectivePeriod.minutes(request.turnaroundDurationMinutes(), 0);
         String note = optionalText(request.timingNote(), "Timing reason");
         if (note == null) throw new InvalidVenueBookingException("Explain the reason for these booking timings.");
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
@@ -330,10 +330,10 @@ public class VenueBookingService {
         records.saveAndFlush(booking);
         lifecycle.returnToPlanning(eventId,actor,"Venue booking occupied times changed; reassess safety arrangements.");
         if (booking.getStatus() != VenueBookingStatus.pending && changeLog != null) {
-            changeLog.publishEvent(new com.example.connect_sphere.venueavailability.service.VenueArrangementChanged(eventId,
+            changeLog.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged(eventId,
                     List.of(bookingId), "The venue's booked setup and turnaround times for your event changed.", null));
         }
-        var period = com.example.connect_sphere.venueavailability.service.EffectivePeriod.of(start, end, durations);
+        var period = com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start, end, durations);
         timingConflicts.notifyCoordinator(event.getCoordinatorId(), eventId, bookingId, event.getEventName(), "venue_timing_changed",
                 "Venue Staff saved setup " + setup + " minutes and turnaround " + turnaround + " minutes. Occupied: "
                         + period.start() + " to " + period.end() + ". Reason: " + note);
@@ -396,7 +396,7 @@ public class VenueBookingService {
     private VenueBookingDto.RelatedBooking relatedBooking(VenueBooking booking) {
         var start = booking.getStartDatetime() == null ? booking.getEvent().getStartDatetime() : booking.getStartDatetime();
         var end = booking.getEndDatetime() == null ? booking.getEvent().getEndDatetime() : booking.getEndDatetime();
-        var occupied = com.example.connect_sphere.venueavailability.service.EffectivePeriod.of(start, end,
+        var occupied = com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start, end,
                 new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(booking.getSetupDurationMinutes(), booking.getTurnaroundDurationMinutes()));
         return new VenueBookingDto.RelatedBooking(booking.getBookingId(), booking.getVenue().getVenueId(),
                 booking.getVenue().getVenueAddress(), booking.getStatus(), start, end, occupied.start(), occupied.end());

@@ -22,7 +22,7 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
-import com.example.connect_sphere.venueavailability.service.VenueArrangementChanged;
+import com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;

@@ -1,4 +1,4 @@
-package com.example.connect_sphere.venueavailability.service;
+package com.example.connect_sphere.venueavailability.entity;
 
 import java.util.List;
 import java.util.UUID;

@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venueavailability.service;
 
+import com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable;
 import java.util.UUID;
 import org.springframework.context.event.EventListener;
 import org.springframework.jdbc.core.JdbcTemplate;

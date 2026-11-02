@@ -4,7 +4,7 @@ import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
 import com.example.connect_sphere.venueavailability.controller.TimingConflictController;
 import com.example.connect_sphere.venueavailability.repository.AvailabilityRepository;
-import com.example.connect_sphere.venueavailability.service.EffectivePeriod;
+import com.example.connect_sphere.venueavailability.entity.EffectivePeriod;
 import com.example.connect_sphere.venueavailability.service.TimingConflictService;
 import java.time.OffsetDateTime;
 import java.util.List;

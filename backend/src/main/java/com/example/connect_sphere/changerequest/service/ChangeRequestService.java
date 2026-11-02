@@ -1,5 +1,6 @@
 package com.example.connect_sphere.changerequest.service;
 
+import com.example.connect_sphere.changerequest.entity.ChangeApproved;
 import com.example.connect_sphere.changerequest.entity.ChangeRequest;
 import com.example.connect_sphere.changerequest.entity.ChangeRequestStatus;
 import com.example.connect_sphere.changerequest.repository.ChangeRequestRepository;
