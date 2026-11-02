@@ -6,7 +6,7 @@ import { leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from '.
 // event. When the Lead reassigns an event, the previous coordinator loses it
 // at once (with a clear message, not an error) and the new one has it.
 
-test('reassigning an event moves it from one coordinator to another at once (ECL-C7)', async ({ browser, request }) => {
+test('ECL-C7 (happy): reassigning an event moves it from one coordinator to another at once', async ({ browser, request }) => {
   test.setTimeout(150_000)
   const eventName = uniqueName('E2E Handover Gala')
   const organiser = await signedIn(browser, 'eo1')

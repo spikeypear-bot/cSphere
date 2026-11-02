@@ -7,7 +7,7 @@ import { apiGet, apiToken, confirmedEventByApi, createVenue, leadAssigns, reques
 // often turns back, checked through the browser: a rejection, a safety
 // change request, and (EO07) an event cancelled at the organiser's request.
 
-test('a rejected request tells the organiser it was rejected and why (EC02, EC-NEW2 AC3)', async ({ browser, request }) => {
+test('EC02 EC-NEW2 EO15 (negative): a rejected request tells the organiser it was rejected and why', async ({ browser, request }) => {
   test.setTimeout(120_000)
   const eventName = uniqueName('E2E Rejected Gala')
   const organiser = await signedIn(browser, 'eo1')
@@ -34,7 +34,7 @@ test('a rejected request tells the organiser it was rejected and why (EC02, EC-N
   })
 })
 
-test('SO-C6, EC08 AC23, AC24: the Safety Officer asks for changes to named checklist items and the coordinator can fix and resend', async ({ browser, request }) => {
+test('SO-C6 EC08 (happy): the Safety Officer asks for changes to named checklist items and the coordinator can fix and resend', async ({ browser, request }) => {
   test.setTimeout(180_000)
   const eventName = uniqueName('E2E Changes Fair')
   const venueName = uniqueName('E2E Harbour Room')
@@ -99,7 +99,7 @@ test('SO-C6, EC08 AC23, AC24: the Safety Officer asks for changes to named check
   })
 })
 
-test('EO07: organiser requests cancellation of a confirmed event, coordinator approves, organiser sees Cancelled', async ({ browser, request }) => {
+test('EO07 (happy): an organiser requests cancellation of a confirmed event, the coordinator approves, and the organiser sees Cancelled', async ({ browser, request }) => {
   test.setTimeout(120_000)
   const eventName = uniqueName('E2E Cancelled Gala')
   const venueId = await createVenue(request, uniqueName('E2E Pier Hall'))

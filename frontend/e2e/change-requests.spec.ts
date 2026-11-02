@@ -7,7 +7,7 @@ import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, subm
 // must acknowledge it, and approves; the organiser sees the new details.
 // Expected values come from the ACs, not from what the page happened to show.
 
-test('an organiser asks for a change and the coordinator approves it after acknowledging its impact (EO03, EC-NEW3)', async ({ browser, request }) => {
+test('EO03 EC-NEW3 EC-NEW5 (happy): an organiser asks for a change and the coordinator approves it after acknowledging its impact', async ({ browser, request }) => {
   test.setTimeout(180_000)
   const eventName = uniqueName('E2E Change Gala')
   const venueName = uniqueName('E2E Change Hall')
