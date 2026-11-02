@@ -87,12 +87,14 @@ describe('EC-NEW3 TS01 SO-C1 synchronization regressions', () => {
   it('TS01 (happy): TS discovers requests automatically and distinguishes types from units', async () => {
     vi.useFakeTimers(); seedSession('technical-support')
     let requests: unknown[] = []
-    stubApi({ 'GET /api/equipment-requests?status=processing': () => jsonResponse(200, requests) })
+    const calls = stubApi({ 'GET /api/equipment-requests?status=all': () => jsonResponse(200, requests) })
     page(<EquipmentRequestsPage />); await flush()
+    expect(screen.getByText('No equipment requests are awaiting review.')).toBeInTheDocument()
     requests = [{ requestId: 'q1', eventId: 'e1', eventName: 'Updated workshop',
       eventStart: '2027-03-10T01:00:00Z', eventEnd: '2027-03-10T04:00:00Z', status: 'processing',
       items: [{ equipmentId: 'p1', equipmentName: 'Projector', quantity: 3 }, { equipmentId: 'm1', equipmentName: 'Microphone', quantity: 5 }] }]
     await act(async () => { vi.advanceTimersByTime(5000) })
+    expect(calls.map(call => call.url)).toEqual(['/api/equipment-requests?status=all', '/api/equipment-requests?status=all'])
     expect(screen.getByText('Updated workshop')).toBeInTheDocument()
     expect(screen.getByText('3 × Projector, 5 × Microphone')).toBeInTheDocument()
     expect(screen.getByText('Equipment types').nextElementSibling).toHaveTextContent('2')

@@ -176,7 +176,7 @@ describe('TS09 the coordinator sees damaged equipment and deals with a shortfall
 
     await user.click(await screen.findByRole('link', { name: 'Request 1 more' }))
     expect(await screen.findByText(/Additional request for the shortfall: 1 × Projector/)).toBeInTheDocument()
-    expect(screen.getByRole('spinbutton', { name: 'Quantity' })).toHaveValue(1)
+    expect(screen.getByRole('spinbutton', { name: 'Projector quantity' })).toHaveValue(1)
     await user.click(screen.getByRole('button', { name: 'Submit equipment request' }))
 
     expect(await screen.findByText('Additional request for the shortfall submitted to Technical Support for review.')).toBeInTheDocument()

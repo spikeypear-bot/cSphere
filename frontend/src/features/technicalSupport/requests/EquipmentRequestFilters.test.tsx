@@ -26,15 +26,14 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 
 describe('TS09 TS01 EC-NEW3 equipment status navigation', () => {
   it.each([
-    ['processing', 'processing', ['processing']],
-    ['approved', 'approved', ['approved', 'attention']],
+    ['processing', 'all', ['processing']],
+    ['approved', 'all', ['approved', 'attention']],
     ['attention', 'all', ['attention']],
-    ['rejected', 'rejected', ['rejected']],
+    ['rejected', 'all', ['rejected']],
     ['superseded', 'all', ['superseded']],
     ['all', 'all', ['processing', 'approved', 'attention', 'rejected', 'superseded']],
-  ] as [string, string, string[]][])('TS09 (happy): %s uses the supported %s backend filter and preserves its request quantities', async (status, backend, expected) => {
-    const returned = backend === 'all' ? requests : requests.filter(r => expected.includes(r.status))
-    const calls = stubApi({ ['GET /api/equipment-requests?status=' + backend]: () => jsonResponse(200, returned) })
+  ] as [string, string, string[]][])('TS09 (happy): %s filters the %s response locally and preserves its request quantities', async (status, backend, expected) => {
+    const calls = stubApi({ ['GET /api/equipment-requests?status=' + backend]: () => jsonResponse(200, requests) })
     open(status)
     const list = await screen.findByRole('list', { name: 'Equipment requests' })
     expect(within(list).getAllByRole('link').map(link => link.getAttribute('href')))

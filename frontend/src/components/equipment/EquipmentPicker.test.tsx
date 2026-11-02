@@ -53,6 +53,9 @@ describe('EO01 EC07 TS01 SO-C3 shared equipment presentation', () => {
     expect(equipmentDraftFrom(equipmentRequirementsFrom({}, 'Bring cables', catalogue), catalogue))
       .toEqual({ selected: {}, notes: 'Bring cables' })
     const unknown = 'Equipment items:\n2 × Retired equipment'
-    expect(equipmentDraftFrom(unknown, catalogue)).toEqual({ selected: {}, notes: unknown })
+    // Generated catalogue lines stay separate from additional notes.
+    expect(equipmentDraftFrom(unknown, catalogue)).toEqual({ selected: {}, notes: '' })
+    expect(equipmentDraftFrom(unknown + '\n\nAdditional notes:\nBring cables', catalogue))
+      .toEqual({ selected: {}, notes: 'Bring cables' })
   })
 })

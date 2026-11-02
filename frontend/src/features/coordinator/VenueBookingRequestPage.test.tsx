@@ -214,11 +214,11 @@ describe('VenueBookingRequestPage (EC03)', () => {
       [{ ...OPTIONS[0], verdict: 'blocked', reasons: ['Setup overlaps another booking.'] }]) })
     renderPage()
     await addVenue(/1 Harbour Road/)
-    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'Request venue' })).toBeEnabled()
     fireEvent.change(screen.getByLabelText('Start'), { target: { value: '2027-03-10T10:00' } })
-    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Request venue' })).toBeDisabled()
     expect(await screen.findByText('Setup overlaps another booking.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Request venue' })).toBeDisabled()
   })
 
   it('initialises saved venue defaults, rechecks overrides and requires a timing reason', async () => {
@@ -235,10 +235,10 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByLabelText(/^Turnaround \(minutes\)/)).toHaveValue(45)
     await userEvent.clear(screen.getByLabelText(/^Setup \(minutes\)/))
     await userEvent.type(screen.getByLabelText(/^Setup \(minutes\)/), '60')
-    expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Request venue' })).toBeDisabled()
     await userEvent.type(screen.getByLabelText('Reason for different timings (required)'), 'Organiser needs early crew access')
-    await waitFor(() => expect(screen.getByRole('button', { name: 'Request 1 Harbour Road' })).toBeEnabled())
-    await userEvent.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Request venue' })).toBeEnabled())
+    await userEvent.click(screen.getByRole('button', { name: 'Request venue' }))
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(submitted).toMatchObject({ setupDurationMinutes: 60, turnaroundDurationMinutes: 45, timingNote: 'Organiser needs early crew access' })
   })
@@ -297,7 +297,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(blocked).toHaveTextContent('Missing facilities: projection.')
     await addVenue(/4 Missing Facility Road/)
     expect(screen.getByRole('table')).toHaveTextContent('Missing: Projection')
-    expect(screen.getByRole('button', { name: 'Request 4 Missing Facility Road' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Request venue' })).toBeDisabled()
   })
 
   it('shows coordinators the recorded unavailability reason and time window', async () => {
@@ -357,7 +357,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     await addVenue(/1 Harbour Road/)
     expect(screen.getByRole('table')).toHaveTextContent('Provided ✓')
     await user.type(screen.getByLabelText('Notes for Venue Staff (optional)'), 'Stage needed')
-    await user.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
+    await user.click(screen.getByRole('button', { name: 'Request venue' }))
 
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({
@@ -393,7 +393,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     renderPage()
 
     await addVenue(/2 Garden Lane/)
-    const submit = screen.getByRole('button', { name: 'Request 2 Garden Lane' })
+    const submit = screen.getByRole('button', { name: 'Request venue' })
     expect(submit).toBeDisabled()
     expect(screen.getByRole('table')).toHaveTextContent('Not provided ✗')
 
@@ -436,7 +436,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     renderPage()
 
     await addVenue(/1 Harbour Road/)
-    await user.click(screen.getByRole('button', { name: 'Request 1 Harbour Road' }))
+    await user.click(screen.getByRole('button', { name: 'Request venue' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('overlaps the event')
     expect(screen.queryByText('Event page')).not.toBeInTheDocument()
