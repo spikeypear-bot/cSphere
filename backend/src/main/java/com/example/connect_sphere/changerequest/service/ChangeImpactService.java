@@ -1,4 +1,4 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -12,7 +12,7 @@ import java.util.Set;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.connect_sphere.changerequest.ChangeRequestDto.ImpactItem;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.ImpactItem;
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.EquipmentReservationService;
 import com.example.connect_sphere.event.entity.Event;

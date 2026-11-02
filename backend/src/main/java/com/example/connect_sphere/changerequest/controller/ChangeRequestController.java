@@ -1,5 +1,8 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.controller;
 
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
+import com.example.connect_sphere.changerequest.service.ChangeRequestException;
+import com.example.connect_sphere.changerequest.service.ChangeRequestService;
 import java.util.List;
 import java.util.UUID;
 
@@ -16,7 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.connect_sphere.changerequest.ChangeRequestDto.View;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.View;
 import com.example.connect_sphere.common.web.ApiError;
 import com.example.connect_sphere.user.entity.UserRole;
 

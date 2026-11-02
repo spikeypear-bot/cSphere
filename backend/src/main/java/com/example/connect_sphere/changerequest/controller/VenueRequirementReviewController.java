@@ -1,5 +1,6 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.controller;
 
+import com.example.connect_sphere.changerequest.service.VenueRequirementReviewService;
 import java.util.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

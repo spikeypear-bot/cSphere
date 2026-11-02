@@ -24,7 +24,7 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
-import com.example.connect_sphere.changerequest.ChangeApproved;
+import com.example.connect_sphere.changerequest.service.ChangeApproved;
 import com.example.connect_sphere.equipment.EquipmentRepository;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository;

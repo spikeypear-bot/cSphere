@@ -1,4 +1,5 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.controller;
+import com.example.connect_sphere.changerequest.service.BookingAssessmentService;
 import java.util.*;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.security.access.prepost.PreAuthorize;

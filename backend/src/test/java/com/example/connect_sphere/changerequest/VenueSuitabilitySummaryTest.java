@@ -2,6 +2,8 @@ package com.example.connect_sphere.changerequest;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
+import com.example.connect_sphere.changerequest.service.ChangeImpactService;
 import java.time.OffsetDateTime;
 import java.util.*;
 import org.junit.jupiter.api.*;

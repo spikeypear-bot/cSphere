@@ -1,4 +1,4 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 

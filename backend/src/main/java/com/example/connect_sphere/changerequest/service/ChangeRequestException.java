@@ -1,5 +1,6 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
 import java.util.List;
 import java.util.UUID;
 

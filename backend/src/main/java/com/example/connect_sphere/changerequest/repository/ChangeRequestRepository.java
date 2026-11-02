@@ -1,5 +1,7 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.repository;
 
+import com.example.connect_sphere.changerequest.entity.ChangeRequest;
+import com.example.connect_sphere.changerequest.entity.ChangeRequestStatus;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;

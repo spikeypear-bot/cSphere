@@ -1,7 +1,8 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Map;

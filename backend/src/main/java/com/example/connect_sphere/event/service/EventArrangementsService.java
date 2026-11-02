@@ -38,7 +38,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Service
 public class EventArrangementsService {
 
-    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.changerequest.ChangeImpactService impact;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.changerequest.service.ChangeImpactService impact;
     @org.springframework.beans.factory.annotation.Autowired
     private com.example.connect_sphere.venue.service.VenueHoursService venueHours;
     private final EventRepository events;

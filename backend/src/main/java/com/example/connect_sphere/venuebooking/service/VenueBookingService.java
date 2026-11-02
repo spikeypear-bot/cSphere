@@ -26,7 +26,7 @@ public class VenueBookingService {
     private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
     @org.springframework.beans.factory.annotation.Autowired
     private com.example.connect_sphere.venuebooking.hold.VenueHoldService holdService;
-    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.changerequest.ChangeImpactService impact;
+    @org.springframework.beans.factory.annotation.Autowired(required=false) private com.example.connect_sphere.changerequest.service.ChangeImpactService impact;
     @org.springframework.beans.factory.annotation.Autowired private BookingPlanService plan;
     @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.event.service.EventLifecycleService lifecycle;
     @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.notification.service.NotificationService notifications;

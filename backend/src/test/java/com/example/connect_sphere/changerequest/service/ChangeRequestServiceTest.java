@@ -1,4 +1,4 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -13,6 +13,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.connect_sphere.changerequest.entity.ChangeRequest;
+import com.example.connect_sphere.changerequest.entity.ChangeRequestStatus;
+import com.example.connect_sphere.changerequest.repository.ChangeRequestRepository;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.OffsetDateTime;
@@ -31,8 +34,8 @@ import org.springframework.dao.DataIntegrityViolationException;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
-import com.example.connect_sphere.changerequest.ChangeRequestDto.ImpactItem;
-import com.example.connect_sphere.changerequest.ChangeRequestService.Caller;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.ImpactItem;
+import com.example.connect_sphere.changerequest.service.ChangeRequestService.Caller;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;

@@ -24,7 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
-import com.example.connect_sphere.changerequest.ChangeApproved;
+import com.example.connect_sphere.changerequest.service.ChangeApproved;
 import com.example.connect_sphere.equipment.Equipment;
 import com.example.connect_sphere.equipment.EquipmentRepository;
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;

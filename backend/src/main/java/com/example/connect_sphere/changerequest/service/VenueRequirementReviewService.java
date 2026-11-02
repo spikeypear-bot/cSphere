@@ -1,5 +1,8 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto;
+import com.example.connect_sphere.changerequest.entity.VenueRequirementReview;
+import com.example.connect_sphere.changerequest.repository.VenueRequirementReviewRepository;
 import java.time.OffsetDateTime;
 import java.util.*;
 import org.springframework.stereotype.Service;

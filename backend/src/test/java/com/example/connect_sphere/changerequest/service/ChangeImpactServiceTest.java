@@ -1,4 +1,4 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -16,7 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-import com.example.connect_sphere.changerequest.ChangeRequestDto.ImpactItem;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.ImpactItem;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.equipment.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.EquipmentReservationService;

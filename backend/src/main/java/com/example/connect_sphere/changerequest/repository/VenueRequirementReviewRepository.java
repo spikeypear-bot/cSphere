@@ -1,5 +1,6 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.repository;
 
+import com.example.connect_sphere.changerequest.entity.VenueRequirementReview;
 import java.util.UUID;
 import org.springframework.data.jpa.repository.JpaRepository;
 

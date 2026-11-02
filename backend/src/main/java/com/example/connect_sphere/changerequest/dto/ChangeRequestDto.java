@@ -1,4 +1,4 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.dto;
 
 import java.time.OffsetDateTime;
 import java.util.List;

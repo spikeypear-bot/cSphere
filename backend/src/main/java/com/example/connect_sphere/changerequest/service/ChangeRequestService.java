@@ -1,5 +1,8 @@
-package com.example.connect_sphere.changerequest;
+package com.example.connect_sphere.changerequest.service;
 
+import com.example.connect_sphere.changerequest.entity.ChangeRequest;
+import com.example.connect_sphere.changerequest.entity.ChangeRequestStatus;
+import com.example.connect_sphere.changerequest.repository.ChangeRequestRepository;
 import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
@@ -20,9 +23,9 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
-import com.example.connect_sphere.changerequest.ChangeRequestDto.FieldChange;
-import com.example.connect_sphere.changerequest.ChangeRequestDto.ImpactItem;
-import com.example.connect_sphere.changerequest.ChangeRequestDto.View;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.FieldChange;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.ImpactItem;
+import com.example.connect_sphere.changerequest.dto.ChangeRequestDto.View;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;

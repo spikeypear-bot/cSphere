@@ -29,7 +29,7 @@ import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import com.example.connect_sphere.changerequest.ChangeApproved;
+import com.example.connect_sphere.changerequest.service.ChangeApproved;
 import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestSubmitted;
 import com.example.connect_sphere.testsupport.FlowSupport;
 import com.example.connect_sphere.user.entity.UserRole;

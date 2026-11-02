@@ -23,7 +23,7 @@ import com.example.connect_sphere.venue.dto.VenueOperatingHourDto;
 
 @Service
 public class VenueService {
-    @Autowired(required=false) private com.example.connect_sphere.changerequest.BookingAssessmentService assessments;
+    @Autowired(required=false) private com.example.connect_sphere.changerequest.service.BookingAssessmentService assessments;
     private final VenueRepository repository;
     private final VenueMapper mapper;
     private final VenueOperatingHourRepository hours;
