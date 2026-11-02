@@ -34,7 +34,7 @@ async function fixture(page: Page, path: string) {
   return calls
 }
 
-test('DEV16 EC03 (cross-cutting): two-column request map shares filters and highlights only selected colocated rooms on desktop/mobile', async ({ page }, testInfo) => {
+test('DEV16 EC03 (cross-cutting): two-column request map shares filters and highlights only selected colocated rooms on desktop/mobile', { tag: '@ui' }, async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   const errors: string[] = []
   page.on('pageerror', error => errors.push(error.message))
@@ -89,7 +89,7 @@ test('DEV16 EC03 (cross-cutting): two-column request map shares filters and high
   expect(errors).toEqual([])
 })
 
-test('DEV16 EC04 (boundary): search map mirrors available results and removes every marker for an empty text match', async ({ page }) => {
+test('DEV16 EC04 (boundary): search map mirrors available results and removes every marker for an empty text match', { tag: '@ui' }, async ({ page }) => {
   const calls = await fixture(page, '/coordinator/venue-search')
   const map = page.getByRole('region', { name: 'Interactive venue map' })
   await expect(map.locator('.venue-map-marker')).toHaveCount(0)

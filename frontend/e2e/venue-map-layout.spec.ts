@@ -39,7 +39,7 @@ async function renderedZoom(page: Page) {
   })
 }
 
-test('DEV16 (boundary): desktop catalogue aligns with the full map card through wrapping, tile errors and mobile switching', async ({ page }) => {
+test('DEV16 (boundary): desktop catalogue aligns with the full map card through wrapping, tile errors and mobile switching', { tag: '@ui' }, async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await openFixture(page, 'venue-staff', 30)
   const list = page.getByRole('list', { name: 'Map venue catalogue' })
@@ -77,7 +77,7 @@ test('DEV16 (boundary): desktop catalogue aligns with the full map card through 
   await expect.poll(aligned).toBeLessThanOrEqual(1)
 })
 
-test('DEV16 EC04 (cross-cutting): desktop margins stay consistent and map controls and details match Venue Staff pages', async ({ page, context }, testInfo) => {
+test('DEV16 EC04 (cross-cutting): desktop margins stay consistent and map controls and details match Venue Staff pages', { tag: '@ui' }, async ({ page, context }, testInfo) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await openFixture(page)
   await expect(page.getByRole('button', { name: /Singapore room Singapore/ })).toBeVisible()
@@ -128,7 +128,7 @@ test('DEV16 EC04 (cross-cutting): desktop margins stay consistent and map contro
   await coordinator.close()
 })
 
-test('DEV16 (happy): touchpad pinch wheel events zoom the hovered map in and out without zooming the page', async ({ page }) => {
+test('DEV16 (happy): touchpad pinch wheel events zoom the hovered map in and out without zooming the page', { tag: '@ui' }, async ({ page }) => {
   await page.setViewportSize({ width: 1440, height: 1000 })
   await openFixture(page)
   const map = page.locator('.leaflet-container')
@@ -152,7 +152,7 @@ test('DEV16 (happy): touchpad pinch wheel events zoom the hovered map in and out
 
 test.describe('DEV16 touchscreen gestures', () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 844 } })
-  test('DEV16 (happy): two-finger pinch zooms the mobile map in and out', async ({ page, context }, testInfo) => {
+  test('DEV16 (happy): two-finger pinch zooms the mobile map in and out', { tag: '@ui' }, async ({ page, context }, testInfo) => {
     await openFixture(page)
     await page.getByRole('button', { name: 'Map view', exact: true }).click()
     const map = page.locator('.leaflet-container')
