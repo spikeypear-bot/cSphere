@@ -684,41 +684,19 @@ class ApiExceptionHandler {
 	{method} +handleAccessDenied ( ex : AccessDeniedException ) : ResponseEntity
 	{method} +handleAttendeeRegistration ( ex : AttendeeRegistrationException ) : ResponseEntity
 	{method} +handleAuthenticationFailure ( ex : AuthenticationException ) : ResponseEntity
-	{method} +handleEquipmentRequestState ( ex : EquipmentRequestStateException ) : ResponseEntity
-	{method} +handleEventCancellationNotFound ( ex : EventCancellationNotFoundException ) : ResponseEntity
-	{method} +handleEventCancellationState ( ex : EventCancellationStateException ) : ResponseEntity
-	{method} +handleEventLifecycle ( ex : EventLifecycleException ) : ResponseEntity
-	{method} +handleEventLifecycleValidation ( ex : EventLifecycleValidationException ) : ResponseEntity
-	{method} +handleEventNotFound ( ex : EventNotFoundException ) : ResponseEntity
-	{method} +handleEventNotPending ( ex : EventNotPendingException ) : ResponseEntity
+	{method} +handleConflict ( ex : RuntimeException ) : ResponseEntity
 	{method} +handleEventNotReady ( ex : EventNotReadyException ) : ResponseEntity
-	{method} +handleEventReassignmentNotFound ( ex : EventReassignmentNotFoundException ) : ResponseEntity
-	{method} +handleEventReassignmentState ( ex : EventReassignmentStateException ) : ResponseEntity
 	{method} +handleIncomplete ( ex : IncompleteEventRequestException ) : ResponseEntity
 	{method} +handleIncompleteReadiness ( ex : IncompleteReadinessException ) : ResponseEntity
-	{method} +handleInvalidCoordinator ( ex : InvalidCoordinatorException ) : ResponseEntity
-	{method} +handleInvalidEquipmentRequest ( ex : InvalidEquipmentRequestException ) : ResponseEntity
-	{method} +handleInvalidMessage ( ex : InvalidMessageException ) : ResponseEntity
-	{method} +handleInvalidReadinessUpdate ( ex : InvalidReadinessUpdateException ) : ResponseEntity
 	{method} +handleInvalidRefreshToken ( ex : InvalidRefreshTokenException ) : ResponseEntity
 	{method} +handleInvalidSchedule ( ex : InvalidEventRequestScheduleException ) : ResponseEntity
-	{method} +handleInvalidVenue ( ex : InvalidVenueException ) : ResponseEntity
-	{method} +handleInvalidVenueBooking ( ex : InvalidVenueBookingException ) : ResponseEntity
-	{method} +handleInvalidVenueOperationalIssue ( ex : InvalidVenueOperationalIssueException ) : ResponseEntity
 	{method} +handleMissingOrganisation ( ex : MissingOrganisationException ) : ResponseEntity
-	{method} +handleMissingRejectionReason ( ex : MissingRejectionReasonException ) : ResponseEntity
 	{method} +handleNotAssignedCoordinator ( ex : NotAssignedCoordinatorException ) : ResponseEntity
-	{method} +handleNotEditable ( ex : EventRequestNotEditableException ) : ResponseEntity
-	{method} +handleNotFound ( ex : EventRequestNotFoundException ) : ResponseEntity
-	{method} +handleNotPending ( ex : EventRequestNotPendingException ) : ResponseEntity
-	{method} +handleNotificationNotFound ( ex : NotificationNotFoundException ) : ResponseEntity
+	{method} +handleNotFound ( ex : RuntimeException ) : ResponseEntity
 	{method} +handleRegistrationPeriod ( ex : RegistrationPeriodException ) : ResponseEntity
-	{method} +handleRequestState ( ex : EventRequestStateException ) : ResponseEntity
 	{method} +handleReservationLine ( ex : ReservationLineException ) : ResponseEntity
 	{method} +handleResponseStatus ( ex : ResponseStatusException ) : ResponseEntity
-	{method} +handleVenueBookingNotFound ( ex : VenueBookingNotFoundException ) : ResponseEntity
-	{method} +handleVenueBookingState ( ex : VenueBookingStateException ) : ResponseEntity
-	{method} +handleVenueNotFound ( ex : VenueNotFoundException ) : ResponseEntity
+	{method} +handleUnprocessable ( ex : RuntimeException ) : ResponseEntity
 }
 
 
@@ -1963,10 +1941,6 @@ class EventNotFoundException {
 }
 
 
-class EventNotPendingException {
-}
-
-
 class EventNotReadyException {
 	{field} -blockers : List<String>
 }
@@ -2428,7 +2402,6 @@ class NotificationOutbox {
 
 
 class NotificationService {
-	{field} {static} -SINGAPORE_TIME : DateTimeFormatter
 	{field} -clock : Clock
 	{field} {static} -log : Logger
 	{method} +createAttendeeEventCancellationNotifications ( eventId : UUID , eventName : String , originalStart : OffsetDateTime , originalEnd : OffsetDateTime , reason : String , cancelledAt : OffsetDateTime ) : void
@@ -3098,7 +3071,6 @@ class VenueBookingController {
 	{method} +history ( bookingId : UUID ) : List
 	{method} +invalidId ( ex : MethodArgumentTypeMismatchException ) : ResponseEntity
 	{method} +list ( venueId : UUID ) : List
-	{method} +notFound ( ex : VenueBookingNotFoundException ) : ResponseEntity
 	{method} +pending () : List
 	{method} +reject ( bookingId : UUID , request : RejectVenueBookingRequest ) : VenueBookingDto
 	{method} +timing ( bookingId : UUID , jwt : Jwt , request : UpdateBookingTimingRequest ) : VenueBookingDto
@@ -3613,7 +3585,6 @@ class VenueMapController {
 	{method} +activity ( date : LocalDate ) : List
 	{method} +bookings ( venueId : UUID , date : LocalDate , includePast : boolean ) : List
 	{method} +invalid ( e : MethodArgumentTypeMismatchException ) : ResponseEntity
-	{method} +missing ( e : VenueNotFoundException ) : ResponseEntity
 }
 
 
