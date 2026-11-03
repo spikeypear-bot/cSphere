@@ -92,6 +92,19 @@ class DevEquipmentSeederFlowTest {
     }
 
     @Test
+    @DisplayName("TS09 (boundary): a kind the seeder tracks by quantity gets no units, even when the database marks it serialised")
+    void aQuantityKindGetsNoUnits() {
+        DevEquipmentSeeder seeder = new DevEquipmentSeeder(jdbc);
+        seeder.run();
+        UUID webcam = DevEquipmentSeeder.equipmentId("webcam");
+        jdbc.update("UPDATE equipments SET serialised = true WHERE equipment_id = ?", webcam);
+
+        seeder.run();
+
+        assertThat(units(webcam)).isZero();
+    }
+
+    @Test
     @DisplayName("TS09 (boundary): the database stores a 64-character serial number and refuses a 65-character one")
     void serialNumberColumnIs64Characters() {
         UUID id = UUID.randomUUID();

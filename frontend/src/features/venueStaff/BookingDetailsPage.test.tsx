@@ -129,7 +129,7 @@ it('VS-C4 AC9 (regression): staff requirements link conflicts without duplicatin
   expect(screen.getAllByText('Setup / Turnaround')).toHaveLength(1)
 })
 
-it.each(['?from=booking-approvals', ''])('keeps the page, open editor and unsaved input mounted during focus refresh (%s)', async suffix => {
+it.each(['?from=booking-approvals', ''])('VS16 (cross-cutting): keeps the page, open editor and unsaved input mounted during focus refresh (%s)', async suffix => {
   let finish!: (value: Response) => void
   let refreshing = false
   const pending = new Promise<Response>(resolve => { finish = resolve })
@@ -159,7 +159,7 @@ it.each(['?from=booking-approvals', ''])('keeps the page, open editor and unsave
   expect(setup).toHaveValue(75)
 })
 
-it('shows the ordered requirements using booking timings and updates them after saving', async () => {
+it('VS16 (happy): shows the ordered requirements using booking timings and updates them after saving', async () => {
   const timing = { setupDurationMinutes: 30, turnaroundDurationMinutes: 45,
     startDatetime: '2026-10-19T10:00:00+08:00', endDatetime: '2026-10-19T12:00:00+08:00',
     effectiveStart: '2026-10-19T09:30:00+08:00', effectiveEnd: '2026-10-19T12:45:00+08:00',
@@ -187,7 +187,7 @@ it('shows the ordered requirements using booking timings and updates them after 
   expect(value('Setup / Turnaround')).toHaveTextContent('60 / 45 minutes')
 })
 
-it('offers a hold beside approval/rejection and updates release/conversion actions immediately without refreshing', async () => {
+it('VS-C3 (happy): offers a hold beside approval/rejection and updates release/conversion actions immediately without refreshing', async () => {
   let holds: import('../../types/venueHold').VenueHold[] = []
   let status: VenueBookingDto['status'] = 'pending'
   const fetch = vi.fn(async (url: string, init: RequestInit) => {
@@ -230,7 +230,7 @@ it('offers a hold beside approval/rejection and updates release/conversion actio
   expect(within(panel).queryByRole('button', { name: 'Convert Hold to Approved Booking' })).not.toBeInTheDocument()
 })
 
-it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'] as const)('exposes the %s booking status for colour styling on details and venue lists', async status => {
+it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'] as const)('VS16 (happy): exposes the %s booking status for colour styling on details and venue lists', async status => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/bookings')) return response([{ ...booking, status }])
     if (url.endsWith('/occupancy-settings')) return response({ setupMinutes: 0, turnaroundMinutes: 0 })
@@ -247,7 +247,7 @@ it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'] as const)('e
   expect(label).toHaveAttribute('data-booking-status', status)
 })
 
-it.each([undefined, null])('defaults an absent booking status (%s) to pending and follows an approval response', async status => {
+it.each([undefined, null])('VS03 (boundary): defaults an absent booking status (%s) to pending and follows an approval response', async status => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
     response({ ...booking, status: init.method === 'PATCH' ? 'approved' : status })))
   page('/venue-staff/bookings/b1?from=booking-approvals')
@@ -259,7 +259,7 @@ it.each([undefined, null])('defaults an absent booking status (%s) to pending an
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
-it('rejects with an alternative venue and arrangement and displays both suggestions', async () => {
+it('VS04 VS09 (happy): rejects with an alternative venue and arrangement and displays both suggestions', async () => {
   const alternativeVenue = { ...booking.venue, venueId: 'v2', venueAddress: 'Garden Hall' }
   const rejected = { ...booking, status: 'rejected' as const, rejectReason: 'Unavailable on that date',
     alternativeVenueId: alternativeVenue.venueId, alternativeVenueAddress: alternativeVenue.venueAddress,
@@ -294,7 +294,7 @@ it('rejects with an alternative venue and arrangement and displays both suggesti
   })
 })
 
-it('allows rejection without an alternative when the venue list cannot be loaded', async () => {
+it('VS04 VS09 (failure): allows rejection without an alternative when the venue list cannot be loaded', async () => {
   const rejected = { ...booking, status: 'rejected' as const, rejectReason: 'Unavailable' }
   const fetch = vi.fn().mockImplementation(async (url: string, init?: RequestInit) => {
     if (url.endsWith('/venues')) return response({ message: 'Venue catalogue unavailable' }, 503)
@@ -320,7 +320,7 @@ it('allows rejection without an alternative when the venue list cannot be loaded
   })
 })
 
-it('navigates catalogue to venue to booking, displays requirements and refetches on reopening', async () => {
+it('VS16 (happy): navigates catalogue to venue to booking, displays requirements and refetches on reopening', async () => {
   let attendance = 120
   const fetch = vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/venues')) return response([booking.venue])
@@ -351,13 +351,13 @@ it('navigates catalogue to venue to booking, displays requirements and refetches
   expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
 })
 
-it('displays empty associated bookings', async () => {
+it('VS16 (boundary): displays empty associated bookings', async () => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => response(url.endsWith('/bookings') ? [] : booking.venue)))
   page('/venue-staff/catalogue/v1')
   expect(await screen.findByText('No associated bookings.')).toBeInTheDocument()
 })
 
-it('shows a booking error and can retry without showing stale details', async () => {
+it('VS16 (failure): shows a booking error and can retry without showing stale details', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(response({ message: 'Venue booking not found' }, 404))
     .mockResolvedValueOnce(response(booking)).mockResolvedValue(response([booking]))
   vi.stubGlobal('fetch', fetch); page('/venue-staff/bookings/b1')
@@ -367,7 +367,7 @@ it('shows a booking error and can retry without showing stale details', async ()
   expect(await screen.findByText('120 people')).toBeInTheDocument()
 })
 
-it('preserves explicit no accessibility requirements and displays existing equipment requirements', async () => {
+it('VS16 (boundary): preserves explicit no accessibility requirements and displays existing equipment requirements', async () => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => response(url.endsWith('/bookings') ? [booking] : { ...booking,
     event: { ...booking.event, accessibilityNeeds: ['none'], equipmentRequirements: 'Projector' } })))
   page('/venue-staff/bookings/b1')
@@ -377,14 +377,14 @@ it('preserves explicit no accessibility requirements and displays existing equip
 })
 
 
-it('shows missing venue errors without exposing an associated booking list', async () => {
+it('VS16 (negative): shows missing venue errors without exposing an associated booking list', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ message: 'Venue not found' }, 404)))
   page('/venue-staff/catalogue/missing')
   expect(await screen.findByRole('alert')).toHaveTextContent('Venue not found')
   expect(screen.queryByRole('heading', { name: 'Associated bookings' })).not.toBeInTheDocument()
 })
 
-it('retains venue details when associated bookings fail and supports retry', async () => {
+it('VS16 (failure): retains venue details when associated bookings fail and supports retry', async () => {
   let attempts = 0
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/bookings')) return ++attempts === 1 ? response({ message: 'Could not load bookings' }, 500) : response([booking])
@@ -398,7 +398,7 @@ it('retains venue details when associated bookings fail and supports retry', asy
 })
 
 
-it('paginates within the venue and fetches current details for each selected booking', async () => {
+it('VS16 (happy): paginates within the venue and fetches current details for each selected booking', async () => {
   const second = { ...booking, bookingId: 'b2', event: { ...booking.event, eventName: 'Seminar', expectedAttendance: 180 } }
   let attendance = 120
   const fetch = vi.fn().mockImplementation(async (url: string) => response(
@@ -420,7 +420,7 @@ it('paginates within the venue and fetches current details for each selected boo
 })
 
 
-it('keeps both panels and navigation mounted while paging without refetching the list', async () => {
+it('VS16 (happy): keeps both panels and navigation mounted while paging without refetching the list', async () => {
   const second = { ...booking, bookingId: 'b2', event: { ...booking.event, eventName: 'Second event' } }
   let finish!: (value: Response) => void
   const pending = new Promise<Response>(resolve => { finish = resolve })
@@ -456,7 +456,7 @@ it('keeps both panels and navigation mounted while paging without refetching the
 })
 
 
-it('retains the displayed booking and navigation after failure and throughout retry', async () => {
+it('VS16 (failure): retains the displayed booking and navigation after failure and throughout retry', async () => {
   const second = { ...booking, bookingId: 'b2', event: { ...booking.event, eventName: 'Recovered event' } }
   let attempts = 0
   let finish!: (value: Response) => void
@@ -491,7 +491,7 @@ it('retains the displayed booking and navigation after failure and throughout re
   expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
 })
 
-it('reviews the booking, cancels without writing, then approves exactly once and displays the response', async () => {
+it('VS03 (happy): reviews the booking, cancels without writing, then approves exactly once and displays the response', async () => {
   let finish!: (value: Response) => void
   const pending = new Promise<Response>(resolve => { finish = resolve })
   const fetch = vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
@@ -519,14 +519,14 @@ it('reviews the booking, cancels without writing, then approves exactly once and
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
-it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)('does not offer approval for %s', async status => {
+it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)('VS03 (negative): does not offer approval for %s', async status => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ ...booking, status })))
   page('/venue-staff/bookings/b1?from=booking-approvals')
   await screen.findByLabelText('Status: ' + ({ approved: 'Approved', pending: 'Pending', rejected: 'Rejected', changed: 'Replaced', cancelled: 'Cancelled', tentative: 'Tentative Hold', attention: 'Requires attention' })[status])
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
-it.each([404, 409, 503, 0])('keeps the booking pending and shows an error for failure %s', async code => {
+it.each([404, 409, 503, 0])('VS03 (failure): keeps the booking pending and shows an error for failure %s', async code => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
     if (init.method === 'PATCH') {
       if (!code) throw new TypeError('Network failure')
@@ -544,7 +544,7 @@ it.each([404, 409, 503, 0])('keeps the booking pending and shows an error for fa
   expect(await screen.findByRole('button', { name: 'Approve Booking' })).toBeEnabled()
 })
 
-it.each([false, true])('shows conflict details through automatic refresh (refresh fails: %s)', async failRefresh => {
+it.each([false, true])('VS03 VS-C4 (conflict): shows conflict details through automatic refresh (refresh fails: %s)', async failRefresh => {
   let attempted = false
   const fetch = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
     if (init.method === 'PATCH') {
@@ -582,7 +582,7 @@ it.each([false, true])('shows conflict details through automatic refresh (refres
   }
 })
 
-it('shows a buffer-only restriction without falsely highlighting the event times', async () => {
+it('VS03 VS-C4 (conflict): shows a buffer-only restriction without falsely highlighting the event times', async () => {
   const message = 'This booking conflicts with the setup or turnaround time required around an existing approved booking.'
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) =>
     init.method === 'PATCH' ? response({ message, conflicts: [{ bookingId: 'buffer-booking', eventName: 'Earlier event',
@@ -608,7 +608,7 @@ it('shows a buffer-only restriction without falsely highlighting the event times
   expect(screen.getByLabelText('Status: Pending')).toBeInTheDocument()
 })
 
-it.each([false, true])('highlights the paired boundaries in the conflict card and current request (reverse: %s)', async reverse => {
+it.each([false, true])('VS03 VS-C4 (conflict): highlights the paired boundaries in the conflict card and current request (reverse: %s)', async reverse => {
   const current = { ...booking, event: { ...booking.event,
     startDatetime: reverse ? '2027-10-16T11:30:00+08:00' : '2027-10-16T09:00:00+08:00',
     endDatetime: reverse ? '2027-10-16T14:00:00+08:00' : '2027-10-16T12:00:00+08:00' } }
@@ -632,7 +632,7 @@ it.each([false, true])('highlights the paired boundaries in the conflict card an
   expect(currentPanel.querySelector('.booking-time-conflict')).toBeNull()
 })
 
-it.each([false, true])('shows unavailable periods and highlights both sides (refresh fails: %s)', async failRefresh => {
+it.each([false, true])('VS03 (conflict): shows unavailable periods and highlights both sides (refresh fails: %s)', async failRefresh => {
   let attempted = false
   const current = { ...booking, event: { ...booking.event, startDatetime: '2027-10-16T09:00:00+08:00', endDatetime: '2027-10-16T12:00:00+08:00' } }
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
@@ -674,7 +674,7 @@ it.each([false, true])('shows unavailable periods and highlights both sides (ref
   }
 })
 
-it('shows combined booking and unavailable-period conflicts without highlighting buffer-only periods', async () => {
+it('VS03 VS-C4 (conflict): shows combined booking and unavailable-period conflicts without highlighting buffer-only periods', async () => {
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => init.method === 'PATCH'
     ? response({ message: 'Booking and unavailability conflicts', conflicts: [{ bookingId: 'b2', eventName: 'Other booking',
       startDatetime: booking.event.startDatetime, endDatetime: booking.event.endDatetime }], unavailablePeriods: [
@@ -691,7 +691,7 @@ it('shows combined booking and unavailable-period conflicts without highlighting
   }
 })
 
-it.each(['approved', 'cancelled'] as const)('reconciles a stale approval conflict to the backend %s status', async status => {
+it.each(['approved', 'cancelled'] as const)('VS03 (conflict): reconciles a stale approval conflict to the backend %s status', async status => {
   let attempted = false
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
     if (init.method === 'PATCH') { attempted = true; return response({ message: 'This booking is no longer pending.' }, 409) }
@@ -706,7 +706,7 @@ it.each(['approved', 'cancelled'] as const)('reconciles a stale approval conflic
   expect(screen.getByRole('alert')).toHaveTextContent('no longer pending')
 })
 
-it('removes a booking deleted between review and approval', async () => {
+it('VS03 (conflict): removes a booking deleted between review and approval', async () => {
   let attempted = false
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
     if (init.method === 'PATCH') attempted = true
@@ -721,7 +721,7 @@ it('removes a booking deleted between review and approval', async () => {
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
-it('requires a successful refresh after a lost response and failed read, then shows the committed status', async () => {
+it('VS03 (failure): requires a successful refresh after a lost response and failed read, then shows the committed status', async () => {
   let attempted = false
   let online = false
   const fetch = vi.fn().mockImplementation(async (_url: string, init: RequestInit) => {
@@ -744,7 +744,7 @@ it('requires a successful refresh after a lost response and failed read, then sh
   expect(fetch.mock.calls.filter(call => call[1].method === 'PATCH')).toHaveLength(1)
 })
 
-it('places the approval action in the venue information header', async () => {
+it('VS03 (happy): places the approval action in the venue information header', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response(booking)))
   page('/venue-staff/bookings/b1?from=booking-approvals')
   const button = await screen.findByRole('button', { name: 'Approve Booking' })
@@ -755,7 +755,7 @@ it('places the approval action in the venue information header', async () => {
   expect(heading.parentElement).not.toHaveTextContent('pending')
 })
 
-it('requires a reason, cancels without writing, and displays the saved rejection', async () => {
+it('VS04 (negative): requires a reason, cancels without writing, and displays the saved rejection', async () => {
   let current = booking
   const fetch = vi.fn().mockImplementation(async (url: string, options: RequestInit) => {
     if (options.method === 'PATCH') {
@@ -793,7 +793,7 @@ it('requires a reason, cancels without writing, and displays the saved rejection
   expect(screen.queryByRole('button', { name: 'Approve Booking' })).not.toBeInTheDocument()
 })
 
-it('refreshes after a lost rejection response and displays the committed reason', async () => {
+it('VS04 (failure): refreshes after a lost rejection response and displays the committed reason', async () => {
   let rejected = false
   const fetch = vi.fn().mockImplementation(async (url: string, options: RequestInit) => {
     if (options.method === 'PATCH') { rejected = true; throw new Error('Lost response') }

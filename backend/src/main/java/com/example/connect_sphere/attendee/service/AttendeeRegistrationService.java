@@ -53,20 +53,19 @@ public class AttendeeRegistrationService {
         if (existing.isPresent()) return dto(existing.get(), event);
 
         JourneyStatus journey = statuses.journeyOf(event);
-        if (journey == JourneyStatus.CANCELLED) refuse("This event has been cancelled.");
+        if (journey == JourneyStatus.CANCELLED) throw refused("This event has been cancelled.");
         if (event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.completed
-                || journey == JourneyStatus.COMPLETED) refuse("Registration is closed.");
+                || journey == JourneyStatus.COMPLETED) throw refused("Registration is closed.");
         if (event.getStatus() != com.example.connect_sphere.event.entity.EventStatus.confirmed
                 && event.getFirstConfirmedAt() != null) {
-            refuse("This event is awaiting re-confirmation and registration is paused.");
+            throw refused("This event is awaiting re-confirmation and registration is paused.");
         }
         if (event.getStatus() != com.example.connect_sphere.event.entity.EventStatus.confirmed) {
-            refuse("This event is not confirmed yet.");
+            throw refused("This event is not confirmed yet.");
         }
-        if (!Boolean.TRUE.equals(event.getRegistrationNeeds())) refuse("This event does not require registration.");
-        if (event.getRegistrationCapacity() == null || event.getRegistrationCapacity() < 1
-                || event.getRegistrationOpensAt() == null || event.getStartDatetime() == null
-                || registrationClosesAt(event) == null
+        if (!Boolean.TRUE.equals(event.getRegistrationNeeds())) throw refused("This event does not require registration.");
+        // V2/V35: start_datetime is NOT NULL and registration_capacity > 0, so the close time always exists.
+        if (event.getRegistrationCapacity() == null || event.getRegistrationOpensAt() == null
                 || !registrationClosesAt(event).isAfter(event.getRegistrationOpensAt())
                 || registrationClosesAt(event).isAfter(event.getStartDatetime())) {
             throw new AttendeeRegistrationException(422, "Registration settings are incomplete or invalid. Please contact the event organiser.");
@@ -77,10 +76,10 @@ public class AttendeeRegistrationService {
         }
 
         OffsetDateTime now = OffsetDateTime.now(clock);
-        if (!now.isBefore(registrationClosesAt(event))) refuse("Registration is closed.");
-        if (now.isBefore(event.getRegistrationOpensAt())) refuse("Registration has not opened yet.");
+        if (!now.isBefore(registrationClosesAt(event))) throw refused("Registration is closed.");
+        if (now.isBefore(event.getRegistrationOpensAt())) throw refused("Registration has not opened yet.");
         if (registrations.countByEventIdAndStatus(eventId, "confirmed") >= event.getRegistrationCapacity()) {
-            refuse("This event is full.");
+            throw refused("This event is full.");
         }
 
         AttendeeRegistration registration = new AttendeeRegistration();
@@ -111,7 +110,7 @@ public class AttendeeRegistrationService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         JourneyStatus journey = statuses.journeyOf(event);
         String reason = AttendeeWithdrawalPolicy.reason(registration, event, journey, now);
-        if (reason != null) refuse(reason);
+        if (reason != null) throw refused(reason);
 
         registration.setStatus("withdrawn");
         registration.setWithdrawnAt(now);
@@ -121,15 +120,17 @@ public class AttendeeRegistrationService {
         return AttendeeRegistrationDetailsDto.from(registration, event, journey, now);
     }
 
-    private static void refuse(String message) { throw new AttendeeRegistrationException(409, message); }
+    // Returned, not thrown here, so each refusal is a visible throw at its own check.
+    private static AttendeeRegistrationException refused(String message) { return new AttendeeRegistrationException(409, message); }
 
     private static OffsetDateTime registrationClosesAt(Event event) {
         return event.getRegistrationClosesAt() == null ? event.getStartDatetime() : event.getRegistrationClosesAt();
     }
 
     private static AttendeeRegistrationDto dto(AttendeeRegistration registration, Event event) {
+        // Both callers pass a confirmed registration (the confirmed lookup, or the row just saved).
         String status = event.getStatus() == com.example.connect_sphere.event.entity.EventStatus.cancelled
-                && "confirmed".equals(registration.getStatus()) ? "event_cancelled" : registration.getStatus();
+                ? "event_cancelled" : registration.getStatus();
         return new AttendeeRegistrationDto(registration.getRegistrationId(), registration.getRegistrationReference(),
                 event.getEventId(), event.getEventName(), status, registration.getRegisteredAt());
     }

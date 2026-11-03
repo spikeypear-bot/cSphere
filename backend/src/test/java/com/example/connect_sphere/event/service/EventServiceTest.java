@@ -43,6 +43,7 @@ import com.example.connect_sphere.notification.service.NotificationService;
 @Tag("EC08")
 @Tag("EO09")
 @Tag("ECL-C7")
+@Tag("AU04")
 class EventServiceTest {
 
     @Mock
@@ -71,6 +72,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("AU04 (happy): an organiser can view their own organisation's event")
     void anOrganiserCanViewTheirOwnOrganisationsEvent() {
         Event event = pendingEvent(ORG);
         when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
@@ -82,6 +84,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): an organiser cannot view another organisation's event; it is reported as not found")
     void anOrganiserCannotViewAnotherOrganisationsEvent() {
         Event event = pendingEvent("Other Org Pte Ltd");
         when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
@@ -96,6 +99,7 @@ class EventServiceTest {
     // confirmed" shortcut no longer exists.
 
     @Test
+    @DisplayName("EC08 (happy): confirming the event hands over to the lifecycle and returns the confirmed event")
     void confirmingDelegatesToTheLifecycleAndReturnsTheUpdatedEvent() {
         Event event = pendingEvent(ORG);
         event.setStatus(EventStatus.confirmed);
@@ -109,6 +113,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 (negative): a refused confirmation is passed back to the caller and no one is notified")
     void aRefusedConfirmationPropagatesAndNotifiesNoOne() {
         Event event = pendingEvent(ORG);
         when(lifecycle.confirm(OTHER_COORDINATOR_ID, event.getEventId()))
@@ -121,6 +126,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C7 (happy): the event shows its coordinator's name and email")
     void coordinatorContactDetailsAreResolvedOntoTheDto() {
         Event event = pendingEvent(ORG);
         event.setCoordinatorId(COORDINATOR_ID);
@@ -182,6 +188,7 @@ class EventServiceTest {
     // ---- EC09: events assigned to me --------------------------------------
 
     @Test
+    @DisplayName("EC09 (happy): the list reads only the caller's events, and only while they are still active, including those in safety review")
     void assignedEventsAreReadForTheCallerOnlyAndOnlyWhileStillActive() {
         when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any())).thenReturn(List.of());
 
@@ -197,6 +204,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC09 (happy): assigned events keep their soonest-first order and carry what the list shows")
     void assignedEventsKeepTheirSoonestFirstOrderAndCarryWhatTheListShows() {
         Event sooner = pendingEvent(ORG);
         sooner.setEventName("Product Launch");
@@ -224,6 +232,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC09 (boundary): a coordinator with no active events gets an empty list")
     void aCoordinatorWithNoActiveEventsGetsAnEmptyList() {
         when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any())).thenReturn(List.of());
 
@@ -231,6 +240,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC09 (cross-cutting): listing assigned events changes nothing")
     void listingAssignedEventsIsReadOnly() {
         Event event = pendingEvent(ORG);
         event.setCoordinatorId(COORDINATOR_ID);

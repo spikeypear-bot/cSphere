@@ -54,7 +54,7 @@ public class VenueBookingService {
             String message) {
         if (changeLog != null) {
             // Audit summaries have a 2000-character contract, including labels and addresses.
-            if (message != null && message.length()>MAX_TEXT_LENGTH)
+            if (message.length()>MAX_TEXT_LENGTH)
                 message=message.substring(0,MAX_TEXT_LENGTH-3)+"...";
             changeLog.publishEvent(new com.example.connect_sphere.activity.service.EventChange(eventId, type, actor, message));
         }
@@ -124,7 +124,8 @@ public class VenueBookingService {
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow();
             plan.requireReplacementEligible(original.getBookingId(), bookingId);
-            if (!original.getEventId().equals(eventId) || !isEligibleReplacementSource(original))
+            // A replacement is only ever created for a booking of the same event (submission checks it).
+            if (!ReplacementSource.eligible(original, availability))
                 throw new VenueBookingStateException("The original booking no longer requires replacement. Refresh this event.");
         }
         var start = booking.getStartDatetime() == null ? event.getStartDatetime() : booking.getStartDatetime();
@@ -175,12 +176,7 @@ public class VenueBookingService {
         if (booking.getReplacesBookingId() != null) {
             var original = records.findById(booking.getReplacesBookingId()).orElseThrow(() -> new VenueBookingStateException("Original booking no longer exists."));
             replacedVenue = venues.findById(original.getVenueId()).map(com.example.connect_sphere.venue.entity.Venue::getVenueAddress).orElse(null);
-            if (!original.getEventId().equals(eventId)
-                    || !isEligibleReplacementSource(original)
-                    || records.existsByReplacesBookingIdAndStatusIn(original.getBookingId(),
-                            List.of(VenueBookingStatus.approved, VenueBookingStatus.attention))) {
-                throw new VenueBookingStateException("The original booking is no longer eligible for replacement. Refresh this event.");
-            }
+            // Eligibility was checked above, under the same event and venue locks.
             if (original.getStatus() == VenueBookingStatus.pending || original.getStatus() == VenueBookingStatus.approved || original.getStatus() == VenueBookingStatus.attention) {
                 if (holdService != null) holdService.endForBooking(original.getBookingId(), null);
                 original.setStatus(VenueBookingStatus.changed);
@@ -213,13 +209,6 @@ public class VenueBookingService {
         return approved;
     }
 
-    private boolean isEligibleReplacementSource(com.example.connect_sphere.venuebooking.entity.VenueBookingRecord booking) {
-        if (booking.getStatus() == VenueBookingStatus.rejected || booking.getStatus() == VenueBookingStatus.cancelled) {
-            return true;
-        }
-        return (booking.getStatus() == VenueBookingStatus.pending || booking.getStatus() == VenueBookingStatus.approved || booking.getStatus() == VenueBookingStatus.attention)
-                && (booking.getStatus() == VenueBookingStatus.approved || booking.getStatus() == VenueBookingStatus.attention || availability.affected(booking.getBookingId()));
-    }
 
     /** VS04: use the same event lock as approval, submission and cancellation. */
     @Transactional
@@ -392,7 +381,7 @@ public class VenueBookingService {
         var event = booking.getEvent();
         return new com.example.connect_sphere.venuebooking.dto.BookingRequirements(
                 override != null && override.expectedAttendance() != null ? override.expectedAttendance() : event.getExpectedAttendance(),
-                override != null && override.requiredFacilities() != null ? override.requiredFacilities() : event.getRequiredFacilities() == null ? List.of() : event.getRequiredFacilities(),
+                override != null && override.requiredFacilities() != null ? override.requiredFacilities() : event.getRequiredFacilities(),
                 override != null && override.accessibilityNeeds() != null ? override.accessibilityNeeds() : event.getAccessibilityNeeds(),
                 override != null && override.venueRequirements() != null ? override.venueRequirements() : event.getVenueRequirements());
     }

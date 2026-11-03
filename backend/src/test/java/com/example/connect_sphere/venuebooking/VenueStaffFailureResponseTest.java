@@ -58,6 +58,17 @@ class VenueStaffFailureResponseTest {
     }
 
     @ParameterizedTest @ValueSource(booleans={false,true})
+    @DisplayName("VS17 (failure): a change decision that cannot be saved returns a retryable message without database details")
+    void changeDecision(boolean transaction) {
+        var controller=new com.example.connect_sphere.changerequest.controller.ChangeRequestController(
+                mock(com.example.connect_sphere.changerequest.service.ChangeRequestService.class));
+        var response=controller.persistenceFailure(unavailable(transaction));
+        org.assertj.core.api.Assertions.assertThat(response.getStatusCode().value()).isEqualTo(503);
+        org.assertj.core.api.Assertions.assertThat(response.getBody().message())
+                .isEqualTo("The change could not be saved. Refresh its details and try again.");
+    }
+
+    @ParameterizedTest @ValueSource(booleans={false,true})
     @DisplayName("DEV16 (failure): hold storage failures tell staff to refresh before making another decision")
     void holds(boolean transaction) throws Exception {
         UUID id=UUID.randomUUID();

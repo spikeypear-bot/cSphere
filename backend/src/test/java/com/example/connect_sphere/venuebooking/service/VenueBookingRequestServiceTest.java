@@ -51,7 +51,7 @@ import com.example.connect_sphere.venueissue.entity.VenueOperationalIssue;
  * sent after commit), plus the suitability boundaries in isolation.
  */
 @Tag("unit") @Tag("VS17") @Tag("EC-C2")
-@Tag("EC03")
+@Tag("EC03") @Tag("VS25")
 class VenueBookingRequestServiceTest {
 
     @Mock private EventRepository events;
@@ -59,7 +59,8 @@ class VenueBookingRequestServiceTest {
     @Mock private VenueBookingRecordRepository bookings;
     @Mock private EventRequestRepository eventRequests;
     @Mock private UserRepository users;
-    @Mock private VenueMapper venueMapper;
+    // The real mapper: with no hours service it reports "Operating hours not configured".
+    private final VenueMapper venueMapper = new com.example.connect_sphere.venue.mapper.VenueMapperImpl();
     @Mock private ActivityService activityService;
     @Mock private NotificationService notificationService;
     @Mock private com.example.connect_sphere.venueavailability.service.AvailabilityService availability;
@@ -86,6 +87,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): every venue staff member is notified when a coordinator requests a venue")
     void everyVenueStaffMemberIsNotifiedOfTheNewRequest() {
         Event event = event(150, List.of("none"));
         Venue venue = venue(150, List.of());
@@ -98,6 +100,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the venue request and its notes appear on the original event request's timeline")
     void theRequestIsRecordedOnTheOriginatingRequestsTimeline() {
         Event event = event(150, List.of("none"));
         Venue venue = venue(150, List.of());
@@ -345,6 +348,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the coordinator's booking history shows the rejection reason and the suggested alternative venue and arrangement")
     void coordinatorBookingHistoryIncludesRejectedAlternativeSuggestions() {
         Event event = event(150, List.of("none"));
         Venue requestedVenue = venue(150, List.of());
@@ -371,16 +375,19 @@ class VenueBookingRequestServiceTest {
     // ---- VenueSuitability boundaries -----------------------------------
 
     @Test
+    @DisplayName("EC03 (boundary): an event whose attendance equals the venue capacity fits")
     void attendanceEqualToCapacityFits() {
         assertThat(VenueSuitability.of(event(150, List.of()), venue(150, List.of())).capacityOk()).isTrue();
     }
 
     @Test
+    @DisplayName("EC03 (boundary): an event one person over the venue capacity does not fit")
     void attendanceOneOverCapacityDoesNotFit() {
         assertThat(VenueSuitability.of(event(151, List.of()), venue(150, List.of())).capacityOk()).isFalse();
     }
 
     @Test
+    @DisplayName("EC03 (boundary): an event with no accessibility needs never needs a justification")
     void noAccessibilityNeededNeverRequiresAJustification() {
         var suitability = VenueSuitability.of(event(10, List.of("none")), venue(50, List.of()));
 
@@ -388,6 +395,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): only the accessibility features the venue lacks are reported and a justification is needed")
     void onlyTheAccessibilityFeaturesTheVenueLacksAreReported() {
         var suitability = VenueSuitability.of(
                 event(10, List.of("step_free_access", "elevators")), venue(50, List.of("elevators")));
@@ -397,6 +405,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): only the facilities the venue lacks are reported")
     void onlyTheFacilitiesTheVenueLacksAreReported() {
         Event event = event(10, List.of());
         event.setRequiredFacilities(List.of("stage", "projection"));
@@ -426,6 +435,60 @@ class VenueBookingRequestServiceTest {
                 .isInstanceOf(InvalidVenueBookingException.class)
                 .hasMessageContaining("Emergency maintenance");
         verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 (negative): a submission with no request at all is refused as having no venue, and nothing is saved")
+    void aMissingRequestIsRefused() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(), null))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessage("Select a venue before submitting the booking request.");
+        org.mockito.Mockito.verify(bookings, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @DisplayName("EC03 (negative): a caller with no coordinator identity is treated as not assigned, and nothing is saved")
+    void aMissingCoordinatorIsNotAssigned() {
+        Event event = event(150, List.of("none"));
+        Venue venue = venue(150, List.of());
+
+        assertThatThrownBy(() -> service.submit(null, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException.class);
+        org.mockito.Mockito.verify(bookings, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @DisplayName("EC-C2 (negative): a batch with no booking list at all is refused like an empty one")
+    void aMissingBatchIsRefused() {
+        Event event = event(150, List.of("none"));
+
+        for (var batch : java.util.Arrays.asList(null, new SubmitVenueBookingRequest.Batch(null)))
+            assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(), batch))
+                    .isInstanceOf(InvalidVenueBookingException.class)
+                    .hasMessage("Add at least one venue before submitting.");
+        org.mockito.Mockito.verify(bookings, org.mockito.Mockito.never()).save(any());
+    }
+
+    @Test
+    @DisplayName("VS25 (boundary): cancelling with no Venue Staff accounts still cancels the booking and sends no notice")
+    void cancellingWithNoVenueStaffSendsNoNotice() {
+        Event event = event(150, List.of("none"));
+        Venue venue = venue(150, List.of());
+        VenueBookingRecord booking = new VenueBookingRecord();
+        booking.setBookingId(UUID.randomUUID());
+        booking.setVenueId(venue.getVenueId());
+        booking.setEventId(event.getEventId());
+        booking.setStatus(VenueBookingStatus.pending);
+        when(bookings.findById(booking.getBookingId())).thenReturn(Optional.of(booking));
+        when(users.findByRole(UserRole.vs)).thenReturn(List.of());
+
+        var result = service.cancel(COORDINATOR, event.getEventId(), booking.getBookingId(), "Not needed");
+
+        assertThat(result.status()).isEqualTo(VenueBookingStatus.cancelled);
+        org.mockito.Mockito.verifyNoInteractions(notificationService);
     }
 
     private Event event(int attendance, List<String> accessibility) {

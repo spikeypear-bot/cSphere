@@ -1,13 +1,15 @@
 // @stories VS17 EO07
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { StatusView } from '../../types/status'
 import type { EventCancellationRequestDto } from '../../types/eventCancellation'
+import type { EventDto } from '../../types/event'
 import { EventDetailsPage } from './EventDetailsPage'
+import { EventCancellationPanel } from './EventCancellationPanel'
 
 const EVENT = 'ev-1'
 
@@ -185,6 +187,56 @@ describe('EO07 organiser requests cancellation of an event', () => {
       .toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Request cancellation' })).toBeInTheDocument()
   })
+
+  it('EO07 AC14 (failure): if the organiser\'s original request cannot be found, nothing is sent and they can try again', async () => {
+    seedSession('organiser')
+    const calls = organiserPage('confirmed', () => [], {
+      'GET /api/event-requests': () => jsonResponse(200, [{ requestId: 'other-req', eventId: 'other-event' }]),
+    })
+    const user = userEvent.setup()
+    renderEvent('/organiser')
+
+    await user.click(await screen.findByRole('button', { name: 'Request cancellation' }))
+    await user.type(screen.getByLabelText('Reason for cancelling'), 'Called off')
+    await user.click(screen.getByRole('button', { name: 'Send cancellation request' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The cancellation request could not be sent. Please try again.')
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+    expect(screen.getByRole('button', { name: 'Send cancellation request' })).toBeEnabled()
+  })
+
+  it('EO07 AC3 (negative): "Keep event" backs out of the request without sending, and starts afresh next time', async () => {
+    seedSession('organiser')
+    const calls = organiserPage('confirmed', () => [])
+    const user = userEvent.setup()
+    renderEvent('/organiser')
+
+    await user.click(await screen.findByRole('button', { name: 'Request cancellation' }))
+    await user.type(screen.getByLabelText('Reason for cancelling'), 'Maybe')
+    await user.click(screen.getByRole('button', { name: 'Keep event' }))
+
+    expect(screen.queryByLabelText('Reason for cancelling')).not.toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+    await user.click(screen.getByRole('button', { name: 'Request cancellation' }))
+    expect(screen.getByLabelText('Reason for cancelling')).toHaveValue('')
+  })
+
+  it('EO07 AC10 (boundary): a decline given without a reason still tells the organiser it was declined', async () => {
+    seedSession('organiser')
+    organiserPage('confirmed', () => [cancellation({ status: 'declined', decisionReason: null })])
+    renderEvent('/organiser')
+
+    expect(await screen.findByText('Your last cancellation request was declined.')).toBeInTheDocument()
+  })
+
+  it('EO07 AC6 (boundary): a pending request with no requester name shows only when it was asked', async () => {
+    seedSession('organiser')
+    organiserPage('confirmed', () => [cancellation({ requesterName: null })])
+    renderEvent('/organiser')
+
+    const asked = await screen.findByText(/^Requested 20 Oct 2026/)
+    expect(asked).not.toHaveTextContent(' by ')
+  })
 })
 
 /** Everything the coordinator's (or Lead's) event page loads. */
@@ -325,5 +377,27 @@ describe('EO07 the assigned coordinator decides; the Lead only reads', () => {
     expect(screen.queryByRole('button', { name: 'Approve cancellation' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Decline' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Request cancellation' })).not.toBeInTheDocument()
+  })
+})
+
+describe('EO07 cancellation requests follow the event shown', () => {
+  it.each(['answers', 'fails'])('EO07 AC7 (conflict): when the previous event\'s requests %s late, the event now shown keeps its own', async (outcome) => {
+    seedSession('coordinator')
+    let settleFirst!: () => void
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input) === `/api/events/${EVENT}/cancellation-requests`
+      ? new Promise<Response>((resolve) => {
+        settleFirst = () => resolve(outcome === 'answers'
+          ? jsonResponse(200, [cancellation({ reason: 'Old event reason' })]) : jsonResponse(500, { message: 'late' }))
+      })
+      : Promise.resolve(jsonResponse(200, [cancellation({ eventId: 'ev-2', reason: 'Second event reason' })]))))
+    const panel = (eventId: string) => (
+      <EventCancellationPanel event={{ ...event('confirmed'), eventId } as unknown as EventDto} role="coordinator" onChanged={() => {}} />
+    )
+    const { rerender } = render(panel(EVENT))
+    rerender(panel('ev-2'))
+    expect(await screen.findByText('Second event reason')).toBeInTheDocument()
+    await act(async () => settleFirst())
+    expect(screen.getByText('Second event reason')).toBeInTheDocument()
+    expect(screen.queryByText('Old event reason')).not.toBeInTheDocument()
   })
 })

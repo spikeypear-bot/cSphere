@@ -123,4 +123,70 @@ describe('EO12 organiser registration period', () => {
     expect(await screen.findByText('The registration period cannot be changed for a cancelled or ended event.')).toBeInTheDocument()
     expect(screen.queryByLabelText('Registration opens (SGT)')).not.toBeInTheDocument()
   })
+
+  it('EO12 (negative): an empty closing date and time is refused without sending a save', async () => {
+    renderEditor()
+    const closing = await screen.findByLabelText('Registration closes (SGT)')
+    fireEvent.change(closing, { target: { value: '' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save registration period' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Enter both a valid registration opening and closing date and time in Singapore time.',
+    )
+    expect(apiClient.put).not.toHaveBeenCalled()
+  })
+
+  it('EO12 (negative): moving a future opening into the past is refused without sending a save', async () => {
+    renderEditor()
+    const opening = await screen.findByLabelText('Registration opens (SGT)')
+    fireEvent.change(opening, { target: { value: '2020-01-01T10:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save registration period' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The registration opening date and time cannot be in the past.')
+    expect(apiClient.put).not.toHaveBeenCalled()
+  })
+
+  it('EO12 (negative): with no period set yet, an opening in the past or a close after the event start is refused', async () => {
+    renderEditor({ ...base, opensAt: null, closesAt: null } as unknown as typeof base)
+    const opening = await screen.findByLabelText('Registration opens (SGT)')
+    const closing = screen.getByLabelText('Registration closes (SGT)')
+    expect(opening).toHaveValue('')
+    fireEvent.change(opening, { target: { value: '2020-01-01T10:00' } })
+    fireEvent.change(closing, { target: { value: '2027-01-02T09:00' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save registration period' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The registration opening date and time cannot be in the past.')
+
+    fireEvent.change(opening, { target: { value: '2027-01-01T10:00' } })
+    fireEvent.change(closing, { target: { value: '2027-01-02T10:30' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save registration period' }))
+    expect(await screen.findByText('Registration must close no later than the event start date and time.')).toBeInTheDocument()
+    expect(apiClient.put).not.toHaveBeenCalled()
+  })
+
+  it('EO12 AC6 (boundary): if registration opens while the form is open, a changed opening is refused', async () => {
+    renderEditor()
+    const opening = await screen.findByLabelText('Registration opens (SGT)')
+    await waitFor(() => expect(opening).toHaveValue('2027-01-01T10:00'))
+    fireEvent.change(opening, { target: { value: '2027-01-01T10:30' } })
+    const now = vi.spyOn(Date, 'now').mockReturnValue(Date.parse('2027-01-01T10:05:00+08:00'))
+    try {
+      fireEvent.click(screen.getByRole('button', { name: 'Save registration period' }))
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Registration has already opened; only the closing date and time can be changed.',
+      )
+    } finally {
+      now.mockRestore()
+    }
+    expect(apiClient.put).not.toHaveBeenCalled()
+  })
+
+  it('EO12 AC15 (failure): an unreadable save answer is reported instead of claiming success', async () => {
+    vi.mocked(apiClient.put).mockResolvedValue({})
+    renderEditor()
+    const closing = await screen.findByLabelText('Registration closes (SGT)')
+    fireEvent.change(closing, { target: { value: '2027-01-02T09:30' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Save registration period' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'The saved registration period could not be confirmed. Please reload and try again.',
+    )
+    expect(screen.queryByText(/Registration period saved/)).not.toBeInTheDocument()
+  })
 })

@@ -166,4 +166,22 @@ class EquipmentAvailabilityServiceTest {
         verify(equipment, never()).damagedQuantities(anyCollection(), any(), any());
         verify(equipment, never()).openlyDamagedUnits(anyCollection(), any(), any());
     }
+
+    @Test
+    @DisplayName("TS02 (boundary): a unit held only by a reservation being given up (D40) is free; a reservation with no serial number names no unit")
+    void ignoredReservationsLeaveTheirUnitsFree() {
+        Equipment mixers = kind(3, true);
+        UUID id = mixers.getId();
+        EquipmentLog givenUp = new EquipmentLog(UUID.randomUUID(), id, 1, "MX-1", START, END);
+        EquipmentLog kept = new EquipmentLog(UUID.randomUUID(), id, 1, "MX-2", START, END);
+        when(logs.findOverlappingForUnit(id, "MX-1", START, END)).thenReturn(List.of(givenUp));
+        EquipmentLog unnamed = new EquipmentLog(UUID.randomUUID(), id, 1, null, START, END);
+        when(logs.findOverlappingForEquipment(id, START, END)).thenReturn(List.of(givenUp, kept, unnamed));
+
+        assertThat(calculator.unitConflict(id, "MX-1", START, END, java.util.Set.of(givenUp.getId()))).isEmpty();
+        assertThat(calculator.unitConflict(id, "MX-1", START, END))
+                .contains(EquipmentAvailabilityService.UnitConflict.RESERVED);
+        assertThat(calculator.unitsNotFree(id, START, END, java.util.Set.of(givenUp.getId())))
+                .containsExactly("MX-2");
+    }
 }

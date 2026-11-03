@@ -17,7 +17,7 @@ const booking: VenueBookingDto = {
     timingNote: 'Early crew access', conflicts: [], editable: true },
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks(); localStorage.clear() })
-it('refreshes the editable durations when the server booking is refreshed', () => {
+it('VS-C2 (happy): refreshes the editable durations when the server booking is refreshed', () => {
   const props = { onSaved: vi.fn(), disabled: false }
   const { rerender } = render(<BookingTimingEditor booking={booking} {...props} />)
   fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '90' } })
@@ -27,14 +27,14 @@ it('refreshes the editable durations when the server booking is refreshed', () =
   expect(screen.getByLabelText('Turnaround (minutes)')).toHaveValue(20)
   expect(screen.getByLabelText('Reason for booking timings')).toHaveValue('Updated crew access')
 })
-it('preserves unsaved duration edits when background refresh returns the same saved timings', () => {
+it('VS-C2 (boundary): preserves unsaved duration edits when background refresh returns the same saved timings', () => {
   const props = { onSaved: vi.fn(), disabled: false }
   const { rerender } = render(<BookingTimingEditor booking={booking} {...props} />)
   fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '75' } })
   rerender(<BookingTimingEditor booking={JSON.parse(JSON.stringify(booking))} {...props} />)
   expect(screen.getByLabelText('Setup (minutes)')).toHaveValue(75)
 })
-it('shows only the timing editor and sends edited durations with a stale-write guard', async () => {
+it('VS-C2 (happy): shows only the timing editor and sends edited durations with a stale-write guard', async () => {
   seedSession('venue-staff')
   const onSaved = vi.fn()
   const calls = stubApi({ 'PUT /api/venue-bookings/b1/timing': () => jsonResponse(200, booking) })
@@ -49,7 +49,7 @@ it('shows only the timing editor and sends edited durations with a stale-write g
     timingNote: 'Early crew access', previousSetupDurationMinutes: 30, previousTurnaroundDurationMinutes: 15 })
   expect(onSaved).toHaveBeenCalledWith(booking)
 })
-it('retains proposed inputs and identifies occupied conflicts after a rejected save', async () => {
+it('VS-C2 (conflict): retains proposed inputs and identifies occupied conflicts after a rejected save', async () => {
   seedSession('venue-staff')
   const onSaved = vi.fn()
   stubApi({ 'PUT /api/venue-bookings/b1/timing': () => jsonResponse(409, { message: 'New overlap blocked.',
@@ -63,7 +63,7 @@ it('retains proposed inputs and identifies occupied conflicts after a rejected s
   expect(screen.getByLabelText('Setup (minutes)')).toHaveValue(60)
   expect(onSaved).not.toHaveBeenCalled()
 })
-it('blocks invalid input and hides editing for historical records', () => {
+it('VS-C2 (negative): blocks invalid input and hides editing for historical records', () => {
   render(<BookingTimingEditor booking={booking} onSaved={vi.fn()} disabled={false} />)
   fireEvent.click(screen.getByText('Edit booking timings'))
   fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '-1' } })
@@ -73,7 +73,7 @@ it('blocks invalid input and hides editing for historical records', () => {
   expect(screen.queryByText('Edit booking timings')).not.toBeInTheDocument()
 })
 
-it('previews durations around the booking window when it differs from the event', () => {
+it('VS-C2 (boundary): previews durations around the booking window when it differs from the event', () => {
   render(<BookingTimingEditor booking={{ ...booking, event: { ...booking.event,
     startDatetime: '2030-04-01T10:00:00+08:00', endDatetime: '2030-04-01T12:00:00+08:00' } }} onSaved={vi.fn()} disabled={false} />)
   fireEvent.change(screen.getByLabelText('Setup (minutes)'), { target: { value: '45' } })

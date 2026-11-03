@@ -20,7 +20,7 @@ const ASSIGNMENTS_PATH = '/coordinator-lead/assignments'
 
 type Decision = 'assign' | 'clarify' | 'reject'
 
-/** Mirrors backend CoordinatorDto (ELC-C6). */
+/** Mirrors backend CoordinatorDto (ECL-C6). */
 interface Coordinator {
   userId: string
   username: string
@@ -80,11 +80,11 @@ function closedReason(request: EventRequestDto, assignee: string): string | null
 /**
  * ECL-C3: an incoming request as the organiser submitted it, with its
  * history, for the Lead to look over before anyone is assigned. While it is
- * still unassigned the Lead can assign it to an Event Coordinator (ELC-C6),
+ * still unassigned the Lead can assign it to an Event Coordinator (ECL-C6),
  * reject it or ask the organiser a question; approving stays with the
  * coordinator it is assigned to. While it waits for the organiser's answer
  * it can only be assigned. Once it has a coordinator and is still under
- * review, the Lead can only reassign it to a different one (ELC-C5).
+ * review, the Lead can only reassign it to a different one (ECL-C5).
  */
 export function IncomingRequestReviewPage() {
   const { requestId } = useParams<{ requestId: string }>()
@@ -146,7 +146,7 @@ export function IncomingRequestReviewPage() {
     coordinators?.find((c) => c.userId === request.coordinatorId)?.username
       ?? (from && from.id === request.coordinatorId ? from.name : 'an Event Coordinator'))
   const waiting = request.status === 'clarification_required'
-  // ELC-C5: an assigned request still under review can move to another
+  // ECL-C5: an assigned request still under review can move to another
   // coordinator; ECL-C7: so can an approved request whose event is still
   // active (not cancelled or finished).
   const activeEvent = request.status === 'approved' && Boolean(request.eventId)

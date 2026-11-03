@@ -17,7 +17,7 @@ import './CoordinatorAssignmentsPage.css'
 /** ECL-C2: every Event Coordinator with the requests they hold that are
  * still under review, in the server's order (coordinators by name, each
  * one's requests soonest event first). Each card opens the request's
- * review page (ECL-C3), where the Lead can reassign it (ELC-C5).
+ * review page (ECL-C3), where the Lead can reassign it (ECL-C5).
  * ECL-C7: each coordinator's active events are listed too, so the Lead sees
  * every assignment and can view or reassign an event. */
 export function CoordinatorAssignmentsPage() {

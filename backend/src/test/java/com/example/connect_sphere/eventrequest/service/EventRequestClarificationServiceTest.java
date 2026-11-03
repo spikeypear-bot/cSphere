@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -91,6 +92,7 @@ class EventRequestClarificationServiceTest {
     // ---- EC01 ---------------------------------------------------------
 
     @Test
+    @DisplayName("EC01 (happy): asking for clarification moves a submitted request to Clarification Required")
     void clarificationMovesASubmittedRequestToClarificationRequired() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -101,6 +103,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (happy): the clarification message, flagged fields, coordinator and status change are recorded on the timeline")
     void clarificationRecordsMessageFlagsCoordinatorAndStatusChangeOnTheTimeline() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -118,6 +121,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (happy): every organiser of the owning organisation is notified with the message")
     void everyOrganiserOfTheOwningOrganisationIsNotifiedWithTheMessage() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -129,6 +133,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (cross-cutting): asking for clarification does not change any detail the organiser submitted")
     void clarificationDoesNotChangeAnyDetailTheOrganiserSubmitted() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -142,6 +147,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EC01 (negative): a blank or whitespace-only message is refused and nothing changes")
     @ValueSource(strings = {"", "   ", "\n\t "})
     void blankOrWhitespaceMessageIsRejectedAndNothingChanges(String message) {
         EventRequest request = stored(EventRequestStatus.pending);
@@ -153,6 +159,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (boundary): a message of exactly 2000 characters is accepted")
     void aMessageOfExactly2000CharactersIsAccepted() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -162,6 +169,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (boundary): a message of 2001 characters is refused and nothing changes")
     void aMessageOf2001CharactersIsRejectedAndNothingChanges() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -173,6 +181,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (negative): flagging a field that does not exist is refused")
     void flaggingAFieldThatDoesNotExistIsRejected() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -184,6 +193,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (negative): a coordinator not assigned to the request cannot ask for clarification")
     void aCoordinatorNotAssignedToTheRequestCannotRequestClarification() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -195,6 +205,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 (conflict): a second clarification cannot be sent while one is still open")
     void aSecondClarificationCannotBeSentWhileOneIsStillOpen() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -207,6 +218,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EC01 (negative): clarification can only be asked for on a submitted request")
     @EnumSource(value = EventRequestStatus.class, names = {"draft", "approved", "rejected", "cancelled"})
     void clarificationIsOnlyPossibleOnASubmittedRequest(EventRequestStatus status) {
         EventRequest request = stored(status);
@@ -219,6 +231,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 EC02 (negative): a request awaiting clarification cannot be approved")
     void aRequestAwaitingClarificationCannotBeApproved() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -232,6 +245,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC01 EC02 (happy): a request awaiting clarification can still be rejected with a reason")
     void aRequestAwaitingClarificationCanStillBeRejectedWithAReason() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -247,6 +261,7 @@ class EventRequestClarificationServiceTest {
     // ---- EO26 ---------------------------------------------------------
 
     @Test
+    @DisplayName("EO26 (happy): resubmitting returns the request to Submitted with the same coordinator")
     void resubmittingReturnsTheRequestToSubmittedWithTheSameCoordinator() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -257,6 +272,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (happy): resubmitting records the response and notifies the assigned coordinator")
     void resubmittingRecordsTheResponseAndNotifiesTheAssignedCoordinator() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -273,6 +289,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (negative): resubmitting without a response is refused and nothing changes")
     void resubmittingWithoutAResponseIsRejectedAndNothingChanges() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -283,6 +300,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (negative): resubmitting applies the same completeness check as the first submission")
     void resubmittingAppliesTheSameCompletenessCheckAsTheFirstSubmission() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
         request.setPurpose("   ");
@@ -296,6 +314,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (negative): resubmitting applies the same date rule as the first submission")
     void resubmittingAppliesTheSameDateRuleAsTheFirstSubmission() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
         request.setEndDatetime(request.getStartDatetime().minusMinutes(1));
@@ -307,6 +326,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (negative): only a request waiting for clarification can be resubmitted")
     void onlyARequestWaitingForClarificationCanBeResubmitted() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -317,6 +337,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (negative): an organiser of another organisation cannot resubmit")
     void anOrganiserOfAnotherOrganisationCannotResubmit() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -328,6 +349,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO26 (happy): the organiser can edit a request waiting for clarification without changing its status")
     void theOrganiserCanEditARequestWaitingForClarificationWithoutChangingItsStatus() {
         EventRequest request = stored(EventRequestStatus.clarification_required);
 
@@ -340,6 +362,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EO26 (negative): a request that is neither a draft nor waiting for clarification cannot be edited")
     @EnumSource(value = EventRequestStatus.class, names = {"pending", "approved", "rejected", "cancelled"})
     void aRequestThatIsNeitherDraftNorWaitingForClarificationCannotBeEdited(EventRequestStatus status) {
         EventRequest request = stored(status);
@@ -354,6 +377,7 @@ class EventRequestClarificationServiceTest {
     // ---- EC02 ---------------------------------------------------------
 
     @Test
+    @DisplayName("EC02 (negative): approval rechecks the mandatory fields and lists what is missing")
     void approvalRechecksMandatoryFieldsAndListsWhatIsMissing() {
         EventRequest request = stored(EventRequestStatus.pending);
         request.setVenueRequirements(null);
@@ -368,6 +392,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC02 (happy): approval records the outcome against the new event")
     void approvalRecordsTheOutcomeAgainstTheNewEvent() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -381,6 +406,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC02 (negative): the review screen is only available to the assigned coordinator")
     void theReviewScreenIsOnlyAvailableToTheAssignedCoordinator() {
         EventRequest request = stored(EventRequestStatus.pending);
 
@@ -390,6 +416,7 @@ class EventRequestClarificationServiceTest {
     }
 
     @Test
+    @DisplayName("EC02 (happy): the review screen reports what would block approval")
     void theReviewScreenReportsWhatWouldBlockApproval() {
         EventRequest request = stored(EventRequestStatus.pending);
         request.setExpectedAttendance(null);
@@ -404,6 +431,48 @@ class EventRequestClarificationServiceTest {
     // ---- helpers ------------------------------------------------------
 
     /** A complete request of ORG, assigned to COORDINATOR, in {@code status}. */
+    @Test
+    @DisplayName("EC01 (boundary): an empty set of per-field questions is the same as none")
+    void anEmptySetOfQuestionsIsNone() {
+        EventRequest request = stored(EventRequestStatus.pending);
+
+        service.requestClarification(COORDINATOR, request.getRequestId(), "Please confirm the end time.",
+                List.of("endDatetime"), java.util.Map.of());
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().fieldQuestions()).isNull();
+        assertThat(entry.getValue().flaggedFields()).containsExactly("endDatetime");
+    }
+
+    @Test
+    @DisplayName("EC01 (boundary): when the owning organisation has no organiser accounts, clarification is still requested and nobody is notified")
+    void clarificationWithNoOrganiserAccountsNotifiesNobody() {
+        EventRequest request = stored(EventRequestStatus.pending);
+        when(userRepository.findByRoleAndOrganisation(UserRole.eo, ORG)).thenReturn(List.of());
+
+        EventRequestDto result = service.requestClarification(
+                COORDINATOR, request.getRequestId(), "Please confirm the end time.", null);
+
+        assertThat(result.status()).isEqualTo(EventRequestStatus.clarification_required);
+        verify(activityService).record(any());
+        verify(notificationService, never()).createClarificationRequestedNotifications(anyList(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("EO26 (negative): an organiser with no organisation cannot read an event's timeline")
+    void anOrganiserWithNoOrganisationCannotReadAnEventsTimeline() {
+        EventRequest request = stored(EventRequestStatus.approved);
+        UUID eventId = UUID.randomUUID();
+        request.setEventId(eventId);
+        when(repository.findByEventId(eventId)).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.timelineForEvent(UserRole.eo, null, ORGANISER, eventId))
+                .isInstanceOf(EventRequestNotFoundException.class);
+
+        verifyNoInteractions(activityService);
+    }
+
     private EventRequest stored(EventRequestStatus status) {
         EventRequest entity = new EventRequest();
         entity.setRequestId(UUID.randomUUID());

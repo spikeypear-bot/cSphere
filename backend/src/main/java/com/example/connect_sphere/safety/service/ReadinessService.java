@@ -208,7 +208,7 @@ public class ReadinessService {
                     state == null || state.getCheckedBy() == null ? null
                             : users.findById(state.getCheckedBy()).map(User::getUsername).orElse(null),
                     state == null ? null : state.getCheckedAt(),
-                    state == null || state.getUpdatedBy() == null ? null
+                    state == null ? null
                             : users.findById(state.getUpdatedBy()).map(User::getUsername).orElse(null),
                     state == null ? null : state.getUpdatedAt());
         }).toList();
@@ -218,7 +218,7 @@ public class ReadinessService {
                 event.getEventId(),
                 review == null ? "not_reviewed" : review.getReviewStatus(),
                 review == null ? null : review.getNote(),
-                review == null || review.getReviewedBy() == null ? null
+                review == null ? null
                         : users.findById(review.getReviewedBy()).map(User::getUsername).orElse(null),
                 review == null ? null : review.getReviewedAt(),
                 review == null ? List.of() : List.copyOf(review.getFlaggedItems()),
@@ -240,7 +240,7 @@ public class ReadinessService {
         return result;
     }
     private String fingerprint(UUID eventId,String key) {
-        if(!key.startsWith("venue_safety_") || venueChecklist==null) return null;
+        if(venueChecklist==null || !key.startsWith("venue_safety_")) return null;
         return venueChecklist.items(eventId).stream().filter(i -> i.key().equals(key)).map(VenueSafetyChecklist.Item::fingerprint).findFirst().orElse(null);
     }
     private boolean current(UUID eventId,String key,ReadinessItemState state) {

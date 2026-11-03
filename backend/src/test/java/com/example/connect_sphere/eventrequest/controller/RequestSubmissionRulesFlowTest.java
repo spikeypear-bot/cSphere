@@ -162,6 +162,119 @@ class RequestSubmissionRulesFlowTest {
                 .isEqualTo("Clarified Gala");
     }
 
+    /** A valid next-week request with registration, plus {@code extra} JSON members. */
+    private static String withRegistration(String registration) {
+        OffsetDateTime start = nextWeek();
+        return """
+                {"eventName":"Registration Gala","purpose":"Quarterly update",
+                 "startDatetime":"%s","endDatetime":"%s","expectedAttendance":150,
+                 "venueRequirements":"Theatre seating","accessibilityNeeds":["none"],"registrationNeeds":true,%s}
+                """.formatted(start, start.plusHours(2), registration);
+    }
+
+    private void refusedWith(UUID id, String field, String message) throws Exception {
+        mvc.perform(post("/api/event-requests/" + id + "/submit").with(flow.as("eo1")))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors." + field).value(message));
+        assertThat(statusOf(id)).isEqualTo("draft");
+    }
+
+    @Test
+    @DisplayName("EO-C2 EO26 (negative): a resubmission with no registration places, opening at the start and closing after it is refused with each problem against its field, and the request stays as it was")
+    void registrationMustFitBeforeTheEvent() throws Exception {
+        UUID id = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Registration Gala", 150, "none"));
+        mvc.perform(post("/api/event-requests/" + id + "/clarifications").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Please add registration.\",\"flaggedFields\":[\"registrationNeeds\"]}"))
+                .andExpect(status().isOk());
+        OffsetDateTime start = nextWeek();
+        String details = withRegistration("\"registrationCapacity\":0,\"registrationOpensAt\":\"%s\",\"registrationClosesAt\":\"%s\""
+                .formatted(start, start.plusHours(1)));
+
+        mvc.perform(post("/api/event-requests/" + id + "/resubmit").with(flow.as("eo1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"response\":\"Added.\",\"details\":" + details + "}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors.registrationCapacity").value("Registration capacity must be at least 1."))
+                .andExpect(jsonPath("$.fieldErrors.registrationOpensAt").value("Registration must open before the event start."))
+                .andExpect(jsonPath("$.fieldErrors.registrationClosesAt")
+                        .value("Registration must close no later than the event start."));
+
+        assertThat(statusOf(id)).isEqualTo("clarification_required");
+        assertThat(jdbc.queryForObject("SELECT registration_capacity FROM event_requests WHERE request_id = ?",
+                Integer.class, id)).isNull();
+    }
+
+    @Test
+    @DisplayName("EO-C2 (negative): registration that closes before it opens is refused and the draft stays a draft")
+    void registrationMustCloseAfterItOpens() throws Exception {
+        OffsetDateTime start = nextWeek();
+        UUID id = flow.draft("eo1", withRegistration("\"registrationCapacity\":100,\"registrationOpensAt\":\"%s\",\"registrationClosesAt\":\"%s\""
+                .formatted(start.minusDays(2), start.minusDays(3))));
+
+        refusedWith(id, "registrationClosesAt", "Registration must close after it opens.");
+    }
+
+    @Test
+    @DisplayName("EO-C2 (boundary): registration that opens before the event and closes exactly at its start is sent for review")
+    void registrationMayCloseAtTheStart() throws Exception {
+        OffsetDateTime start = nextWeek();
+        UUID id = flow.draft("eo1", withRegistration("\"registrationCapacity\":1,\"registrationOpensAt\":\"%s\",\"registrationClosesAt\":\"%s\""
+                .formatted(start.minusDays(1), start)));
+
+        mvc.perform(post("/api/event-requests/" + id + "/submit").with(flow.as("eo1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("pending"));
+    }
+
+    @Test
+    @DisplayName("EO02 (negative): equipment chosen twice, with no type, with no quantity or left empty is refused, and the draft stays a draft")
+    void eachEquipmentTypeOnceWithAPositiveQuantity() throws Exception {
+        OffsetDateTime start = nextWeek();
+        UUID equipment = UUID.randomUUID();
+        for (String items : new String[] {
+                "[{\"equipmentId\":\"" + equipment + "\",\"quantity\":1},{\"equipmentId\":\"" + equipment + "\",\"quantity\":2}]",
+                "[{\"quantity\":1}]", "[{\"equipmentId\":\"" + equipment + "\",\"quantity\":0}]", "[null]"}) {
+            String body = body(start, start.plusHours(2), "150").replace("\"registrationNeeds\":false",
+                    "\"registrationNeeds\":false,\"equipmentItems\":" + items);
+            refusedWith(flow.draft("eo1", body), "equipmentItems",
+                    "Choose each equipment type once with a positive whole-number quantity.");
+        }
+    }
+
+    @Test
+    @DisplayName("EO02 (negative): equipment that is not in the catalogue is refused and the draft stays a draft")
+    void equipmentMustStillExist() throws Exception {
+        OffsetDateTime start = nextWeek();
+        String body = body(start, start.plusHours(2), "150").replace("\"registrationNeeds\":false",
+                "\"registrationNeeds\":false,\"equipmentItems\":[{\"equipmentId\":\"" + UUID.randomUUID() + "\",\"quantity\":1}]");
+
+        refusedWith(flow.draft("eo1", body), "equipmentItems", "One of the selected equipment types no longer exists.");
+    }
+
+    @Test
+    @DisplayName("EO26 EC02 (boundary): when the organiser clears details of a returned request, the coordinator's review lists them as missing, not as schedule problems")
+    void clearedDetailsOfAReturnedRequestShowAsMissing() throws Exception {
+        UUID id = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Cleared Gala", 150, "none"));
+        mvc.perform(post("/api/event-requests/" + id + "/clarifications").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"message\":\"Please confirm the times.\",\"flaggedFields\":[\"startDatetime\"]}"))
+                .andExpect(status().isOk());
+        mvc.perform(put("/api/event-requests/" + id).with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"eventName":"Cleared Gala","purpose":"Quarterly update","expectedAttendance":150,
+                                 "venueRequirements":"Theatre seating","accessibilityNeeds":["none"],"registrationNeeds":true}
+                                """))
+                .andExpect(status().isOk());
+
+        mvc.perform(get("/api/event-requests/" + id + "/review").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.missingFields").value(org.hamcrest.Matchers.contains(
+                        "startDatetime", "endDatetime", "registrationCapacity", "registrationOpensAt")))
+                .andExpect(jsonPath("$.scheduleValid").value(true));
+        assertThat(statusOf(id)).isEqualTo("clarification_required");
+    }
+
     @Test
     @DisplayName("EO-C2 AC3 (conflict): once a submitted request's start has passed, the coordinator sees why and cannot approve it; no event is created")
     void aRequestWhoseStartHasPassedCannotBeApproved() throws Exception {

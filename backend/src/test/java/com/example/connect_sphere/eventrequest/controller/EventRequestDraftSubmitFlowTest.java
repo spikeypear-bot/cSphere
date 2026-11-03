@@ -17,6 +17,7 @@ import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,6 +43,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("AU04")
 class EventRequestDraftSubmitFlowTest {
 
     private static final String START = "2027-03-10T01:00:00Z";
@@ -156,6 +158,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): an incomplete request can be saved as a draft for the organiser's organisation")
     void anIncompleteRequestCanBeSavedAsADraftForTheOrganisersOrganisation() throws Exception {
         save("eo1", "{\"eventName\":\"" + eventName + "\"}")
                 .andExpect(status().isCreated())
@@ -171,6 +174,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): a saved draft reopens with everything that was saved")
     void aSavedDraftCanBeReopenedWithEverythingThatWasSaved() throws Exception {
         Map<String, String> fields = complete();
         fields.put("description", "\"Keynote and demos\"");
@@ -195,6 +199,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): a draft can be edited and saved again without being submitted")
     void aDraftCanBeEditedAndSavedAgainWithoutBeingSubmitted() throws Exception {
         UUID requestId = draft("eo1", "{\"eventName\":\"" + eventName + "\"}");
         Map<String, String> changed = complete();
@@ -216,6 +221,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 (failure): a save that fails leaves the last saved version in place")
     void aSaveThatFailsLeavesTheLastSavedVersionInPlace() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
         Map<String, String> broken = complete();
@@ -231,6 +237,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 (negative): a draft is not shown to the Lead or to coordinators for review")
     void aDraftIsNotShownToTheLeadOrToCoordinatorsForReview() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
 
@@ -241,6 +248,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): another organiser in the same organisation can open and edit the draft")
     void anOrganiserInTheSameOrganisationCanOpenAndEditTheDraft() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
         Map<String, String> changed = complete();
@@ -253,6 +261,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 EO02 EO15 (negative): another organisation cannot open, edit or submit the draft, and it is unchanged")
     void anotherOrganisationCannotOpenEditOrSubmitTheDraftAndItIsUnchanged() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
         Map<String, String> changed = complete();
@@ -268,6 +277,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO02 (happy): a complete draft can be submitted and its status changes from draft to pending")
     void aCompleteDraftCanBeSubmittedAndItsStatusChangesFromDraftToPending() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
 
@@ -281,6 +291,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO02 (happy): submitting records on the timeline when and by whom the request was submitted")
     void submittingRecordsWhenTheRequestWasSubmitted() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
 
@@ -296,6 +307,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO02 (happy): a submitted request waits in the Lead's unassigned list and in no coordinator's queue")
     void aSubmittedRequestWaitsInTheLeadsUnassignedListAndInNoCoordinatorsQueue() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
 
@@ -305,7 +317,7 @@ class EventRequestDraftSubmitFlowTest {
         unassignedQueue()
                 .andExpect(jsonPath(entry(requestId) + ".eventName", contains(eventName)))
                 .andExpect(jsonPath(entry(requestId) + ".status", contains("pending")));
-        // ELC-C6: coordinators see it only once the Lead assigns it to them.
+        // ECL-C6: coordinators see it only once the Lead assigns it to them.
         reviewQueue()
                 .andExpect(jsonPath("$.unassigned").doesNotExist())
                 .andExpect(jsonPath(queued("needsReview", requestId), empty()))
@@ -313,6 +325,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO02 (negative): submitting an empty draft names every missing required field and leaves it a draft")
     void submittingAnEmptyDraftNamesEveryRequiredFieldAndLeavesItADraft() throws Exception {
         UUID requestId = draft("eo1", "{}");
 
@@ -326,6 +339,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO02 (conflict): a submitted request can no longer be edited or submitted again, and nothing changes")
     void aSubmittedRequestCanNoLongerBeEditedOrSubmittedAsADraft() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
         submit(requestId, "eo1").andExpect(status().isOk());
@@ -342,6 +356,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO15 (happy): the list shows only the caller's organisation's requests, each with its status and last update")
     void theListShowsOnlyTheCallersOrganisationWithEachRequestsStatusAndLastUpdate() throws Exception {
         UUID draftId = draft("eo1", json(complete()));
         UUID submittedId = draft("eo1", json(complete()));
@@ -364,6 +379,7 @@ class EventRequestDraftSubmitFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ec1", "vs1", "ts1", "att1"})
+    @DisplayName("EO01 EO15 (negative): other roles cannot create or list event requests and nothing is saved")
     void otherRolesCannotCreateOrListEventRequestsAndNothingIsSaved(String username) throws Exception {
         save(username, json(complete())).andExpect(status().isForbidden());
         list(username).andExpect(status().isForbidden());
@@ -372,6 +388,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): an organiser is forbidden from coordinator, Venue Staff and Technical Support functions, and the request stays pending")
     void anOrganiserCannotUseCoordinatorVenueStaffOrTechnicalSupportFunctions() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
         submit(requestId, "eo1").andExpect(status().isOk());
@@ -388,11 +405,31 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("EO01 EO15 (negative): a caller who is not signed in cannot create or list event requests and nothing is saved")
     void anUnauthenticatedCallerCannotCreateOrListEventRequests() throws Exception {
         mvc.perform(post("/api/event-requests").contentType(MediaType.APPLICATION_JSON).content(json(complete())))
                 .andExpect(status().isUnauthorized());
         mvc.perform(get("/api/event-requests")).andExpect(status().isUnauthorized());
 
         assertThat(savedRequests()).isZero();
+    }
+
+    @Test
+    @DisplayName("EO01 (negative): a draft with a registration capacity of 0 is refused with a field message, not a server error, and nothing is saved or overwritten")
+    void aDraftCannotHoldAZeroRegistrationCapacity() throws Exception {
+        Map<String, String> zero = complete();
+        zero.put("registrationCapacity", "0");
+        int before = savedRequests();
+
+        save("eo1", json(zero)).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors.registrationCapacity").value("Registration capacity must be at least 1."));
+        assertThat(savedRequests()).isEqualTo(before);
+
+        UUID requestId = draft("eo1", json(complete()));
+        update(requestId, "eo1", json(zero)).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors.registrationCapacity").value("Registration capacity must be at least 1."));
+        sync();
+        assertThat(jdbc.queryForObject("SELECT registration_capacity FROM event_requests WHERE request_id = ?",
+                Integer.class, requestId)).isNull();
     }
 }

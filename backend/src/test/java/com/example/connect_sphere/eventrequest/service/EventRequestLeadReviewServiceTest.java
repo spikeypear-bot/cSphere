@@ -17,6 +17,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -44,15 +45,15 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 
 /**
- * ECL-C3, ELC-C6 and ELC-C5: the Event Coordinator Lead's review of an
+ * ECL-C3, ECL-C6 and ECL-C5: the Event Coordinator Lead's review of an
  * unassigned request, its assignment to an Event Coordinator and its
  * reassignment to another, with every repository mocked. Each test is named after the acceptance criterion it checks, and
  * expected values come from the criteria, not from the code.
  */
 @Tag("unit")
 @Tag("ECL-C3")
-@Tag("ELC-C6")
-@Tag("ELC-C5")
+@Tag("ECL-C6")
+@Tag("ECL-C5")
 @Tag("EC-NEW4")
 @Tag("AT01")
 class EventRequestLeadReviewServiceTest {
@@ -93,6 +94,7 @@ class EventRequestLeadReviewServiceTest {
     // ---- Viewing the request ------------------------------------------
 
     @Test
+    @DisplayName("ECL-C3 (happy): the review shows the request as the organiser submitted it")
     void theReviewShowsTheRequestAsTheOrganiserSubmittedIt() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -114,6 +116,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): the review includes the request's history")
     void theReviewIncludesTheRequestsHistory() {
         EventRequest request = stored(EventRequestStatus.pending, null);
         ActivityDto reply = new ActivityDto(UUID.randomUUID(), "clarification_responded", "eo1", "eo",
@@ -126,6 +129,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (negative): a draft is reported as not found")
     void aDraftIsReportedAsNotFound() {
         EventRequest draft = stored(EventRequestStatus.draft, null);
 
@@ -134,6 +138,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (negative): a request that does not exist is reported as not found")
     void aRequestThatDoesNotExistIsReportedAsNotFound() {
         UUID missing = UUID.randomUUID();
         when(repository.findById(missing)).thenReturn(Optional.empty());
@@ -143,6 +148,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (conflict): a request assigned since the page loaded still opens and shows its coordinator")
     void aRequestThatHasSinceBeenAssignedStillOpensAndShowsItsCoordinator() {
         EventRequest request = stored(EventRequestStatus.pending, COORDINATOR);
 
@@ -153,6 +159,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C3 (conflict): a request decided since the page loaded still opens and shows its status")
     @EnumSource(value = EventRequestStatus.class, names = {"approved", "rejected", "cancelled"})
     void aRequestThatHasSinceBeenDecidedStillOpensAndShowsItsStatus(EventRequestStatus status) {
         EventRequest request = stored(status, COORDINATOR);
@@ -161,6 +168,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (cross-cutting): opening the review changes nothing and notifies no one")
     void openingTheReviewChangesNothingAndNotifiesNoOne() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -176,6 +184,7 @@ class EventRequestLeadReviewServiceTest {
     // ---- Rejecting ----------------------------------------------------
 
     @Test
+    @DisplayName("ECL-C3 (happy): rejecting an unassigned request makes it Rejected with the reason and assigns no one")
     void rejectingAnUnassignedRequestMakesItRejectedWithTheReasonAndAssignsNoOne() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -187,6 +196,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): rejecting notifies the organiser with the reason")
     void rejectingNotifiesTheOrganiserWithTheReason() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -197,6 +207,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): rejecting is recorded on the timeline with the Lead as the actor")
     void rejectingIsRecordedOnTheTimelineWithTheLeadAsTheActor() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -212,6 +223,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C3 (negative): rejecting without a reason is blocked and nothing changes")
     @NullSource
     @ValueSource(strings = {"", "   "})
     void rejectingWithoutAReasonIsBlockedAndNothingChanges(String reason) {
@@ -223,6 +235,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (conflict): a request assigned since the page loaded cannot be rejected by the Lead")
     void aRequestAssignedSinceThePageLoadedCannotBeRejectedByTheLead() {
         EventRequest request = stored(EventRequestStatus.pending, COORDINATOR);
 
@@ -233,6 +246,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C3 (conflict): a request that is no longer submitted cannot be rejected by the Lead")
     @EnumSource(value = EventRequestStatus.class,
             names = {"clarification_required", "approved", "rejected", "cancelled"})
     void aRequestThatIsNoLongerSubmittedCannotBeRejectedByTheLead(EventRequestStatus status) {
@@ -244,6 +258,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (negative): a draft cannot be rejected and is reported as not found")
     void aDraftCannotBeRejectedAndIsReportedAsNotFound() {
         EventRequest draft = stored(EventRequestStatus.draft, null);
 
@@ -255,6 +270,7 @@ class EventRequestLeadReviewServiceTest {
     // ---- Asking for clarification ----------------------------------
 
     @Test
+    @DisplayName("ECL-C3 (happy): asking for clarification makes the request Clarification Required and assigns no one")
     void askingForClarificationMakesTheRequestClarificationRequiredAndAssignsNoOne() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -266,6 +282,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): asking for clarification notifies every organiser of the organisation with the message")
     void askingForClarificationNotifiesEveryOrganiserOfTheOrganisationWithTheMessage() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -277,6 +294,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): asking for clarification is recorded on the timeline with the Lead as the actor")
     void askingForClarificationIsRecordedOnTheTimelineWithTheLeadAsTheActor() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -292,6 +310,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (cross-cutting): asking for clarification does not change any detail the organiser submitted")
     void askingForClarificationDoesNotChangeAnyDetailTheOrganiserSubmitted() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -304,6 +323,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C3 (negative): asking for clarification without a message is blocked and nothing changes")
     @NullSource
     @ValueSource(strings = {"", "   "})
     void askingForClarificationWithoutAMessageIsBlockedAndNothingChanges(String message) {
@@ -315,6 +335,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (conflict): a request assigned since the page loaded cannot be sent back by the Lead")
     void aRequestAssignedSinceThePageLoadedCannotBeSentBackByTheLead() {
         EventRequest request = stored(EventRequestStatus.pending, COORDINATOR);
 
@@ -326,6 +347,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C3 (conflict): a request that is no longer submitted cannot be sent back by the Lead")
     @EnumSource(value = EventRequestStatus.class,
             names = {"clarification_required", "approved", "rejected", "cancelled"})
     void aRequestThatIsNoLongerSubmittedCannotBeSentBackByTheLead(EventRequestStatus status) {
@@ -338,6 +360,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): when the organiser resubmits, the request is submitted again with no coordinator")
     void whenTheOrganiserResubmitsTheRequestIsSubmittedAgainWithNoCoordinator() {
         EventRequest request = stored(EventRequestStatus.clarification_required, null);
 
@@ -349,9 +372,10 @@ class EventRequestLeadReviewServiceTest {
         verify(notificationService, never()).createClarificationRespondedNotification(any(), any(), any(), any());
     }
 
-    // ---- Assigning (ELC-C6) ------------------------------------------
+    // ---- Assigning (ECL-C6) ------------------------------------------
 
     @ParameterizedTest
+    @DisplayName("ECL-C6 (happy): assigning gives the request its coordinator and keeps its status")
     @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
     void assigningGivesTheRequestItsCoordinatorAndKeepsItsStatus(EventRequestStatus status) {
         EventRequest request = stored(status, null);
@@ -364,6 +388,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (happy): assigning is recorded on the timeline with the Lead as the actor and the coordinator's name")
     void assigningIsRecordedOnTheTimelineWithTheLeadAsTheActorAndTheCoordinatorsName() {
         EventRequest request = stored(EventRequestStatus.pending, null);
         coordinator("ec1");
@@ -381,6 +406,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (cross-cutting): assigning does not approve the request, create an event or change any other detail")
     void assigningDoesNotApproveTheRequestCreateAnEventOrChangeAnyOtherDetail() {
         EventRequest request = stored(EventRequestStatus.pending, null);
         coordinator("ec1");
@@ -405,7 +431,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("ELC-C6, EC-NEW4 AC2 (happy): assigning tells the organiser who their coordinator is, and the coordinator it is theirs; nobody else")
+    @DisplayName("ECL-C6 EC-NEW4 AC2 (happy): assigning tells the organiser who their coordinator is, and the coordinator it is theirs; nobody else")
     void assigningTellsTheOrganiserWhoTheirCoordinatorIsAndNotifiesNobodyElse() {
         EventRequest request = stored(EventRequestStatus.pending, null);
         coordinator("ec1");
@@ -422,6 +448,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): assigning without choosing a coordinator is blocked and nothing changes")
     void assigningWithoutChoosingACoordinatorIsBlockedAndNothingChanges() {
         EventRequest request = stored(EventRequestStatus.pending, null);
 
@@ -432,6 +459,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C6 (negative): a user who is not an Event Coordinator cannot be assigned and nothing changes")
     @EnumSource(value = UserRole.class, mode = EnumSource.Mode.EXCLUDE, names = "ec")
     void aUserWhoIsNotAnEventCoordinatorCannotBeAssignedAndNothingChanges(UserRole otherRole) {
         EventRequest request = stored(EventRequestStatus.pending, null);
@@ -444,6 +472,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): a user that does not exist cannot be assigned and nothing changes")
     void aUserThatDoesNotExistCannotBeAssignedAndNothingChanges() {
         EventRequest request = stored(EventRequestStatus.pending, null);
         when(userRepository.findById(COORDINATOR)).thenReturn(Optional.empty());
@@ -455,6 +484,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C6 (conflict): a request assigned since the page loaded cannot be assigned again")
     @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
     void aRequestAssignedSinceThePageLoadedCannotBeAssignedAgain(EventRequestStatus status) {
         UUID alreadyAssigned = UUID.randomUUID();
@@ -468,6 +498,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C6 (conflict): a request decided since the page loaded cannot be assigned")
     @EnumSource(value = EventRequestStatus.class, names = {"approved", "rejected", "cancelled"})
     void aRequestDecidedSinceThePageLoadedCannotBeAssigned(EventRequestStatus status) {
         EventRequest request = stored(status, null);
@@ -480,6 +511,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): a draft cannot be assigned and is reported as not found")
     void aDraftCannotBeAssignedAndIsReportedAsNotFound() {
         EventRequest draft = stored(EventRequestStatus.draft, null);
         coordinator("ec1");
@@ -490,6 +522,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (happy): when the organiser resubmits a request assigned while it waited, it goes to that coordinator")
     void whenTheOrganiserResubmitsARequestAssignedWhileItWaitedItGoesToThatCoordinator() {
         EventRequest request = stored(EventRequestStatus.clarification_required, null);
         coordinator("ec1");
@@ -504,9 +537,10 @@ class EventRequestLeadReviewServiceTest {
                 COORDINATOR, request.getRequestId(), "Q1 Town Hall", "It is for our staff.");
     }
 
-    // ---- Reassigning (ELC-C5) ----------------------------------------
+    // ---- Reassigning (ECL-C5) ----------------------------------------
 
     @ParameterizedTest
+    @DisplayName("ECL-C5 (happy): reassigning moves the request to the chosen coordinator and keeps its status")
     @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
     void reassigningMovesTheRequestToTheChosenCoordinatorAndKeepsItsStatus(EventRequestStatus status) {
         EventRequest request = assignedToPrevious(status);
@@ -519,6 +553,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (happy): reassigning is recorded on the timeline with the Lead as the actor and both coordinators' names")
     void reassigningIsRecordedOnTheTimelineWithTheLeadAsTheActorAndBothCoordinatorsNames() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         coordinator("ec2");
@@ -536,6 +571,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (cross-cutting): reassigning does not approve the request, create an event or change any other detail")
     void reassigningDoesNotApproveTheRequestCreateAnEventOrChangeAnyOtherDetail() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         coordinator("ec2");
@@ -560,7 +596,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("ELC-C5, EC-NEW4 AC3, AC4 (happy): reassigning tells the organiser, the new coordinator (naming the previous one) and the previous coordinator (the handoff); nobody else")
+    @DisplayName("ECL-C5 EC-NEW4 AC3, AC4 (happy): reassigning tells the organiser, the new coordinator (naming the previous one) and the previous coordinator (the handoff); nobody else")
     void reassigningTellsTheOrganiserTheirCoordinatorChangedAndNotifiesNobodyElse() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         coordinator("ec2");
@@ -581,6 +617,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (negative): reassigning without choosing a coordinator is blocked and nothing changes")
     void reassigningWithoutChoosingACoordinatorIsBlockedAndNothingChanges() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
 
@@ -591,6 +628,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C5 (negative): a request cannot be reassigned to a user who is not an Event Coordinator")
     @EnumSource(value = UserRole.class, mode = EnumSource.Mode.EXCLUDE, names = "ec")
     void aRequestCannotBeReassignedToAUserWhoIsNotAnEventCoordinator(UserRole otherRole) {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
@@ -603,6 +641,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (negative): a request cannot be reassigned to a user that does not exist")
     void aRequestCannotBeReassignedToAUserThatDoesNotExist() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         when(userRepository.findById(COORDINATOR)).thenReturn(Optional.empty());
@@ -614,6 +653,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C5 (negative): a request cannot be reassigned to the coordinator it already has")
     @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
     void aRequestCannotBeReassignedToTheCoordinatorItAlreadyHas(EventRequestStatus status) {
         EventRequest request = assignedToPrevious(status);
@@ -625,6 +665,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C5 (negative): a request with no coordinator cannot be reassigned")
     @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
     void aRequestWithNoCoordinatorCannotBeReassigned(EventRequestStatus status) {
         EventRequest request = stored(status, null);
@@ -637,6 +678,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C5 (conflict): a request decided since the page loaded cannot be reassigned")
     @EnumSource(value = EventRequestStatus.class, names = {"approved", "rejected", "cancelled"})
     void aRequestDecidedSinceThePageLoadedCannotBeReassigned(EventRequestStatus status) {
         EventRequest request = assignedToPrevious(status);
@@ -649,6 +691,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (negative): a draft cannot be reassigned and is reported as not found")
     void aDraftCannotBeReassignedAndIsReportedAsNotFound() {
         EventRequest draft = assignedToPrevious(EventRequestStatus.draft);
         coordinator("ec2");
@@ -659,6 +702,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (negative): after reassignment the previous coordinator can no longer open or decide the request")
     void afterReassignmentThePreviousCoordinatorCanNoLongerOpenOrDecideTheRequest() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         coordinator("ec2");
@@ -678,6 +722,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (happy): after reassignment the new coordinator can open the request")
     void afterReassignmentTheNewCoordinatorCanOpenTheRequest() {
         EventRequest request = assignedToPrevious(EventRequestStatus.pending);
         coordinator("ec2");
@@ -689,6 +734,7 @@ class EventRequestLeadReviewServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 (happy): when the organiser resubmits a request reassigned while it waited, only the new coordinator is told")
     void whenTheOrganiserResubmitsARequestReassignedWhileItWaitedOnlyTheNewCoordinatorIsTold() {
         EventRequest request = assignedToPrevious(EventRequestStatus.clarification_required);
         coordinator("ec2");

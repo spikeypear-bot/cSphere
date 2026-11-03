@@ -15,6 +15,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -39,15 +40,15 @@ import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
 /**
- * ECL-C2 and ELC-C5: only the Event Coordinator Lead may open the list of
+ * ECL-C2 and ECL-C5: only the Event Coordinator Lead may open the list of
  * assigned requests or reassign one of them. Controller slice with the real
  * SecurityConfig imported; no database needed.
  */
-@Tag("unit")
+@Tag("integration")
 @WebMvcTest(EventRequestController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 @Tag("ECL-C2")
-@Tag("ELC-C5")
+@Tag("ECL-C5")
 @Tag("AU04")
 class AssignedRequestsAccessTest {
 
@@ -79,6 +80,7 @@ class AssignedRequestsAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): the Event Coordinator Lead sees every coordinator with the requests they hold, in the order given")
     void anEventCoordinatorLeadGetsEveryCoordinatorWithTheirRequestsInTheServicesOrder() throws Exception {
         UUID busy = UUID.randomUUID();
         UUID free = UUID.randomUUID();
@@ -116,6 +118,7 @@ class AssignedRequestsAccessTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "ec", "eo", "vs", "technician", "attendee" })
+    @DisplayName("ECL-C2 AU04 (negative): every other role is refused the assigned-requests list with a message and no request data is read")
     void everyOtherRoleIsDeniedAndNoRequestDataIsRead(String otherRole) throws Exception {
         mockMvc.perform(get(ASSIGNED).with(tokenFor(otherRole)))
                 .andExpect(status().isForbidden())
@@ -127,6 +130,7 @@ class AssignedRequestsAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 AU04 (negative): a call without signing in is rejected and no request data is read")
     void aCallWithNoTokenIsRejectedAndNoRequestDataIsRead() throws Exception {
         mockMvc.perform(get(ASSIGNED))
                 .andExpect(status().isUnauthorized());
@@ -134,9 +138,10 @@ class AssignedRequestsAccessTest {
         verifyNoInteractions(service);
     }
 
-    // ---- Reassigning (ELC-C5) ----------------------------------------
+    // ---- Reassigning (ECL-C5) ----------------------------------------
 
     @Test
+    @DisplayName("ECL-C5 (happy): the Lead reassigns a request to the coordinator they chose, recorded as the signed-in Lead")
     void anEventCoordinatorLeadReassignsAsThemselvesToTheCoordinatorTheyChose() throws Exception {
         UUID lead = UUID.randomUUID();
         EventRequestDto reassigned = new EventRequestDto(REQUEST, 'C', null, "Annual Summit", null, null,
@@ -157,6 +162,7 @@ class AssignedRequestsAccessTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "ec", "eo", "vs", "technician", "attendee", "safety_officer" })
+    @DisplayName("ECL-C5 AU04 (negative): every other role is refused reassigning with a message and nothing is changed")
     void everyOtherRoleIsDeniedReassigningAndNothingIsChanged(String otherRole) throws Exception {
         mockMvc.perform(post(REASSIGN).with(tokenFor(otherRole))
                         .contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
@@ -168,6 +174,7 @@ class AssignedRequestsAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C5 AU04 (negative): a reassign call without signing in is rejected and nothing is changed")
     void aReassignCallWithNoTokenIsRejectedAndNothingIsChanged() throws Exception {
         mockMvc.perform(post(REASSIGN).contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
                 .andExpect(status().isUnauthorized());

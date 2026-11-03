@@ -244,7 +244,7 @@ class VenueHoldReminderFlowTest {
         eventIds.add(event);
         UUID b=bookingFor(venue(),event);hold(b,Duration.ofHours(1));
         UUID requestId=jdbc.queryForObject("SELECT request_id FROM event_requests WHERE event_id=?",UUID.class,event);
-        // The Lead's reassignment (ELC-C5/ECL-C7) moves the request and its event to ec2.
+        // The Lead's reassignment (ECL-C5/ECL-C7) moves the request and its event to ec2.
         mvc.perform(post("/api/event-requests/assigned/"+requestId+"/reassign").with(flow.as("ecl1"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"coordinatorUserId\":\""+otherCoordinator+"\"}"))
             .andExpect(status().isOk());
@@ -302,5 +302,14 @@ class VenueHoldReminderFlowTest {
         reminderJob.remind();reminderJob.remind();
         assertThat(reminders(b)).isEqualTo(1);
         assertThat(remindedAt(hold.holdId()).toInstant()).isEqualTo(T0);
+    }
+
+    @Test @DisplayName("EC-C3 (negative): a hold on an event with no coordinator gets no reminder and stays unreminded")
+    void noCoordinatorNoReminder(){
+        UUID b=booking(venue());var hold=hold(b,Duration.ofHours(3));
+        jdbc.update("UPDATE events SET coordinator_id=NULL WHERE event_id=?",eventOf(b));
+        assertThat(holds.remind(hold.holdId())).isFalse();
+        assertThat(reminders(b)).isZero();
+        assertThat(remindedAt(hold.holdId())).isNull();
     }
 }

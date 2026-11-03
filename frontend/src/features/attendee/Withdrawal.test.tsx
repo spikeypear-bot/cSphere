@@ -157,6 +157,17 @@ describe('AT08 withdrawal', () => {
     expect(posts()).toHaveLength(1)
   })
 
+  it('AT08 (failure): a server error says the withdrawal could not be confirmed and keeps the registration', async () => {
+    post = async () => response({ message: 'Internal error' }, 500)
+    page()
+    fireEvent.click(within(await openDialog()).getByRole('button', { name: 'Confirm withdrawal' }))
+    expect(await screen.findByText(
+      'Withdrawal could not be confirmed. Refresh your registration status before trying again.')).toBeInTheDocument()
+    expect(screen.queryByText('Internal error')).not.toBeInTheDocument()
+    expect(screen.getByText('Registration Confirmed')).toBeInTheDocument()
+    expect(posts()).toHaveLength(1)
+  })
+
   it('AT08 (failure): failed reconciliation disables retry until a fresh server read succeeds', async () => {
     page()
     const dialog = await openDialog()
@@ -171,6 +182,21 @@ describe('AT08 withdrawal', () => {
     await waitFor(() => expect(screen.getByRole('button', { name: 'Withdraw Registration' })).toBeEnabled())
     expect(posts()).toHaveLength(1)
     expect(screen.getByText('Registration Confirmed')).toBeInTheDocument()
+  })
+
+  it('AT08 (failure): a refresh that still cannot reach the server says so and keeps withdrawal disabled', async () => {
+    page()
+    const dialog = await openDialog()
+    post = async () => { throw new TypeError('Offline') }
+    read = async () => { throw new TypeError('Offline') }
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Confirm withdrawal' }))
+    const refresh = await screen.findByRole('button', { name: 'Refresh registration status' })
+    await waitFor(() => expect(refresh).toBeEnabled())
+    fireEvent.click(refresh)
+    expect(await screen.findByText('Registration status could not be loaded. Check your connection and try again.')).toBeInTheDocument()
+    await waitFor(() => expect(refresh).toBeEnabled())
+    expect(screen.getByRole('button', { name: 'Withdraw Registration' })).toBeDisabled()
+    expect(posts()).toHaveLength(1)
   })
 
   it('AT08 (conflict): an older background read cannot overwrite a successful withdrawal', async () => {

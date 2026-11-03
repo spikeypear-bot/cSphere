@@ -1,4 +1,4 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS03 EC08 SO-C4 SO-C6 EC-NEW2 EO15 EO07
+// @stories EO01 EO02 ECL-C3 ECL-C6 EC02 EC03 VS03 EC08 SO-C4 SO-C6 EC-NEW2 EO15 EO07
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, confirmedEventByApi, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest,
   uniqueName, addVenueToRequest } from './support.ts'

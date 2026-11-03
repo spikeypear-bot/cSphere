@@ -21,7 +21,7 @@ export interface ReviewQueue {
  * waiting on *my* decision, and requests waiting on the *organiser* (EC01).
  * Unassigned requests and requests assigned to other coordinators are not
  * returned by the server at all: the Event Coordinator Lead assigns each
- * request (ELC-C6). Opening a request goes to its full review screen, where
+ * request (ECL-C6). Opening a request goes to its full review screen, where
  * decisions are made.
  */
 export function ReviewQueuePage() {

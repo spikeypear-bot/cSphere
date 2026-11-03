@@ -35,6 +35,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("SO-C2")
 class EquipmentRequestFlowTest {
 
     @Autowired MockMvc mvc;
@@ -156,6 +157,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): the coordinator submits items with quantities and notes, and the request is saved as processing")
     void coordinatorSubmitsItemsWithQuantitiesAndNotesAndTheRequestIsSavedAsProcessing() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -189,6 +191,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): a submitted request appears in the Technical Support queue with its items")
     void aSubmittedRequestAppearsInTheTechnicalSupportQueueWithItsItems() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -211,6 +214,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): the coordinator can view the request and its quantities after submitting")
     void theCoordinatorCanViewTheRequestAndItsQuantitiesAfterSubmitting() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -230,6 +234,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): an event with no equipment request shows an empty list")
     void anEventWithNoRequestShowsAnEmptyList() throws Exception {
         UUID eventId = event();
 
@@ -242,6 +247,7 @@ class EquipmentRequestFlowTest {
     // safety_officer token, including once the event awaits its safety review.
     @ParameterizedTest
     @ValueSource(strings = {"pending", "awaiting_safety_review", "safety_changes_requested", "safety_approved", "confirmed"})
+    @DisplayName("SO-C2 (happy): the Safety Officer can view an active event's equipment requests, from Planning to Confirmed")
     void theSafetyOfficerCanViewTheRequestsOfAnActiveEvent(String eventStatus) throws Exception {
         UUID eventId = event();
         UUID requestId = submitted(eventId, body("Two screens on stage", item(equipment("EC07 Projector"), 2)));
@@ -255,6 +261,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("SO-C2 (negative): the Safety Officer cannot view the equipment requests of a cancelled event")
     void theSafetyOfficerCannotViewTheRequestsOfACancelledEvent() throws Exception {
         UUID eventId = event();
         submitted(eventId, body("Two screens on stage", item(equipment("EC07 Projector"), 2)));
@@ -265,6 +272,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): a quantity of one is accepted")
     void aQuantityOfOneIsAccepted() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -277,6 +285,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): a quantity of zero is refused and nothing is saved")
     void aQuantityOfZeroIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -290,6 +299,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): an equipment type that does not exist is refused with a message and nothing is saved")
     void anEquipmentTypeThatDoesNotExistIsRefusedWithAMessageAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -302,6 +312,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (conflict): a second request is refused while one is processing, and the first is unchanged")
     void aSecondRequestIsRefusedWhileOneIsProcessingAndTheFirstIsUnchanged() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -320,6 +331,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (cross-cutting): submitting a request leaves the event's status unchanged")
     void submittingDoesNotChangeTheEventsStatus() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -331,6 +343,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): an event that is no longer being planned cannot take a request and nothing is saved")
     void anEventThatIsNoLongerInPlanningCannotTakeARequest() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -346,6 +359,7 @@ class EquipmentRequestFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
+    @DisplayName("EC07 (negative): other roles cannot submit or view a request and nothing is saved")
     void otherRolesCannotSubmitOrViewAndNothingIsSaved(String username) throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -358,6 +372,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): a coordinator not assigned to the event cannot submit or view a request and nothing is saved")
     void aCoordinatorNotAssignedToTheEventCannotSubmitOrViewAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -370,6 +385,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): a caller who is not signed in cannot submit and nothing is saved")
     void anUnauthenticatedCallerCannotSubmitAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -382,6 +398,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): submitting for an event that does not exist is not found and nothing is saved")
     void anEventThatDoesNotExistReturnsNotFound() throws Exception {
         UUID projector = equipment("EC07 Projector");
         UUID missing = UUID.randomUUID();
@@ -392,6 +409,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): a malformed event id is refused as a bad request")
     void aMalformedEventIdReturnsBadRequest() throws Exception {
         UUID projector = equipment("EC07 Projector");
 
@@ -405,6 +423,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): revising a processing request supersedes it with a new processing request holding the new items")
     void revisingAProcessingRequestSupersedesItAndCreatesANewOneWithTheNewItems() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -653,6 +672,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): revising an event that has no equipment request is refused and nothing is saved")
     void revisingAnEventWithNoEquipmentRequestIsRefused() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -664,6 +684,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): a rejected request cannot be revised")
     void revisingAfterARejectionIsRefused() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -679,6 +700,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): a coordinator not assigned to the event cannot revise the request and nothing changes")
     void aCoordinatorNotAssignedToTheEventCannotReviseAndNothingChanges() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -692,6 +714,7 @@ class EquipmentRequestFlowTest {
     @ParameterizedTest
     @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): other roles cannot revise the request and nothing changes")
     void otherRolesCannotReviseAndNothingChanges(String username) throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -801,5 +824,150 @@ class EquipmentRequestFlowTest {
 
         assertThat(statusOf(requestId)).isEqualTo("processing");
         assertThat(suitableEntries(eventId)).isEmpty();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (D37) (negative): a request with no note at all is refused and stays flagged")
+    void noNoteAtAllIsRefused() throws Exception {
+        UUID eventId = event();
+        UUID requestId = flagged(eventId);
+
+        markStillSuitable(eventId, requestId, "ec1", null)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Say why the request is still suitable, in 2000 characters or fewer."));
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+        assertThat(suitableEntries(eventId)).isEmpty();
+    }
+
+    // ---- EC07: the remaining submission rules ----
+
+    @Test
+    @DisplayName("EC07 (boundary): technical requirements of 2,001 characters are refused and nothing is saved")
+    void technicalRequirementsAreAtMost2000Characters() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+
+        submit(eventId, "ec1", body("x".repeat(2001), item(projector, 1)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Technical requirements must be 2000 characters or fewer."));
+        assertThat(requestsFor(eventId)).isZero();
+    }
+
+    private java.util.List<String> timeline(UUID eventId) {
+        sync();
+        return jdbc.queryForList("SELECT a.message FROM event_request_activity a JOIN event_requests r ON r.request_id = a.request_id "
+                + "WHERE r.event_id = ? AND a.activity_type IN ('equipment_requested', 'equipment_revised') ORDER BY a.occurred_at",
+                String.class, eventId);
+    }
+
+    @Test
+    @DisplayName("EC07 EC-NEW3 (boundary): requirements of exactly 2,000 characters are saved in full, on a first request and a revision, and their timeline entries are shortened to fit")
+    void maximumLengthRequirementsAreSavedAndTheTimelineFits() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        String longest = "x".repeat(2000);
+
+        UUID requestId = submitted(eventId, body(longest, item(projector, 1)));
+        revise(eventId, "ec1", body("y".repeat(2000), item(projector, 2))).andExpect(status().isOk());
+
+        assertThat(jdbc.queryForObject("SELECT technical_requirement FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId)).isEqualTo(longest);
+        assertThat(timeline(eventId)).hasSize(2).allSatisfy(message -> assertThat(message).hasSize(2000).endsWith("…"));
+    }
+
+    @Test
+    @DisplayName("EC07 (boundary): items with no technical requirements, or requirements with no items, are each enough on their own")
+    void itemsOrRequirementsAloneAreEnough() throws Exception {
+        UUID itemsOnly = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requirementsOnly = event();
+
+        submit(itemsOnly, "ec1", "{\"items\":[" + item(projector, 2) + "]}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.technicalRequirement").value(""))
+                .andExpect(jsonPath("$.lines[0].quantity").value(2));
+        submit(requirementsOnly, "ec1", "{\"technicalRequirement\":\"  A lectern  \"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.technicalRequirement").value("A lectern"))
+                .andExpect(jsonPath("$.lines").isEmpty());
+        assertThat(linesFor(requirementsOnly)).isZero();
+    }
+
+    @Test
+    @DisplayName("EC07 (negative): a missing item, an item with no equipment, or the same equipment twice is refused and nothing is saved")
+    void malformedItemsAreRefused() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+
+        submit(eventId, "ec1", "{\"technicalRequirement\":\"Stage\",\"items\":[null]}")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Each equipment item must have a valid selection and a quantity greater than zero."));
+        submit(eventId, "ec1", "{\"technicalRequirement\":\"Stage\",\"items\":[{\"quantity\":2}]}")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Each equipment item must have a valid selection and a quantity greater than zero."));
+        submit(eventId, "ec1", body("Stage", item(projector, 1), item(projector, 2)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Select each equipment type only once and adjust its quantity."));
+
+        assertThat(requestsFor(eventId)).isZero();
+        assertThat(linesFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("EC07 (happy): after Technical Support reject the only request, the coordinator can submit a new one")
+    void aNewRequestCanFollowARejection() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID rejected = submitted(eventId, body("Two screens", item(projector, 2)));
+        mvc.perform(patch("/api/equipment-requests/" + rejected + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"rejected\",\"rejectReason\":\"Not available\"}"))
+                .andExpect(status().isOk());
+        sync();
+
+        UUID second = submitted(eventId, body("One screen", item(projector, 1)));
+
+        assertThat(statusOf(second)).isEqualTo("processing");
+        assertThat(statusOf(rejected)).isEqualTo("rejected");
+        assertThat(requestsFor(eventId)).isEqualTo(2);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): a cancelled event's request cannot be revised and nothing changes")
+    void aCancelledEventsRequestCannotBeRevised() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        moveTo(eventId, "cancelled");
+
+        revise(eventId, "ec1", body("Three screens", item(projector, 3)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This event has been cancelled or has finished, "
+                        + "so its equipment request can no longer be revised."));
+
+        assertThat(statusOf(requestId)).isEqualTo("processing");
+        assertThat(requestsFor(eventId)).isEqualTo(1);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): a revision of items alone is recorded on the timeline without requirement text")
+    void aRevisionOfItemsAloneIsRecorded() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        submitted(eventId, body("Two screens", item(projector, 2)));
+
+        revise(eventId, "ec1", "{\"items\":[" + item(projector, 3) + "]}").andExpect(status().isOk());
+
+        sync();
+        assertThat(jdbc.queryForList("SELECT message FROM event_request_activity WHERE event_id = ? "
+                + "AND activity_type = 'equipment_revised'", String.class, eventId))
+                .containsExactly("Revised the equipment request: now 3 items of equipment, replacing the previous request");
     }
 }

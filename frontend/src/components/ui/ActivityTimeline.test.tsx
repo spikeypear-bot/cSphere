@@ -15,7 +15,7 @@ const entries: ActivityDto[] = [
 describe('ActivityTimeline', () => {
   afterEach(cleanup)
 
-  it('renders each entry in the order given, with who acted and what they did', () => {
+  it('EC01 EC02 (happy): shows each entry in the order given, with who acted and what they did', () => {
     render(<ActivityTimeline entries={entries} />)
     const items = within(screen.getByRole('list', { name: 'Request timeline' })).getAllByRole('listitem')
       .filter((li) => li.classList.contains('activity-timeline__entry'))
@@ -33,7 +33,7 @@ describe('ActivityTimeline', () => {
     expect(screen.getByRole('listitem')).toHaveTextContent('ecl1 (Event Coordinator Lead) rejected the request')
   })
 
-  it('says the Lead assigned a coordinator and names the coordinator (ELC-C6)', () => {
+  it('says the Lead assigned a coordinator and names the coordinator (ECL-C6)', () => {
     render(<ActivityTimeline entries={[{ activityId: 'a4', type: 'coordinator_assigned', actorName: 'ecl1',
       actorRole: 'ecl', message: 'Assigned to ec1', flaggedFields: [], fromStatus: null, toStatus: null,
       occurredAt: '2026-09-21T01:00:00Z' }]} />)
@@ -45,7 +45,7 @@ describe('ActivityTimeline', () => {
     expect(entry).not.toHaveTextContent(/ecl1.*is coordinating/)
   })
 
-  it('says the Lead reassigned the coordinator and names the previous and the new one (ELC-C5)', () => {
+  it('says the Lead reassigned the coordinator and names the previous and the new one (ECL-C5)', () => {
     render(<ActivityTimeline entries={[{ activityId: 'a5', type: 'coordinator_reassigned', actorName: 'ecl1',
       actorRole: 'ecl', message: 'Reassigned from ec1 to ec2', flaggedFields: [], fromStatus: null, toStatus: null,
       occurredAt: '2026-09-21T01:00:00Z' }]} />)
@@ -55,7 +55,7 @@ describe('ActivityTimeline', () => {
     expect(within(entry).getByText('Reassigned from ec1 to ec2')).toBeInTheDocument()
   })
 
-  it('shows the message, the flagged fields by name, and the status change', () => {
+  it('EC01 (happy): shows the message, the flagged fields by name, and the status change', () => {
     render(<ActivityTimeline entries={entries} />)
 
     expect(screen.getByText('Is 150 final?').tagName).toBe('BLOCKQUOTE')
@@ -80,7 +80,7 @@ describe('ActivityTimeline', () => {
     expect(document.body).not.toHaveTextContent('Approved →')
   })
 
-  it('shows the empty text when there is no history', () => {
+  it('EC01 EC02 (boundary): shows the empty text when there is no history', () => {
     render(<ActivityTimeline entries={[]} emptyText="No history yet." />)
     expect(screen.getByText('No history yet.')).toBeInTheDocument()
   })
@@ -107,7 +107,7 @@ describe('SO-C5 / SO-C6 safety decisions on the timeline', () => {
 describe('ActivityTimeline (V14 details)', () => {
   afterEach(cleanup)
 
-  it('lists each question under its field instead of one block of text', () => {
+  it('EC01 (happy): lists each question under its field instead of one block of text', () => {
     render(<ActivityTimeline entries={[{ ...entries[1], fieldQuestions: {
       expectedAttendance: 'Is 150 final?', endDatetime: 'Can it end at 5pm?' } }]} />)
 
@@ -129,5 +129,54 @@ describe('ActivityTimeline (V14 details)', () => {
     const changes = within(screen.getByRole('list', { name: 'What changed' })).getAllByRole('listitem')
     expect(changes).toHaveLength(1)
     expect(changes[0]).toHaveTextContent('Expected attendance: 150 → 120')
+  })
+})
+
+describe('EC-NEW5 ActivityTimeline — entries this build has no wording for, and edge entries', () => {
+  afterEach(cleanup)
+
+  const entry = (over: Partial<ActivityDto>): ActivityDto => ({ activityId: null, type: 'submitted', actorName: 'ec1',
+    actorRole: 'ec', message: null, flaggedFields: [], fromStatus: null, toStatus: null, occurredAt: '2026-09-20T01:00:00Z', ...over })
+  const rows = () => within(screen.getByRole('list', { name: 'Request timeline' })).getAllByRole('listitem')
+    .filter((li) => li.classList.contains('activity-timeline__entry'))
+
+  it('EC-NEW5 (boundary): an unknown role, action, status, field or checklist item is shown as recorded rather than hidden', () => {
+    render(<ActivityTimeline entries={[
+      entry({ activityId: 'u1', type: 'future_action' as ActivityDto['type'], actorRole: 'auditor', fromStatus: 'rejected', toStatus: 'archived' }),
+      entry({ activityId: 'u2', type: 'clarification_requested', fieldQuestions: { budgetCode: 'Which code?' } }),
+      entry({ activityId: 'u3', type: 'safety_rejected', flaggedFields: ['retired_item'] }),
+      entry({ activityId: 'u4', type: 'rejected', flaggedFields: ['budgetCode'] }),
+    ]} />)
+    const [unknown, question, safety, flagged] = rows()
+    expect(unknown).toHaveTextContent('ec1 (auditor) future_action')
+    expect(unknown).toHaveTextContent(/Rejected\s*→\s*archived/)
+    expect(within(question).getByRole('definition')).toHaveTextContent('Which code?')
+    expect(within(question).getByRole('term')).toHaveTextContent('budgetCode')
+    expect(within(safety).getByRole('list', { name: 'Checklist items concerned' })).toHaveTextContent('retired_item')
+    expect(within(flagged).getByRole('list', { name: 'Fields that need attention' })).toHaveTextContent('budgetCode')
+  })
+
+  it('EC-NEW5 (happy): a venue booking entry moves through booking statuses, not request statuses', () => {
+    render(<ActivityTimeline entries={[entry({ type: 'venue_booking_approved', fromStatus: 'pending', toStatus: 'confirmed' })]} />)
+    expect(rows()[0]).toHaveTextContent(/Pending venue review\s*→\s*Confirmed/)
+  })
+
+  it('EC-NEW5 (boundary): a response with no earlier clarification on record lists no changes', () => {
+    render(<ActivityTimeline entries={[entry({ activityId: 's1', type: 'submitted', fieldValues: { expectedAttendance: 150 } }),
+      entry({ activityId: 'c1', type: 'clarification_responded', actorRole: 'eo', fieldValues: { expectedAttendance: 120 } })]} />)
+    expect(screen.queryByRole('list', { name: 'What changed' })).not.toBeInTheDocument()
+  })
+
+  it('EC-NEW5 (happy): an updated registration period lists the valid new dates only, and nothing when none were captured', () => {
+    render(<ActivityTimeline entries={[
+      entry({ activityId: 'r1', type: 'registration_period_updated',
+        fieldValues: { registrationOpensAt: '2027-03-01T01:00:00Z', registrationClosesAt: 'not a date' } }),
+      entry({ activityId: 'r2', type: 'registration_period_updated' }),
+    ]} />)
+    const [withDates, without] = rows()
+    const period = within(withDates).getByLabelText('Updated registration period')
+    expect(within(period).getAllByRole('term').map((t) => t.textContent)).toEqual(['Registration opens'])
+    expect(period).toHaveTextContent('1 Mar 2027')
+    expect(within(without).queryByLabelText('Updated registration period')).not.toBeInTheDocument()
   })
 })

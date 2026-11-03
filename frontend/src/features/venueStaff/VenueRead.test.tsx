@@ -59,7 +59,7 @@ describe('DEV16 venue details workflow coverage', () => {
   })
 })
 
-it('opens venue panels without duplicate sibling keys', async () => {
+it('VS18 (cross-cutting): opens venue panels without duplicate sibling keys', async () => {
   const errors = vi.spyOn(console, 'error').mockImplementation(() => {})
   try {
     vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string) => response(
@@ -73,7 +73,7 @@ it('opens venue panels without duplicate sibling keys', async () => {
   }
 })
 
-it('keeps rooms at the same location separate and layouts within their room', async () => {
+it('VS18 (happy): keeps rooms at the same location separate and layouts within their room', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([venue,
     { ...venue, venueId: 'room-2', venueAddress: 'School A - Classroom 2, Level 2', venueCapacity: 50 },
   ])))
@@ -89,7 +89,7 @@ it('keeps rooms at the same location separate and layouts within their room', as
   expect(screen.getAllByLabelText('Supported layouts')).toHaveLength(2)
 })
 
-it('reads full characteristics and latest values on refresh and reopening without writes', async () => {
+it('VS18 (happy): reads full characteristics and latest values on refresh and reopening without writes', async () => {
   let saved = venue
   const fetch = vi.fn().mockImplementation(async (url: string) => response(
     url.endsWith('/bookings') || url.endsWith('/operational-issues') ? []
@@ -125,7 +125,7 @@ it('reads full characteristics and latest values on refresh and reopening withou
   expect(fetch.mock.calls.every(call => call[1].method === 'GET' && call[1].cache === 'no-store')).toBe(true)
 })
 
-it('validates an operational issue before posting', async () => {
+it('VS17 (negative): validates an operational issue before posting', async () => {
   const fetch = vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/bookings') || url.endsWith('/operational-issues')) return response([])
     return response(venue)
@@ -139,7 +139,7 @@ it('validates an operational issue before posting', async () => {
   expect(fetch.mock.calls.every(call => call[1].method !== 'POST')).toBe(true)
 })
 
-it.each([403, 404])('hides details and never requests bookings when venue read returns %s', async status => {
+it.each([403, 404])('VS18 VS16 (negative): hides details and never requests bookings when venue read returns %s', async status => {
   const fetch = vi.fn().mockResolvedValue(response({ message: 'Venue unavailable.' }, status))
   vi.stubGlobal('fetch', fetch)
   page('/venue-staff/catalogue/room-1')
@@ -149,7 +149,7 @@ it.each([403, 404])('hides details and never requests bookings when venue read r
   expect(fetch).toHaveBeenCalledTimes(1)
 })
 
-it('removes previously displayed catalogue records after access is denied on refresh', async () => {
+it('VS18 (negative): removes previously displayed catalogue records after access is denied on refresh', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(response([venue]))
     .mockResolvedValueOnce(response({ message: 'Access denied.' }, 403)))
   page()
@@ -159,7 +159,7 @@ it('removes previously displayed catalogue records after access is denied on ref
   expect(screen.queryByText(venue.venueAddress)).not.toBeInTheDocument()
 })
 
-it('shows an empty catalogue without venue links', async () => {
+it('VS18 (boundary): shows an empty catalogue without venue links', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([])))
   page()
   expect(await screen.findByRole('heading', { name: 'No venues yet' })).toBeInTheDocument()

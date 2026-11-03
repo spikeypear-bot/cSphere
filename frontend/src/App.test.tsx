@@ -31,14 +31,14 @@ describe('App routing — role consoles', () => {
     window.localStorage.clear()
   })
 
-  it('sends an unauthenticated visit to a role route to the login page', () => {
+  it('DEV05 AU04 (negative): an unauthenticated visit to a role route lands on the login page', () => {
     window.localStorage.clear()
     renderApp('/coordinator')
     expect(screen.getByRole('heading', { name: /Sign in to ConnectSphere/i })).toBeInTheDocument()
     expect(screen.getByRole('status')).toHaveTextContent('/coordinator')
   })
 
-  it('opens the console belonging to the signed-in account', async () => {
+  it('AU04 (happy): opens the console belonging to the signed-in account', async () => {
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator')
 
@@ -52,7 +52,7 @@ describe('App routing — role consoles', () => {
 
   // ---- EC09: "My events" belongs to the Event Coordinator console's navigation ----
 
-  it('puts "My events" one click away in the Event Coordinator navigation and opens the page there', async () => {
+  it('EC09 (happy): puts "My events" one click away in the Event Coordinator navigation and opens the page there', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     const user = userEvent.setup()
     signInAs('coordinator', 'ec1', 'ConnectSphere')
@@ -67,7 +67,7 @@ describe('App routing — role consoles', () => {
     expect(await screen.findByText(/No events are assigned to you right now\./)).toBeInTheDocument()
   })
 
-  it('redirects an Event Coordinator Lead away from "My events" and says why', async () => {
+  it('EC09 AU04 (negative): redirects an Event Coordinator Lead away from "My events" and says why', async () => {
     // The Lead dashboard reads its queues.
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
@@ -80,7 +80,7 @@ describe('App routing — role consoles', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('/coordinator/my-events')
   })
 
-  it('sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
+  it('AU04 (happy): sends a signed-in visitor at "/" straight to their own console — there is no role to pick', async () => {
     signInAs('attendee', 'att1', 'Acme Pte Ltd')
     renderApp('/')
     expect(await screen.findByRole('heading', { level: 1, name: /^Good \w+, att1$/ })).toBeInTheDocument()
@@ -104,7 +104,7 @@ describe('App routing — role consoles', () => {
     expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
   })
 
-  it("redirects a signed-in account away from another role's console and says why", async () => {
+  it("AU04 (negative): redirects a signed-in account away from another role's console and says why", async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('attendee', 'att1')
     renderApp('/venue-staff')
@@ -120,7 +120,7 @@ describe('App routing — role consoles', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('/venue-staff')
   })
 
-  it('does not show the access-denied alert during ordinary navigation', async () => {
+  it('AU04 (happy): does not show the access-denied alert during ordinary navigation', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('attendee', 'att1')
     renderApp('/attendee')
@@ -129,7 +129,7 @@ describe('App routing — role consoles', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('identifies the signed-in account in the shell', async () => {
+  it('DEV05 (happy): identifies the signed-in account in the shell', async () => {
     signInAs('organiser', 'eo1', 'Acme Pte Ltd')
     renderApp('/organiser')
 
@@ -139,7 +139,7 @@ describe('App routing — role consoles', () => {
 
   // ---- ECL-C1: the Event Coordinator Lead is its own role and console ----
 
-  it('lands a signed-in Event Coordinator Lead on their own console, with the unassigned queue one click away', async () => {
+  it('ECL-C1 (happy): lands a signed-in Event Coordinator Lead on their own console, with the unassigned queue one click away', async () => {
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
     renderApp('/')
 
@@ -150,7 +150,7 @@ describe('App routing — role consoles', () => {
     expect(screen.getByText(/ecl1 · Event Coordinator Lead · ConnectSphere/)).toBeInTheDocument()
   })
 
-  it("redirects an Event Coordinator away from the Lead's unassigned queue and says why", async () => {
+  it("ECL-C1 AU04 (negative): redirects an Event Coordinator away from the Lead's unassigned queue and says why", async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('coordinator', 'ec1', 'ConnectSphere')
     renderApp('/coordinator-lead/unassigned-requests')
@@ -164,7 +164,7 @@ describe('App routing — role consoles', () => {
 
   // ---- ECL-C2: coordinator assignments belong to the Lead's console ----
 
-  it('puts "Coordinator assignments" one click away on the Lead console and opens the page there', async () => {
+  it('ECL-C1 (happy): puts "Coordinator assignments" one click away on the Lead console and opens the page there', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, [])))
     const user = userEvent.setup()
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')
@@ -186,7 +186,7 @@ describe('App routing — role consoles', () => {
     ['technical-support', 'ts1', /^Good \w+, ts1$/, 'Technical Support'],
     ['attendee', 'att1', /^Good \w+, att1$/, 'Attendee'],
     ['safety-officer', 'so1', /^Good \w+, so1$/, 'Safety Officer'],
-  ] as const)('redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole, ownNav) => {
+  ] as const)('ECL-C1 AU04 (negative): redirects a signed-in %s away from coordinator assignments, says why and reads no request data', async (role, username, ownConsole, ownNav) => {
     const fetched: string[] = []
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       fetched.push(String(input))
@@ -205,7 +205,7 @@ describe('App routing — role consoles', () => {
     expect(fetched).not.toContain('/api/event-requests/assigned')
   })
 
-  it("redirects an Event Coordinator Lead away from the Event Coordinator's console — it is a separate role", async () => {
+  it("ECL-C1 AU04 (negative): redirects an Event Coordinator Lead away from the Event Coordinator's console — it is a separate role", async () => {
     // The Lead dashboard reads its queues.
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => jsonResponse(200, emptyBody(String(input)))))
     signInAs('coordinator-lead', 'ecl1', 'ConnectSphere')

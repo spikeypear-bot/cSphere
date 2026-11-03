@@ -115,9 +115,10 @@ public class DevEquipmentSeeder implements CommandLineRunner {
     }
 
     private int seedSerialNumbers(UUID equipmentId, SeedEquipment seed, int quantity) {
-        Integer existing = jdbc.queryForObject(
+        // COUNT(*) always returns one non-null row.
+        int existing = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM serialised_equipments WHERE equipment_id = ?", Integer.class, equipmentId);
-        return topUp(existing == null ? 0 : existing, quantity,
+        return topUp(existing, quantity,
                 () -> seed.serialPattern().generate(random),
                 serial -> jdbc.update("""
                         INSERT INTO serialised_equipments (equipment_id, serial_number, status)

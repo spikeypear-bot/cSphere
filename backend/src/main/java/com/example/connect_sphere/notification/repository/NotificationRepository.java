@@ -30,7 +30,4 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
 
     /** TS11 AC15: has this user already been told about this equipment request? */
     boolean existsByRecipientUserIdAndEquipmentRequestId(UUID recipientUserId, UUID equipmentRequestId);
-
-    /** TS11 AC15: has this user already been asked to review this change? */
-    boolean existsByRecipientUserIdAndEquipmentReviewId(UUID recipientUserId, UUID equipmentReviewId);
 }

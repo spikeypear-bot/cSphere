@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,7 +46,9 @@ class VenueOperationalIssueFlowTest {
     private static final String EVENT_END = "2027-03-10T04:00:00Z";
     private static final String LATER = "2027-03-10T06:00:00Z";
 
-    @Test void coordinatorSeesIssuesDuringSavedSetupAndTurnaround() throws Exception {
+    @Test
+    @DisplayName("VS13 (boundary): the coordinator sees issues during the saved setup and turnaround time, but not one starting after them")
+    void coordinatorSeesIssuesDuringSavedSetupAndTurnaround() throws Exception {
         UUID v = venue(), e = eventManagedByEc1(), b = booking(v, e, "approved");
         jdbc.update("UPDATE venue_bookings SET setup_duration_minutes=30,turnaround_duration_minutes=45 WHERE booking_id=?", b);
         UUID setup = reported(v, "Crew access", "2027-03-10T00:40:00Z", EVENT_START);
@@ -141,6 +144,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): Venue Staff report an issue with an affected period and it is saved against the venue")
     void venueStaffReportsAnIssueWithAPeriodAndItIsSavedAgainstTheVenue() throws Exception {
         UUID venueId = venue();
 
@@ -160,6 +164,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): a newly reported issue shows when it was reported")
     void aNewlyReportedIssueComesBackWithTheTimeItWasReported() throws Exception {
         UUID venueId = venue();
 
@@ -169,6 +174,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (boundary): an issue can be reported without an affected period")
     void anIssueCanBeReportedWithoutAnAffectedPeriod() throws Exception {
         UUID venueId = venue();
 
@@ -182,6 +188,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): an issue without a description is refused with a message and nothing is saved")
     void anIssueWithoutADescriptionIsRefusedWithAMessageAndNothingIsSaved() throws Exception {
         UUID venueId = venue();
 
@@ -193,6 +200,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): an affected end earlier than the start is refused with a message and nothing is saved")
     void anEndEarlierThanTheStartIsRefusedWithAMessageAndNothingIsSaved() throws Exception {
         UUID venueId = venue();
 
@@ -204,6 +212,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (cross-cutting): reporting an issue does not change, cancel or remove the venue's bookings")
     void reportingAnIssueDoesNotChangeCancelOrRemoveTheVenuesBookings() throws Exception {
         UUID venueId = venue();
         UUID eventId = eventManagedByEc1();
@@ -223,6 +232,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): Venue Staff see a reported issue under its own venue only")
     void venueStaffCanViewAReportedIssueUnderItsVenueOnly() throws Exception {
         UUID venueId = venue();
         UUID otherVenueId = venue();
@@ -242,6 +252,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): the coordinator sees an issue at a venue they manage, with the event it overlaps")
     void theCoordinatorSeesAnIssueAtAVenueTheyManageWithTheEventItOverlaps() throws Exception {
         UUID venueId = venue();
         UUID eventId = eventManagedByEc1();
@@ -259,6 +270,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (boundary): an issue that starts exactly when the event ends is listed without an overlapping event")
     void anIssueThatStartsWhenTheEventEndsIsListedWithoutAnOverlappingEvent() throws Exception {
         UUID venueId = venue();
         booking(venueId, eventManagedByEc1(), "approved");
@@ -270,6 +282,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (boundary): an issue without a period is listed for the coordinator without overlapping events")
     void anIssueWithoutAPeriodIsListedForTheCoordinatorWithoutOverlappingEvents() throws Exception {
         UUID venueId = venue();
         booking(venueId, eventManagedByEc1(), "approved");
@@ -281,6 +294,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): a coordinator does not see issues at venues they do not manage")
     void aCoordinatorDoesNotSeeIssuesAtVenuesTheyDoNotManage() throws Exception {
         UUID venueId = venue();
         booking(venueId, eventManagedByEc1(), "approved");
@@ -292,6 +306,7 @@ class VenueOperationalIssueFlowTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS13 (negative): other roles cannot report or list venue issues, and nothing is saved")
     @ValueSource(strings = {"eo1", "ec1", "ts1", "att1"})
     void otherRolesCannotReportOrListVenueIssuesAndNothingIsSaved(String username) throws Exception {
         UUID venueId = venue();
@@ -305,12 +320,14 @@ class VenueOperationalIssueFlowTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS13 (negative): only coordinators can open the coordinator issue list")
     @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
     void onlyCoordinatorsCanOpenTheCoordinatorIssueList(String username) throws Exception {
         coordinatorIssues(username).andExpect(status().isForbidden());
     }
 
     @Test
+    @DisplayName("VS13 (negative): a caller who is not signed in cannot report an issue, and nothing is saved")
     void anUnauthenticatedCallerCannotReportAnIssueAndNothingIsSaved() throws Exception {
         UUID venueId = venue();
 
@@ -323,12 +340,14 @@ class VenueOperationalIssueFlowTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): reporting an issue at a venue that does not exist returns not found")
     void aVenueThatDoesNotExistReturnsNotFound() throws Exception {
         report(UUID.randomUUID(), "vs1", issue("Air conditioning failure", EVENT_START, EVENT_END))
                 .andExpect(status().isNotFound());
     }
 
     @Test
+    @DisplayName("VS13 (negative): reporting an issue with a malformed venue id returns bad request")
     void aMalformedVenueIdReturnsBadRequest() throws Exception {
         mvc.perform(post("/api/venues/not-a-uuid/operational-issues").with(flow.as("vs1"))
                         .contentType(MediaType.APPLICATION_JSON)

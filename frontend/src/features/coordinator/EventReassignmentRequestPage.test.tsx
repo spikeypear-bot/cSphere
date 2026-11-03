@@ -44,7 +44,7 @@ describe('EventReassignmentRequestPage (EC-C1)', () => {
     window.localStorage.clear()
   })
 
-  it('submits a reason and displays the pending status', async () => {
+  it('EC-C1 (happy): submits a reason and displays the pending status', async () => {
     const calls = stubApi({
       [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, event),
       [`GET /api/events/${EVENT_ID}/reassignment-requests`]: () => jsonResponse(200, []),
@@ -61,7 +61,7 @@ describe('EventReassignmentRequestPage (EC-C1)', () => {
     expect(calls.at(-1)?.body).toEqual({ reason: 'I am no longer available.' })
   })
 
-  it('shows an existing pending request without allowing duplicate submission', async () => {
+  it('EC-C1 (conflict): shows an existing pending request without allowing duplicate submission', async () => {
     stubApi({
       [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, event),
       [`GET /api/events/${EVENT_ID}/reassignment-requests`]: () => jsonResponse(200, [pending]),
@@ -73,7 +73,7 @@ describe('EventReassignmentRequestPage (EC-C1)', () => {
     expect(screen.getByText(/continue planning this event while it is pending/)).toBeInTheDocument()
   })
 
-  it('shows a decline reason and lets the still-assigned requester submit a new request', async () => {
+  it('EC-C1 (happy): shows a decline reason and lets the still-assigned requester submit a new request', async () => {
     stubApi({
       [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, event),
       [`GET /api/events/${EVENT_ID}/reassignment-requests`]: () => jsonResponse(200, [{
@@ -87,7 +87,7 @@ describe('EventReassignmentRequestPage (EC-C1)', () => {
     expect(screen.getByRole('button', { name: 'Send request' })).toBeInTheDocument()
   })
 
-  it('does not offer the request form when the server denies the caller access', async () => {
+  it('EC-C1 (negative): does not offer the request form when the server denies the caller access', async () => {
     stubApi({
       [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, event),
       [`GET /api/events/${EVENT_ID}/reassignment-requests`]: () =>

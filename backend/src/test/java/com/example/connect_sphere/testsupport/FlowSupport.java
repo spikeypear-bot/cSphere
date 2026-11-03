@@ -69,7 +69,7 @@ public final class FlowSupport {
         return id;
     }
 
-    /** As above, then assigned to {@code coordinator} by the Lead (ELC-C6). */
+    /** As above, then assigned to {@code coordinator} by the Lead (ECL-C6). */
     public UUID submittedAndAssigned(String organiser, String coordinator, String requestBody) throws Exception {
         UUID id = submitted(organiser, requestBody);
         mvc.perform(post("/api/event-requests/unassigned/" + id + "/assign").with(as("ecl1"))

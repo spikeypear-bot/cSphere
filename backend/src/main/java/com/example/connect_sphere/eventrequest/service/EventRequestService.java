@@ -101,8 +101,19 @@ public class EventRequestService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
+        requireStorableCapacity(request);
         applyFields(entity, request);
         return mapper.toDto(repository.save(entity));
+    }
+
+    /** EO01: drafts may be incomplete, but V41 stores only a positive registration capacity, so
+     * a capacity below 1 is refused with the field message the submit rule uses, not a 500. */
+    private static void requireStorableCapacity(SaveEventRequestRequest request) {
+        Integer capacity = request.registrationCapacity();
+        if (capacity != null && capacity < 1) {
+            throw new InvalidEventRequestScheduleException(
+                    Map.of("registrationCapacity", "Registration capacity must be at least 1."));
+        }
     }
 
     /** EO01 draft edits, and (EO26) edits to a request that is waiting for
@@ -112,6 +123,7 @@ public class EventRequestService {
     public EventRequestDto updateDraft(String organisation, UUID requestId, SaveEventRequestRequest request) {
         requireOrganisation(organisation);
         EventRequest entity = findOwnedEditable(organisation, requestId);
+        requireStorableCapacity(request);
         applyFields(entity, request);
         entity.setUpdatedAt(OffsetDateTime.now(clock));
         // If this save fails (e.g. the transaction rolls back for any reason),
@@ -260,7 +272,7 @@ public class EventRequestService {
      * internal staff, so none of this is scoped by organisation. Unassigned
      * requests and requests assigned to other coordinators are left out:
      * EC02 says a coordinator "cannot view or review an event request that
-     * is not assigned to them", and assigning is the Lead's (ELC-C6).
+     * is not assigned to them", and assigning is the Lead's (ECL-C6).
      */
     @Transactional(readOnly = true)
     public ReviewQueueDto reviewQueue(UUID coordinatorId) {
@@ -377,7 +389,7 @@ public class EventRequestService {
         event.setEquipmentRequirements(entity.getEquipmentRequirements());
         event.setEquipmentItems(entity.getEquipmentItems());
         event.setAccessibilityNeeds(entity.getAccessibilityNeeds().stream().map(Enum::name).toList());
-        event.setRequiredFacilities(entity.getRequiredFacilities() == null ? List.of() : entity.getRequiredFacilities());
+        event.setRequiredFacilities(entity.getRequiredFacilities());
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
         event.setRegistrationCapacity(entity.getRegistrationCapacity());
         event.setRegistrationOpensAt(entity.getRegistrationOpensAt());
@@ -440,7 +452,7 @@ public class EventRequestService {
 
     /** ECL-C1: requests with no coordinator, across all organisations,
      * longest-waiting first. One the Lead sent back for clarification stays
-     * listed while it waits (ELC-C6), so it can still be assigned. Read-only. */
+     * listed while it waits (ECL-C6), so it can still be assigned. Read-only. */
     @Transactional(readOnly = true)
     public List<EventRequestDto> unassignedRequests() {
         return repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(
@@ -448,7 +460,7 @@ public class EventRequestService {
                 .stream().map(mapper::toDto).toList();
     }
 
-    /** ELC-C6: every Event Coordinator, by username, for the Lead to pick
+    /** ECL-C6: every Event Coordinator, by username, for the Lead to pick
      * one from. Read-only. */
     @Transactional(readOnly = true)
     public List<CoordinatorDto> coordinators() {
@@ -475,7 +487,7 @@ public class EventRequestService {
     }
 
     /**
-     * ELC-C6: the Lead hands an unassigned request to one Event Coordinator.
+     * ECL-C6: the Lead hands an unassigned request to one Event Coordinator.
      * Allowed while it is Submitted or waiting for the organiser's
      * clarification; the status and the organiser's details stay as they
      * are. A request that already has a coordinator is refused, even when
@@ -491,7 +503,7 @@ public class EventRequestService {
     }
 
     /**
-     * ELC-C5: the Lead moves a request that is still under review from its
+     * ECL-C5: the Lead moves a request that is still under review from its
      * Event Coordinator to a different one. Only the coordinator changes:
      * the status and the organiser's details stay as they are. The organiser
      * learns of the change (EO19) once it commits.
@@ -600,8 +612,7 @@ public class EventRequestService {
         if (status == EventStatus.cancelled || status == EventStatus.completed) {
             return false;
         }
-        return !(status == EventStatus.confirmed && event.getEndDatetime() != null
-                && event.getEndDatetime().isBefore(OffsetDateTime.now(clock)));
+        return !(status == EventStatus.confirmed && event.getEndDatetime().isBefore(OffsetDateTime.now(clock)));
     }
 
     /** ECL-C3: the Lead filters out a request before anyone is assigned. */
@@ -628,7 +639,7 @@ public class EventRequestService {
     }
 
     /** {@code orClarifying} also accepts a request that is waiting for the
-     * organiser's clarification: it can still be assigned (ELC-C6), but not
+     * organiser's clarification: it can still be assigned (ECL-C6), but not
      * rejected or sent back a second time. */
     private EventRequest findAwaitingAssignment(UUID requestId, boolean orClarifying) {
         EventRequest entity = repository.findForUpdate(requestId)
@@ -647,7 +658,7 @@ public class EventRequestService {
         return entity;
     }
 
-    /** A request the Lead may reassign (ELC-C5): it has a coordinator and is
+    /** A request the Lead may reassign (ECL-C5): it has a coordinator and is
      * still under review, or (ECL-C7) it was approved and its event has not
      * finished or been cancelled. A rejected or cancelled request, or a
      * finished event, stays with whoever handled it. */
@@ -691,7 +702,7 @@ public class EventRequestService {
     }
 
     private static void requireAssigned(UUID coordinatorId, EventRequest entity) {
-        if (coordinatorId == null || !coordinatorId.equals(entity.getCoordinatorId())) {
+        if (!coordinatorId.equals(entity.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(entity.getRequestId());
         }
     }
@@ -810,13 +821,12 @@ public class EventRequestService {
         values.put("eventName", e.getEventName());
         values.put("purpose", e.getPurpose());
         values.put("description", e.getDescription());
-        values.put("startDatetime", e.getStartDatetime() == null ? null : e.getStartDatetime().toString());
-        values.put("endDatetime", e.getEndDatetime() == null ? null : e.getEndDatetime().toString());
+        values.put("startDatetime", e.getStartDatetime().toString());
+        values.put("endDatetime", e.getEndDatetime().toString());
         values.put("expectedAttendance", e.getExpectedAttendance());
         values.put("venueRequirements", e.getVenueRequirements());
         values.put("equipmentRequirements", e.getEquipmentRequirements());
-        values.put("accessibilityNeeds", e.getAccessibilityNeeds() == null ? List.of()
-                : e.getAccessibilityNeeds().stream().map(Enum::name).toList());
+        values.put("accessibilityNeeds", e.getAccessibilityNeeds().stream().map(Enum::name).toList());
         values.put("registrationNeeds", e.getRegistrationNeeds());
         values.put("registrationCapacity", e.getRegistrationCapacity());
         values.put("registrationOpensAt", e.getRegistrationOpensAt() == null ? null : e.getRegistrationOpensAt().toString());
@@ -854,9 +864,8 @@ public class EventRequestService {
     public static SaveEventRequestRequest detailsOf(EventRequest e) {
         return new SaveEventRequestRequest(e.getEventName(), e.getPurpose(), e.getDescription(),
                 e.getStartDatetime(), e.getEndDatetime(), e.getExpectedAttendance(), e.getVenueRequirements(),
-                e.getEquipmentRequirements(), e.getAccessibilityNeeds() == null ? List.of() : List.copyOf(e.getAccessibilityNeeds()),
-                e.getRequiredFacilities() == null ? List.of()
-                        : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
+                e.getEquipmentRequirements(), List.copyOf(e.getAccessibilityNeeds()),
+                e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
                 e.getRegistrationNeeds(), e.getRegistrationCapacity(), e.getRegistrationOpensAt(),
                 e.getRegistrationClosesAt(), e.getAttendeeInstructions(), e.getEquipmentItems());
     }
@@ -886,7 +895,7 @@ public class EventRequestService {
             event.setEquipmentRequirements(request.getEquipmentRequirements());
             event.setEquipmentItems(request.getEquipmentItems());
             event.setAccessibilityNeeds(request.getAccessibilityNeeds().stream().map(Enum::name).toList());
-            event.setRequiredFacilities(request.getRequiredFacilities() == null ? List.of() : request.getRequiredFacilities());
+            event.setRequiredFacilities(request.getRequiredFacilities());
             event.setRegistrationNeeds(request.getRegistrationNeeds());
             event.setRegistrationCapacity(request.getRegistrationCapacity());
             event.setRegistrationOpensAt(request.getRegistrationOpensAt());
@@ -970,7 +979,7 @@ public class EventRequestService {
         if (isBlank(entity.getVenueRequirements())) {
             missing.add("venueRequirements");
         }
-        if (entity.getAccessibilityNeeds() == null || entity.getAccessibilityNeeds().isEmpty()) {
+        if (entity.getAccessibilityNeeds().isEmpty()) {
             missing.add("accessibilityNeeds");
         }
         if (Boolean.TRUE.equals(entity.getRegistrationNeeds())) {

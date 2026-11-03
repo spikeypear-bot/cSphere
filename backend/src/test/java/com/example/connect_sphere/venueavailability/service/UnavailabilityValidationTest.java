@@ -3,6 +3,7 @@ package com.example.connect_sphere.venueavailability.service;
 import static org.assertj.core.api.Assertions.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,10 +46,25 @@ class UnavailabilityValidationTest {
         if (accepted) assertThat(error).isNull(); else assertThat(error).isNotNull();
     }
 
-    @Test void pastDateUsesSingaporeCalendarRatherThanSuppliedOffset() {
+    @Test
+    @DisplayName("VS01 (boundary): whether a date is in the past follows the Singapore calendar, not the offset supplied")
+    void pastDateUsesSingaporeCalendarRatherThanSuppliedOffset() {
         var start = OffsetDateTime.parse("2026-10-06T16:00:00Z");
         assertThatCode(() -> AvailabilityService.validate(new Request(start,start.plusHours(1),"Maintenance",null,null),TODAY)).doesNotThrowAnyException();
         assertThatThrownBy(() -> AvailabilityService.validate(new Request(start.minusSeconds(1),start.plusHours(1),"Maintenance",null,null),TODAY))
                 .hasMessageContaining("before today");
+    }
+
+    @Test
+    @DisplayName("VS01 (negative): a period needs its times and a reason of 1 to 2000 characters")
+    void aPeriodNeedsTimesAndAReason() {
+        var start = OffsetDateTime.parse("2026-10-08T10:00:00+08:00");
+        assertThatThrownBy(() -> AvailabilityService.validate(null, TODAY))
+                .hasMessage("Start and end date/time are required.");
+        for (String reason : java.util.Arrays.asList(null, "  ", "x".repeat(2001)))
+            assertThatThrownBy(() -> AvailabilityService.validate(new Request(start, start.plusHours(1), reason, null, null), TODAY))
+                    .hasMessage("Reason is required and must be at most 2000 characters.");
+        assertThatCode(() -> AvailabilityService.validate(new Request(start, start.plusHours(1), "x".repeat(2000), null, null), TODAY))
+                .doesNotThrowAnyException();
     }
 }

@@ -879,4 +879,323 @@ class EquipmentDamageFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.equipment[0].quantity").value(1));
     }
+
+    // ---- The remaining rules ------------------------------------------------------
+
+    private ResultActions resolve(UUID eventId, UUID outcomeId, String body) throws Exception {
+        return mvc.perform(post("/api/events/" + eventId + "/equipment-damage/" + outcomeId + "/resolve")
+                .with(flow.as("ec1")).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    private int allReports() {
+        sync();
+        return jdbc.queryForObject("SELECT count(*) FROM equipment_damage_reports", Integer.class);
+    }
+
+    @Test
+    @DisplayName("TS09 AC1, AC2 (negative): a report naming no equipment, a blank serial number, or no description is refused and nothing is saved")
+    void aReportNeedsEquipmentAndADescription() throws Exception {
+        UUID projectors = projectors("PJ-1");
+        int before = allReports();
+
+        report("{\"serialNumber\":\"PJ-1\",\"description\":\"Cracked\",\"periodStart\":\"" + DAMAGED_FROM
+                + "\",\"blockStatus\":\"FAULTY\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose the damaged equipment."));
+        report(unitReport(projectors, "  ", "Cracked", DAMAGED_FROM, null, null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose the damaged unit's serial number."));
+        report(unitReport(projectors, "PJ-1", null, DAMAGED_FROM, null, null))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Describe the damage."));
+
+        assertThat(allReports()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("TS09 AC2 (boundary): a serialised unit is reported one at a time: a quantity of 2 is refused and nothing is saved, a quantity of 1 is accepted")
+    void aSerialisedUnitIsReportedOneAtATime() throws Exception {
+        UUID projectors = projectors("PJ-1");
+        String body = "{\"equipmentId\":\"%s\",\"serialNumber\":\"PJ-1\",\"quantity\":%d,\"description\":\"Cracked\","
+                + "\"periodStart\":\"%s\",\"blockStatus\":\"FAULTY\"}";
+
+        report(body.formatted(projectors, 2, DAMAGED_FROM))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A serialised unit is reported one at a time."));
+        assertThat(reportsFor(projectors)).isZero();
+
+        report(body.formatted(projectors, 1, DAMAGED_FROM))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.quantity").value(1));
+    }
+
+    @Test
+    @DisplayName("TS09 AC3 (boundary): a blank serial number on a non-serialised kind is ignored and the quantity is reported")
+    void aBlankSerialOnANonSerialisedKindIsIgnored() throws Exception {
+        UUID cables = equipment("TS09 Cable " + UUID.randomUUID(), 10, false);
+
+        report("{\"equipmentId\":\"" + cables + "\",\"serialNumber\":\"  \",\"quantity\":2,"
+                + "\"description\":\"Frayed\",\"periodStart\":\"" + DAMAGED_FROM + "\"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.serialNumber").doesNotExist())
+                .andExpect(jsonPath("$.quantity").value(2));
+    }
+
+    @Test
+    @DisplayName("TS09 AC9, AC10, AC12 (negative): for a serialised unit, no decision, an unknown one, or a replacement with no serial number is refused and nothing changes")
+    void aSerialisedDecisionMustBeOneOfTheThree() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2");
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+
+        decide(report, eventId, "{}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose what happens to this event."));
+        decide(report, eventId, "{\"decision\":\" \"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose what happens to this event."));
+        decide(report, eventId, "{\"decision\":\"REDUCE\",\"reduceBy\":1}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Decide COVERED, REPLACE or SHORT for a serialised unit."));
+        decide(report, eventId, "{\"decision\":\"replace\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Choose the replacement unit's serial number."));
+
+        assertThat(serialsReservedFor(eventId, projectors)).containsExactly("PJ-1");
+        assertThat(outcomeColumn(outcomeOf(report, eventId), "outcome")).isNull();
+    }
+
+    @Test
+    @DisplayName("TS09 AC11 (negative): a non-serialised kind is decided only by reducing by 0 or more units; anything else is refused and nothing changes")
+    void aNonSerialisedDecisionIsAReduction() throws Exception {
+        UUID mics = equipment("TS09 Mic " + UUID.randomUUID(), 10, false);
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedQuantity(eventId, mics, 10, 10, MARCH_10);
+        JsonNode report = reported(quantityReport(mics, 3, DAMAGED_FROM, null));
+        String name = report.get("equipmentName").asString();
+
+        decide(report, eventId, "{\"decision\":\"COVERED\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        "For " + name + ", decide by reducing this event's reservation (0 or more units)."));
+        decide(report, eventId, "{\"decision\":\"REDUCE\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value(
+                        "Give how many units to take off this event's reservation (0 or more)."));
+        decide(report, eventId, "{\"decision\":\"REDUCE\",\"reduceBy\":-1}")
+                .andExpect(status().isBadRequest());
+
+        assertThat(unitsReservedFor(eventId, mics)).isEqualTo(10);
+        assertThat(outcomeColumn(outcomeOf(report, eventId), "outcome")).isNull();
+    }
+
+    @Test
+    @DisplayName("TS09 AC6, AC15 (boundary): an affected event cancelled after the report cannot be decided and no longer holds up closing")
+    void aCancelledAffectedEventNoLongerNeedsAnOutcome() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2");
+        UUID first = event("TS09 First", MARCH_10);
+        approvedUnits(first, projectors, 1, MARCH_10, "PJ-1");
+        UUID second = event("TS09 Second", MARCH_11);
+        approvedUnits(second, projectors, 1, MARCH_11, "PJ-1");
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+        assertThat(affectedIds(report)).containsExactly(first.toString(), second.toString());
+
+        close(report).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("2 affected events still need an outcome."));
+
+        setStatus(second, "cancelled");
+        decide(report, second, "{\"decision\":\"SHORT\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(
+                        "This event has been cancelled or has finished, so nothing needs deciding for it."));
+        assertThat(outcomeColumn(outcomeOf(report, second), "outcome")).isNull();
+        close(report).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("1 affected event still needs an outcome."));
+
+        decide(report, first, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.canClose").value(true));
+        close(report).andExpect(status().isOk()).andExpect(jsonPath("$.status").value("CLOSED"));
+    }
+
+    @Test
+    @DisplayName("TS09 AC10, AC13 (conflict): a unit an earlier report on it has already released cannot be replaced again, and nothing changes")
+    void aUnitAlreadyReleasedCannotBeReplaced() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2", "PJ-3");
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1", "PJ-2");
+        JsonNode first = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+        JsonNode second = reported(unitReport(projectors, "PJ-1", "Lamp gone", DAMAGED_FROM, null, null));
+        decide(first, eventId, "{\"decision\":\"COVERED\"}").andExpect(status().isOk());
+
+        decide(second, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-3\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The damaged unit is no longer reserved for this event."));
+
+        assertThat(serialsReservedFor(eventId, projectors)).containsExactly("PJ-2");
+        assertThat(outcomeColumn(outcomeOf(second, eventId), "outcome")).isNull();
+    }
+
+    @Test
+    @DisplayName("TS09 AC11, AC12 (boundary): reducing an event by everything it holds removes its reservation and leaves it short by all of it")
+    void reducingByEverythingRemovesTheReservation() throws Exception {
+        UUID mics = equipment("TS09 Mic " + UUID.randomUUID(), 10, false);
+        UUID big = event("TS09 Big", MARCH_10);
+        approvedQuantity(big, mics, 6, 6, MARCH_10);
+        UUID small = event("TS09 Small", MARCH_10);
+        approvedQuantity(small, mics, 4, 4, MARCH_10);
+        JsonNode report = reported(quantityReport(mics, 3, DAMAGED_FROM, null));
+
+        decide(report, small, "{\"decision\":\"REDUCE\",\"reduceBy\":4}").andExpect(status().isOk());
+
+        sync();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs WHERE event_id = ?", Integer.class, small))
+                .isZero();
+        assertThat(outcomeColumn(outcomeOf(report, small), "outcome")).isEqualTo("SHORT");
+        assertThat(outcomeColumn(outcomeOf(report, small), "shortfall")).isEqualTo("4");
+        assertThat(unitsReservedFor(big, mics)).isEqualTo(6);
+    }
+
+    @Test
+    @DisplayName("TS09 AC18 (boundary): reducing an event that is already short again does not send it back to Planning a second time")
+    void anEventAlreadyShortIsNotReturnedToPlanningAgain() throws Exception {
+        UUID mics = equipment("TS09 Mic " + UUID.randomUUID(), 10, false);
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedQuantity(eventId, mics, 10, 10, MARCH_10);
+        setStatus(eventId, "confirmed");
+        JsonNode report = reported(quantityReport(mics, 3, DAMAGED_FROM, null));
+
+        decide(report, eventId, "{\"decision\":\"REDUCE\",\"reduceBy\":1}").andExpect(status().isOk());
+        assertThat(eventStatus(eventId)).isEqualTo("pending");
+
+        setStatus(eventId, "confirmed");
+        decide(report, eventId, "{\"decision\":\"REDUCE\",\"reduceBy\":2}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.affectedEvents[0].shortfall").value(3));
+        assertThat(eventStatus(eventId)).isEqualTo("confirmed");
+    }
+
+    @Test
+    @DisplayName("TS09 AC11, AC19, AC20 (conflict): once the coordinator has resolved a shortfall with a note or requested more, Technical Support can no longer change it")
+    void aShortfallTheCoordinatorActedOnCannotBeChanged() throws Exception {
+        UUID mics = equipment("TS09 Mic " + UUID.randomUUID(), 20, false);
+        UUID noted = event("TS09 Noted", MARCH_10);
+        approvedQuantity(noted, mics, 10, 10, MARCH_10);
+        UUID requested = event("TS09 Requested", MARCH_10);
+        approvedQuantity(requested, mics, 10, 10, MARCH_10);
+        JsonNode report = reported(quantityReport(mics, 3, DAMAGED_FROM, null));
+        decide(report, noted, "{\"decision\":\"REDUCE\",\"reduceBy\":2}").andExpect(status().isOk());
+        decide(report, requested, "{\"decision\":\"REDUCE\",\"reduceBy\":1}").andExpect(status().isOk());
+        resolve(noted, outcomeOf(report, noted), "{\"note\":\"Eight is enough\"}").andExpect(status().isOk());
+        UUID additional = request(requested, mics, 1, outcomeOf(report, requested));
+
+        for (UUID eventId : List.of(noted, requested)) {
+            decide(report, eventId, "{\"decision\":\"REDUCE\",\"reduceBy\":0}")
+                    .andExpect(status().isConflict())
+                    .andExpect(jsonPath("$.message").value(
+                            "The coordinator has already acted on this shortfall, so it can no longer be changed."));
+        }
+
+        assertThat(outcomeColumn(outcomeOf(report, noted), "reduced_by")).isEqualTo("2");
+        assertThat(outcomeColumn(outcomeOf(report, requested), "reduced_by")).isEqualTo("1");
+        mvc.perform(get("/api/equipment-damage-reports/" + report.get("reportId").asString()).with(flow.as("ts1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.affectedEvents[?(@.eventId == '" + requested + "')].additionalRequestId")
+                        .value(additional.toString()))
+                .andExpect(jsonPath("$.affectedEvents[?(@.eventId == '" + requested + "')].additionalRequestStatus")
+                        .value("processing"));
+    }
+
+    @Test
+    @DisplayName("TS09 AC4 (boundary): a unit still reserved by an event whose request awaits review is not blocked when its report closes itself")
+    void aUnitStillReservedIsNotBlockedOnClose() throws Exception {
+        UUID projectors = projectors("PJ-1");
+        UUID processing = event("TS09 Processing", MARCH_10);
+        request(processing, projectors, 1, null);
+        reserve(processing, projectors, 1, "PJ-1", MARCH_10);
+
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, "FAULTY"));
+
+        assertThat(report.get("status").asString()).isEqualTo("CLOSED");
+        assertThat(report.get("blockApplied").asBoolean()).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_status_periods WHERE equipment_id = ?",
+                Integer.class, projectors)).isZero();
+        assertThat(serialsReservedFor(processing, projectors)).containsExactly("PJ-1");
+    }
+
+    @Test
+    @DisplayName("TS09 (negative): an unknown damage report is not found, to read or to close")
+    void anUnknownReportIsNotFound() throws Exception {
+        UUID unknown = UUID.randomUUID();
+
+        mvc.perform(get("/api/equipment-damage-reports/" + unknown).with(flow.as("ts1")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Damage report not found."));
+        mvc.perform(post("/api/equipment-damage-reports/" + unknown + "/close").with(flow.as("ts1")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Damage report not found."));
+    }
+
+    @Test
+    @DisplayName("TS09 AC17, AC19, AC20 (conflict): while an additional request awaits review the shortfall cannot be resolved or requested again; once it is rejected, both are open again")
+    void aShortfallWaitsForItsAdditionalRequest() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2");
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedUnits(eventId, projectors, 2, MARCH_10, "PJ-1", "PJ-2");
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+        decide(report, eventId, "{\"decision\":\"SHORT\"}").andExpect(status().isOk());
+        UUID shortfall = outcomeOf(report, eventId);
+        UUID additional = request(eventId, projectors, 1, shortfall);
+
+        mvc.perform(get("/api/events/" + eventId + "/equipment-damage").with(flow.as("ec1")))
+                .andExpect(jsonPath("$[0].additionalRequestStatus").value("processing"))
+                .andExpect(jsonPath("$[0].canResolve").value(false))
+                .andExpect(jsonPath("$[0].canRequestAdditional").value(false));
+        resolve(eventId, shortfall, "{\"note\":\"One is enough\"}")
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("An additional request for this shortfall is awaiting "
+                        + "Technical Support. Wait for their decision before resolving it."));
+        assertThat(outcomeColumn(shortfall, "resolved_at")).isNull();
+
+        mvc.perform(patch("/api/equipment-requests/" + additional + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"rejected\",\"rejectReason\":\"None free\"}"))
+                .andExpect(status().isOk());
+        sync();
+        mvc.perform(get("/api/events/" + eventId + "/equipment-damage").with(flow.as("ec1")))
+                .andExpect(jsonPath("$[0].additionalRequestStatus").value("rejected"))
+                .andExpect(jsonPath("$[0].canResolve").value(true))
+                .andExpect(jsonPath("$[0].canRequestAdditional").value(true));
+        resolve(eventId, shortfall, "{}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Say why the shortfall is acceptable."));
+        resolve(eventId, shortfall, "{\"note\":\"One is enough\"}")
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.resolution").value("NOTE"));
+    }
+
+    @Test
+    @DisplayName("TS09 AC17 (boundary): the coordinator sees the damage with no outcome before Technical Support decide; after a replacement on a confirmed event there is nothing to request or resolve")
+    void theCoordinatorSeesTheDamageBeforeAndAfterTheDecision() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2");
+        UUID eventId = event("TS09 Gala", MARCH_10);
+        approvedUnits(eventId, projectors, 1, MARCH_10, "PJ-1");
+        setStatus(eventId, "confirmed");
+        JsonNode report = reported(unitReport(projectors, "PJ-1", "Cracked", DAMAGED_FROM, null, null));
+
+        mvc.perform(get("/api/events/" + eventId + "/equipment-damage").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outcome").doesNotExist())
+                .andExpect(jsonPath("$[0].canResolve").value(false))
+                .andExpect(jsonPath("$[0].canRequestAdditional").value(false));
+
+        decide(report, eventId, "{\"decision\":\"REPLACE\",\"replacementSerialNumber\":\"PJ-2\"}")
+                .andExpect(status().isOk());
+        mvc.perform(get("/api/events/" + eventId + "/equipment-damage").with(flow.as("ec1")))
+                .andExpect(jsonPath("$[0].outcome").value("REPLACED"))
+                .andExpect(jsonPath("$[0].replacementSerialNumber").value("PJ-2"))
+                .andExpect(jsonPath("$[0].canResolve").value(false))
+                .andExpect(jsonPath("$[0].canRequestAdditional").value(false));
+    }
 }

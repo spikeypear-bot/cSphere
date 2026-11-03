@@ -36,13 +36,13 @@ describe('ReviewQueuePage (EC02 queue)', () => {
     window.localStorage.clear()
   })
 
-  it('shows an empty state when nothing is waiting', async () => {
+  it('EC02 (boundary): shows an empty state when nothing is waiting', async () => {
     stubApi({ 'GET /api/event-requests/queue': () => jsonResponse(200, EMPTY) })
     renderQueue()
     expect(await screen.findByText('Nothing is waiting for review right now.')).toBeInTheDocument()
   })
 
-  it('groups my requests by who needs to act, and links each to its review screen', async () => {
+  it('EC02 (happy): groups my requests by who needs to act, and links each to its review screen', async () => {
     stubApi({
       'GET /api/event-requests/queue': () => jsonResponse(200, {
         needsReview: [request('r1', 'Town Hall')],
@@ -61,7 +61,7 @@ describe('ReviewQueuePage (EC02 queue)', () => {
     expect(within(waiting).getByRole('link', { name: 'Gala' })).toHaveAttribute('href', '/coordinator/requests/r2')
   })
 
-  it('shows no unassigned requests and offers no way to assign one (ELC-C6)', async () => {
+  it('shows no unassigned requests and offers no way to assign one (ECL-C6)', async () => {
     const calls = stubApi({
       // Even if a server still sent unassigned requests, they are not the coordinator's to see.
       'GET /api/event-requests/queue': () => jsonResponse(200, {
@@ -90,7 +90,7 @@ describe('ReviewQueuePage status filter (EC-NEW2)', () => {
     window.localStorage.clear()
   })
 
-  it('filters the queue by the shared status', async () => {
+  it('EC-NEW2 (happy): filters the queue by the shared status', async () => {
     stubApi({
       'GET /api/event-requests/queue': () => jsonResponse(200, {
         needsReview: [{ ...request('r1', 'Town Hall'), journeyStatus: sv('UNDER_REVIEW', 'Under Review') }],

@@ -18,6 +18,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -46,6 +47,7 @@ import com.example.connect_sphere.venue.service.VenueService;
 @AutoConfigureMockMvc
 @Tag("EC08")
 @Tag("SO-C4")
+@Tag("EC-NEW4")
 class NotificationFlowTest {
     @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
 
@@ -198,6 +200,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO19 (happy): the organiser is told who their request's coordinator is, with the coordinator's name and contact")
     void assigningACoordinatorNotifiesTheOrganiserWithTheCoordinatorsNameAndContact() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -213,6 +216,7 @@ class NotificationFlowTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EO19 (conflict): assigning a request that already has a coordinator is refused and the organiser gets no new notice")
     @ValueSource(strings = {"ec1", "ec2"})
     void assigningARequestThatAlreadyHasACoordinatorIsRefusedAndCreatesNoNotification(String coordinator)
             throws Exception {
@@ -228,6 +232,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO19 (happy): after a reassignment the organiser is told their new coordinator, marked as a reassignment")
     void reassigningNotifiesTheOrganiserOfTheirNewCoordinatorAsAReassignment() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -245,7 +250,8 @@ class NotificationFlowTest {
     }
 
     @Test
-    void reassigningNotifiesNeitherCoordinatorNorTheLead() throws Exception {
+    @DisplayName("EC-NEW4 (happy): reassigning a request tells both coordinators, and the Lead who did it is not told")
+    void reassigningNotifiesBothCoordinatorsButNotTheLead() throws Exception {
         UUID requestId = assignedRequest();
 
         reassign(requestId, "ec2").andExpect(status().isOk());
@@ -259,6 +265,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO19 (negative): reassigning a request to the coordinator it already has is refused and the organiser gets no reassignment notice")
     void aReassignmentToTheSameCoordinatorIsRefusedAndCreatesNoNotification() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -270,6 +277,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO19 (conflict): reassigning a request the coordinator has already decided is refused and the organiser gets no reassignment notice")
     void aReassignmentAfterTheCoordinatorDecidedIsRefusedAndCreatesNoNotification() throws Exception {
         UUID requestId = assignedRequest();
         reject(requestId, "No capacity").andExpect(status().isOk());
@@ -283,6 +291,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): approving a request tells the organiser the new status, with a link to the event")
     void approvingNotifiesTheOrganiserWithTheNewStatusAndALinkToTheEvent() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -300,6 +309,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): rejecting a request tells the organiser the new status and the reason")
     void rejectingNotifiesTheOrganiserWithTheNewStatusAndTheReason() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -314,6 +324,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (negative): a coordinator only opening the review screen sends the organiser no notification")
     void openingTheReviewScreenCreatesNoNotification() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -331,6 +342,7 @@ class NotificationFlowTest {
      * the event is confirmed.
      */
     @Test
+    @DisplayName("SO-C4 EC08 EO09 (happy): once the Safety Officer approves and the coordinator confirms, the organiser is told the event is confirmed")
     void safetyApprovalThenCoordinatorConfirmationNotifiesTheOrganiser() throws Exception {
         UUID eventId = approve(assignedRequest());
         bookAndApproveVenue(eventId);
@@ -366,6 +378,7 @@ class NotificationFlowTest {
      * (even with the checklist ticked) and nobody is told it is confirmed.
      */
     @Test
+    @DisplayName("EC08 SO-C4 (conflict): confirming an event straight from Planning is refused and nobody is told it is confirmed")
     void confirmingStraightFromPlanningIsRefusedAndNotifiesNobody() throws Exception {
         UUID eventId = approve(assignedRequest());
         completeReadiness(eventId);
@@ -384,6 +397,7 @@ class NotificationFlowTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EC08 (negative): other roles cannot confirm an event and nobody is told it is confirmed")
     @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
     void otherRolesCannotConfirmAnEventAndNoNotificationIsCreated(String username) throws Exception {
         UUID eventId = approve(assignedRequest());
@@ -395,6 +409,7 @@ class NotificationFlowTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EO09 EO19 (negative): only the organiser who created the request sees its notifications")
     // ec2 is a coordinator not on this event; ec1, its coordinator, is now told of
     // the assignment (EC-NEW4), so is no longer an outsider here.
     @ValueSource(strings = {"eo2", "eo3", "ec2"})
@@ -408,6 +423,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO19 (happy): the organiser's unread count rises with a new notice and falls when it is marked read")
     void theUnreadCountRisesWithANewNotificationAndFallsWhenItIsMarkedRead() throws Exception {
         int before = unreadCountOf("eo1");
         assignedRequest();
@@ -421,6 +437,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO19 (cross-cutting): marking a notice read does not change the request or its coordinator")
     void markingANotificationReadDoesNotChangeTheRequestOrItsCoordinator() throws Exception {
         UUID requestId = assignedRequest();
 
@@ -432,6 +449,7 @@ class NotificationFlowTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (negative): a caller who is not signed in cannot read notifications or the unread count")
     void anUnauthenticatedCallerCannotReadNotifications() throws Exception {
         mvc.perform(get("/api/notifications")).andExpect(status().isUnauthorized());
         mvc.perform(get("/api/notifications/unread-count")).andExpect(status().isUnauthorized());

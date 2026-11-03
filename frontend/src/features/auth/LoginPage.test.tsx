@@ -24,7 +24,7 @@ describe('LoginPage', () => {
     window.localStorage.clear()
   })
 
-  it('posts the credentials to /api/auth/login with no Authorization header', async () => {
+  it('DEV05 (happy): posts the credentials to /api/auth/login with no Authorization header', async () => {
     const fetchSpy = vi.fn().mockResolvedValue({
       ok: true,
       status: 200,
@@ -58,7 +58,7 @@ describe('LoginPage', () => {
     expect(headers.Authorization).toBeUndefined()
   })
 
-  it("shows the backend's message on a rejected login and clears the password", async () => {
+  it("DEV05 (negative): shows the backend's message on a rejected login and clears the password", async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue({
@@ -78,12 +78,12 @@ describe('LoginPage', () => {
     expect(screen.getByLabelText('Password')).toHaveValue('')
   })
 
-  it('names the page the visitor was trying to reach', () => {
+  it('DEV05 AU04 (happy): names the page the visitor was trying to reach', () => {
     renderLogin('/?access-denied=%2Fvenue-staff')
     expect(screen.getByRole('status')).toHaveTextContent('/venue-staff')
   })
 
-  it('will not submit until both fields are filled', async () => {
+  it('DEV05 (negative): will not submit until both fields are filled', async () => {
     const user = userEvent.setup()
     renderLogin()
     expect(screen.getByRole('button', { name: 'Sign in' })).toBeDisabled()

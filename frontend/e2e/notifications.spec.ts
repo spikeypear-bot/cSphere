@@ -1,4 +1,4 @@
-// @stories EC-NEW4 EO-C1 ELC-C6 VS-C1
+// @stories EC-NEW4 EO-C1 ECL-C6 VS-C1
 import { expect, test, type APIRequestContext, type Page } from '@playwright/test'
 import { apiToken, confirmedEventByApi, createVenue, leadAssigns, requestIdOf, signedIn, uniqueName } from './support.ts'
 
@@ -36,7 +36,7 @@ test('EC-NEW4 (happy): the Lead is told of a new request, the coordinator of its
     await expect(item.locator('.notification-bell__item-time')).toContainText('(Singapore time)')
   })
 
-  await test.step('ELC-C6: the Lead assigns it to ec1', async () => {
+  await test.step('ECL-C6: the Lead assigns it to ec1', async () => {
     await leadAssigns(lead, requestId)
   })
 

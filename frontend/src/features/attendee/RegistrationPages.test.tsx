@@ -77,6 +77,16 @@ describe('AT04 registration pages', () => {
     },
   )
 
+  it.each(['/attendee/my-registrations', '/attendee/my-registrations/reg-1'])(
+    'AT04 (negative): a non-attendee account is told only attendees can view registrations on %s', async path => {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ message: 'Forbidden' }, 403)))
+      renderPage(path)
+      expect(await screen.findByText('Only attendees can view their registrations.')).toBeInTheDocument()
+      expect(screen.queryByText('CS-REFERENCE')).not.toBeInTheDocument()
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument()
+    },
+  )
+
   it('AT04 (negative): unavailable ownership response reveals no registration details', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ message: 'Registration unavailable.' }, 404)))
     renderPage('/attendee/my-registrations/other')

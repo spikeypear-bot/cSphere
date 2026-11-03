@@ -77,7 +77,7 @@ describe('EC-NEW2 one consistent status on the event page', () => {
 })
 
 describe('EC08 readiness, send for safety review, withdraw and confirm', () => {
-  it('refreshes lifecycle readiness after cancelling an approved venue booking', async () => {
+  it('EC08 (happy): after an approved venue booking is cancelled, the readiness checklist refreshes and the event can no longer be sent for review', async () => {
     seedSession('coordinator')
     let cancelled = false
     const calls = stubApi({
@@ -358,6 +358,27 @@ describe('EO04 organiser views confirmed arrangements', () => {
 
     const card = await screen.findByRole('region', { name: 'Confirmed arrangements' })
     expect(within(card).getByText('No equipment was arranged for this event.')).toBeInTheDocument()
+  })
+
+  it('EO04 (conflict): each booked venue shows its own window, and a venue needing reassessment is flagged with any issues', async () => {
+    seedSession('organiser')
+    const venue = arrangements().venues[0]
+    organiserStub(arrangements({ venues: [
+      { ...venue, bookingId: 'b1', name: 'Marina Hall', startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T02:00:00Z',
+        requiresAttention: true, suitabilityIssues: ['Capacity is below expected attendance'] },
+      { ...venue, bookingId: 'b2', venueId: 'v2', name: 'Bay Room', requiresAttention: true, suitabilityIssues: [] },
+    ] }))
+    renderEvent('/organiser')
+
+    const card = await screen.findByRole('region', { name: 'Confirmed arrangements' })
+    const [marina, bay] = within(card).getAllByRole('listitem').filter((li) => li.classList.contains('arrangements__venue'))
+    expect(marina).toHaveTextContent(/10 Mar 2027.* to .*10 Mar 2027/)
+    expect(within(marina).getByText('Requires attention')).toBeInTheDocument()
+    expect(within(marina).getByRole('status')).toHaveTextContent('needs to be reassessed by your coordinator and Venue Staff')
+    expect(within(marina).getByText('Capacity is below expected attendance')).toBeInTheDocument()
+    expect(within(bay).getByText('Requires attention')).toBeInTheDocument()
+    expect(within(bay).getByRole('status')).not.toContainElement(within(bay).queryByRole('list'))
+    expect(bay).not.toHaveTextContent(/2027 to /)
   })
 
   it('EO04 AC24 (failure): a cancelled event says so and shows no arrangements as if they still applied', async () => {

@@ -122,7 +122,7 @@ public class EventRequest {
     private UUID createdBy;
 
     // EO19: set by EventRequestService.assignCoordinator(); null until the
-    // Event Coordinator Lead assigns one (ELC-C6). See V12 migration.
+    // Event Coordinator Lead assigns one (ECL-C6). See V12 migration.
     @Column(name = "coordinator_id")
     private UUID coordinatorId;
 

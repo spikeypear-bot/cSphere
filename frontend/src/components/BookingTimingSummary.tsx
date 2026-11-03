@@ -2,11 +2,10 @@ import type { BookingTiming } from '../types/bookingTiming'
 import { Link } from 'react-router-dom'
 import { formatEventTimeRange as range } from '../features/venueStaff/formatEventDateTime'
 
-export function BookingTimingSummary({ timing, headingLevel = 3, bookingLinks = false }: { timing?: BookingTiming | null; headingLevel?: 2 | 3; bookingLinks?: boolean }) {
-  const Heading = headingLevel === 2 ? 'h2' : 'h3'
+export function BookingTimingSummary({ timing, bookingLinks = false }: { timing?: BookingTiming | null; bookingLinks?: boolean }) {
   if (!timing) return null
   return <section aria-label="Booking timings">
-    <Heading>Booking Timings (SGT)</Heading>
+    <h3>Booking Timings (SGT)</h3>
     <dl className="venue-card-preview__information">
       <div><dt>Booking Window</dt><dd>{range(timing.startDatetime, timing.endDatetime)}</dd></div>
       <div><dt>Setup / Turnaround</dt><dd>{timing.setupDurationMinutes} / {timing.turnaroundDurationMinutes} minutes</dd></div>

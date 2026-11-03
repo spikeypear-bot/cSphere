@@ -13,6 +13,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -42,7 +43,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
  * always the caller's own. Controller slice with the real SecurityConfig
  * imported; no database needed.
  */
-@Tag("unit")
+@Tag("integration")
 @WebMvcTest(EventController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 @Tag("EC09")
@@ -86,6 +87,7 @@ class AssignedEventsAccessTest {
     }
 
     @Test
+    @DisplayName("EC09 AU04 (happy): an Event Coordinator gets their own events with what the list shows")
     void anEventCoordinatorGetsTheirOwnEventsWithWhatTheListShows() throws Exception {
         UUID eventId = UUID.randomUUID();
         when(service.assignedEvents(CALLER_ID)).thenReturn(List.of(new EventDto(
@@ -107,6 +109,7 @@ class AssignedEventsAccessTest {
     }
 
     @Test
+    @DisplayName("EC09 (boundary): a coordinator with no assigned events gets an empty list, not an error")
     void aCoordinatorWithNoAssignedEventsGetsAnEmptyListNotAnError() throws Exception {
         when(service.assignedEvents(CALLER_ID)).thenReturn(List.of());
 
@@ -118,6 +121,7 @@ class AssignedEventsAccessTest {
     /** The list is the token's subject's; nothing in the request can name another coordinator. */
     @ParameterizedTest
     @ValueSource(strings = { "coordinatorId", "coordinatorUserId", "userId" })
+    @DisplayName("EC09 AU04 (negative): a parameter naming another coordinator is ignored and the caller still gets only their own events")
     void aParameterNamingAnotherCoordinatorIsIgnored(String parameter) throws Exception {
         when(service.assignedEvents(CALLER_ID)).thenReturn(List.of());
 
@@ -130,6 +134,7 @@ class AssignedEventsAccessTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "ecl", "eo", "vs", "technician", "attendee", "safety_officer" })
+    @DisplayName("EC09 AU04 (negative): every other role is refused and no event data is read")
     void everyOtherRoleIsDeniedAndNoEventDataIsRead(String otherRole) throws Exception {
         mockMvc.perform(get(ASSIGNED).with(tokenFor(otherRole)))
                 .andExpect(status().isForbidden())
@@ -140,6 +145,7 @@ class AssignedEventsAccessTest {
     }
 
     @Test
+    @DisplayName("EC09 AU04 (negative): a caller who is not signed in is refused and no event data is read")
     void aCallWithNoTokenIsRejectedAndNoEventDataIsRead() throws Exception {
         mockMvc.perform(get(ASSIGNED))
                 .andExpect(status().isUnauthorized());

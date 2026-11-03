@@ -108,7 +108,9 @@ class VenueTimingWorkflowTest {
                 BigDecimal.valueOf(setup), BigDecimal.valueOf(turnaround), "Independent crew access");
     }
 
-    @Test void multipleBookingWindowsDriveSubmissionApprovalCalendarAndStaffEdits() {
+    @Test
+    @DisplayName("VS-C2 (happy): each venue in a request keeps its own booking window and setup/turnaround times through submission, approval, the calendar and staff edits, and the event times are unchanged")
+    void multipleBookingWindowsDriveSubmissionApprovalCalendarAndStaffEdits() {
         UUID first = venue(30,15), second = venue(15,30), e = event("08:00","18:00");
         var results = requests.submitBatch(coordinator, e, new SubmitVenueBookingRequest.Batch(List.of(
                 timedRequest(first,"10:00","12:00",30,15), timedRequest(second,"14:00","16:00",15,30))));
@@ -128,7 +130,9 @@ class VenueTimingWorkflowTest {
         assertThat(jdbc.queryForObject("SELECT start_datetime FROM events WHERE event_id=?",OffsetDateTime.class,e)).isEqualTo(at("08:00"));
     }
 
-    @Test void availabilityRechecksTheRequestedWindowAndBuffersInsteadOfTheEventWindow() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (conflict): availability is checked on the requested booking window plus buffers, not the event window, so a buffer overlap is blocked, a touching window is allowed and staff cannot widen it into an overlap")
+    void availabilityRechecksTheRequestedWindowAndBuffersInsteadOfTheEventWindow() throws Exception {
         UUID v = venue(0,0), e = event("15:00","17:00");
         UUID existing = booking(v,"approved","08:00","18:00",0,30);
         jdbc.update("UPDATE venue_bookings SET start_datetime=?,end_datetime=? WHERE booking_id=?",at("10:00"),at("11:00"),existing);
@@ -145,7 +149,9 @@ class VenueTimingWorkflowTest {
                 .isInstanceOf(VenueBookingConflictException.class);
     }
 
-    @Test void batchRejectsBufferOnlyOverlapAndRollsBackEarlierRequests() {
+    @Test
+    @DisplayName("VS-C2 (conflict): a multi-venue request where only the buffers overlap is refused and none of its bookings are saved")
+    void batchRejectsBufferOnlyOverlapAndRollsBackEarlierRequests() {
         UUID v=venue(0,0), e=event("08:00","18:00");
         assertThatThrownBy(() -> requests.submitBatch(coordinator,e,new SubmitVenueBookingRequest.Batch(List.of(
                 timedRequest(v,"10:00","11:00",0,30),timedRequest(v,"11:45","13:00",30,0)))))
@@ -158,7 +164,9 @@ class VenueTimingWorkflowTest {
         assertThat(requests.bookingsForEvent(coordinator,e)).isEmpty();
     }
 
-    @Test void bookingWindowControlsOpeningHoursAndUnavailability() {
+    @Test
+    @DisplayName("VS-C2 (boundary): opening hours and unavailable periods are checked against the booking window plus setup and turnaround")
+    void bookingWindowControlsOpeningHoursAndUnavailability() {
         UUID v=venue(0,0), e=event("08:00","18:00");
         jdbc.update("UPDATE venue_operating_hours SET open_time='09:30',close_time='12:30' WHERE venue_id=?",v);
         assertThatThrownBy(() -> requests.submit(coordinator,e,timedRequest(v,"10:00","12:00",31,30)))
@@ -171,7 +179,9 @@ class VenueTimingWorkflowTest {
         assertThat(buffer.affectedBookings()).hasSize(1);
     }
 
-    @Test void operationalIssueDuringSetupBlocksApprovalAndTimingExpansion() {
+    @Test
+    @DisplayName("VS-C2 (conflict): an operational issue during setup time blocks approval until setup is shortened, and staff cannot extend setup back into it")
+    void operationalIssueDuringSetupBlocksApprovalAndTimingExpansion() {
         UUID v=venue(0,0), e=event("08:00","18:00");
         var result=requests.submit(coordinator,e,timedRequest(v,"10:00","12:00",30,15));
         jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,affected_from,affected_until,created_by) VALUES (?,?,'Setup access blocked',?,?,?)",
@@ -184,7 +194,9 @@ class VenueTimingWorkflowTest {
                 .isInstanceOf(VenueBookingStateException.class);
     }
 
-    @Test void incomingLifecycleNotificationsRemainValidAlongsideTimingNotifications() {
+    @Test
+    @DisplayName("VS-C2 (cross-cutting): existing event lifecycle notifications still save alongside the new timing-change notification")
+    void incomingLifecycleNotificationsRemainValidAlongsideTimingNotifications() {
         UUID v=venue(0,0), b=booking(v,"approved","10:00","12:00",0,0);
         UUID e=jdbc.queryForObject("SELECT event_id FROM venue_bookings WHERE booking_id=?",UUID.class,b);
         for (String type : List.of("event_confirmed","event_returned_to_planning","event_safety_approved")) {
@@ -196,7 +208,9 @@ class VenueTimingWorkflowTest {
         assertThat(notificationCount("venue_timing_changed")).isEqualTo(1);
     }
 
-    @Test void defaultsAreVisibleEditableAndDoNotRewriteExistingBookings() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (happy): venue default setup and turnaround times are visible, only venue staff can edit them, and existing bookings keep their saved times")
+    void defaultsAreVisibleEditableAndDoNotRewriteExistingBookings() throws Exception {
         UUID v = venue(30, 45), b = booking(v, "approved", "10:00", "12:00", 30, 45);
         String before = snapshot(b);
         mvc.perform(get("/api/venues/" + v).with(flow.as("ec1"))).andExpect(status().isOk())
@@ -210,7 +224,9 @@ class VenueTimingWorkflowTest {
         assertThat(availability.settings(v)).isEqualTo(new Settings(60,15));
     }
 
-    @Test void approvalConflictReturnsSavedDurationsAndBothTimeRanges() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (conflict): a refused approval shows the conflicting booking's saved setup and turnaround and both its booked and occupied time ranges")
+    void approvalConflictReturnsSavedDurationsAndBothTimeRanges() throws Exception {
         UUID v = venue(120,120), existing = booking(v,"approved","10:00","12:00",30,45);
         UUID requested = booking(v,"pending","11:00","13:00",0,0);
         var response = mvc.perform(patch("/api/venue-bookings/" + requested + "/approve").with(flow.as("vs1")))
@@ -226,7 +242,9 @@ class VenueTimingWorkflowTest {
         assertThat(OffsetDateTime.parse(conflict.get("effectiveEnd").asString())).isEqualTo(at("12:45"));
     }
 
-    @Test void fractionalNegativeAndOutOfRangeDurationsCannotBeSaved() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (negative): fractional, negative, too-large or non-numeric durations are refused for venues and bookings and nothing changes")
+    void fractionalNegativeAndOutOfRangeDurationsCannotBeSaved() throws Exception {
         UUID v = venue(0, 0), b = booking(v, "pending", "10:00", "12:00", 0, 0);
         String before = snapshot(b);
         for (String invalid : List.of("-1", "0.5", "10081", "\"oops\"")) {
@@ -239,7 +257,9 @@ class VenueTimingWorkflowTest {
         assertThat(snapshot(b)).isEqualTo(before);
     }
 
-    @Test void openingHoursCoverTheEntireOccupiedPeriodAcrossAllVenueActions() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (boundary): the whole occupied period including setup and turnaround must fit opening hours for options, submission, approval, timing edits and search")
+    void openingHoursCoverTheEntireOccupiedPeriodAcrossAllVenueActions() throws Exception {
         UUID v = venue(30,45), e = event("09:00","12:00");
         jdbc.update("UPDATE venue_operating_hours SET open_time='09:00',close_time='13:00' WHERE venue_id=?", v);
         assertThat(requests.venueOptions(coordinator,e).stream().filter(o -> o.venue().venueId().equals(v))
@@ -257,7 +277,9 @@ class VenueTimingWorkflowTest {
                 .andExpect(jsonPath("$[*].venueId", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(v.toString()))));
     }
 
-    @Test void coordinatorOverridesRequireReasonAndPreserveChosenValues() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (happy): a coordinator's setup or turnaround override needs a reason and the chosen values are saved as entered")
+    void coordinatorOverridesRequireReasonAndPreserveChosenValues() throws Exception {
         UUID v = venue(30, 45), e = event("10:00", "12:00");
         var input = new SubmitVenueBookingRequest(v, "Organiser needs stage setup", null, null, BigDecimal.valueOf(60), BigDecimal.ZERO, "Crew starts early");
         assertThatThrownBy(() -> requests.submit(coordinator, e, new SubmitVenueBookingRequest(v, null, null, null,
@@ -271,7 +293,9 @@ class VenueTimingWorkflowTest {
         mvc.perform(get("/api/events/" + e + "/venue-bookings").with(flow.as("ec2"))).andExpect(status().isForbidden());
     }
 
-    @Test void overriddenOccupancyDrivesOptionsSubmissionAndSearch() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (conflict): an overridden setup time decides whether the venue is offered, can be requested and appears in search")
+    void overriddenOccupancyDrivesOptionsSubmissionAndSearch() throws Exception {
         UUID v = venue(0, 0), e = event("11:00", "12:00");
         booking(v, "approved", "09:00", "10:00", 0, 45);
         assertThat(requests.venueOptions(coordinator, e, BigDecimal.valueOf(30), BigDecimal.ZERO).stream()
@@ -285,7 +309,9 @@ class VenueTimingWorkflowTest {
                 .andExpect(jsonPath("$[*].venueId", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem(v.toString()))));
     }
 
-    @Test void safeEditNotifiesCoordinatorAndRejectsStaleOrUnauthorisedWrites() throws Exception {
+    @Test
+    @DisplayName("VS-C2 (happy): a staff timing edit is saved, notifies the coordinator and shows to the safety officer, while stale edits and other roles are refused")
+    void safeEditNotifiesCoordinatorAndRejectsStaleOrUnauthorisedWrites() throws Exception {
         UUID v = venue(0,0), b = booking(v,"approved","10:00","12:00",0,0);
         var saved = bookings.updateTiming(b, staff, edit(30,45,0,0));
         assertThat(saved.timing().effectiveStart()).isEqualTo(at("09:30"));
@@ -356,7 +382,9 @@ class VenueTimingWorkflowTest {
         mvc.perform(get("/api/venues/"+v+"/timing-conflicts")).andExpect(status().isUnauthorized());
     }
 
-    @Test void legacyOverlapsAreReportedOnceWithoutCancellingAndCanBeReduced() {
+    @Test
+    @DisplayName("VS-C2 VS-C4 (conflict): an existing overlap is reported once per scan without cancelling either booking, and clears once staff shorten the turnaround")
+    void legacyOverlapsAreReportedOnceWithoutCancellingAndCanBeReduced() {
         UUID v=venue(0,0), a=booking(v,"approved","09:00","10:00",0,45), b=booking(v,"approved","10:30","12:00",0,0);
         String beforeA=snapshot(a), beforeB=snapshot(b);
         assertThat(conflicts.scan(v)).hasSize(1);
@@ -369,7 +397,9 @@ class VenueTimingWorkflowTest {
         assertThat(bookings.get(a).status().name()).isEqualTo("approved");
     }
 
-    @Test void conflictingEditsAndNotificationFailuresRollBackCompletely() {
+    @Test
+    @DisplayName("VS-C2 (failure): a timing edit that would overlap, or whose notification fails, is rolled back and the booking is unchanged")
+    void conflictingEditsAndNotificationFailuresRollBackCompletely() {
         UUID v=venue(0,0), a=booking(v,"approved","09:00","10:00",0,0);
         booking(v,"approved","11:00","12:00",0,0);
         String before=snapshot(a);
@@ -381,7 +411,9 @@ class VenueTimingWorkflowTest {
         assertThat(snapshot(a)).isEqualTo(before);
     }
 
-    @Test void timingEditAndApprovalCannotRaceIntoAnOverlap() throws Exception {
+    @Test
+    @DisplayName("VS-C2 VS-C4 (conflict): a timing edit and an approval made at the same time cannot both succeed, so no overlap is created")
+    void timingEditAndApprovalCannotRaceIntoAnOverlap() throws Exception {
         UUID v=venue(0,0), a=booking(v,"approved","09:00","10:00",0,0), b=booking(v,"pending","11:00","12:00",0,0);
         CountDownLatch start=new CountDownLatch(1);
         try (var pool=Executors.newFixedThreadPool(2)) {
@@ -393,5 +425,88 @@ class VenueTimingWorkflowTest {
             assertThat(edit.get(15,TimeUnit.SECONDS)).isNotEqualTo(approve.get(15,TimeUnit.SECONDS));
             assertThat(conflicts.list(v)).isEmpty();
         }
+    }
+    @Test
+    @DisplayName("VS-C2 (conflict): an edit based on an out-of-date turnaround is refused and nothing changes")
+    void staleTurnaroundIsRefused() {
+        UUID b = booking(venue(10, 10), "approved", "10:00", "12:00", 10, 10);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(20, 10, 10, 99)))
+                .isInstanceOf(VenueBookingStateException.class)
+                .hasMessage("Booking timings changed. Refresh the booking before saving again.");
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (negative): new timings need a reason; a blank one is refused and nothing changes")
+    void timingsNeedAReason() {
+        UUID b = booking(venue(10, 10), "approved", "10:00", "12:00", 10, 10);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, new UpdateBookingTimingRequest(BigDecimal.valueOf(20),
+                BigDecimal.TEN, "   ", 10, 10)))
+                .isInstanceOf(InvalidVenueBookingException.class).hasMessage("Explain the reason for these booking timings.");
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (boundary): timings that only shrink are saved even while the booking still conflicts with another")
+    void shrinkingIsAllowedDespiteAConflict() {
+        UUID venue = venue(0, 0);
+        UUID b = booking(venue, "approved", "10:00", "12:00", 0, 60);
+        booking(venue, "approved", "12:30", "14:00", 0, 0);
+        var saved = bookings.updateTiming(b, staff, edit(0, 45, 0, 60));
+        assertThat(saved.timing().turnaroundDurationMinutes()).isEqualTo(45);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(0, 50, 0, 45)))
+                .isInstanceOf(VenueBookingConflictException.class);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (happy): saving the same durations with a new reason records the new reason")
+    void aNewReasonAloneIsSaved() {
+        UUID b = booking(venue(10, 10), "approved", "10:00", "12:00", 10, 10);
+        bookings.updateTiming(b, staff, edit(10, 10, 10, 10));
+        assertThat(jdbc.queryForObject("SELECT timing_note FROM venue_bookings WHERE booking_id=?", String.class, b))
+                .isEqualTo("Adjusted crew access");
+    }
+
+    @Test
+    @DisplayName("VS-C2 (boundary): Venue Staff see a rejected booking, or one of a completed or cancelled event, with its timing no longer editable")
+    void closedBookingsShowReadOnlyTiming() {
+        UUID venue = venue(0, 0);
+        assertThat(bookings.get(booking(venue, "approved", "10:00", "12:00", 0, 0)).timing().editable()).isTrue();
+        assertThat(bookings.get(booking(venue, "rejected", "13:00", "14:00", 0, 0)).timing().editable()).isFalse();
+        for (String closed : List.of("completed", "cancelled")) {
+            UUID b = booking(venue, "approved", "15:00", "16:00", 0, 0);
+            jdbc.update("UPDATE events SET status=?::event_status WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)", closed, b);
+            assertThat(bookings.get(b).timing().editable()).isFalse();
+        }
+    }
+    @Test
+    @DisplayName("VS-C2 (negative): a rejected booking's timings cannot be edited, and nothing changes")
+    void inactiveBookingTimingsAreFixed() {
+        UUID b = booking(venue(10, 10), "rejected", "10:00", "12:00", 10, 10);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(20, 10, 10, 10)))
+                .isInstanceOf(VenueBookingStateException.class).hasMessage("Only active pending or approved booking timings can be edited.");
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (conflict): a setup that would reach into a recorded unavailable period is refused, and nothing changes")
+    void extendingIntoUnavailabilityIsRefused() {
+        UUID venue = venue(0, 0);
+        UUID b = booking(venue, "approved", "10:00", "12:00", 0, 0);
+        jdbc.update("INSERT INTO venue_unavailability(unavailability_id,venue_id,start_datetime,end_datetime,reason,created_by) VALUES (?,?,?,?,?,?)",
+                UUID.randomUUID(), venue, at("09:00"), at("09:30"), "Floor polishing", staff);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(45, 0, 0, 0)))
+                .isInstanceOf(VenueBookingConflictException.class);
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+    @Test
+    @DisplayName("VS-C2 (happy): a flagged booking's timings can still be edited while it waits for a decision")
+    void flaggedBookingTimingsCanBeEdited() {
+        UUID b = booking(venue(10, 10), "attention", "10:00", "12:00", 10, 10);
+        assertThat(bookings.updateTiming(b, staff, edit(5, 10, 10, 10)).timing().setupDurationMinutes()).isEqualTo(5);
     }
 }

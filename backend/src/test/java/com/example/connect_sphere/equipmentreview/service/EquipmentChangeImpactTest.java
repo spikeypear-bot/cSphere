@@ -69,6 +69,35 @@ class EquipmentChangeImpactTest {
     }
 
     @Test
+    @DisplayName("TS11 AC4 (boundary): a new end alone is enough to re-check the reservations")
+    void aNewEndAloneIsChecked() {
+        var shortBy = reserved("2027-03-10T02:00:00Z", "2027-03-10T04:59:00Z");
+
+        assertThat(EquipmentChangeImpact.assess(NEW_TIME, Set.of("endDatetime"), List.of(shortBy)).orElseThrow()
+                .uncovered()).containsExactly(shortBy);
+    }
+
+    @Test
+    @DisplayName("TS11 AC4 (boundary): without both new times no reservation is judged uncovered")
+    void withoutBothTimesNothingIsUncovered() {
+        var shortBy = reserved("2027-03-10T02:00:00Z", "2027-03-10T04:59:00Z");
+
+        assertThat(EquipmentChangeImpact.assess(Map.of("startDatetime", "2027-03-10T10:00+08:00"), TIMES,
+                List.of(shortBy))).isEmpty();
+    }
+
+    @Test
+    @DisplayName("TS11 AC4 (happy): changed equipment items affect equipment like changed requirement wording")
+    void changedItemsAffect() {
+        var covering = reserved("2027-03-10T01:00:00Z", "2027-03-10T06:00:00Z");
+
+        var result = EquipmentChangeImpact.assess(NEW_TIME, Set.of("equipmentItems"), List.of(covering));
+
+        assertThat(result.orElseThrow().requirementsChanged()).isTrue();
+        assertThat(result.get().uncovered()).isEmpty();
+    }
+
+    @Test
     @DisplayName("TS11 AC6 (negative): a change to attendance only does not affect equipment, whatever the reservations")
     void otherFieldsDoNotAffect() {
         // Even a reservation that would not cover the stored times is not re-judged when times did not change.

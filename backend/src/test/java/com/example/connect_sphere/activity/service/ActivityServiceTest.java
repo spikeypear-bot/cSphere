@@ -204,6 +204,76 @@ class ActivityServiceTest {
     }
 
     @Test
+    @DisplayName("EC-NEW5 (boundary): an event stored as Completed whose end has passed also shows the Completed entry")
+    void aStoredCompletedEventShowsCompleted() {
+        row(ActivityType.event_confirmed, null).setEventId(eventId);
+        Event event = new Event();
+        event.setEventId(eventId);
+        event.setStatus(EventStatus.completed);
+        event.setEndDatetime(OffsetDateTime.parse("2026-01-01T04:00:00Z"));
+        when(events.findById(eventId)).thenReturn(Optional.of(event));
+
+        assertThat(timeline(UserRole.ec)).extracting(ActivityDto::type)
+                .containsExactly("event_confirmed", "event_completed");
+    }
+
+    @Test
+    @DisplayName("EC-NEW5 (boundary): a requested change that touches only fields outside Week 4's important ones is Normal; one touching an important field is Major")
+    void aChangeEntryIsMajorOnlyWhenItTouchesAnImportantField() {
+        row(ActivityType.change_requested, Map.of("description", "New wording"));
+        row(ActivityType.change_approved, Map.of("expectedAttendance", 200));
+        row(ActivityType.change_requested, null);
+
+        assertThat(timeline(UserRole.ec)).extracting(ActivityDto::significance)
+                .containsExactly("normal", "major", "normal");
+    }
+
+    @Test
+    @DisplayName("EC-NEW5 (boundary): a reply with no earlier captured values, or with none of its own, is no important change")
+    void missingValuesAreNoImportantChange() {
+        assertThat(ActivityService.changesImportantField(null, values())).isFalse();
+        assertThat(ActivityService.changesImportantField(values(), null)).isFalse();
+        assertThat(ActivityService.touchesImportantField(null)).isFalse();
+    }
+
+    @Test
+    @DisplayName("EC-NEW5 (boundary): values compare by meaning across types: maps by keys and values, mismatched kinds never match")
+    void valuesCompareByMeaningAcrossTypes() {
+        assertThat(ActivityService.sameValue("150", 150)).isFalse();
+        assertThat(ActivityService.sameValue(150, "150")).isFalse();
+        assertThat(ActivityService.sameValue(Map.of("a", 1), Map.of("a", 1.0))).isTrue();
+        assertThat(ActivityService.sameValue(Map.of("a", 1), Map.of("a", 2))).isFalse();
+        assertThat(ActivityService.sameValue(Map.of("a", 1), Map.of("b", 1))).isFalse();
+        assertThat(ActivityService.sameValue(Map.of("a", 1), List.of("a"))).isFalse();
+        assertThat(ActivityService.sameValue(List.of("a"), "a")).isFalse();
+        assertThat(ActivityService.sameValue(List.of("a"), List.of("a", "b"))).isFalse();
+        assertThat(ActivityService.sameValue(List.of("a", "b"), List.of("a", "c"))).isFalse();
+        assertThat(ActivityService.sameValue(true, true)).isTrue();
+    }
+
+    @Test
+    @DisplayName("EC-NEW5 (boundary): a request with two submitted entries is dated by the earlier one")
+    void theEarliestSubmissionWins() {
+        OffsetDateTime first = OffsetDateTime.parse("2026-10-01T00:00:00Z");
+        OffsetDateTime second = first.plusHours(1);
+        UUID other = UUID.randomUUID();
+        when(repository.findByRequestIdInAndActivityType(any(), eq(ActivityType.submitted))).thenReturn(List.of(
+                submittedAt(requestId, second), submittedAt(requestId, first),
+                submittedAt(other, first), submittedAt(other, second)));
+
+        assertThat(service.submittedAt(List.of(requestId, other)))
+                .containsExactlyInAnyOrderEntriesOf(Map.of(requestId, first, other, first));
+    }
+
+    private static RequestActivity submittedAt(UUID request, OffsetDateTime at) {
+        RequestActivity a = new RequestActivity();
+        a.setRequestId(request);
+        a.setActivityType(ActivityType.submitted);
+        a.setOccurredAt(at);
+        return a;
+    }
+
+    @Test
     @DisplayName("EC-NEW5 AC31 (negative): a role outside an entry's audience, such as Venue Staff for Completed, is not shown it")
     void completedFollowsItsAudience() {
         row(ActivityType.event_confirmed, null).setEventId(eventId);
@@ -220,5 +290,13 @@ class ActivityServiceTest {
                 ActivityType.sent_for_safety_review, ActivityType.safety_changes_requested)) {
             assertThat(type.audience()).as(type.name()).doesNotContain(UserRole.eo);
         }
+    }
+
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.DisplayName("EC-NEW5 (boundary): a timeline message of up to 2,000 characters is kept whole; a longer one is cut to 2,000 ending in an ellipsis")
+    void longMessagesAreShortenedToTheLimit() {
+        assertThat(ActivityService.fitted(null)).isNull();
+        assertThat(ActivityService.fitted("x".repeat(2000))).isEqualTo("x".repeat(2000));
+        assertThat(ActivityService.fitted("x".repeat(2001))).hasSize(2000).isEqualTo("x".repeat(1999) + "…");
     }
 }

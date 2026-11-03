@@ -1,8 +1,8 @@
 // @stories EO10 EO11
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { act, cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiClient } from '../../lib/apiClient'
+import { apiClient, ApiClientError } from '../../lib/apiClient'
 import { OrganiserRegistrations } from './OrganiserRegistrations'
 
 vi.mock('../../lib/apiClient', () => ({ apiClient: { get: vi.fn(), put: vi.fn() }, ApiClientError: class extends Error {} }))
@@ -109,6 +109,71 @@ describe('EO10 EO11 OrganiserRegistrations', () => {
     expect(screen.queryByRole('navigation', { name: 'Registered attendees pages' })).not.toBeInTheDocument()
     if (count) expect(screen.getAllByRole('row')).toHaveLength(11)
     else expect(screen.getByText('No registrations yet.')).toBeInTheDocument()
+  })
+
+  it('EO11 (failure): shows the reason the server gives for refusing a capacity', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue(base)
+    vi.mocked(apiClient.put).mockRejectedValue(new ApiClientError('Capacity cannot be below the 1 confirmed registration.', 409))
+    render(<OrganiserRegistrations eventId="e1" />)
+    await userEvent.type(await screen.findByLabelText('Registration capacity'), '9')
+    await userEvent.click(screen.getByRole('button', { name: 'Save capacity' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Capacity cannot be below the 1 confirmed registration.')
+  })
+
+  it('EO10 (boundary): an event with no capacity limit shows unlimited places and no fill bar', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ ...base, capacity: null, placesRemaining: null })
+    render(<OrganiserRegistrations eventId="e1" />)
+    expect(await screen.findByText('Capacity')).toBeInTheDocument()
+    expect(screen.getByText('Capacity').previousSibling).toHaveTextContent('∞')
+    expect(screen.getByText('Places remaining').previousSibling).toHaveTextContent('∞')
+    expect(screen.queryByRole('img', { name: /of places taken/ })).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Registration capacity')).toHaveAttribute('placeholder', 'e.g. 50')
+  })
+
+  it.each([
+    [8, '80% of places taken', 'ok'],
+    [9, '90% of places taken', 'near'],
+    [10, '100% of places taken', 'full'],
+    [12, '100% of places taken', 'full'],
+  ])('EO10 (boundary): %s of 10 places taken reads "%s" and the bar is %s', async (confirmedCount, label, state) => {
+    vi.mocked(apiClient.get).mockResolvedValue({ ...base, capacity: 10, confirmedCount })
+    render(<OrganiserRegistrations eventId="e1" />)
+    expect(await screen.findByRole('img', { name: label })).toHaveClass(`registrations__bar--${state}`)
+  })
+
+  it('EO10 (boundary): a registration status this page has no label for is shown by its name', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ ...base, attendees: [{ ...base.attendees[0], status: 'waitlisted' }] })
+    render(<OrganiserRegistrations eventId="e1" />)
+    expect(await screen.findByText('waitlisted')).toBeInTheDocument()
+  })
+
+  it.each(['answers', 'fails'])('EO10 (conflict): when the previous event\'s read %s late, the event now shown is unchanged', async (outcome) => {
+    let settleFirst!: () => void
+    vi.mocked(apiClient.get).mockImplementation((path: string) => path === '/events/e1/registrations'
+      ? new Promise((resolve, reject) => {
+        settleFirst = () => (outcome === 'answers' ? resolve({ ...base, eventName: 'Fair' }) : reject(new Error('late')))
+      })
+      : Promise.resolve({ ...base, eventId: 'e2', eventName: 'Second Fair' }))
+    const { rerender } = render(<OrganiserRegistrations eventId="e1" />)
+    rerender(<OrganiserRegistrations eventId="e2" />)
+    expect(await screen.findByText('Second Fair')).toBeInTheDocument()
+    await act(async () => settleFirst())
+    expect(screen.getByText('Second Fair')).toBeInTheDocument()
+    expect(screen.queryByText('Fair')).not.toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('EO10 (boundary): switching to another event starts its attendee list on the first page', async () => {
+    const attendees = Array.from({ length: 11 }, (_, index) => ({
+      ...base.attendees[0], registrationId: `r${index}`, name: `Attendee ${index + 1}`,
+    }))
+    vi.mocked(apiClient.get).mockResolvedValue({ ...base, attendees })
+    const { rerender } = render(<OrganiserRegistrations eventId="e1" />)
+    await userEvent.click(await screen.findByRole('button', { name: 'Next' }))
+    expect(screen.getByText('Attendee 11')).toBeInTheDocument()
+    rerender(<OrganiserRegistrations eventId="e2" />)
+    expect(await screen.findByText(/Page 1 of 2/)).toBeInTheDocument()
+    expect(screen.getByText('Attendee 1')).toBeInTheDocument()
   })
 
 })

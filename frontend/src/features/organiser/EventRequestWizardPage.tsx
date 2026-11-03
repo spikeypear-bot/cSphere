@@ -117,8 +117,11 @@ export function EventRequestWizardPage() {
   const expectedAttendance = fields.expectedAttendance
   const hasOpensAt = Boolean(fields.registrationOpensAt)
   const hasCapacity = fields.registrationCapacity != null
+  // Once only: a value the organiser then clears must stay cleared, not refill as they type.
+  const registrationPrefilled = useRef(false)
   useEffect(() => {
-    if (stepIndex !== 3 || !registrationNeeds) return
+    if (registrationPrefilled.current || stepIndex !== 3 || !registrationNeeds) return
+    registrationPrefilled.current = true
     const update: Partial<DraftFields> = {}
     if (!hasOpensAt && startDatetime) {
       const start = Date.parse(startDatetime)

@@ -3,7 +3,7 @@
 An Event Coordinator may ask the Event Coordinator Lead to transfer an active
 event. The Lead either assigns a different Event Coordinator or declines with
 a reason. This is separate from reassignment of an incoming event request
-(ELC-C5), which takes place before an event exists.
+(ECL-C5), which takes place before an event exists.
 
 | Method | Path | Role | Result |
 |---|---|---|---|

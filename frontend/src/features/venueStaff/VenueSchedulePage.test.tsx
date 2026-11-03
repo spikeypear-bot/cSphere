@@ -93,7 +93,7 @@ it('VS-C3 VS-C4 (regression): polling refreshes booking statuses and conflict in
   expect(within(screen.getByRole('table')).getAllByRole('button', { name: /Approved booking/ })).toHaveLength(6)
   expect(screen.getByRole('table').querySelectorAll('[data-conflict="true"]')).toHaveLength(6)
 })
-it('refreshes on window focus and removes released occupancy while retaining other entries', async () => {
+it('VS15 (happy): refreshes on window focus and removes released occupancy while retaining other entries', async () => {
   await mount()
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues'
     ? [{ venueId: 'v1', venueAddress: 'Main Hall' }]
@@ -129,7 +129,7 @@ it('VS-C4 AC7, AC8, AC9, AC10 (conflict): highlights buffers, links both booking
   expect(screen.queryByRole('link', { name: 'Review all active conflicts for this venue' })).not.toBeInTheDocument()
   expect(screen.getByRole('table').querySelector('[data-conflict="true"]')).toBeNull()
 })
-it('shows overlapping bookings, holds and separate buffers, with read-only details', async () => {
+it('VS15 VS-C2 VS-C3 (happy): shows overlapping bookings, holds and separate buffers, with read-only details', async () => {
   await mount()
   const table = screen.getByRole('table')
   expect(within(table).getAllByRole('button')).toHaveLength(7)
@@ -153,7 +153,7 @@ it('VS-C4 AC8 (boundary): highlights a visible booking with an off-screen confli
   expect(within(table).queryByRole('button', { name: /Off-screen event/ })).not.toBeInTheDocument()
   within(table).getAllByRole('button', { name: /Approved booking/ }).forEach(entry => expect(entry).toHaveAttribute('data-conflict', 'true'))
 })
-it('requests displayed dates, navigates periods and returns to today', async () => {
+it('VS15 (happy): requests displayed dates, navigates periods and returns to today', async () => {
   await mount()
   const path = vi.mocked(apiClient.get).mock.calls.at(-1)![0]
   expect(new URLSearchParams(path.split('?')[1]).get('start')).toBe(`${calendarDays(month)[0]}T00:00:00+08:00`)
@@ -169,7 +169,7 @@ it('requests displayed dates, navigates periods and returns to today', async () 
   await screen.findByRole('table')
   expect(screen.queryByText(/No schedule entries for this month/)).not.toBeInTheDocument()
 })
-it('clears previous entries on refresh failure and supports retry', async () => {
+it('VS15 (failure): clears previous entries on refresh failure and supports retry', async () => {
   await mount()
   vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('Offline'))
   fireEvent.click(screen.getByRole('button', { name: 'Refresh schedule' }))
@@ -179,7 +179,7 @@ it('clears previous entries on refresh failure and supports retry', async () => 
   fireEvent.click(screen.getByRole('button', { name: 'Retry schedule' }))
   await screen.findByRole('table')
 })
-it('ignores a late response for the previous venue', async () => {
+it('VS15 (boundary): ignores a late response for the previous venue', async () => {
   let resolve!: (value: VenueSchedule) => void
   vi.mocked(apiClient.get).mockImplementation(async path => path === '/venues' ? [{ venueId: 'v1', venueAddress: 'Main Hall' }, { venueId: 'v2', venueAddress: 'Other Hall' }] : path.includes('/v1/') ? new Promise<VenueSchedule>(r => { resolve = r }) : { ...schedule, bookings: [], unavailablePeriods: [] })
   render(<MemoryRouter><VenueSchedulePage /></MemoryRouter>)
@@ -189,7 +189,7 @@ it('ignores a late response for the previous venue', async () => {
   await act(async () => { resolve(schedule) })
   expect(screen.queryByText('Workshop')).not.toBeInTheDocument()
 })
-it('normalises distinct IDs, omits zero buffers and assigns multi-day entries with exclusive midnight ends', () => {
+it('VS15 VS-C2 (boundary): normalises distinct IDs, omits zero buffers and assigns multi-day entries with exclusive midnight ends', () => {
   const entries = calendarEntries(schedule)
   expect(new Set(entries.map(e => e.id)).size).toBe(7)
   const zero = calendarEntries({ ...schedule, unavailablePeriods: [], bookings: [{ ...booking, effectiveStart: booking.startDateTime, effectiveEnd: booking.endDateTime }] })
@@ -203,7 +203,7 @@ it('normalises distinct IDs, omits zero buffers and assigns multi-day entries wi
   expect(singaporeDate(new Date('2027-04-01T16:00:00Z'))).toBe('2027-04-02')
 })
 
-it('preserves the calendar height during navigation, venue changes and refresh without retaining stale entries', async () => {
+it('VS15 (cross-cutting): preserves the calendar height during navigation, venue changes and refresh without retaining stale entries', async () => {
   await mount()
   const frame = screen.getByRole('region', { name: 'Venue schedule' }).parentElement!
   vi.spyOn(frame, 'getBoundingClientRect').mockReturnValue({ height: 1200 } as DOMRect)

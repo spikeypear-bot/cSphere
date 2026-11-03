@@ -66,7 +66,7 @@ describe('EC04 VenueSearchPage', () => {
     window.localStorage.clear()
   })
 
-  it('searches with event time, capacity and all selected facilities', async () => {
+  it('EC04 (happy): searches with event time, capacity and all selected facilities', async () => {
     const calls = stubApi({ [`GET ${searchUrl()}`]: () => jsonResponse(200, [match]) })
     const user = userEvent.setup()
     renderPage()
@@ -93,7 +93,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(url.searchParams.getAll('facility')).toEqual(['stage', 'projection'])
   })
 
-  it('shows a no-matches message when the server returns no venues', async () => {
+  it('EC04 (boundary): shows a no-matches message when the server returns no venues', async () => {
     stubApi({ [`GET ${searchUrl()}`]: () => jsonResponse(200, []) })
     const user = userEvent.setup()
     renderPage()
@@ -137,7 +137,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(screen.getByLabelText('Test filter').closest('label')).toHaveClass('venue-search-field', 'custom-filter')
   })
 
-  it('rejects invalid event times without requesting or showing stale results', async () => {
+  it('EC04 (negative): rejects invalid event times without requesting or showing stale results', async () => {
     const calls = stubApi({})
     const user = userEvent.setup()
     renderPage()
@@ -150,7 +150,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(screen.queryByRole('heading', { name: 'Search results' })).not.toBeInTheDocument()
   })
 
-  it('rejects an impossible calendar date without requesting venues', async () => {
+  it('EC04 (negative): rejects an impossible calendar date without requesting venues', async () => {
     const calls = stubApi({})
     const user = userEvent.setup()
     renderPage()
@@ -162,7 +162,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('rejects a negative or non-integer capacity without requesting venues', async () => {
+  it('EC04 (negative): rejects a negative or non-integer capacity without requesting venues', async () => {
     const calls = stubApi({})
     const user = userEvent.setup()
     renderPage()
@@ -172,5 +172,72 @@ describe('EC04 VenueSearchPage', () => {
 
     expect(screen.getByRole('alert')).toHaveTextContent('Required capacity must be a whole number greater than 0.')
     expect(calls).toHaveLength(0)
+  })
+})
+
+describe('EC04 VenueSearchPage: searching, refresh and failures', () => {
+  const periodUrl = `GET /api/venues/search?${new URLSearchParams({
+    startDatetime: new Date(start).toISOString(), endDatetime: new Date(end).toISOString() })}`
+  beforeEach(() => seedSession('coordinator'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EC04 (happy): shows that it is searching, then venues without a recorded capacity or facilities', async () => {
+    stubApi({ [periodUrl]: () => jsonResponse(200, [{ ...match, venueCapacity: null, venueFacilities: [], setupMinutes: 30, turnaroundMinutes: 15 }]) })
+    renderPage()
+    enterPeriod()
+    fireEvent.click(screen.getByRole('button', { name: 'Search venues' }))
+
+    expect(screen.getByRole('status')).toHaveTextContent('Searching available venues…')
+    expect(screen.getByRole('button', { name: 'Searching…' })).toBeDisabled()
+    const card = await screen.findByRole('button', { name: '1 Harbour Road' })
+    expect(card).toHaveTextContent('Capacity not recorded · No facilities listed')
+    fireEvent.click(card)
+    expect(within(screen.getByRole('dialog')).getByText('30 / 15 minutes')).toBeInTheDocument()
+  })
+
+  it('EC04 (happy): an unticked facility is no longer searched for', async () => {
+    const calls = stubApi({ [periodUrl]: () => jsonResponse(200, [match]) })
+    renderPage()
+    enterPeriod()
+    fireEvent.click(screen.getByLabelText('Stage'))
+    fireEvent.click(screen.getByLabelText('Stage'))
+    fireEvent.click(screen.getByRole('button', { name: 'Search venues' }))
+
+    expect(await screen.findByRole('button', { name: '1 Harbour Road' })).toBeInTheDocument()
+    expect(new URL(calls[0].url, 'http://localhost').searchParams.getAll('facility')).toEqual([])
+  })
+
+  it('EC04 (failure): a failed search shows the server reason and no results', async () => {
+    stubApi({ [periodUrl]: () => jsonResponse(500, { message: 'Venue search is down' }) })
+    renderPage()
+    enterPeriod()
+    fireEvent.click(screen.getByRole('button', { name: 'Search venues' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Venue search is down')
+    expect(screen.queryByRole('heading', { name: 'Search results' })).not.toBeInTheDocument()
+  })
+
+  it('EC04 (failure): results refresh in the background (closing a vanished venue\'s window), and a failed refresh keeps them with a warning', async () => {
+    let answer = () => jsonResponse(200, [match])
+    stubApi({ [periodUrl]: () => answer() })
+    renderPage()
+    enterPeriod()
+    fireEvent.click(screen.getByRole('button', { name: 'Search venues' }))
+    fireEvent.click(await screen.findByRole('button', { name: '1 Harbour Road' }))
+    expect(screen.getByRole('dialog', { name: '1 Harbour Road' })).toBeInTheDocument()
+
+    answer = () => jsonResponse(200, [])
+    fireEvent.focus(window)
+    expect(await screen.findByText('No matching venues found.')).toBeInTheDocument()
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    answer = () => jsonResponse(500, {})
+    fireEvent.focus(window)
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not refresh venues. Search again to retry.')
+    expect(screen.getByText('No matching venues found.')).toBeInTheDocument()
   })
 })

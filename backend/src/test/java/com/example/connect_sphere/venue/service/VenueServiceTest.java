@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -27,6 +28,8 @@ import com.example.connect_sphere.venue.repository.VenueRepository;
 @Tag("DEV16")
 @Tag("VS07")
 @Tag("VS17")
+@Tag("VS06A")
+@Tag("VS06B")
 class VenueServiceTest {
     private final VenueRepository repository = mock(VenueRepository.class);
     private final VenueService service = new VenueService(repository, Mappers.getMapper(VenueMapper.class));
@@ -37,7 +40,7 @@ class VenueServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings={" ","x"})
-    @org.junit.jupiter.api.DisplayName("DEV16 (negative): blank or overlong venue names are refused before saving")
+    @DisplayName("DEV16 (negative): blank or overlong venue names are refused before saving")
     void invalidVenueNames(String value) {
         String name=value.equals("x") ? value.repeat(201) : value;
         var input=new CreateVenueDto("Hall address",100,List.of(VenueLayout.theatre),"",null,List.of(),List.of(),schedule(),null,null,name);
@@ -62,6 +65,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS06B (happy): chosen accessibility provisions and facilities are kept, and missing lists become empty")
     void copiesSelectionsAndNormalisesMissingLists() {
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
         var result = service.createVenue(new CreateVenueDto("Venue", 50, List.of(VenueLayout.theatre),
@@ -89,6 +93,7 @@ class VenueServiceTest {
 
     @ParameterizedTest
     @MethodSource("invalidSelections")
+    @DisplayName("VS06B (negative): duplicate, null or contradictory selections are refused before anything is saved")
     void rejectsInvalidSelectionsBeforeSaving(CreateVenueDto input) {
         assertThatThrownBy(() -> service.createVenue(input)).isInstanceOf(InvalidVenueException.class);
         verifyNoInteractions(repository);
@@ -96,6 +101,7 @@ class VenueServiceTest {
 
     @ParameterizedTest
     @ValueSource(ints = {1, 50, 50000})
+    @DisplayName("VS06A VS06B (boundary): a venue with a capacity from 1 to 50000 is created with its text trimmed and its layouts, hours and selections kept")
     void createsVenueWithSharedCapacityAndTrimmedText(int capacity) {
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
         var result = service.createVenue(new CreateVenueDto("  #01-02 Example\nSingapore 123456  ",
@@ -133,6 +139,7 @@ class VenueServiceTest {
 
     @ParameterizedTest
     @MethodSource("invalidInputs")
+    @DisplayName("VS06A (negative): a blank or too-long address, a capacity outside 1 to 50000, missing or duplicate layouts, or missing hours are refused before saving")
     void rejectsInvalidInputBeforeSaving(CreateVenueDto input) {
         assertThatThrownBy(() -> service.createVenue(input)).isInstanceOf(InvalidVenueException.class);
         verifyNoInteractions(repository);
@@ -144,6 +151,7 @@ class VenueServiceTest {
 
     @ParameterizedTest
     @MethodSource("invalidBasicFields")
+    @DisplayName("VS06A VS06B (negative): valid selections do not let an invalid address, capacity, layout or hours through")
     void selectionsDoNotBypassBasicVenueValidation(CreateVenueDto input) {
         var withSelections = new CreateVenueDto(input.venueAddress(), input.venueCapacity(),
                 input.supportedLayouts(), input.operatingInformation(), input.additionalInformation(),
@@ -153,6 +161,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS06A (boundary): an address of exactly 500 characters after trimming is accepted")
     void accepts500CharacterAddressAfterTrimming() {
         when(repository.save(any())).thenAnswer(call -> call.getArgument(0));
         assertThat(service.createVenue(input(" " + "a".repeat(500) + " ", 50,
@@ -160,6 +169,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS06A (negative): a venue with no details is refused with 422 naming the address, capacity and layouts, but not the optional operating information")
     void returnsFieldMessagesInExistingApiErrorShape() {
         var exception = catchThrowableOfType(() -> service.createVenue(
                 new CreateVenueDto(null, null, null, null, null, null, null)), InvalidVenueException.class);
@@ -171,6 +181,7 @@ class VenueServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (happy): an update changes only the submitted fields")
     @ValueSource(strings = {"capacity", "layouts", "accessibility", "facilities", "hours", "all", "empty"})
     void updatesOnlySubmittedFields(String field) {
         var venue = new com.example.connect_sphere.venue.entity.Venue();
@@ -201,6 +212,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS07 (negative): an invalid update is refused before the venue is changed, and nothing is saved")
     void validatesBeforeMutatingExistingVenue() {
         var venue = new com.example.connect_sphere.venue.entity.Venue();
         venue.setVenueId(java.util.UUID.randomUUID()); venue.setVenueAddress("Venue");
@@ -217,6 +229,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS07 (negative): updating a venue that does not exist saves nothing")
     void unknownUpdateDoesNotSave() {
         var id = java.util.UUID.randomUUID();
         assertThatThrownBy(() -> service.updateVenue(id, new com.example.connect_sphere.venue.dto.UpdateVenueDto()))

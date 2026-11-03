@@ -6,6 +6,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,12 +33,16 @@ import jakarta.persistence.EntityManager;
 @Tag("VS07")
 @Tag("VS17")
 @Tag("VS18")
+@Tag("VS06A")
+@Tag("VS06B")
+@Tag("AU04")
 class VenueControllerTest {
     @Autowired MockMvc mvc;
     @Autowired EntityManager entityManager;
     @Autowired VenueRepository repository;
 
     @Test
+    @DisplayName("VS18 (happy): a saved venue appears in the catalogue and its detail shows every saved characteristic")
     void createsThenListsAndReadsSavedVenue() throws Exception {
         var response = mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"  API Test Venue  ","venueCapacity":50,
@@ -70,6 +75,7 @@ class VenueControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"", ",\"venueAccessibilities\":[],\"venueFacilities\":[]",
             ",\"venueAccessibilities\":null,\"venueFacilities\":null"})
+    @DisplayName("VS06A VS06B (boundary): a venue sent with no, empty or null accessibility and facility lists is created with empty lists and its basic details")
     void emptySelectionsRemainCompatibleWithBasicCreation(String selections) throws Exception {
         var response = mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"Basic venue","venueCapacity":50,
@@ -96,6 +102,7 @@ class VenueControllerTest {
             "\"venueAccessibilities\":[\"elevators\",\"elevators\"]",
             "\"venueFacilities\":[null]",
             "\"venueFacilities\":[\"stage\",\"stage\"]"})
+    @DisplayName("VS06B (negative): duplicate, null or contradictory accessibility and facility selections are refused with 422 and no venue is saved")
     void invalidSelectionsReturn422WithoutSaving(String selections) throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
@@ -108,12 +115,14 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS18 (negative): opening a venue that does not exist returns not found")
     void unknownVenueReturns404() throws Exception {
         mvc.perform(get("/api/venues/" + UUID.randomUUID()))
                 .andExpect(status().isNotFound()).andExpect(jsonPath("$.message").exists());
     }
 
     @Test
+    @DisplayName("VS18 (negative): opening a venue with a malformed id returns bad request")
     void malformedIdReturns400() throws Exception {
         mvc.perform(get("/api/venues/not-a-uuid"))
                 .andExpect(status().isBadRequest()).andExpect(jsonPath("$.message").exists());
@@ -124,6 +133,7 @@ class VenueControllerTest {
             "{\"venueCapacity\":\"many\"}", "{\"venueAccessibilities\":[\"unknown\"]}",
             "{\"venueFacilities\":[\"unknown\"]}", "{\"venueFacilities\":\"stage\"}",
             "{\"venueAccessibilities\":\"elevators\"}", "{\"venueAccessibilities\":[{}]}", "{\"venueFacilities\":[{}]}"})
+    @DisplayName("VS06A VS06B (negative): malformed JSON or unknown layout, capacity, accessibility or facility values are refused with 400 and no venue is saved")
     void malformedInputReturns400WithoutSaving(String body) throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content(body))
@@ -132,6 +142,7 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS06A (negative): a venue with no fields is refused with 422 naming the missing capacity, and nothing is saved")
     void missingFieldsReturn422WithoutSaving() throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("{}"))
@@ -150,6 +161,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (happy): an update changes only the submitted fields and the change is saved")
     @ValueSource(strings = {"venueCapacity", "supportedLayouts", "venueAccessibilities", "venueFacilities", "operatingHours", "all", "empty"})
     void updatesOnlySubmittedFieldsAndPersists(String field) throws Exception {
         String location = updateFixture();
@@ -181,6 +193,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (negative): an invalid update is refused and the venue is unchanged")
     @ValueSource(strings = {"{\"venueCapacity\":0}", "{\"supportedLayouts\":[]}",
             "{\"operatingHours\":[]}", "{\"venueAccessibilities\":[\"none\",\"elevators\"]}",
             "{\"venueFacilities\":[\"stage\",\"stage\"]}"})
@@ -194,6 +207,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (negative): a malformed update is refused as bad request")
     @ValueSource(strings = {"{\"venueCapacity\":null}", "{\"supportedLayouts\":null}",
             "{\"operatingHours\":null}", "{\"venueFacilities\":[\"unknown\"]}",
             "{\"venueAccessibilities\":[\"unknown\"]}", "{\"venueCapacity\":1.5}"})
@@ -203,6 +217,22 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS07 (negative): a null additional or operating information in an update is refused naming the field, and the venue is unchanged")
+    void nullTextFieldsNameTheField() throws Exception {
+        String location = updateFixture();
+        String before = mvc.perform(get(location)).andReturn().getResponse().getContentAsString();
+        mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content("{\"additionalInformation\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("additionalInformation must be text; use an empty string to clear it, not null"));
+        mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content("{\"operatingInformation\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("operatingInformation must be text; update operatingHours to change the schedule"));
+        entityManager.flush(); entityManager.clear();
+        assertThat(mvc.perform(get(location)).andReturn().getResponse().getContentAsString()).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS07 (negative): updating a venue that does not exist returns not found")
     void updateMissingVenueReturns404() throws Exception {
         mvc.perform(put("/api/venues/" + UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"venueCapacity\":150}"))
@@ -236,6 +266,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (negative): a refused update names the field at fault and keeps the saved values")
     @org.junit.jupiter.params.provider.MethodSource("invalidCharacteristicUpdates")
     void validationNamesFieldAndPreservesSavedValues(String field, String value, int expectedStatus) throws Exception {
         String location = updateFixture();
@@ -249,6 +280,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (boundary): capacities of 1 and 50,000 and an explicit no-accessibility choice are accepted")
     @ValueSource(ints = {1, 50000})
     void acceptsCapacityBoundsAndExplicitNoAccessibility(int capacity) throws Exception {
         mvc.perform(put(updateFixture()).contentType(MediaType.APPLICATION_JSON)
@@ -260,6 +292,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (happy): additional information can be updated and cleared, and the change is saved")
     @ValueSource(strings = {"Use Level 2", ""})
     void updatesAndClearsAdditionalInformation(String information) throws Exception {
         String location = updateFixture();
@@ -283,7 +316,7 @@ class VenueControllerTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("VS17 (cross-cutting): venue edits only invalidate affected approvals and preserve complete reservation records")
+    @DisplayName("VS17 (cross-cutting): venue edits only invalidate affected approvals and preserve complete reservation records")
     void characteristicUpdatesPreserveReservationsAndInvalidateAffectedApprovals() throws Exception {
         String location = updateFixture();
         UUID venueId = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
@@ -333,6 +366,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS18 (negative): a caller who is not signed in cannot read venues and gets the standard error")
     @ValueSource(strings = {"/api/venues", "/api/venues/00000000-0000-0000-0000-000000000001"})
     @WithAnonymousUser
     void unauthenticatedRequestReturns401InApiErrorShape(String path) throws Exception {
@@ -343,6 +377,7 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS18 (cross-cutting): reading the catalogue and a venue's detail changes no venue, event or booking")
     void catalogueAndDetailReadsPreserveVenueEventAndBookingRows() throws Exception {
         String location = updateFixture();
         UUID venueId = UUID.fromString(location.substring(location.lastIndexOf('/') + 1));
@@ -382,6 +417,7 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS18 (happy): every Venue Staff member can read the same catalogue and venue records")
     void allVenueStaffCanReadTheSameCatalogueAndIndividualRecords() throws Exception {
         String location = updateFixture();
         for (String staff : java.util.List.of("venue-staff-one", "venue-staff-two")) {
@@ -397,6 +433,7 @@ class VenueControllerTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS18 (negative): an invalid token cannot read venues")
     @ValueSource(strings = {"/api/venues", "/api/venues/00000000-0000-0000-0000-000000000001"})
     @WithAnonymousUser
     void invalidBearerTokenCannotReadVenues(String path) throws Exception {
@@ -407,6 +444,7 @@ class VenueControllerTest {
 
     @Test
     @WithMockUser(roles = "ATTENDEE")
+    @DisplayName("VS06A AU04 (negative): an attendee cannot create a venue; the request is forbidden and nothing is saved")
     void createByDisallowedRoleReturns403WithoutSaving() throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
@@ -418,7 +456,7 @@ class VenueControllerTest {
         assertThat(repository.count()).isEqualTo(before);
     }
     @Test
-    @org.junit.jupiter.api.DisplayName("VS17 (boundary): legacy prose cannot create or overwrite an operating schedule")
+    @DisplayName("VS17 (boundary): legacy prose cannot create or overwrite an operating schedule")
     void legacyProseDoesNotAdvertiseHours() throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""

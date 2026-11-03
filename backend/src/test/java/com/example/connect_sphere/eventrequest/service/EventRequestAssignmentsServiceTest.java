@@ -18,6 +18,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -87,6 +88,7 @@ class EventRequestAssignmentsServiceTest {
     // ---- Who is listed ------------------------------------------------
 
     @Test
+    @DisplayName("ECL-C2 (happy): every coordinator is listed in name order")
     void everyCoordinatorIsListedInNameOrder() {
         assertThat(service.assignedRequests()).extracting(CoordinatorAssignmentsDto::coordinatorName)
                 .containsExactly("aisha", "bala", "chen");
@@ -95,6 +97,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (boundary): a coordinator who holds no requests is still listed, holding none")
     void aCoordinatorWhoHoldsNoRequestsIsStillListedHoldingNone() {
         underReview(held(chen, "Tech Summit", MARCH_1));
 
@@ -106,6 +109,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (boundary): when nothing is assigned, every coordinator is listed holding none")
     void whenNothingIsAssignedEveryCoordinatorIsListedHoldingNone() {
         underReview();
 
@@ -115,6 +119,7 @@ class EventRequestAssignmentsServiceTest {
     // ---- Which requests, and where -----------------------------------
 
     @Test
+    @DisplayName("ECL-C2 (happy): each request sits under its own coordinator, whichever organisation it came from")
     void eachRequestSitsUnderItsOwnCoordinatorWhicheverOrganisationItCameFrom() {
         EventRequest acme = held(aisha, "Town Hall", MARCH_1);
         EventRequest globex = held(aisha, "Product Launch", MARCH_1.plusDays(1));
@@ -132,6 +137,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): within a coordinator, requests keep the soonest-first order even when other coordinators' requests fall between")
     void withinACoordinatorRequestsKeepTheSoonestFirstOrderEvenWhenOtherCoordinatorsRequestsFallBetween() {
         EventRequest soonest = held(aisha, "Town Hall", MARCH_1);
         EventRequest someoneElses = held(bala, "Offsite", MARCH_1.plusDays(1));
@@ -147,6 +153,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): only assigned requests that are submitted or waiting on clarification are asked for")
     void onlyAssignedRequestsThatAreSubmittedOrWaitingOnClarificationAreAskedFor() {
         service.assignedRequests();
 
@@ -159,6 +166,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("ECL-C2 (negative): a request that is not under review is never asked for")
     @EnumSource(value = EventRequestStatus.class, names = {"draft", "approved", "rejected", "cancelled"})
     void aRequestThatIsNotUnderReviewIsNeverAskedFor(EventRequestStatus excluded) {
         service.assignedRequests();
@@ -171,6 +179,7 @@ class EventRequestAssignmentsServiceTest {
     // ---- What each request shows ---------------------------------------
 
     @Test
+    @DisplayName("ECL-C2 (happy): each request shows its event details and current status")
     void eachRequestShowsItsEventDetailsAndCurrentStatus() {
         EventRequest waitingOnOrganiser = held(aisha, "Town Hall", MARCH_1);
         waitingOnOrganiser.setStatus(EventRequestStatus.clarification_required);
@@ -188,6 +197,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): the date submitted is when the organiser submitted, not when the request was assigned")
     void theDateSubmittedIsWhenTheOrganiserSubmittedNotWhenTheRequestWasAssigned() {
         EventRequest request = held(aisha, "Town Hall", MARCH_1);
         underReview(request);
@@ -200,6 +210,7 @@ class EventRequestAssignmentsServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (boundary): a request submitted before the timeline existed shows when it was created instead")
     void aRequestSubmittedBeforeTheTimelineExistedFallsBackToWhenItWasCreated() {
         underReview(held(aisha, "Town Hall", MARCH_1));
 
@@ -209,6 +220,7 @@ class EventRequestAssignmentsServiceTest {
     // ---- Read-only ------------------------------------------------------
 
     @Test
+    @DisplayName("ECL-C2 (cross-cutting): viewing assignments changes nothing and notifies no one")
     void viewingAssignmentsChangesNothingAndNotifiesNoOne() {
         EventRequest request = held(aisha, "Town Hall", MARCH_1);
         underReview(request);

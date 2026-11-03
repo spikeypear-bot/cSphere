@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -79,6 +80,7 @@ class NewEndpointRoleAccessTest {
 
     @ParameterizedTest(name = "{0} {1} {2} -> 403")
     @MethodSource("endpointsForUnrelatedRoles")
+    @DisplayName("AU04 DEV05 EC01 EC02 EC03 EO26 EO07 (negative): Technical Support and Attendees are refused on every request, venue booking and cancellation endpoint before any lookup")
     void unrelatedRolesAreRefused(String user, String method, String path) throws Exception {
         MockHttpServletRequestBuilder request = "GET".equals(method) ? get(path)
                 : post(path).contentType(MediaType.APPLICATION_JSON).content("{}");

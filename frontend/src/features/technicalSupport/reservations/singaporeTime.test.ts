@@ -9,6 +9,7 @@ import { toLocalInputValue } from './reservationUtils'
 describe('TS02 TS09 — loan windows and reported periods are Singapore time', () => {
   it('TS09 (boundary): a typed 09:00 means 09:00 in Singapore, i.e. 01:00 UTC', () => {
     expect(toIso('2027-03-10T09:00')).toBe('2027-03-10T01:00:00.000Z')
+    expect(toIso('2027-03-10T09:00:30')).toBe('2027-03-10T01:00:30.000Z')
   })
 
   it('TS02 (boundary): an instant shows as its Singapore wall-clock time, including across midnight', () => {

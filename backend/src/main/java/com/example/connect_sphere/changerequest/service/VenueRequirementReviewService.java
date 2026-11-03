@@ -73,7 +73,8 @@ public class VenueRequirementReviewService {
         if (!current(review, booking, event)) throw new VenueBookingStateException("This requirement review has been superseded. Refresh to review the current requirements.");
         if (booking.getStatus()==VenueBookingStatus.attention) throw new VenueBookingStateException("Resolve the booking assessment before recording this requirement review.");
         if (!active(booking,event)) throw new VenueBookingStateException("Only active pending or approved bookings can be reviewed. Refresh the booking details.");
-        if (decision == null || !Set.of("suitable","action_required").contains(Objects.toString(decision.outcome(),"")))
+        // The body is required: Spring answers 400 without one.
+        if (!Set.of("suitable","action_required").contains(Objects.toString(decision.outcome(),"")))
             throw new InvalidVenueBookingException("Choose remains suitable or coordinator action required.");
         String note=decision.note()==null ? null : decision.note().strip();
         if (note != null && note.isBlank()) note=null;
@@ -120,7 +121,8 @@ public class VenueRequirementReviewService {
                     """,Boolean.class,booking.getBookingId(),review.getReviewedAt()==null ? review.getApprovedAt() : review.getReviewedAt(),booking.getBookingId(),review.getReviewId(),review.getApprovedAt())));
     }
     private boolean active(VenueBookingRecord b, Event e) {
-        return (b.getStatus()==VenueBookingStatus.pending || b.getStatus()==VenueBookingStatus.approved || b.getStatus()==VenueBookingStatus.attention)
+        // Both callers have already set an attention booking aside.
+        return (b.getStatus()==VenueBookingStatus.pending || b.getStatus()==VenueBookingStatus.approved)
                 && e.getStatus()!=EventStatus.cancelled && e.getStatus()!=EventStatus.completed
                 && e.getEndDatetime().isAfter(OffsetDateTime.now(clock));
     }

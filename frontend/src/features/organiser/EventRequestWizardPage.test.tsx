@@ -103,7 +103,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(screen.getByLabelText('Venue requirements')).toBeInTheDocument()
   })
 
-  it('does not submit previously saved data when saving the current fields fails', async () => {
+  it('EO02 (failure): when saving the current fields fails, previously saved data is not submitted', async () => {
     let fail = false
     const fetch = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       if (String(input) === '/api/equipment/catalogue') return jsonResponse(200, [])
@@ -199,7 +199,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(await screen.findByText('Organiser home')).toBeInTheDocument()
   })
 
-  it('shows exactly the missing fields the backend reports when submitting an incomplete request', async () => {
+  it('EO02 (negative): submitting an incomplete request shows exactly the missing fields the backend reports', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/equipment/catalogue') return jsonResponse(200, [])
@@ -245,7 +245,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(within(missing).getByText('Purpose')).toBeInTheDocument()
   })
 
-  it('shows an inline error on the accessibility field when the backend reports it missing', async () => {
+  it('EO02 (negative): the accessibility field shows an inline error when the backend reports it missing', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/equipment/catalogue') return jsonResponse(200, [])
@@ -295,7 +295,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(await screen.findByText('Accessibility requirements is required')).toBeInTheDocument()
   })
 
-  it('treats "no accessibility requirements needed" as exclusive with a real accommodation', async () => {
+  it('EO01 (boundary): "no accessibility requirements needed" cannot be chosen together with a real accommodation', async () => {
     const fetchMock = vi.fn(async () =>
       jsonResponse(201, {
         requestId: DRAFT_ID,
@@ -327,7 +327,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(none).toHaveAttribute('aria-pressed', 'false')
   })
 
-  it('lets organisers select catalogue equipment and saves item quantities in the request', async () => {
+  it('EO01 (happy): organisers can select catalogue equipment and the item quantities are saved in the request', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/equipment/catalogue') {
@@ -394,7 +394,7 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
     window.localStorage.clear()
   })
 
-  it('shows a live completion percentage that rises as required fields are filled in', async () => {
+  it('EO01 (happy): a live completion percentage rises as required fields are filled in', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
@@ -419,7 +419,7 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
     expect(await screen.findByText(/% ready to submit/)).not.toHaveTextContent('0% ready to submit')
   })
 
-  it('autosaves automatically after the person stops typing, without clicking Next', async () => {
+  it('EO01 (happy): the draft autosaves after the organiser stops typing, without clicking Next', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/event-requests' && init?.method === 'POST') {
@@ -455,7 +455,7 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
     }
   })
 
-  it('restores unsynced input from a local backup when the server is unreachable', async () => {
+  it('EO01 (failure): when the server is unreachable, unsaved input is restored from a local backup', async () => {
     window.localStorage.setItem(
       `connectsphere.draft-backup.Acme Conferences.${DRAFT_ID}`,
       JSON.stringify({
@@ -479,7 +479,7 @@ describe('EventRequestWizardPage — EO01/EO02 UX enhancements (docs/decision-lo
     expect(screen.getByLabelText('Event name')).toHaveValue('Recovered Town Hall')
   })
 
-  it('never answers a load failure with a backup left behind by a different organisation on this device', async () => {
+  it('EO01 (cross-cutting): a load failure never restores a backup left on this device by a different organisation', async () => {
     // Regression test for a real cross-org leak found via live testing: this
     // browser previously acted as a different organisation and left a local
     // backup for this exact request id. A same-device, different-organisation

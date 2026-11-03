@@ -582,4 +582,138 @@ class ChangeRequestFlowTest {
         assertThat(jdbc.queryForObject("SELECT start_datetime = '" + DAY + "10:00:00+08:00'::timestamptz "
                 + "FROM event_requests WHERE request_id = ?", Boolean.class, requestId)).isTrue();
     }
+
+    private int changeCount(UUID requestId) {
+        sync();
+        return jdbc.queryForObject("SELECT count(*) FROM event_change_requests WHERE request_id = ?", Integer.class, requestId);
+    }
+
+    @Test
+    @DisplayName("EO03 (negative): a proposal without a request, a reason or the details is refused with its message, and nothing is saved")
+    void aProposalNeedsItsParts() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Parts Gala", 150, "none"));
+
+        mvc.perform(post("/api/change-requests").with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"x\",\"details\":" + details("Parts Gala", "09:00", "12:00", 160) + "}"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("This change request could not be found."));
+        ask("eo1", requestId, null, details("Parts Gala", "09:00", "12:00", 160))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Please say why the change is needed."));
+        mvc.perform(post("/api/change-requests").with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"requestId\":\"" + requestId + "\",\"reason\":\"More people\"}"))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Please include the event's details as they should be."));
+
+        assertThat(changeCount(requestId)).isZero();
+    }
+
+    @Test
+    @DisplayName("EO03 (negative): a cancelled request, or an approved event that has since been cancelled, cannot be changed; a pending change on that event shows why and cannot be decided")
+    void cancelledRecordsCannotBeChanged() throws Exception {
+        UUID cancelled = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Called Off Gala", 150, "none"));
+        mvc.perform(post("/api/event-requests/" + cancelled + "/cancel").with(flow.as("eo1"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"reason\":\"No longer needed\"}")).andExpect(status().isOk());
+        sync();
+        ask("eo1", cancelled, "x", details("Called Off Gala", "09:00", "12:00", 160)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This request was cancelled, so it can no longer be changed."));
+        assertThat(changeCount(cancelled)).isZero();
+
+        UUID eventId = flow.approvedEvent("eo1", "ec1", FlowSupport.requestBody("Ended Gala", 150, "none"));
+        UUID requestId = requestOf(eventId);
+        UUID id = asked(requestId, details("Ended Gala", "09:00", "12:00", 160));
+        jdbc.update("UPDATE events SET status = 'cancelled' WHERE event_id = ?", eventId);
+        sync();
+
+        String inactive = "This event is no longer active, so it can no longer be changed.";
+        JsonNode coordinatorView = view(id, "ec1");
+        assertThat(coordinatorView.get("closedReason").asString()).isEqualTo(inactive);
+        assertThat(coordinatorView.get("impact").isNull()).isTrue();
+        assertThat(coordinatorView.get("canDecide").asBoolean()).isFalse();
+        approve("ec1", id, List.of()).andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(inactive));
+        withdraw(id);
+        ask("eo1", requestId, "x", details("Ended Gala", "09:00", "12:00", 170)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(inactive));
+        assertThat(changeCount(requestId)).isEqualTo(1);
+        assertThat(eventField(eventId, "expected_attendance")).isEqualTo("150");
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (conflict): while the organiser is answering a clarification the change waits: it shows its impact but cannot be decided, and nothing is applied")
+    void aClarificationPausesTheDecision() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Paused Gala", 150, "none"));
+        UUID id = asked(requestId, details("Paused Gala", "09:00", "12:00", 200));
+        mvc.perform(post("/api/event-requests/" + requestId + "/clarifications").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"message\":\"Final numbers?\",\"flaggedFields\":[]}"))
+                .andExpect(status().isOk());
+        sync();
+
+        JsonNode waiting = view(id, "ec1");
+        assertThat(waiting.get("closedReason").isNull()).isTrue();
+        assertThat(waiting.get("impact").isArray()).isTrue();
+        assertThat(waiting.get("canDecide").asBoolean()).isFalse();
+        approve("ec1", id, List.of()).andExpect(status().isConflict()).andExpect(jsonPath("$.message")
+                .value("The request is waiting for the organiser's clarification; decide this change once they reply."));
+        assertThat(view(id, "eo1").get("status").asString()).isEqualTo("pending");
+        assertThat(jdbc.queryForObject("SELECT expected_attendance FROM event_requests WHERE request_id = ?",
+                Integer.class, requestId)).isEqualTo(150);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (happy): approving with an empty body, or no body, is approving with nothing acknowledged")
+    void approvingWithoutAList() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Bodyless Gala", 150, "none"));
+        UUID first = asked(requestId, details("Bodyless Gala", "09:00", "12:00", 160));
+        mvc.perform(post("/api/change-requests/" + first + "/approve").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("approved"));
+        sync();
+        UUID second = asked(requestId, details("Bodyless Gala", "09:00", "12:00", 170));
+        mvc.perform(post("/api/change-requests/" + second + "/approve").with(flow.as("ec1")))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("approved"));
+        sync();
+        assertThat(jdbc.queryForObject("SELECT expected_attendance FROM event_requests WHERE request_id = ?",
+                Integer.class, requestId)).isEqualTo(170);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (negative): rejecting with no body is refused for want of a reason, and nothing changes")
+    void rejectingWithoutABody() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Unreasoned Gala", 150, "none"));
+        UUID id = asked(requestId, details("Unreasoned Gala", "09:00", "12:00", 160));
+
+        mvc.perform(post("/api/change-requests/" + id + "/reject").with(flow.as("ec1")))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Please give the organiser a reason for rejecting the change."));
+        assertThat(view(id, "eo1").get("status").asString()).isEqualTo("pending");
+    }
+
+    @Test
+    @DisplayName("EO03, ECL-C7 (happy): an event's change requests are listed from the event; an unknown event is not found")
+    void listedFromTheEvent() throws Exception {
+        UUID eventId = flow.approvedEvent("eo1", "ec1", FlowSupport.requestBody("Listed Gala", 150, "none"));
+        UUID id = asked(requestOf(eventId), details("Listed Gala", "09:00", "12:00", 160));
+
+        for (String viewer : List.of("eo1", "ec1", "ecl1")) {
+            mvc.perform(get("/api/change-requests").param("eventId", eventId.toString()).with(flow.as(viewer)))
+                    .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].changeRequestId").value(id.toString()));
+        }
+        mvc.perform(get("/api/change-requests").param("eventId", UUID.randomUUID().toString()).with(flow.as("eo1")))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    @DisplayName("EO03, ECL-C7 (cross-cutting): the pending list holds an organisation's own changes for its organisers and every change for the Lead")
+    void pendingListsByViewer() throws Exception {
+        UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Queued Gala", 150, "none"));
+        UUID id = asked(requestId, details("Queued Gala", "09:00", "12:00", 160));
+        String mine = "$[?(@.changeRequestId == '" + id + "')]";
+
+        mvc.perform(get("/api/change-requests").with(flow.as("eo2"))).andExpect(jsonPath(mine).isNotEmpty())
+                .andExpect(jsonPath(mine + ".canWithdraw").value(true));
+        mvc.perform(get("/api/change-requests").with(flow.as("eo3"))).andExpect(jsonPath(mine).isEmpty());
+        mvc.perform(get("/api/change-requests").with(flow.as("ecl1"))).andExpect(jsonPath(mine).isNotEmpty())
+                .andExpect(jsonPath(mine + ".canDecide").value(false));
+    }
 }

@@ -21,8 +21,8 @@ public record EquipmentReservationResponse(
     /** Whether this reservation's loan window covers the whole of {@code start}
      * to {@code end} (EC-NEW3's equipment impact, TS11 AC4). */
     public boolean covers(Instant start, Instant end) {
-        return loanedFrom != null && loanedUntil != null
-                && !loanedFrom.isAfter(start) && !loanedUntil.isBefore(end);
+        // Built only from an EquipmentLog, whose loan window is NOT NULL (V2 equipment_logs).
+        return !loanedFrom.isAfter(start) && !loanedUntil.isBefore(end);
     }
 
     public static EquipmentReservationResponse from(EquipmentLog log, String equipmentName, String eventName) {

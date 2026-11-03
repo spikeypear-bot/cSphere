@@ -1,5 +1,5 @@
 // @stories SO-C1 SO-C3 SO-C4 SO-C5 SO-C6 EC08
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
@@ -41,7 +41,7 @@ afterEach(() => {
 })
 
 describe('Safety Officer event views (SO-C1–SO-C4)', () => {
-  it('shows confirmed events with their venue and the empty state when there are none', async () => {
+  it('SO-C1 (happy): shows confirmed events with their venue, and the empty state when none are waiting for review', async () => {
     seedSession('safety-officer')
     stubApi({
       'GET /api/safety/events/planning': () => jsonResponse(200, []),
@@ -113,7 +113,7 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(within(card).getByRole('link', { name: 'Town Hall' })).toHaveAttribute('href', `/safety-officer/events/${EVENT_ID}`)
   })
 
-  it('persists checklist changes, shows event logistics, and blocks approval while incomplete', async () => {
+  it('SO-C1 SO-C3 SO-C4 (negative): checklist changes are saved and event logistics shown, but Approve stays disabled while the checklist is incomplete', async () => {
     seedSession('safety-officer')
     let checklist = READINESS
     const calls = stubApi({
@@ -163,7 +163,7 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(calls.some((call) => call.method === 'PATCH')).toBe(true)
   })
 
-  it('asks for a note before requesting changes, and sends the decision', async () => {
+  it('SO-C4 SO-C6 (negative): Request changes stays disabled until a note and an item are given, then sends the decision', async () => {
     seedSession('safety-officer')
     const complete = { ...READINESS, completedItems: 6, totalItems: 6 }
     const calls = stubApi({
@@ -309,5 +309,172 @@ describe('SO-C5 / SO-C6 Safety Officer decisions', () => {
     expect(await screen.findByText(/by so2/)).toBeInTheDocument()
     expect(screen.getByText('Changes requested')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Reject' })).not.toBeInTheDocument()
+  })
+})
+
+describe('SO-C1 SO-C3 SO-C4 Safety Officer pages — sparse data, failures and edges', () => {
+  afterEach(() => vi.unstubAllGlobals())
+
+  const unreadable = () => ({ ok: false, status: 502, text: async () => '<html>Bad gateway</html>' }) as Response
+  const never = () => new Promise<Response>(() => {}) as unknown as Response
+
+  function details(over: Record<string, (body: unknown) => Response> = {}) {
+    seedSession('safety-officer')
+    const calls = stubApi({
+      [`GET /api/safety/events/${EVENT_ID}`]: () => jsonResponse(200, EVENT),
+      [`GET /api/safety/events/${EVENT_ID}/readiness`]: () => jsonResponse(200, READINESS),
+      [`GET /api/events/${EVENT_ID}/venue-bookings`]: () => jsonResponse(200, []),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, []),
+      [`GET /api/equipment/events/${EVENT_ID}/reservations`]: () => jsonResponse(200, []),
+      ...over,
+    })
+    render(<MemoryRouter initialEntries={[`/safety-officer/events/${EVENT_ID}`]}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer/events/:eventId" element={<SafetyEventDetailsPage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+    return calls
+  }
+
+  it('SO-C1 (boundary): sparse event, venue and equipment details read as not provided rather than blank', async () => {
+    details({
+      [`GET /api/safety/events/${EVENT_ID}`]: () => jsonResponse(200, { ...EVENT, status: 'archived', description: '',
+        accessibilityNeeds: [], requiredFacilities: null, registrationNeeds: null }),
+      [`GET /api/events/${EVENT_ID}/venue-bookings`]: () => jsonResponse(200, [{
+        bookingId: 'b1', status: 'attention', venueId: 'venue-9', venueAddress: null, venueCapacity: null,
+        requirements: null, requiresAlternative: true,
+      }]),
+      'GET /api/venues/venue-9': () => jsonResponse(404, { message: 'Venue not found' }),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, [{
+        requestId: 'r1', status: 'rejected', technicalRequirement: '', rejectReason: 'No stock', lines: [],
+      }]),
+      [`GET /api/equipment/events/${EVENT_ID}/reservations`]: () => jsonResponse(200, [{
+        logId: 'l1', equipmentName: 'Projector', quantity: 1, serialNumber: 'SN-1',
+        loanedFrom: '2027-03-10T00:00:00Z', loanedUntil: '2027-03-10T05:00:00Z',
+      }]),
+      [`GET /api/safety/events/${EVENT_ID}/readiness`]: () => jsonResponse(500, { message: 'Down' }),
+    })
+
+    expect(await screen.findByRole('heading', { name: 'Venue — attention' })).toBeInTheDocument()
+    expect(screen.getByText(/^archived · /)).toBeInTheDocument()
+    const fact = (term: string) => screen.getAllByText(term).map((dt) => dt.nextElementSibling?.textContent)
+    expect(fact('Description')).toEqual(['Not provided'])
+    expect(fact('Accessibility needs')).toEqual(['None specified', 'None specified'])
+    expect(fact('Registration')).toEqual(['Not finalised'])
+    expect(fact('Capacity')).toEqual(['Not finalised'])
+    expect(fact('Required facilities')).toEqual(['None specified'])
+    expect(fact('Expected attendance in this room')).toEqual(['150'])
+    expect(fact('Venue requirements')).toEqual(['Theatre seating'])
+    expect(fact('Available facilities')).toEqual(['None listed'])
+    expect(await screen.findByText('Could not load venue details. Venue not found')).toBeInTheDocument()
+    expect(screen.getByText('This booking needs an alternative venue arrangement.')).toBeInTheDocument()
+    expect(screen.getByText('No additional requirements.')).toBeInTheDocument()
+    expect(screen.getByText('Reason: No stock')).toBeInTheDocument()
+    expect(await screen.findByText('Reserved: Projector × 1 (SN-1)')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load readiness checklist. Down')).toBeInTheDocument()
+    expect(screen.queryByRole('heading', { name: 'Safety approval' })).not.toBeInTheDocument()
+  })
+
+  it('SO-C1 (failure): bookings, equipment requests and reservations that cannot be loaded each say so', async () => {
+    details({
+      [`GET /api/safety/events/${EVENT_ID}`]: () => jsonResponse(200, { ...EVENT, status: 'safety_approved', registrationNeeds: false }),
+      [`GET /api/safety/events/${EVENT_ID}/readiness`]: () => jsonResponse(200, { ...READINESS, approvalStatus: 'approved',
+        reviewedBy: 'so1', reviewedAt: null, flaggedItems: ['retired_item'] }),
+      [`GET /api/events/${EVENT_ID}/venue-bookings`]: () => jsonResponse(500, { message: 'Bookings down' }),
+      [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(500, { message: 'Requests down' }),
+      [`GET /api/equipment/events/${EVENT_ID}/reservations`]: () => jsonResponse(500, { message: 'Reservations down' }),
+    })
+
+    expect(await screen.findByText('Could not load booking details. Bookings down')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load equipment requests. Requests down')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load equipment reservations. Reservations down')).toBeInTheDocument()
+    expect(screen.getByText('Registration').nextElementSibling).toHaveTextContent('Not required')
+    expect(await screen.findByText('Approved. Waiting for the Event Coordinator to confirm the event.')).toBeInTheDocument()
+    // Reviewed with no time recorded, and an item the checklist no longer has is still named.
+    expect(screen.getByText('by so1', { exact: false })).toHaveTextContent(/^by so1$/)
+    expect(within(screen.getByRole('list', { name: 'Checklist items concerned' })).getByText('retired_item')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Approve' })).not.toBeInTheDocument()
+  })
+
+  it('SO-C1 (failure): an event that cannot be loaded says so', async () => {
+    details({ [`GET /api/safety/events/${EVENT_ID}`]: () => jsonResponse(404, { message: 'Event not found' }) })
+    expect(await screen.findByRole('alert')).toHaveTextContent('Could not load this event. Event not found')
+  })
+
+  it('SO-C3 (boundary): while the checklist is still loading the page says so', async () => {
+    details({ [`GET /api/safety/events/${EVENT_ID}/readiness`]: never })
+    expect(await screen.findByText('Loading readiness checklist…')).toBeInTheDocument()
+  })
+
+  it('SO-C1 (boundary): opened without an event in the address, the page waits and asks the server for nothing', () => {
+    seedSession('safety-officer')
+    const calls = stubApi({})
+    render(<MemoryRouter initialEntries={['/safety-officer/events']}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer/events" element={<SafetyEventDetailsPage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+    expect(screen.getByRole('status')).toHaveTextContent('Loading event…')
+    expect(calls).toEqual([])
+  })
+
+  it('SO-C3 (failure): a refused checklist save shows the server reason, an unreadable reply a plain message', async () => {
+    let reply: () => Response = () => jsonResponse(409, { message: 'This checklist is locked.' })
+    details({ [`PATCH /api/safety/events/${EVENT_ID}/readiness/items/venue_booking`]: () => reply() })
+    const user = userEvent.setup()
+    const box = await screen.findByRole('checkbox', { name: 'Venue booking is approved and suitable' })
+
+    await user.click(box)
+    expect(await screen.findByText('This checklist is locked.')).toHaveAttribute('role', 'alert')
+    expect(screen.getByText('0 of 6 items complete')).toBeInTheDocument()
+
+    reply = unreadable
+    await user.click(box)
+    expect(await screen.findByText('Could not save this checklist item.')).toHaveAttribute('role', 'alert')
+  })
+
+  it('SO-C4 (failure): an unreadable reply to a decision shows a plain message and keeps what was typed; unticking an item disables sending back again', async () => {
+    details({ [`POST /api/safety/events/${EVENT_ID}/approval`]: unreadable })
+    const user = userEvent.setup()
+    await user.type(await screen.findByLabelText('Note for the Event Coordinator'), 'Add a marshal')
+    const raise = within(screen.getByRole('group', { name: 'Checklist items this decision concerns' }))
+      .getByRole('checkbox', { name: 'Raise: Venue booking is approved and suitable' })
+    await user.click(raise)
+    expect(screen.getByRole('button', { name: 'Request changes' })).toBeEnabled()
+    await user.click(raise)
+    expect(screen.getByRole('button', { name: 'Request changes' })).toBeDisabled()
+    await user.click(raise)
+    await user.click(screen.getByRole('button', { name: 'Request changes' }))
+
+    expect(await screen.findByText('Could not save the safety review.')).toHaveAttribute('role', 'alert')
+    expect(screen.getByLabelText('Note for the Event Coordinator')).toHaveValue('Add a marshal')
+  })
+
+  it('SO-C1 (failure): the reviews list says when planning or confirmed events cannot be loaded, and shows an unlabelled status as given', async () => {
+    seedSession('safety-officer')
+    stubApi({
+      'GET /api/safety/events/planning': () => jsonResponse(500, { message: 'Planning down' }),
+      'GET /api/safety/events/confirmed': () => jsonResponse(500, { message: 'Confirmed down' }),
+    })
+    const view = render(<MemoryRouter initialEntries={['/safety-officer/reviews']}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer/reviews" element={<SafetyReviewsPage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+    expect(await screen.findByText('Could not load planning events. Planning down')).toBeInTheDocument()
+    expect(await screen.findByText('Could not load confirmed events. Confirmed down')).toBeInTheDocument()
+    view.unmount()
+
+    stubApi({
+      'GET /api/safety/events/planning': () => jsonResponse(200, [{ eventId: 'e9', eventName: 'Odd Fair',
+        startDatetime: EVENT.startDatetime, endDatetime: EVENT.endDatetime, venueAddress: null, status: 'on_hold' }]),
+      'GET /api/safety/events/confirmed': () => jsonResponse(200, []),
+    })
+    render(<MemoryRouter initialEntries={['/safety-officer/reviews']}>
+      <SessionProvider>
+        <Routes><Route path="/safety-officer/reviews" element={<SafetyReviewsPage />} /></Routes>
+      </SessionProvider>
+    </MemoryRouter>)
+    expect(await screen.findByText('on_hold')).toBeInTheDocument()
   })
 })

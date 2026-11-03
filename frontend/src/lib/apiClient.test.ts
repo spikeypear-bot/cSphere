@@ -1,6 +1,6 @@
 // @stories DEV05  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiClient, ApiClientError, UNAUTHORISED_EVENT } from './apiClient'
+import { apiClient, ApiClientError, login, logout, UNAUTHORISED_EVENT } from './apiClient'
 import { AUTH_STORAGE_KEY } from './authTokens'
 
 function signedIn(accessToken = 'access-1', refreshToken = 'refresh-1') {
@@ -50,7 +50,7 @@ describe('apiClient', () => {
   beforeEach(() => window.localStorage.clear())
   afterEach(() => vi.unstubAllGlobals())
 
-  it('sends the access token as a Bearer header', async () => {
+  it('DEV05 (happy): sends the access token as a Bearer header', async () => {
     signedIn()
     const fetchSpy = mockFetchSequence({ jsonBody: { hello: 'world' } })
 
@@ -64,7 +64,7 @@ describe('apiClient', () => {
     )
   })
 
-  it('sends no organisation of any kind — the backend reads its own claim', async () => {
+  it('DEV05 (cross-cutting): sends no organisation of any kind — the backend reads its own claim', async () => {
     signedIn()
     const fetchSpy = mockFetchSequence({ jsonBody: [] })
 
@@ -74,14 +74,14 @@ describe('apiClient', () => {
     expect(headers['X-Organisation']).toBeUndefined()
   })
 
-  it('parses a successful JSON response', async () => {
+  it('DEV05 (happy): parses a successful JSON response', async () => {
     signedIn()
     mockFetchSequence({ jsonBody: { requestId: 'abc' } })
     const result = await apiClient.get<{ requestId: string }>('/event-requests/abc')
     expect(result.requestId).toBe('abc')
   })
 
-  it('throws an ApiClientError with missingFields on a 422 response', async () => {
+  it('DEV05 (negative): a 422 response throws an ApiClientError listing the missing fields', async () => {
     signedIn()
     mockFetchSequence({
       status: 422,
@@ -94,7 +94,7 @@ describe('apiClient', () => {
     })
   })
 
-  it('retains valid booking conflict details and ignores malformed entries', async () => {
+  it('DEV05 (boundary): keeps valid booking conflict details and ignores malformed entries', async () => {
     const conflict = { bookingId: 'b2', eventName: 'Existing event',
       startDatetime: '2027-04-01T09:00:00+08:00', endDatetime: '2027-04-01T12:00:00+08:00' }
     mockFetchSequence({ status: 409, jsonBody: { message: 'Overlap', conflicts: [conflict, null,
@@ -104,20 +104,20 @@ describe('apiClient', () => {
     })
   })
 
-  it.each([undefined, null, {}])('handles absent or invalid conflict lists (%s)', async conflicts => {
+  it.each([undefined, null, {}])('DEV05 (boundary): handles absent or invalid conflict lists (%s)', async conflicts => {
     mockFetchSequence({ status: 409, jsonBody: { message: 'Unavailable', conflicts } })
     await expect(apiClient.patch('/venue-bookings/b1/approve')).rejects.toMatchObject({
       message: 'Unavailable', conflicts: [],
     })
   })
 
-  it('retains unavailable periods while ignoring malformed entries', async () => {
+  it('DEV05 (boundary): keeps unavailable periods while ignoring malformed entries', async () => {
     const period = { unavailabilityId: 'u1', reason: 'Maintenance', startDatetime: '2027-10-16T11:30:00+08:00', endDatetime: '2027-10-16T15:00:00+08:00' }
     mockFetchSequence({ status: 409, jsonBody: { message: 'Unavailable', unavailablePeriods: [period, null, { ...period, endDatetime: 'invalid' }] } })
     await expect(apiClient.patch('/venue-bookings/b1/approve')).rejects.toMatchObject({ unavailablePeriods: [period], conflicts: [] })
   })
 
-  it('renews an expired access token and replays the original request', async () => {
+  it('DEV05 (happy): an expired access token is renewed and the original request replayed', async () => {
     signedIn()
     const fetchSpy = mockFetchSequence(
       { status: 401 },
@@ -139,7 +139,7 @@ describe('apiClient', () => {
       .toBe('Bearer access-2')
   })
 
-  it('ends the session when the token cannot be renewed', async () => {
+  it('DEV05 (failure): ends the session when the token cannot be renewed', async () => {
     signedIn()
     mockFetchSequence({ status: 401 }, { status: 401 }, { status: 401, jsonBody: { message: 'Session expired' } })
     const listener = vi.fn()
@@ -154,7 +154,7 @@ describe('apiClient', () => {
     window.removeEventListener(UNAUTHORISED_EVENT, listener)
   })
 
-  it('does NOT end the session on a 403 — being forbidden is not being logged out', async () => {
+  it('DEV05 (negative): does NOT end the session on a 403 — being forbidden is not being logged out', async () => {
     signedIn()
     mockFetchSequence({ status: 403, jsonBody: { message: 'You do not have permission to perform this action.' } })
     const listener = vi.fn()
@@ -169,19 +169,92 @@ describe('apiClient', () => {
     window.removeEventListener(UNAUTHORISED_EVENT, listener)
   })
 
-  it('does not treat a validation (422) or server (500) error as unauthorised', async () => {
+  it('DEV05 (negative): does not treat a validation (422) or server (500) error as unauthorised', async () => {
     signedIn()
     mockFetchSequence({ status: 500 })
     const error = await apiClient.get('/event-requests').catch((err: unknown) => err)
     expect((error as ApiClientError).isUnauthorised).toBe(false)
   })
 
-  it('throws a distinguishable ApiClientError when the network request itself fails', async () => {
+  it('DEV05 (failure): throws a distinguishable ApiClientError when the network request itself fails', async () => {
     signedIn()
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
 
     const error = await apiClient.get('/event-requests').catch((err: unknown) => err)
     expect(error).toBeInstanceOf(ApiClientError)
     expect((error as ApiClientError).status).toBe(0)
+  })
+})
+
+describe('DEV05 apiClient — error details, login, logout and renewal edges', () => {
+  beforeEach(() => window.localStorage.clear())
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('DEV05 (negative): field errors keep only the messages the server gave as text', async () => {
+    mockFetchSequence({ status: 422, jsonBody: { message: 'Invalid', fieldErrors: { name: 'Too long', size: 3 } } })
+    await expect(apiClient.post('/x')).rejects.toMatchObject({ fieldErrors: { name: 'Too long' } })
+    mockFetchSequence({ status: 422, jsonBody: { message: 'Invalid', fieldErrors: { size: 3 } } })
+    await expect(apiClient.post('/x')).rejects.toMatchObject({ fieldErrors: null })
+  })
+
+  it('DEV05 (negative): a 403 with no message says the account may not do that', async () => {
+    signedIn()
+    mockFetchSequence({ status: 403 })
+    await expect(apiClient.get('/venues')).rejects.toMatchObject({ status: 403, message: 'You do not have permission to do that.' })
+  })
+
+  it('DEV05 (happy): login stores the session it returns', async () => {
+    mockFetchSequence({ jsonBody: RENEWED })
+    await expect(login('eo1', 'pw')).resolves.toMatchObject({ accessToken: 'access-2', role: 'organiser' })
+    expect(JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY) ?? '{}')).toMatchObject({ accessToken: 'access-2' })
+  })
+
+  it('DEV05 (negative): login for a role this app does not know is refused and stores nothing', async () => {
+    mockFetchSequence({ jsonBody: { ...RENEWED, role: 'auditor' } })
+    await expect(login('x', 'pw')).rejects.toMatchObject({ message: 'This account has a role this app does not recognise.' })
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (failure): login while the server is unreachable says so', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(login('eo1', 'pw')).rejects.toMatchObject({ status: 0, message: 'Could not reach ConnectSphere. Check your connection and try again.' })
+  })
+
+  it('DEV05 (happy): logout revokes the refresh token on the server and forgets the session here', async () => {
+    signedIn()
+    const fetchSpy = mockFetchSequence({ status: 204 })
+    await logout()
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ body: JSON.stringify({ refreshToken: 'refresh-1' }) }))
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (failure): logout still ends the session here when the server cannot be reached', async () => {
+    signedIn()
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(logout()).resolves.toBeUndefined()
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (boundary): logout with no stored session calls nothing', async () => {
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    await logout()
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('DEV05 (boundary): with no refresh token stored, an expired session ends without trying to renew', async () => {
+    signedIn('access-1', '')
+    const fetchSpy = mockFetchSequence({ status: 401 })
+    await expect(apiClient.get('/x')).rejects.toMatchObject({ status: 401, message: 'Your session has expired. Please log in again.' })
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (negative): a renewal that comes back with an unknown role is not stored and the session ends', async () => {
+    signedIn()
+    const fetchSpy = mockFetchSequence({ status: 401 }, { jsonBody: { ...RENEWED, role: 'auditor' } }, { status: 401 })
+    await expect(apiClient.get('/x')).rejects.toMatchObject({ status: 401 })
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
   })
 })

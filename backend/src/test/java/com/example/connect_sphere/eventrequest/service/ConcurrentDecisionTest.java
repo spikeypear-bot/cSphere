@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -42,8 +43,9 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingRequestServic
  */
 @Tag("integration")
 @SpringBootTest
-@Tag("ELC-C6")
+@Tag("ECL-C6")
 @Tag("EC02")
+@Tag("EC03")
 class ConcurrentDecisionTest {
 
     private static final String HIDDEN_ORG = "Automated Concurrency Tests";
@@ -68,7 +70,7 @@ class ConcurrentDecisionTest {
         // No creator from here on, so no organiser's notification bell
         // receives these automated requests.
         jdbc.update("UPDATE event_requests SET created_by = NULL WHERE request_id = ?", requestId);
-        requests.assignCoordinator(id("ecl1"), requestId, coordinator); // ELC-C6: the Lead assigns
+        requests.assignCoordinator(id("ecl1"), requestId, coordinator); // ECL-C6: the Lead assigns
         return requestId;
     }
 
@@ -98,6 +100,7 @@ class ConcurrentDecisionTest {
     }
 
     @Test
+    @DisplayName("EC02 (conflict): two simultaneous approvals of one request create exactly one event")
     void twoSimultaneousApprovalsCreateExactlyOneEvent() throws Exception {
         UUID coordinator = id("ec5");
         UUID requestId = submittedAndAssigned(coordinator);
@@ -112,6 +115,7 @@ class ConcurrentDecisionTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): two venue booking requests sent for one event at the same moment create exactly one")
     void twoSimultaneousBookingRequestsForOneEventCreateExactlyOne() throws Exception {
         UUID coordinator = id("ec5");
         UUID requestId = submittedAndAssigned(coordinator);

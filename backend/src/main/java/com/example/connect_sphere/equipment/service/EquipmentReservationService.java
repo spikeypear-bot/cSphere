@@ -84,15 +84,17 @@ public class EquipmentReservationService {
                 .toList();
         // D32: the shared calculation (reserved, blocked and damaged units), one set of queries.
         Map<UUID, EquipmentAvailabilityService.Availability> available = availability.forEquipment(kinds, start, end);
-        var request = requestRepository.findById(requestId).orElse(null);
+        if (kinds.isEmpty()) return List.of();
+        // Request lines belong to an existing request (foreign key).
+        var request = requestRepository.findById(requestId).orElseThrow();
         return kinds.stream()
                 .map(equipment -> new EquipmentAvailabilityResponse(
                         equipment.getId(), equipment.getName(),
                         Boolean.TRUE.equals(equipment.getSerialised()),
                         equipment.getQuantity(), available.get(equipment.getId()).availableQuantity()
                                 // D40: what a revision may reuse, as reserving counts it.
-                                + (request == null ? 0 : givenUp(request, equipment.getId(), start, end).stream()
-                                        .mapToInt(EquipmentLog::getQuantity).sum())))
+                                + givenUp(request, equipment.getId(), start, end).stream()
+                                        .mapToInt(EquipmentLog::getQuantity).sum()))
                 .toList();
     }
 
@@ -208,8 +210,7 @@ public class EquipmentReservationService {
         if (!request.isRevision()) return List.of();
         return logRepository.findByEventId(request.getEventId()).stream()
                 .filter(log -> log.getEquipmentId().equals(equipmentId) && !request.getId().equals(log.getRequestId()))
-                .filter(log -> log.getLoanedFrom().isBefore(end) && log.getLoanedUntil().isAfter(start))
-                .filter(log -> log.getLoanedFrom().isAfter(start) || log.getLoanedUntil().isBefore(end))
+                .filter(log -> log.overlaps(start, end) && !log.covers(start, end))
                 .toList();
     }
 
@@ -278,9 +279,7 @@ public class EquipmentReservationService {
             int requested = processing + (revising || shortfalls == null ? 0 : shortfalls.need(eventId, id, null));
             int reserved = logRepository.findByEventId(eventId).stream()
                     .filter(log -> log.getEquipmentId().equals(id) && !log.isSpare())
-                    .filter(log -> revising
-                            ? !log.getLoanedFrom().isAfter(start) && !log.getLoanedUntil().isBefore(end)
-                            : log.getLoanedFrom().isBefore(end) && log.getLoanedUntil().isAfter(start))
+                    .filter(log -> revising ? log.covers(start, end) : log.overlaps(start, end))
                     .mapToInt(EquipmentLog::getQuantity)
                     .sum();
             int allowed = Math.max(0, requested - reserved);
@@ -469,8 +468,7 @@ public class EquipmentReservationService {
                 .toList();
         List<EquipmentLog> released = new ArrayList<>();
         for (EquipmentLog log : logs) {
-            boolean fits = needed.containsKey(log.getEquipmentId())
-                    && !log.getLoanedFrom().isAfter(start) && !log.getLoanedUntil().isBefore(end);
+            boolean fits = needed.containsKey(log.getEquipmentId()) && log.covers(start, end);
             if (!fits) {
                 released.add(log);
             } else if (!log.isSpare()) {

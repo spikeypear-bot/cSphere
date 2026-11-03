@@ -14,6 +14,9 @@ are picked up from test names and display names.
 
 Writes docs/test-traceability.md. With --check, exits 1 if any test file
 traces to no story, so new tests cannot silently drop out of the matrix.
+It also lists each test whose own name (backend @DisplayName, frontend
+it/test title) names no story, and --check fails on those too, so every
+test, not only its file, traces.
 With GITHUB_STEP_SUMMARY set (CI), also writes a short summary there.
 
 Usage: python .github/scripts/traceability.py [--check]
@@ -87,6 +90,18 @@ def ids_in(source):
     return sorted(found)
 
 
+def test_names(path, source):
+    """Each test's own name: a backend @DisplayName (else the method name), or a frontend it/test title."""
+    if path.endswith('.java'):
+        for m in re.finditer(r'@(?:org\.junit\.jupiter\.(?:api|params)\.)?(?:Test|ParameterizedTest|RepeatedTest)\b'
+                             r'(.{0,800}?)\bvoid\s+(\w+)\s*\(', source, re.S):
+            shown = re.search(r'@(?:org\.junit\.jupiter\.api\.)?DisplayName\(\s*"((?:[^"\\]|\\.)*)"', m.group(1))
+            yield shown.group(1) if shown else m.group(2)
+    else:
+        for m in re.finditer(r'\b(?:it|test)(?:\.each\(.*?\))?\(\s*([\'"`])((?:(?!\1).)*)\1', source, re.S):
+            yield m.group(2)
+
+
 def count_its(source):
     return len(re.findall(r'^\s*(?:it|test)(?:\.each\([^)]*\))?\(', source, re.M))
 
@@ -96,9 +111,11 @@ def main():
     rows = list(backend_files()) + list(frontend_files())
     by_story = defaultdict(lambda: {'files': defaultdict(list), 'acs': set(), 'cases': set(), 'tests': 0})
     untraced = []
+    unnamed = []
     for path, layer, stories, tests, source in rows:
         if not stories:
             untraced.append(path)
+        unnamed += [(path, name) for name in test_names(path, source) if not STORY.search(name)]
         for story in stories:
             entry = by_story[story]
             entry['files'][layer].append(path)
@@ -120,7 +137,7 @@ def main():
         'AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.',
         '',
         f'**{len(rows)} test files, {sum(r[3] for r in rows)} tests, {len(by_story)} stories traced, '
-        f'{len(untraced)} files untraced.**',
+        f'{len(untraced)} files untraced, {len(unnamed)} tests whose name names no story.**',
         '',
         '| Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |',
         '|---|---:|---:|---:|---:|---:|---|---|',
@@ -144,6 +161,9 @@ def main():
     lines += ['', 'Some of these are not built yet; a story that is built and still listed here needs tests.',
               '', '## Untraced test files', '']
     lines += [f'- `{u}`' for u in untraced] or ['- none']
+    lines += ['', '## Tests whose name names no story', '',
+              'The file is traced, but this test\'s own name does not say which story it checks.', '']
+    lines += [f'- `{p}`: {n}' for p, n in unnamed] or ['- none']
     lines += ['', '## Files per story', '']
     for story in sorted(by_story, key=key):
         lines.append(f'<details><summary>{story}</summary>\n')
@@ -154,13 +174,18 @@ def main():
     OUT.write_text('\n'.join(lines) + '\n', encoding='utf-8')
 
     summary = (f'### Traceability\n{len(rows)} test files, {len(by_story)} stories traced, '
-               f'{len(untraced)} untraced files, {len(gaps)} High-priority stories without tests.\n')
+               f'{len(untraced)} untraced files, {len(unnamed)} tests whose name names no story, '
+               f'{len(gaps)} High-priority stories without tests.\n')
     if os.environ.get('GITHUB_STEP_SUMMARY'):
         with open(os.environ['GITHUB_STEP_SUMMARY'], 'a', encoding='utf-8') as f:
             f.write(summary)
     print(summary.strip())
     if check and untraced:
         print('Untraced test files (add a story @Tag / "// @stories" header):', *untraced, sep='\n  ')
+    if check and unnamed:
+        print('Tests whose name names no story (start it with the story ID, e.g. "VS-C3 (boundary): ..."):',
+              *(f'{p}: {n}' for p, n in unnamed), sep='\n  ')
+    if check and (untraced or unnamed):
         sys.exit(1)
 
 

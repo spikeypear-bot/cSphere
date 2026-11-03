@@ -606,6 +606,113 @@ class EventCancellationServiceTest {
         verifyNoInteractions(activity, notifications);
     }
 
+    @ParameterizedTest(name = "{0}")
+    @EnumSource(value = EventRequestStatus.class, names = {"pending", "clarification_required"})
+    @DisplayName("EO07 (negative): a request still under review cannot have event cancellation requested; the organiser is told to cancel the request itself, and nothing changes")
+    void aRequestUnderReviewIsCancelledItselfInstead(EventRequestStatus status) {
+        EventRequest request = request(status, COORDINATOR);
+        when(eventRequests.findById(request.getRequestId())).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.requestCancellation(ORG, ORGANISER, request.getRequestId(), REASON))
+                .isInstanceOf(EventCancellationStateException.class)
+                .hasMessage("This request has not been approved yet, so cancel the request itself instead.");
+
+        verify(cancellations, never()).save(any());
+        verifyNoInteractions(activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 (negative): a rejected request cannot have event cancellation requested, and the message names its status")
+    void aRejectedRequestNamesItsStatus() {
+        EventRequest request = request(EventRequestStatus.rejected, COORDINATOR);
+        when(eventRequests.findById(request.getRequestId())).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.requestCancellation(ORG, ORGANISER, request.getRequestId(), REASON))
+                .isInstanceOf(EventCancellationStateException.class)
+                .hasMessage("Only an approved event can have its cancellation requested (this one is Rejected).");
+
+        verify(cancellations, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("EO07 (boundary): requesting cancellation of an event with no coordinator saves the request and notifies nobody")
+    void anEventWithNoCoordinatorIsAskedWithoutANotification() {
+        Event event = approvedEvent(EventStatus.pending);
+        event.setCoordinatorId(null);
+
+        EventCancellationRequestDto dto = service.requestCancellation(ORG, ORGANISER, requestIdOf(event), REASON);
+
+        assertThat(dto.status()).isEqualTo(EventCancellationStatus.pending);
+        verify(cancellations, times(1)).save(any());
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 (negative): an organiser with no organisation cannot read an event's cancellation requests")
+    void anOrganiserWithNoOrganisationCannotReadTheRequests() {
+        Event event = approvedEvent(EventStatus.pending);
+
+        assertThatThrownBy(() -> service.forEvent(UserRole.eo, null, ORGANISER, event.getEventId()))
+                .isInstanceOf(EventNotFoundException.class);
+
+        verify(cancellations, never()).findByEventIdOrderByRequestedAtDesc(any());
+    }
+
+    @Test
+    @DisplayName("EO07 (happy): an approval note is trimmed, kept as the decision reason, and shown on the timeline and to the organiser")
+    void anApprovalNoteIsRecordedAndShared() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+
+        service.approve(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), "  Refund issued.  ");
+
+        verify(lifecycle, times(1)).cancel(COORDINATOR, event.getEventId(),
+                "Cancelled at the organiser's request: " + REASON + " Coordinator's note: Refund issued.");
+        assertThat(request.getDecisionReason()).isEqualTo("Refund issued.");
+        verify(notifications, times(1)).createEventCancellationDecisionNotification(ORGANISER, event.getEventId(),
+                "Town Hall", NotificationType.event_cancellation_approved,
+                "Town Hall has been cancelled as you asked. Coordinator's note: Refund issued.");
+    }
+
+    @Test
+    @DisplayName("EO07 (boundary): a blank approval note counts as no note")
+    void aBlankApprovalNoteIsNoNote() {
+        Event event = approvedEvent(EventStatus.confirmed);
+        EventCancellationRequest request = pendingRequest(event);
+
+        service.approve(COORDINATOR, event.getEventId(), request.getCancellationRequestId(), "   ");
+
+        verify(lifecycle, times(1)).cancel(COORDINATOR, event.getEventId(),
+                "Cancelled at the organiser's request: " + REASON);
+        assertThat(request.getDecisionReason()).isNull();
+    }
+
+    @Test
+    @DisplayName("EO07 (negative): a caller with a missing or blank organisation cannot cancel a request, and nothing is read or saved")
+    void aCallerWithNoOrganisationCannotCancel() {
+        for (String organisation : new String[] {null, "  "}) {
+            assertThatThrownBy(() -> service.cancelRequest(organisation, ORGANISER, UUID.randomUUID(), REASON))
+                    .isInstanceOf(com.example.connect_sphere.eventrequest.service.MissingOrganisationException.class)
+                    .hasMessage("Authenticated caller has no organisation");
+        }
+
+        verifyNoInteractions(eventRequests, activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EO07 (negative): cancelling a request with no reason at all is refused and nothing is saved")
+    void cancellingWithNoReasonIsRefused() {
+        EventRequest request = request(EventRequestStatus.pending, COORDINATOR);
+
+        assertThatThrownBy(() -> service.cancelRequest(ORG, ORGANISER, request.getRequestId(), null))
+                .isInstanceOf(InvalidMessageException.class)
+                .hasMessage("Please give a reason for cancelling this request.");
+
+        assertThat(request.getStatus()).isEqualTo(EventRequestStatus.pending);
+        verify(eventRequests, never()).save(any());
+        verifyNoInteractions(activity, notifications);
+    }
+
     @Test
     @DisplayName("EO07 AC4 (boundary): an approval note over 2000 characters is refused and nothing changes")
     void anOverLongApprovalNoteIsRefused() {

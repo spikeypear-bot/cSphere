@@ -49,4 +49,19 @@ describe('EO-C2 request date, time and attendance rules (same as the server)', (
     expect(dateRangeError(null, '2026-10-30T09:00:00Z')).toBeUndefined()
     expect(dateRangeError('invalid', '2026-10-30T09:00:00Z')).toBe('Enter valid start and end dates and times.')
   })
+
+  it('EO-C2 (boundary): with registration, capacity must be a whole number of at least 1 and the close must fall after opening and by the start', () => {
+    const registration = { ...valid, registrationNeeds: true, registrationOpensAt: '2026-10-25T02:00:00Z' }
+    expect(requestFieldProblems({ ...registration, registrationCapacity: 0 }, NOW))
+      .toEqual({ registrationCapacity: 'Registration capacity must be a whole number of at least 1.' })
+    expect(requestFieldProblems({ ...registration, registrationCapacity: 2.5 }, NOW))
+      .toEqual({ registrationCapacity: 'Registration capacity must be a whole number of at least 1.' })
+    expect(requestFieldProblems({ ...registration, registrationClosesAt: '2026-10-30T02:01:00Z' }, NOW))
+      .toEqual({ registrationClosesAt: 'Registration must close no later than the event start.' })
+    expect(requestFieldProblems({ ...registration, registrationClosesAt: '2026-10-30T02:00:00Z' }, NOW)).toEqual({})
+    expect(requestFieldProblems({ ...registration, registrationClosesAt: '2026-10-25T02:00:00Z' }, NOW))
+      .toEqual({ registrationClosesAt: 'Registration must close after it opens.' })
+    // Without registration none of these are checked.
+    expect(requestFieldProblems({ ...registration, registrationNeeds: false, registrationCapacity: 0 }, NOW)).toEqual({})
+  })
 })

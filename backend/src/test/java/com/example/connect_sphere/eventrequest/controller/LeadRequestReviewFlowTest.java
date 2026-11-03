@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,7 +33,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 
 /**
- * ECL-C3 and ELC-C6 end to end through the real filter chain and a real
+ * ECL-C3 and ECL-C6 end to end through the real filter chain and a real
  * PostgreSQL database: the Lead's review, rejection, clarification and
  * assignment of an unassigned request, and what the organiser, the
  * coordinator and the unassigned queue see afterwards. Each test rolls back,
@@ -44,7 +45,7 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc
 @Transactional
 @Tag("ECL-C3")
-@Tag("ELC-C6")
+@Tag("ECL-C6")
 class LeadRequestReviewFlowTest {
 
     private static final String UNASSIGNED = "/api/event-requests/unassigned";
@@ -112,6 +113,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): the Lead sees an unassigned request as the organiser submitted it, and looking changes nothing")
     void theLeadSeesAnUnassignedRequestAsTheOrganiserSubmittedIt() throws Exception {
         UUID id = unassignedRequest();
 
@@ -136,6 +138,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (negative): a draft or unknown request is not found for the Lead and cannot be rejected")
     void aDraftOrUnknownRequestIsNotFoundForTheLead() throws Exception {
         UUID draft = flow.draft("eo1", FlowSupport.requestBody("Town Hall", 150, "none"));
 
@@ -149,6 +152,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): a request the Lead rejects leaves the queue and the organiser sees the Lead's reason")
     void aRejectedRequestLeavesTheQueueAndTheOrganiserSeesTheReasonFromTheLead() throws Exception {
         UUID id = unassignedRequest();
         assertThat(unassignedQueue()).contains(id.toString());
@@ -169,6 +173,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 ECL-C6 (happy): a request sent back for clarification stays in the queue marked clarification required, and is still unassigned when resubmitted")
     void aRequestSentBackStaysInTheQueueMarkedClarificationRequiredUntilItIsResubmittedStillUnassigned()
             throws Exception {
         UUID id = unassignedRequest();
@@ -177,7 +182,7 @@ class LeadRequestReviewFlowTest {
 
         assertThat(statusOf(id)).isEqualTo("clarification_required");
         assertThat(coordinatorOf(id)).isNull();
-        // ELC-C6: it stays listed while it waits, so the Lead can still assign it.
+        // ECL-C6: it stays listed while it waits, so the Lead can still assign it.
         mvc.perform(get(UNASSIGNED).with(flow.as("ecl1")))
                 .andExpect(jsonPath("$[?(@.requestId == '" + id + "')].status").value("clarification_required"));
         mvc.perform(get("/api/event-requests/" + id + "/timeline").with(flow.as("eo1")))
@@ -199,6 +204,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (negative): an empty rejection reason or clarification message is refused and nothing changes")
     void anEmptyReasonOrMessageIsRefusedAndNothingChanges() throws Exception {
         UUID id = unassignedRequest();
 
@@ -211,6 +217,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (conflict): once a request is assigned, the Lead's rejection and clarification are refused and nothing changes")
     void onceARequestIsAssignedTheLeadsActionsAreRefusedAndNothingChanges() throws Exception {
         UUID id = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Town Hall", 150, "none"));
         int entriesBefore = timelineEntries(id);
@@ -228,6 +235,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (conflict): a request the Lead already rejected cannot be rejected or sent back again")
     void aRequestTheLeadAlreadyRejectedCannotBeRejectedOrSentBackAgain() throws Exception {
         UUID id = unassignedRequest();
         leadPosts(id, "reject", "{\"reason\":\"Not a corporate event\"}", 200);
@@ -242,9 +250,10 @@ class LeadRequestReviewFlowTest {
                 .andExpect(jsonPath("$.rejectionReason").value("Not a corporate event"));
     }
 
-    // ---- ELC-C6: assigning --------------------------------------------
+    // ---- ECL-C6: assigning --------------------------------------------
 
     @Test
+    @DisplayName("ECL-C6 (happy): the Lead picks from every Event Coordinator and nobody else")
     void theLeadPicksFromEveryEventCoordinatorAndNobodyElse() throws Exception {
         List<String> everyCoordinator = jdbc.queryForList(
                 "SELECT username FROM users WHERE role = 'ec' ORDER BY username", String.class);
@@ -262,6 +271,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (happy): an assigned request keeps its status, leaves the unassigned list and joins its coordinator's queue")
     void anAssignedRequestKeepsItsStatusLeavesTheUnassignedListAndJoinsItsCoordinatorsQueue() throws Exception {
         UUID id = unassignedRequest();
 
@@ -283,6 +293,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (happy): only the assigned coordinator reviews and approves the request, as before")
     void theAssignedCoordinatorReviewsAndApprovesTheRequestAsBefore() throws Exception {
         UUID id = unassignedRequest();
         leadAssigns(id, quoted("ec1"), 200);
@@ -298,6 +309,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (happy): assigning appears on the timeline with the Lead as its actor and the coordinator's name")
     void assigningIsOnTheTimelineWithTheLeadAsItsActorAndTheCoordinatorsName() throws Exception {
         UUID id = unassignedRequest();
 
@@ -312,6 +324,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (happy): assigning changes no detail of the request and creates no event")
     void assigningChangesNoDetailOfTheRequestAndCreatesNoEvent() throws Exception {
         UUID id = unassignedRequest();
         int eventsBefore = jdbc.queryForObject("SELECT count(*) FROM events", Integer.class);
@@ -334,6 +347,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (boundary): a request assigned while it waits for clarification goes to its coordinator when resubmitted")
     void aRequestAssignedWhileItWaitsForClarificationGoesToItsCoordinatorWhenResubmitted() throws Exception {
         UUID id = unassignedRequest();
         leadPosts(id, "clarifications", "{\"message\":\"Who is the event for?\"}", 200);
@@ -357,6 +371,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): assigning without choosing a coordinator is refused with a message and nothing changes")
     void assigningWithoutACoordinatorIsRefusedWithAMessageAndNothingChanges() throws Exception {
         UUID id = unassignedRequest();
 
@@ -371,6 +386,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): assigning someone who is not an Event Coordinator is refused with a message and nothing changes")
     void assigningSomeoneWhoIsNotAnEventCoordinatorIsRefusedWithAMessageAndNothingChanges() throws Exception {
         UUID id = unassignedRequest();
 
@@ -387,6 +403,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (conflict): a request that already has a coordinator cannot be assigned again")
     void aRequestThatAlreadyHasACoordinatorCannotBeAssignedAgain() throws Exception {
         UUID id = unassignedRequest();
         leadAssigns(id, quoted("ec1"), 200);
@@ -402,6 +419,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (conflict): a request the Lead already rejected cannot be assigned")
     void aRequestTheLeadAlreadyRejectedCannotBeAssigned() throws Exception {
         UUID id = unassignedRequest();
         leadPosts(id, "reject", "{\"reason\":\"Not a corporate event\"}", 200);
@@ -416,6 +434,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): a draft or unknown request cannot be assigned")
     void aDraftOrUnknownRequestCannotBeAssigned() throws Exception {
         UUID draft = flow.draft("eo1", FlowSupport.requestBody("Town Hall", 150, "none"));
 
@@ -429,6 +448,7 @@ class LeadRequestReviewFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ec1", "eo1", "vs1", "ts1", "att1"})
+    @DisplayName("ECL-C6 (negative): nobody but the Lead can assign, even by calling the API directly, and nothing changes")
     void nobodyButTheLeadCanAssignEvenByCallingTheApiDirectly(String username) throws Exception {
         UUID id = unassignedRequest();
 
@@ -442,6 +462,7 @@ class LeadRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("ECL-C6 (negative): an Event Coordinator can no longer see or pick up an unassigned request")
     void anEventCoordinatorCanNoLongerSeeOrPickUpAnUnassignedRequest() throws Exception {
         UUID id = unassignedRequest();
 

@@ -35,7 +35,7 @@ describe('EventReassignmentRequestsPage (EC-C1 Lead review)', () => {
     window.localStorage.clear()
   })
 
-  it('approves a request by selecting another coordinator', async () => {
+  it('EC-C1 (happy): approves a request by selecting another coordinator', async () => {
     let queueReads = 0
     const calls = stubApi({
       'GET /api/event-reassignment-requests': () =>
@@ -56,7 +56,7 @@ describe('EventReassignmentRequestsPage (EC-C1 Lead review)', () => {
     expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ coordinatorUserId: 'ec-2' })
   })
 
-  it('requires a decline reason and submits it with the decision', async () => {
+  it('EC-C1 (negative): requires a decline reason and submits it with the decision', async () => {
     const calls = stubApi({
       'GET /api/event-reassignment-requests': () => jsonResponse(200, [request]),
       'GET /api/event-reassignment-requests/coordinators': () => jsonResponse(200, coordinators),

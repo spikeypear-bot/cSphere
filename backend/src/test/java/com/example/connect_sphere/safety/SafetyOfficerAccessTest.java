@@ -17,6 +17,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,7 +41,7 @@ import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 
-@Tag("unit")
+@Tag("integration")
 @WebMvcTest(SafetyOfficerController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 @Tag("SO-C1")
@@ -65,6 +66,7 @@ class SafetyOfficerAccessTest {
     }
 
     @Test
+    @DisplayName("SO-C1 AU04 (negative): only Safety Officers can read the confirmed events list; a coordinator is refused")
     void onlySafetyOfficersCanReadConfirmedEvents() throws Exception {
         when(events.findByStatusOrderByStartDatetimeAsc(EventStatus.confirmed)).thenReturn(List.of());
 
@@ -80,12 +82,14 @@ class SafetyOfficerAccessTest {
     }
 
     @Test
+    @DisplayName("SO-C1 AU04 (negative): a caller who is not signed in cannot read the confirmed events list")
     void aCallWithoutATokenCannotReadConfirmedEvents() throws Exception {
         mockMvc.perform(get(CONFIRMED)).andExpect(status().isUnauthorized());
         verifyNoInteractions(events, venues, readiness);
     }
 
     @Test
+    @DisplayName("SO-C1 (happy): the confirmed events list shows each event's time and assigned venue")
     void confirmedListIncludesEventTimeAndAssignedVenue() throws Exception {
         UUID venueId = UUID.randomUUID();
         Event event = new Event();
@@ -109,6 +113,7 @@ class SafetyOfficerAccessTest {
     }
 
     @Test
+    @DisplayName("SO-C1 (cross-cutting): the Safety Officer's planning list shows the same status every other role sees")
     void planningListCarriesTheSameStatusEveryOtherRoleSees() throws Exception {
         Event event = new Event();
         event.setEventId(EVENT_ID);
@@ -132,6 +137,7 @@ class SafetyOfficerAccessTest {
      * coordinator going around the Safety Officer) cannot use it to decide.
      */
     @Test
+    @DisplayName("EC08 SO-C4 AU04 (negative): a Safety Officer cannot use the coordinator's confirm, and a coordinator cannot make the safety decision")
     void safetyOfficerCannotUseTheCoordinatorsConfirmAndCoordinatorCannotApprove() throws Exception {
         mockMvc.perform(post("/api/events/" + EVENT_ID + "/confirm").with(tokenFor("safety_officer")))
                 .andExpect(status().isForbidden());
@@ -143,6 +149,7 @@ class SafetyOfficerAccessTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): a coordinator cannot edit the Safety Officer's checklist items")
     void coordinatorCannotEditSafetyChecklistItems() throws Exception {
         mockMvc.perform(patch("/api/safety/events/" + EVENT_ID + "/readiness/items/venue_booking")
                         .contentType("application/json")

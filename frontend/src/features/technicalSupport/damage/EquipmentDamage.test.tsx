@@ -409,4 +409,86 @@ describe('TS09 Technical Support reports damaged equipment', () => {
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByRole('list', { name: 'Affected events' })).toBeInTheDocument()
   })
+
+  it('TS09 AC6, AC11 (boundary): one damaged unit with an end date, and what each coordinator did about a shortfall', async () => {
+    stubApi({
+      'GET /api/equipment-damage-reports/rep-2': () => jsonResponse(200, {
+        ...BULK_REPORT, quantity: 1, periodEnd: '2027-03-05T00:00:00Z', status: 'CLOSED',
+        affectedEvents: [
+          { ...EVENT, outcomeId: 'o1', eventName: 'Noted', outcome: 'REPLACED', replacementSerialNumber: null, resolution: 'NOTE', resolutionNote: 'Using a TV' },
+          { ...EVENT, outcomeId: 'o2', eventName: 'Blank note', outcome: 'SHORT', shortfall: 1, resolution: 'NOTE', resolutionNote: null },
+          { ...EVENT, outcomeId: 'o3', eventName: 'Shortfall', outcome: 'SHORT', shortfall: 1, resolution: 'ADDITIONAL_REQUEST' },
+          { ...EVENT, outcomeId: 'o4', eventName: 'Requested', outcome: 'SHORT', shortfall: 1, additionalRequestId: 'req-9', additionalRequestStatus: 'approved' },
+          { ...EVENT, outcomeId: 'o5', eventName: 'Pending', outcome: 'SHORT', shortfall: 1, additionalRequestId: 'req-8' },
+        ],
+      }),
+    })
+    renderAt('/technical-support/faulty/reports/rep-2')
+
+    const cards = within(await screen.findByRole('list', { name: 'Affected events' })).getAllByRole('listitem')
+    expect(screen.getByText('Damaged').nextSibling).toHaveTextContent(/^1 unit$/)
+    expect(screen.getByText('Until').nextSibling).not.toHaveTextContent('Further notice')
+    expect(screen.getByText('Status').nextSibling).toHaveTextContent('Closed')
+    expect(cards[0]).toHaveTextContent('Replaced')
+    expect(cards[0]).toHaveTextContent('Coordinator: resolved with a note: Using a TV')
+    expect(cards[1]).toHaveTextContent(/Coordinator: resolved with a note:\s*$/)
+    expect(cards[2]).toHaveTextContent('Coordinator: requested the shortfall')
+    expect(cards[3]).toHaveTextContent('Coordinator submitted an additional request (approved).')
+    expect(cards[4]).toHaveTextContent('Coordinator submitted an additional request (processing).')
+    // A closed report offers no actions.
+    expect(screen.queryByRole('button', { name: 'Apply' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Close report' })).not.toBeInTheDocument()
+  })
+
+  it('TS09 AC10 (failure): replacement units that cannot load say so, Try again reloads them, and Cancel closes the picker', async () => {
+    let attempts = 0
+    stubApi({
+      'GET /api/equipment-damage-reports/rep-1': () => jsonResponse(200, REPORT),
+      [unitsUrl(iso(EVENT.eventStart), iso(EVENT.eventEnd))]: () => (++attempts === 1
+        ? jsonResponse(500, { message: 'down' })
+        : jsonResponse(200, [{ equipmentId: 'eq-proj', equipmentName: 'Projector', serialNumber: 'EPS-EBU04-AAAA22', status: 'Available' }])),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/reports/rep-1')
+
+    await user.click(await screen.findByRole('button', { name: 'Replace unit' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('The units could not be loaded.')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByLabelText('Replacement unit for Town Hall')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Use this unit' })).toBeDisabled()
+
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+    expect(screen.queryByLabelText('Replacement unit for Town Hall')).not.toBeInTheDocument()
+  })
+
+  it('TS09 AC12 (boundary): with no other working unit free, the picker says to mark the event short', async () => {
+    stubApi({
+      'GET /api/equipment-damage-reports/rep-1': () => jsonResponse(200, REPORT),
+      [unitsUrl(iso(EVENT.eventStart), iso(EVENT.eventEnd))]: () => jsonResponse(200, [
+        { equipmentId: 'eq-proj', equipmentName: 'Projector', serialNumber: 'EPS-EBU04-7K2Q9M', status: 'Available' },
+      ]),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/reports/rep-1')
+
+    await user.click(await screen.findByRole('button', { name: 'Replace unit' }))
+    expect(await screen.findByText("No other unit is available for this event's period. Mark the event short instead.")).toBeInTheDocument()
+  })
+
+  it('TS09 AC22 (failure): an unreadable report or decision answer shows a plain message and changes nothing', async () => {
+    const unreadable = () => ({ ok: true, status: 200, text: async () => 'not json' }) as Response
+    let loads = 0
+    stubApi({
+      'GET /api/equipment-damage-reports/rep-1': () => (++loads === 1 ? unreadable() : jsonResponse(200, REPORT)),
+      'POST /api/equipment-damage-reports/rep-1/outcomes/out-1': unreadable,
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/reports/rep-1')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The damage report could not be loaded. Could not load this damage report.')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    await user.click(await screen.findByRole('button', { name: 'Mark short' }))
+    expect(await screen.findByText('That could not be saved. Nothing was changed.')).toBeInTheDocument()
+    expect(screen.getByText('Awaiting a decision', { selector: '.chip' })).toBeInTheDocument()
+  })
 })

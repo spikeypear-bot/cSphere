@@ -44,7 +44,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     window.localStorage.clear()
   })
 
-  it("shows each waiting request's basic event information on its card", async () => {
+  it("ECL-C1 (happy): shows each waiting request's basic event information on its card", async () => {
     stubApi({
       [QUEUE]: () => jsonResponse(200, [
         request('r1', 'Tech Summit', {
@@ -69,7 +69,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(within(card).getByText('Submitted', { selector: '.status-badge' })).toBeInTheDocument()
   })
 
-  it('keeps the order the server sends — longest-waiting first — and says how many are waiting', async () => {
+  it('ECL-C1 (happy): keeps the order the server sends — longest-waiting first — and says how many are waiting', async () => {
     // Neither alphabetical nor newest-first, so any client-side re-sort shows.
     stubApi({
       [QUEUE]: () => jsonResponse(200, [
@@ -86,7 +86,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(screen.getByText('3 requests are waiting for a coordinator.')).toBeInTheDocument()
   })
 
-  it('shows a clear message when there are no unassigned requests', async () => {
+  it('ECL-C1 (boundary): shows a clear message when there are no unassigned requests', async () => {
     stubApi({ [QUEUE]: () => jsonResponse(200, []) })
     renderPage()
 
@@ -95,7 +95,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('shows the access-denied message, not an empty queue, when the server refuses the caller', async () => {
+  it('ECL-C1 (negative): shows the access-denied message, not an empty queue, when the server refuses the caller', async () => {
     stubApi({
       [QUEUE]: () => jsonResponse(403, { message: 'You do not have permission to perform this action.' }),
     })
@@ -107,7 +107,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(screen.queryAllByRole('listitem')).toHaveLength(0)
   })
 
-  it('refreshing re-reads the queue: a new submission appears and an assigned request drops off', async () => {
+  it('ECL-C1 (happy): refreshing re-reads the queue: a new submission appears and an assigned request drops off', async () => {
     let reads = 0
     const calls = stubApi({
       [QUEUE]: () => {
@@ -141,7 +141,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
   })
 
-  it('marks a request that is waiting for clarification, and still links it to its review page (ELC-C6)', async () => {
+  it('marks a request that is waiting for clarification, and still links it to its review page (ECL-C6)', async () => {
     stubApi({
       [QUEUE]: () => jsonResponse(200, [
         request('r1', 'Offsite'),
@@ -163,7 +163,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
     expect(within(await cardFor('Offsite')).getByText('Submitted', { selector: '.status-badge' })).toBeInTheDocument()
   })
 
-  it('only ever reads: a card offers its review link and nothing that changes the request', async () => {
+  it('ECL-C1 (cross-cutting): only ever reads: a card offers its review link and nothing that changes the request', async () => {
     const calls = stubApi({ [QUEUE]: () => jsonResponse(200, [request('r1', 'Offsite')]) })
     renderPage()
 
@@ -186,7 +186,7 @@ describe('UnassignedRequestsPage status filter (EC-NEW2)', () => {
     window.localStorage.clear()
   })
 
-  it('filters unassigned requests by the shared status', async () => {
+  it('EC-NEW2 (happy): filters unassigned requests by the shared status', async () => {
     stubApi({ [QUEUE]: () => jsonResponse(200, [
       request('r1', 'Town Hall', { journeyStatus: sv('SUBMITTED', 'Submitted') }),
       request('r2', 'Gala', { status: 'clarification_required', journeyStatus: sv('CLARIFICATION_REQUIRED', 'Clarification Required') }),

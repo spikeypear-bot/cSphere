@@ -86,7 +86,7 @@ public class EventService {
      * ECL-C7: every Event Coordinator with the active events they hold (not
      * cancelled or finished), soonest first, for the Lead's oversight and
      * reassignment. Each event comes with its originating request, which is
-     * what the Lead reassigns (ELC-C5). Read-only.
+     * what the Lead reassigns (ECL-C5). Read-only.
      */
     @Transactional(readOnly = true)
     public List<CoordinatorEventsDto> activeEventsByCoordinator() {

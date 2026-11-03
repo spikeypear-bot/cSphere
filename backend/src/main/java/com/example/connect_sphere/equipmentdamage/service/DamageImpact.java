@@ -71,7 +71,7 @@ public class DamageImpact {
     /** Not cancelled, not completed, and not over. */
     public boolean isActive(Event event) {
         return ACTIVE.contains(event.getStatus())
-                && (event.getEndDatetime() == null || !event.getEndDatetime().toInstant().isBefore(Instant.now(clock)));
+                && !event.getEndDatetime().toInstant().isBefore(Instant.now(clock));
     }
 
     /** The reservations the damage touches for one event: the damaged unit's,
@@ -150,7 +150,7 @@ public class DamageImpact {
             Instant a = points.get(i);
             Instant b = points.get(i + 1);
             List<EquipmentLog> covering = reserved.stream()
-                    .filter(log -> log.getLoanedFrom().isBefore(b) && log.getLoanedUntil().isAfter(a)).toList();
+                    .filter(log -> log.overlaps(a, b)).toList();
             int units = covering.stream().mapToInt(EquipmentLog::getQuantity).sum();
             int damaged = damage.stream()
                     .filter(d -> d.getPeriodStart().isBefore(b) && endOf(d).isAfter(a))

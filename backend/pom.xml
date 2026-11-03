@@ -215,6 +215,57 @@
 							</rules>
 						</configuration>
 					</execution>
+					<execution>
+						<!-- EC03, VS03, EC10, TS02: fully tested; the branches left are the stated coverage
+						     exclusions in docs/testing-strategy.md (optional collaborators, one guard). -->
+						<id>venue-booking-coverage</id>
+						<phase>verify</phase>
+						<goals><goal>check</goal></goals>
+						<configuration>
+							<rules>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.venuebooking.service.VenueBookingRequestService</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>MISSEDCOUNT</value><maximum>1</maximum></limit>
+									</limits>
+								</rule>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.venuebooking.service.VenueBookingService</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>MISSEDCOUNT</value><maximum>7</maximum></limit>
+									</limits>
+								</rule>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.equipment.service.EquipmentReservationService</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>MISSEDCOUNT</value><maximum>2</maximum></limit>
+									</limits>
+								</rule>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.equipment.entity.EquipmentLog</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+									</limits>
+								</rule>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.venuebooking.service.ReplacementSource</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+									</limits>
+								</rule>
+							</rules>
+						</configuration>
+					</execution>
 				</executions>
 			</plugin>
 		</plugins>

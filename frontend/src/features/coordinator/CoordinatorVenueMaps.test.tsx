@@ -13,7 +13,10 @@ import { VenueSearchPage } from './VenueSearchPage'
 
 // The page tests exercise the real filters/selection/request code; renderer and
 // real Leaflet marker grouping are covered separately by map unit/browser tests.
-vi.mock('../venueMap/VenueMap', () => ({ default: ({ venues, selectedId, selectedIds, onSelect, onToggleVenue }: VenueMapProps) =>
+// The fake replaces VenueMapPanel, not the lazily loaded VenueMap: React.lazy + Suspense
+// made the map appear only after an async import and Suspense's reveal throttle, which
+// under CPU load fell outside findByRole's window. Now it renders with the page's data.
+vi.mock('../venueMap/VenueMapPanel', () => ({ VenueMapPanel: ({ venues, selectedId, selectedIds, onSelect, onToggleVenue }: VenueMapProps) =>
   <section role="region" aria-label="Interactive venue map" data-focus={selectedId}>
     {venues.filter(hasCoordinates).map(venue => <div key={venue.venueId}>
       <button onClick={() => onSelect(venue.venueId)}>Location {venue.venueId}</button>
@@ -36,14 +39,14 @@ const option = (id: string, name: string, verdict: VenueOptionDto['verdict'] = '
 })
 const options = [option('a', 'Alpha'), option('b', 'Beta'), option('blocked', 'Closed hall', 'blocked'),
   { ...option('unlocated', 'Unlocated'), venue: { ...option('unlocated', 'Unlocated').venue, latitude: null } }]
-function requestPage(config: { replacement?: boolean; read?: () => Response } = {}) {
+function requestPage(config: { replacement?: boolean; read?: () => Response; bookings?: unknown[] } = {}) {
   seedSession('coordinator')
   const calls = stubApi({
     [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
     [`GET /api/events/${EVENT}/venue-options`]: () => config.read?.() ?? jsonResponse(200, options),
-    [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, config.replacement ? [{
+    [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, config.bookings ?? (config.replacement ? [{
       bookingId: 'old', venueId: 'old-venue', venueAddress: 'Original hall', status: 'rejected', rejectReason: 'Unavailable',
-    }] : []),
+    }] : [])),
     [`GET /api/events/${EVENT}/venue-assessments`]: () => jsonResponse(200, []),
     [`GET /api/events/${EVENT}/venue-reviews`]: () => jsonResponse(200, []),
     [`POST /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(201, {}),
@@ -136,6 +139,20 @@ describe('DEV16 EC request map', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Request replacement Beta address' }))
     await screen.findByText('Event page')
     expect(calls.find(call => call.method === 'POST')?.body).toMatchObject({ venueId: 'b', replacesBookingId: 'old' })
+  })
+  it('EC03 (conflict): a venue already requested cannot be added from the map, and its window only offers to show it on the map', async () => {
+    requestPage({ bookings: [{ bookingId: 'b1', status: 'pending', venueId: 'a', venueAddress: 'Alpha address' }] })
+    const region = await map()
+    fireEvent.click(within(region).getByRole('checkbox', { name: 'Alpha' }))
+    expect(within(region).getByRole('checkbox', { name: 'Alpha' })).not.toBeChecked()
+    expect(screen.queryByRole('list', { name: 'Selected venues' })).not.toBeInTheDocument()
+
+    fireEvent.click(card('Alpha'))
+    const details = within(screen.getByRole('dialog', { name: 'Alpha address' }))
+    expect(details.queryByRole('button', { name: 'Add to request' })).not.toBeInTheDocument()
+    fireEvent.click(details.getByRole('button', { name: 'Show on map' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(region).toHaveAttribute('data-focus', 'a')
   })
   it('DEV16 (failure): a denied options read cannot display a map or send a venue request', async () => {
     const calls = requestPage({ read: () => jsonResponse(403, { message: 'Access denied' }) })

@@ -80,7 +80,7 @@ The customer says all six must be in the Week 12 submission and expects no furth
 2. **Venue becomes unavailable after booking** — Venue Staff can mark a venue temporarily unavailable even with future bookings. The event is **not** cancelled: affected bookings are identified, their coordinators informed, original event information preserved, and the coordinator can search for and request a replacement venue. (VS-C1, EC-C4, EC10, EO-C1)
 3. **Multiple venues for one event** — an event can have several venue bookings, each checked independently for suitability, availability and conflicts; changing or cancelling one does not remove the others unless explicitly required. (EC-C2)
 4. **Tentative venue holds expire** — Venue Staff may hold a venue while a coordinator finalises; every hold has an expiry date/time, after which the venue becomes available again; the coordinator is told before or at expiry; an expired hold is never a confirmed booking. (VS-C3, EC-C3)
-5. **Event Coordinator Lead role** — see Users. (ECL-C1–C3, ECL-C7, ELC-C4–C6, EC-C1)
+5. **Event Coordinator Lead role** — see Users. (ECL-C1–C3, ECL-C7, ECL-C4–C6, EC-C1)
 6. **Operational Safety Check (Safety Officer role)** — see Users. The event cannot proceed to preparation until the Safety Officer approves; assume they always respond. (SO-C1–C6)
 
 **How to handle changes (Week 7 Guide to Managing Changes):**
@@ -193,14 +193,14 @@ Week 6 asked "is the evidence from one unit trustworthy?"; Week 9 asks "does it 
 - **Unit vs integration traceability.** A unit test usually proves one story's AC. Integration and E2E tests often cut across several stories, so tag all of them.
 - **Week 4 test cases go in the Sheet** (*Test Cases – Sprint N*: ID, scenario, pre-conditions, steps, data, expected, plus an execution record). **Remarks name the automated tests that execute each case**, so Sheet, ACs and code point at each other. Repository copies are in `docs/test-cases/` (e.g. `sprint3-jillian.md`, which maps all 95 ACs of EC-NEW2/EC08/EO04).
 
-**Writing or changing a test — every time (all agents, no prompt needed).** CI's `traceability` job fails the PR if any test file names no story. Follow these steps for every test you create or edit, without being asked:
+**Writing or changing a test — every time (all agents, no prompt needed).** CI's `traceability` job fails the PR if any test file names no story, or if any single test's own name (`@DisplayName`, `it`/`test` title) does not start with a story ID. Follow these steps for every test you create or edit, without being asked:
 
 1. **Find the story ID** from the branch name (`git branch --show-current`).
    - Examples: `feat/vs-c3-tentative-venue-holds` → `VS-C3`; `feature/ecnew5-change_log` → `EC-NEW5`; `feat/ec08-…` → `EC08`.
    - Use the canonical form: uppercase, a hyphen before `C` or `NEW`, and two digits for plain numbers (`EO04`, `EC08`, `VS-C3`, `EC-NEW5`, `ECL-C7`, `TS01`, `SO-C4`, `AU04`, `DEV15`).
    - If the branch names no clear story, **stop and ask the user**. Never guess or invent an ID.
 2. **Tag every test file you create or edit.**
-   - **Backend** (`backend/src/test/**/*Test.java`): on the class, add `@Tag("<StoryID>")` next to exactly one layer tag. Use `@Tag("integration")` for tests that use a real database or Spring context (`@SpringBootTest`), and `@Tag("unit")` otherwise.
+   - **Backend** (`backend/src/test/**/*Test.java`): on the class, add `@Tag("<StoryID>")` next to exactly one layer tag. Use `@Tag("integration")` for tests that use a real database or any Spring context (`@SpringBootTest`, and slices such as `@WebMvcTest`), and `@Tag("unit")` otherwise (plain JUnit with Mockito mocks).
    - **Frontend** (`frontend/src/**/*.test.ts(x)`): make line 1 `// @stories <StoryID>`, and start the top-level `describe` title with the story ID.
    - **E2E** (`frontend/e2e/*.spec.ts`): make line 1 `// @stories <IDs>`, and start each test title with a story ID.
    - **Tests that cover several stories** (usually integration or E2E): tag **all** of them.

@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -28,7 +29,7 @@ import com.example.connect_sphere.config.JwtConfig;
 import com.example.connect_sphere.config.SecurityConfig;
 import com.example.connect_sphere.event.service.EventReassignmentService;
 
-@Tag("unit")
+@Tag("integration")
 @Tag("EC-C1")
 @WebMvcTest(EventReassignmentController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
@@ -42,6 +43,7 @@ class EventReassignmentAccessTest {
     @MockitoBean EventReassignmentService service;
 
     @Test
+    @DisplayName("EC-C1 (negative): only an Event Coordinator can submit a reassignment request; the Lead is refused")
     void onlyTheAssignedCoordinatorRoleCanSubmitARequest() throws Exception {
         mvc.perform(post("/api/events/" + EVENT_ID + "/reassignment-requests").with(tokenFor("ec"))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -56,6 +58,7 @@ class EventReassignmentAccessTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (negative): only the Lead can see the pending reassignment queue")
     void thePendingQueueIsLeadOnly() throws Exception {
         when(service.pendingRequests()).thenReturn(List.of());
 
@@ -68,6 +71,7 @@ class EventReassignmentAccessTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (negative): a caller who is not signed in is refused and nothing is read")
     void unauthenticatedCallsAreRejected() throws Exception {
         mvc.perform(get("/api/event-reassignment-requests"))
                 .andExpect(status().isUnauthorized());
