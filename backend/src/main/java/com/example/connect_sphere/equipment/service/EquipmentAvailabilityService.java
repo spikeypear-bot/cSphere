@@ -79,7 +79,7 @@ public class EquipmentAvailabilityService {
             Instant start, Instant end) {
         return reservations.stream()
                 .filter(log -> log.getEquipmentId().equals(equipmentId))
-                .filter(log -> !log.getLoanedFrom().isAfter(start) && !log.getLoanedUntil().isBefore(end))
+                .filter(log -> log.covers(start, end))
                 .mapToInt(EquipmentLog::getQuantity)
                 .sum();
     }

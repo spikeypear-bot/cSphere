@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.DisplayName;
@@ -546,5 +547,164 @@ class EquipmentReservationFlowTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.message").value("end must be after start"));
         assertThat(reservationsFor(eventId)).isZero();
+    }
+
+    private ResultActions reserveBatch(String body) throws Exception {
+        return mvc.perform(post("/api/equipment/reservations/batch").with(flow.as("ts1"))
+                .contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test
+    @DisplayName("TS02 (negative): a reservation without its event, its equipment, or a valid period is refused and nothing is saved")
+    void aReservationNeedsItsEventEquipmentAndPeriod() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS02 Speaker", 10, false);
+        requested(eventId, speakers);
+        for (String body : List.of(
+                "{\"eventId\":\"%s\",\"quantity\":1,\"start\":\"%s\",\"end\":\"%s\"}".formatted(eventId, START, END),
+                "{\"equipmentId\":\"%s\",\"quantity\":1,\"start\":\"%s\",\"end\":\"%s\"}".formatted(speakers, START, END),
+                "{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":1,\"end\":\"%s\"}".formatted(eventId, speakers, END),
+                "{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":1,\"start\":\"%s\"}".formatted(eventId, speakers, START)))
+            reserve("ts1", body).andExpect(status().isBadRequest());
+        assertThat(reservationsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("TS02 (negative): a specific serial number reserves exactly one unit; asking for two with it is refused and nothing is saved")
+    void aSerialNumberReservesOneUnit() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID cameras = equipment("TS02 Camera", 3, true);
+        unit(cameras, "CAM-001");
+        requested(eventId, cameras);
+        reserve("ts1", reservation(eventId, cameras, 2, "CAM-001", START, END))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("A specific serial number reserves exactly 1 unit"));
+        assertThat(reservationsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("TS02 (negative): a serial number that is not one of the kind's units is not found, and nothing is saved")
+    void anUnknownSerialNumberIsNotFound() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID cameras = equipment("TS02 Camera", 3, true);
+        unit(cameras, "CAM-001");
+        requested(eventId, cameras);
+        reserve("ts1", reservation(eventId, cameras, 1, "CAM-999", START, END))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.message").value("Equipment unit not found"));
+        assertThat(reservationsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("TS02 (negative): serial numbers given for a kind that is not tracked by serial number are refused, and nothing is saved")
+    void serialNumbersNeedASerialisedKind() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS02 Speaker", 10, false);
+        requested(eventId, speakers);
+        reserveBatch("{\"eventId\":\"%s\",\"start\":\"%s\",\"end\":\"%s\",\"lines\":[{\"equipmentId\":\"%s\",\"quantity\":1,\"serialNumbers\":[\"SPK-1\"]}]}"
+                .formatted(eventId, START, END, speakers))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("TS02 Speaker is not tracked by serial number"));
+        assertThat(reservationsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("TS02 (negative): a batch without its event or items, or with an empty, unnamed, negative or blank-serial line, is refused and nothing is saved")
+    void aBatchNeedsWellFormedLines() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS02 Speaker", 10, false);
+        requested(eventId, speakers);
+        String window = "\"start\":\"%s\",\"end\":\"%s\"".formatted(START, END);
+        String event = "\"eventId\":\"%s\",".formatted(eventId);
+        String kind = "\"equipmentId\":\"%s\"".formatted(speakers);
+        for (String body : List.of(
+                "{" + window + ",\"lines\":[{" + kind + ",\"quantity\":1}]}",
+                "{" + event + window + "}",
+                "{" + event + window + ",\"lines\":[null]}",
+                "{" + event + window + ",\"lines\":[{\"quantity\":1}]}",
+                "{" + event + window + ",\"lines\":[{" + kind + ",\"quantity\":-1,\"spare\":2}]}",
+                "{" + event + window + ",\"lines\":[{" + kind + ",\"quantity\":2,\"spare\":-1}]}",
+                "{" + event + window + ",\"lines\":[{" + kind + ",\"quantity\":1,\"serialNumbers\":[\" \"]}]}",
+                "{" + event + window + ",\"lines\":[{" + kind + ",\"quantity\":1,\"serialNumbers\":[null]}]}"))
+            reserveBatch(body).andExpect(status().isBadRequest());
+        assertThat(reservationsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("TS02 (boundary): a batch line with only spare units, its quantity left out, is saved as spare units")
+    void aBatchLineCanBeSpareOnly() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS02 Speaker", 10, false);
+        requested(eventId, speakers, 1);
+        reserveBatch("{\"eventId\":\"%s\",\"start\":\"%s\",\"end\":\"%s\",\"lines\":[{\"equipmentId\":\"%s\",\"spare\":2}]}"
+                .formatted(eventId, START, END, speakers))
+                .andExpect(status().isCreated());
+        sync();
+        assertThat(jdbc.queryForObject("SELECT sum(quantity) FROM equipment_logs WHERE event_id = ? AND spare", Integer.class, eventId))
+                .isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("TS02 (negative): a kind's reservations are only listed for a period with both ends, the end after the start")
+    void aKindsReservationsNeedAValidPeriod() throws Exception {
+        UUID speakers = equipment("TS02 Speaker", 10, false);
+        for (String[] range : List.of(new String[] {null, END}, new String[] {START, null}, new String[] {END, START}, new String[] {START, START})) {
+            var get = get("/api/equipment/" + speakers + "/reservations").with(flow.as("ts1"));
+            if (range[0] != null) get = get.param("from", range[0]);
+            if (range[1] != null) get = get.param("to", range[1]);
+            mvc.perform(get).andExpect(status().isBadRequest());
+        }
+        mvc.perform(get("/api/equipment/" + speakers + "/reservations").with(flow.as("ts1")).param("from", START).param("to", END))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("TS02 (boundary): availability for a request with no items lists nothing")
+    void availabilityOfARequestWithoutItemsIsEmpty() throws Exception {
+        availability(UUID.randomUUID(), START, END).andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(0));
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 TS02 (happy): for a revision after the event moved, units the event holds only at its old time count as free, and units still covering the event count towards the new quantity")
+    void aRevisionReusesUnitsHeldAtTheOldTime() throws Exception {
+        UUID eventId = event("Town Hall");
+        UUID speakers = equipment("TS02 Speaker", 6, false);
+        UUID screens = equipment("TS02 Screen", 5, false);
+        UUID old = requested(eventId, speakers, 6);
+        reserved(eventId, speakers, 2, null);
+        reserved(eventId, speakers, 1, null);
+        reserved(eventId, speakers, 3, null);
+        updateRequestStatus("ts1", old, "{\"status\":\"approved\"}").andExpect(status().isOk());
+        sync();
+        // The event moved: the 2-unit reservation is now an hour off, the 3-unit one wholly before it; 1 still covers it.
+        jdbc.update("UPDATE equipment_logs SET loaned_from = loaned_from - interval '1 hour', loaned_until = loaned_until - interval '1 hour' "
+                + "WHERE event_id = ? AND quantity = 2", eventId);
+        jdbc.update("UPDATE equipment_logs SET loaned_from = loaned_from - interval '6 hours', loaned_until = loaned_until - interval '6 hours' "
+                + "WHERE event_id = ? AND quantity = 3", eventId);
+        String revised = mvc.perform(patch("/api/events/" + eventId + "/equipment-request").with(flow.as("ec1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"technicalRequirement\":\"Stage setup\",\"items\":[{\"equipmentId\":\"%s\",\"quantity\":3},{\"equipmentId\":\"%s\",\"quantity\":1}]}"
+                                .formatted(speakers, screens)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        sync();
+        UUID revision = UUID.fromString(flow.read(revised).get("requestId").asString());
+
+        // 6 speakers: 2 overlap the window at the old time and 1 covers it, so 3 are free; the 2 given up count as free too.
+        // The 3 wholly before the window take nothing from it, and are not counted twice.
+        availability(revision, START, END).andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.equipmentId == '" + speakers + "')].availableQuantity").value(5));
+        // 3 asked for and 1 already covering the event: 2 more may be reserved, not 3.
+        reserve("ts1", reservation(eventId, speakers, 3, null, START, END)).andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.startsWith("Only 2 more TS02 Speaker")));
+        // One at a time: the second sees the first as the revision's own, not one it gives up.
+        reserved(eventId, speakers, 1, null);
+        reserved(eventId, speakers, 1, null);
+        reserved(eventId, screens, 1, null);
+        updateRequestStatus("ts1", revision, "{\"status\":\"approved\"}").andExpect(status().isOk());
+        sync();
+        assertThat(jdbc.queryForObject("SELECT sum(quantity) FROM equipment_logs WHERE event_id = ? AND equipment_id = ?",
+                Integer.class, eventId, speakers)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id = ?", String.class, old))
+                .isEqualTo("superseded");
     }
 }

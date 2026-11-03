@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**305 test files, 2540 tests, 82 stories traced, 0 files untraced, 0 tests whose name names no story.**
+**307 test files, 2554 tests, 82 stories traced, 0 files untraced, 0 tests whose name names no story.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -27,7 +27,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EC03 | 4 | 6 | 9 | 5 | 208 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 5 | 3 | 37 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
-| EC07 | 2 | 5 | 2 | 5 | 154 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC07 | 3 | 5 | 2 | 5 | 157 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC08 | 3 | 9 | 6 | 6 | 314 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 1 | 2 | 5 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC10 | 1 | 1 | 2 | 3 | 92 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -36,7 +36,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | EC-C3 | 2 | 1 | 2 | 1 | 51 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C4 |  | 1 | 2 | 1 | 66 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9 | happy, negative, boundary, conflict, failure |
 | EC-NEW2 | 2 | 2 | 7 | 2 | 176 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-NEW3 | 9 | 9 | 9 | 4 | 343 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW3 | 10 | 9 | 9 | 4 | 355 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 3 | 5 | 1 | 5 | 132 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW5 | 2 | 2 | 3 | 3 | 105 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C1 | 1 | 3 | 6 | 2 | 128 | AC2, AC4, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -67,10 +67,10 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | SO-C5 | 2 | 2 | 3 | 1 | 112 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C6 | 2 | 2 | 3 | 1 | 111 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS01 | 3 | 4 | 9 | 5 | 144 | AC1, AC2, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS02 | 3 | 5 | 6 | 2 | 150 | AC5, AC10, AC11, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS02 | 4 | 5 | 6 | 2 | 161 | AC5, AC10, AC11, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS03 | 4 | 5 | 6 | 1 | 141 | AC2, AC3 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS06 | 2 | 3 | 3 | 2 | 111 | AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS09 | 8 | 8 | 18 | 2 | 298 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS06 | 3 | 3 | 3 | 2 | 122 | AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS09 | 9 | 8 | 18 | 2 | 300 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS11 | 3 | 3 | 2 | 1 | 87 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS01 | 1 | 3 | 2 | 1 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS02 |  | 2 | 10 | 4 | 167 | — | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -421,6 +421,7 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>EC07</summary>
 
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentReservationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/entity/EquipmentRequestLineIdTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
@@ -556,6 +557,7 @@ The file is traced, but this test's own name does not say which story it checks.
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeFieldsTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeImpactServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentReservationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestQueueServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`
@@ -1007,6 +1009,7 @@ The file is traced, but this test's own name does not say which story it checks.
 <details><summary>TS02</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/entity/EquipmentLogTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/entity/SerialisedEquipmentIdTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentAvailabilityServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
@@ -1046,6 +1049,7 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>TS06</summary>
 
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/entity/EquipmentLogTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/entity/EquipmentRequestLineIdTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
@@ -1061,6 +1065,7 @@ The file is traced, but this test's own name does not say which story it checks.
 <details><summary>TS09</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentConsoleReadsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/entity/EquipmentLogTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/DevEquipmentSeederTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/DamageImpactTest.java`

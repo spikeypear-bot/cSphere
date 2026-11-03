@@ -150,7 +150,7 @@ public class DamageImpact {
             Instant a = points.get(i);
             Instant b = points.get(i + 1);
             List<EquipmentLog> covering = reserved.stream()
-                    .filter(log -> log.getLoanedFrom().isBefore(b) && log.getLoanedUntil().isAfter(a)).toList();
+                    .filter(log -> log.overlaps(a, b)).toList();
             int units = covering.stream().mapToInt(EquipmentLog::getQuantity).sum();
             int damaged = damage.stream()
                     .filter(d -> d.getPeriodStart().isBefore(b) && endOf(d).isAfter(a))

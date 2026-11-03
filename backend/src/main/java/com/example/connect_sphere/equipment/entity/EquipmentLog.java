@@ -84,6 +84,16 @@ public class EquipmentLog {
         this.serialNumber = replacementSerialNumber;
     }
 
+    /** EO07: held for part of [start, end) at least: it starts before the period ends and ends after it starts. */
+    public boolean overlaps(Instant start, Instant end) {
+        return loanedFrom.isBefore(end) && loanedUntil.isAfter(start);
+    }
+
+    /** TS06, D40: held for the whole of [start, end). */
+    public boolean covers(Instant start, Instant end) {
+        return !loanedFrom.isAfter(start) && !loanedUntil.isBefore(end);
+    }
+
     /** TS09 AC11: fewer units of a non-serialised kind for this reservation. */
     public void reduceBy(int units) {
         if (units < 0 || units > quantity) {

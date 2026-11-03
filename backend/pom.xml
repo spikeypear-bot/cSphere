@@ -216,7 +216,7 @@
 						</configuration>
 					</execution>
 					<execution>
-						<!-- EC03, VS03, EC10: fully tested; the branches left are the stated coverage
+						<!-- EC03, VS03, EC10, TS02: fully tested; the branches left are the stated coverage
 						     exclusions in docs/testing-strategy.md (optional collaborators, one guard). -->
 						<id>venue-booking-coverage</id>
 						<phase>verify</phase>
@@ -237,6 +237,22 @@
 									<limits>
 										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
 										<limit><counter>BRANCH</counter><value>MISSEDCOUNT</value><maximum>7</maximum></limit>
+									</limits>
+								</rule>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.equipment.service.EquipmentReservationService</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>MISSEDCOUNT</value><maximum>2</maximum></limit>
+									</limits>
+								</rule>
+								<rule>
+									<element>CLASS</element>
+									<includes><include>com.example.connect_sphere.equipment.entity.EquipmentLog</include></includes>
+									<limits>
+										<limit><counter>LINE</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
+										<limit><counter>BRANCH</counter><value>COVEREDRATIO</value><minimum>1.0</minimum></limit>
 									</limits>
 								</rule>
 								<rule>
