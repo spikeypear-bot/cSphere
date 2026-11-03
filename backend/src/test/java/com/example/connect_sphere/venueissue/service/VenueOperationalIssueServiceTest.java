@@ -130,4 +130,58 @@ class VenueOperationalIssueServiceTest {
         verify(issues).findByVenueIdOrderByAffectedFromAscCreatedAtDesc(venueId);
     }
 
+    @Test
+    @DisplayName("VS13 (negative): listing the issues of a venue that does not exist is not found")
+    void listingAnUnknownVenue() {
+        when(venues.existsById(venueId)).thenReturn(false);
+
+        assertThatThrownBy(() -> service.list(venueId))
+                .isInstanceOf(com.example.connect_sphere.venue.service.VenueNotFoundException.class);
+        org.mockito.Mockito.verifyNoInteractions(issues);
+    }
+
+    @Test
+    @DisplayName("VS13 (boundary): a description must be given and at most 2000 characters; a longer one saves nothing")
+    void descriptionLimits() {
+        when(venues.existsById(venueId)).thenReturn(true);
+
+        assertThatThrownBy(() -> service.create(venueId, userId, new CreateVenueOperationalIssueRequest(null, null, null)))
+                .isInstanceOf(InvalidVenueOperationalIssueException.class).hasMessage("Issue description is required.");
+        assertThatThrownBy(() -> service.create(venueId, userId,
+                new CreateVenueOperationalIssueRequest("x".repeat(2001), null, null)))
+                .isInstanceOf(InvalidVenueOperationalIssueException.class)
+                .hasMessage("Issue description must be at most 2000 characters.");
+        org.mockito.Mockito.verify(issues, org.mockito.Mockito.never()).saveAndFlush(any());
+
+        assertThat(service.create(venueId, userId, new CreateVenueOperationalIssueRequest("x".repeat(2000), null, null))
+                .description()).hasSize(2000);
+    }
+
+    @Test
+    @DisplayName("VS13 VS17 (boundary): a timed issue affects only bookings whose occupied time overlaps it; ones that end before it or start after it are left alone")
+    void onlyOverlappingBookingsAreAffected() {
+        var availability = org.mockito.Mockito.mock(com.example.connect_sphere.venueavailability.repository.AvailabilityRepository.class);
+        var publisher = org.mockito.Mockito.mock(org.springframework.context.ApplicationEventPublisher.class);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "availability", availability);
+        org.springframework.test.util.ReflectionTestUtils.setField(service, "publisher", publisher);
+        when(venues.existsById(venueId)).thenReturn(true);
+        var from = OffsetDateTime.parse("2027-03-10T13:00:00+08:00");
+        var morning = new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking(UUID.randomUUID(),
+                UUID.randomUUID(), null, "Morning talk", "approved", from.minusHours(4), from.minusHours(2),
+                from.minusHours(5), from.minusHours(1));
+        var afternoon = new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking(UUID.randomUUID(),
+                UUID.randomUUID(), null, "Afternoon talk", "approved", from.plusHours(1), from.plusHours(2),
+                from.plusMinutes(30), from.plusHours(3));
+        var evening = new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking(UUID.randomUUID(),
+                UUID.randomUUID(), null, "Evening talk", "approved", from.plusHours(5), from.plusHours(6),
+                from.plusHours(4), from.plusHours(7));
+        when(availability.bookings(venueId)).thenReturn(List.of(morning, afternoon, evening));
+
+        service.create(venueId, userId, new CreateVenueOperationalIssueRequest("Power cut", from, from.plusHours(1)));
+
+        verify(availability).notifyOperationalIssue(venueId, List.of(afternoon), "Power cut");
+        verify(publisher).publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable(
+                List.of(afternoon.eventId()), userId, "A venue operational issue requires review: Power cut"));
+    }
+
 }
