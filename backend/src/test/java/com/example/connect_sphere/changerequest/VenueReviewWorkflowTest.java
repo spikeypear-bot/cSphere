@@ -167,4 +167,65 @@ class VenueReviewWorkflowTest {
         assertThat(state(review)).isEqualTo("pending");
         decide("vs1","action_required","Find a hall for 200 guests").andExpect(status().isOk());
     }
+
+    private ResultActions decideOther(String body) throws Exception {
+        return mvc.perform(post(path(otherBooking,otherReview)).with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(body));
+    }
+
+    @Test @Transactional @DisplayName("VS17 (conflict): a review waits while the booking needs reassessment, and is refused once the event is cancelled, completed or over; nothing is recorded")
+    void onlyAnOpenBookingIsReviewed() throws Exception {
+        fixture();
+        jdbc.update("UPDATE venue_bookings SET status='attention' WHERE booking_id=?",booking); em.clear();
+        mvc.perform(get("/api/venue-bookings/"+booking+"/requirement-reviews").with(flow.as("vs1"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].outcomeCurrent").value(true)).andExpect(jsonPath("$[0].canReview").value(false));
+        decide("vs1","suitable","").andExpect(status().isConflict())
+            .andExpect(jsonPath("$.message").value("Resolve the booking assessment before recording this requirement review."));
+        for (String change:List.of("status='cancelled'","status='completed'","start_datetime=now()-interval '2 hours', end_datetime=now()-interval '1 hour'")) {
+            jdbc.update("UPDATE events SET status='pending',start_datetime='2027-03-10 09:00+08',end_datetime='2027-03-10 12:00+08' WHERE event_id=?",eventId);
+            jdbc.update("UPDATE events SET "+change+" WHERE event_id=?",eventId); em.clear();
+            decideOther("{\"outcome\":\"suitable\"}").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("Only active pending or approved bookings can be reviewed. Refresh the booking details."));
+        }
+        assertThat(state(review)).isEqualTo("pending"); assertThat(state(otherReview)).isEqualTo("pending");
+    }
+
+    @Test @Transactional @DisplayName("VS17 (negative): a decision without an outcome is refused and nothing is recorded")
+    void anOutcomeIsNeeded() throws Exception {
+        fixture();
+        decideOther("{}").andExpect(status().isUnprocessableEntity())
+            .andExpect(jsonPath("$.message").value("Choose remains suitable or coordinator action required."));
+        assertThat(state(otherReview)).isEqualTo("pending");
+    }
+
+    @Test @Transactional @DisplayName("VS17 (conflict): moving the booking's start or end, changing its turnaround, or a later timing edit supersedes the open review")
+    void movedBookingSupersedesTheReview() throws Exception {
+        fixture();
+        for (String change:List.of("start_datetime='2027-03-10 09:30+08'","end_datetime='2027-03-10 11:30+08'","turnaround_duration_minutes=60","timing_updated_at=now()+interval '1 day'")) {
+            jdbc.update("UPDATE venue_bookings SET start_datetime='2027-03-10 09:00+08',end_datetime='2027-03-10 12:00+08',turnaround_duration_minutes=45,timing_updated_at=NULL WHERE booking_id=?",booking);
+            jdbc.update("UPDATE venue_bookings SET "+change+" WHERE booking_id=?",booking); em.clear();
+            mvc.perform(get("/api/venue-bookings/"+booking+"/requirement-reviews").with(flow.as("vs1"))).andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].outcomeCurrent").value(false)).andExpect(jsonPath("$[0].canReview").value(false));
+            decide("vs1","suitable","").andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This requirement review has been superseded. Refresh to review the current requirements."));
+        }
+        assertThat(state(review)).isEqualTo("pending");
+    }
+
+    @Test @Transactional @DisplayName("VS17 (boundary): a legacy booking without its own times is reviewed at the event's times; a recorded outcome stays current after an earlier timing edit, and an event without a coordinator names none")
+    void legacyBookingIsReviewedAtTheEventsTimes() throws Exception {
+        fixture();
+        jdbc.update("UPDATE venue_bookings SET start_datetime=NULL,end_datetime=NULL,timing_updated_at='2020-01-01 00:00+00' WHERE booking_id=?",otherBooking); em.clear();
+        mvc.perform(get("/api/venue-bookings/"+otherBooking+"/requirement-reviews").with(flow.as("vs1"))).andExpect(status().isOk())
+            .andExpect(jsonPath("$[0].canReview").value(true)).andExpect(jsonPath("$[0].outcomeCurrent").value(true));
+        decideOther("{\"outcome\":\"suitable\"}").andExpect(status().isOk());
+        assertThat(state(otherReview)).isEqualTo("suitable");
+        jdbc.update("UPDATE venue_bookings SET timing_updated_at='2020-01-01 00:00+00' WHERE booking_id=?",otherBooking);
+        jdbc.update("UPDATE events SET coordinator_id=NULL WHERE event_id=?",eventId); em.clear();
+        var view=reviews.forBooking(otherBooking).getFirst();
+        assertThat(view.outcomeCurrent()).isTrue(); assertThat(view.currentCoordinatorName()).isNull();
+        assertThat(view.reservedStart().toInstant()).isEqualTo(java.time.OffsetDateTime.parse("2027-03-10T09:00:00+08:00").toInstant());
+        // A timing edit after the outcome was recorded makes it historical.
+        jdbc.update("UPDATE venue_bookings SET timing_updated_at=now()+interval '1 day' WHERE booking_id=?",otherBooking); em.clear();
+        assertThat(reviews.forBooking(otherBooking).getFirst().outcomeCurrent()).isFalse();
+    }
 }
