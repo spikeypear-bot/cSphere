@@ -108,6 +108,7 @@ interface RequestActivityRepository {
 
 class ActivityService {
 	{field} {static} ~IMPORTANT_FIELDS : List<String>
+	{field} {static} ~MAX_MESSAGE_LENGTH : int
 	{field} -clock : Clock
 	{method} +record ( entry : Entry ) : void
 	{method}  {static} +sameValue ( a : Object , b : Object ) : boolean
@@ -897,7 +898,9 @@ class EquipmentLog <<Entity>>  {
 	{field} -serialNumber : String
 	{field} -spare : boolean
 	{field} -technicalRequirements : String
+	{method} +covers ( start : Instant , end : Instant ) : boolean
 	{method} +forRequest ( requestId : UUID ) : void
+	{method} +overlaps ( start : Instant , end : Instant ) : boolean
 	{method} +reduceBy ( units : int ) : void
 	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
@@ -1458,6 +1461,7 @@ class EquipmentRequestStateException {
 
 class EquipmentRequirementCoverage {
 	{method}  {static} +covered ( event : Event , heldThroughout : ToLongFunction ) : boolean
+	{method}  {static} +coveredBy ( event : Event , held : Collection ) : boolean
 }
 
 
@@ -2411,7 +2415,6 @@ enum NotificationType {
 interface NotificationRepository {
 	{method}  {abstract} +countByRecipientUserIdAndReadAtIsNull ( recipientUserId : UUID ) : long
 	{method}  {abstract} +existsByRecipientUserIdAndEquipmentRequestId ( recipientUserId : UUID , equipmentRequestId : UUID ) : boolean
-	{method}  {abstract} +existsByRecipientUserIdAndEquipmentReviewId ( recipientUserId : UUID , equipmentReviewId : UUID ) : boolean
 	{method}  {abstract} +findByRecipientUserIdOrderByOccurredAtDesc ( recipientUserId : UUID ) : List
 	{method}  {abstract} +markAllRead ( recipient : UUID , upTo : OffsetDateTime , now : OffsetDateTime ) : int
 }

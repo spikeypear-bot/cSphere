@@ -218,7 +218,9 @@ class EquipmentLog <<Entity>>  {
 	{field} -serialNumber : String
 	{field} -spare : boolean
 	{field} -technicalRequirements : String
+	{method} +covers ( start : Instant , end : Instant ) : boolean
 	{method} +forRequest ( requestId : UUID ) : void
+	{method} +overlaps ( start : Instant , end : Instant ) : boolean
 	{method} +reduceBy ( units : int ) : void
 	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
