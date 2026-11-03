@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -80,6 +81,7 @@ class VenueBookingWordingTest {
     }
 
     @ParameterizedTest
+    @DisplayName("EC03 (boundary): notes of exactly the maximum length are saved in full and the timeline entry is shortened to fit")
     @EnumSource(value = ActivityType.class, names = {"venue_booking_requested", "venue_added", "venue_booking_replaced"})
     void notesOfExactlyTheMaximumLengthAreAcceptedAndTheTimelineEntryStillFits(ActivityType type) {
         Event event = event(EventStatus.pending, List.of("none"), List.of());
@@ -115,6 +117,7 @@ class VenueBookingWordingTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): short notes appear on the timeline unchanged, and a request without notes names only the venue")
     void shortNotesAreCopiedToTheTimelineUnchanged() {
         assertThat(VenueBookingRequestService.requestedMessage("1 Harbour Road", "Stage needed"))
                 .isEqualTo("Requested 1 Harbour Road. Stage needed");
@@ -122,6 +125,7 @@ class VenueBookingWordingTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): a request clashing with an unavailable period is refused with that period's times and reason")
     void aRecordedUnavailablePeriodIsNamedWithItsTimesAndReason() {
         Event event = event(EventStatus.pending, List.of("none"), List.of());
         Venue venue = venue(List.of(), List.of());
@@ -137,6 +141,7 @@ class VenueBookingWordingTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): a refused request names the missing accessibility feature by its on-screen label")
     void aMissingAccessibilityFeatureIsNamedByItsLabel() {
         Event event = event(EventStatus.pending, List.of("wheelchair_support"), List.of());
         Venue venue = venue(List.of("elevators"), List.of());
@@ -147,6 +152,7 @@ class VenueBookingWordingTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): a refused request names each missing facility by its on-screen label")
     void aMissingFacilityIsNamedByItsLabel() {
         Event event = event(EventStatus.pending, List.of("none"), List.of("stage", "audio_visual_equipment"));
         Venue venue = venue(List.of(), List.of("projection"));
@@ -157,6 +163,7 @@ class VenueBookingWordingTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): a request for an event past Planning is refused and names the event's current status")
     void anEventPastPlanningIsDescribedByItsStatusLabel() {
         Event event = event(EventStatus.awaiting_safety_review, List.of("none"), List.of());
         Venue venue = venue(List.of(), List.of());
@@ -167,6 +174,7 @@ class VenueBookingWordingTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): accessibility and facility labels match the screens and unknown codes are shown as they are")
     void labelsMatchTheScreensAndUnknownCodesPassThrough() {
         assertThat(AccessibilityFeature.labelOf("step_free_access")).isEqualTo("Step-free access");
         assertThat(AccessibilityFeature.labelOf("public_transport")).isEqualTo("Near public transport");

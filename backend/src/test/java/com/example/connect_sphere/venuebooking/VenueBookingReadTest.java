@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -70,6 +71,7 @@ class VenueBookingReadTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS16 (happy): staff see a booking of any status with its venue and current event details, and viewing it changes nothing")
     @ValueSource(strings = {"pending", "approved", "changed", "rejected", "cancelled"})
     void readsCurrentLinkedEventWithoutChangingAnyRecord(String status) throws Exception {
         UUID venueId = venue();
@@ -104,6 +106,7 @@ class VenueBookingReadTest {
     }
 
     @Test
+    @DisplayName("VS16 (happy): reopening a booking shows the event's latest saved attendance, times and requirements")
     void refetchReadsLatestSavedEventValues() throws Exception {
         UUID venueId = venue(); UUID eventId = event(); UUID bookingId = booking(venueId, eventId, "pending");
         mvc.perform(get("/api/venue-bookings/" + bookingId)).andExpect(jsonPath("$.event.expectedAttendance").value(120));
@@ -128,6 +131,7 @@ class VenueBookingReadTest {
     }
 
     @Test
+    @DisplayName("VS16 (boundary): a venue's booking list shows only its own bookings and is empty for a venue with none")
     void listsOnlyAssociatedBookingsAndReturnsEmptyForUnbookedVenue() throws Exception {
         UUID selected = venue(); UUID other = venue(); UUID eventId = event();
         UUID first = booking(selected, eventId, "pending");
@@ -143,6 +147,7 @@ class VenueBookingReadTest {
     }
 
     @Test
+    @DisplayName("VS16 (happy): the pending queue lists only pending requests with current venue and event details and viewing it changes nothing")
     void pendingQueueFiltersStatusesReadsCurrentRelationshipsAndDoesNotWrite() throws Exception {
         jdbc.update("DELETE FROM venue_bookings"); // Rolled back; isolate the global queue from local demo data.
         UUID firstVenue = venue(); UUID secondVenue = venue();
@@ -184,6 +189,7 @@ class VenueBookingReadTest {
     }
 
     @Test
+    @DisplayName("VS16 (boundary): the pending queue is empty when no booking is pending")
     void pendingQueueReturnsEmptyWhenOnlyNonPendingBookingsExist() throws Exception {
         jdbc.update("DELETE FROM venue_bookings");
         booking(venue(), event(), "approved");
@@ -193,7 +199,7 @@ class VenueBookingReadTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"EO", "EC", "TECHNICIAN", "ATTENDEE"})
-    @org.junit.jupiter.api.DisplayName("VS17 AU04 (negative): private booking lists and details reject unrelated roles")
+    @DisplayName("VS17 AU04 (negative): private booking lists and details reject unrelated roles")
     void staffBookingReadsRejectOtherRoles(String role) throws Exception {
         UUID venueId=venue();
         UUID bookingId = booking(venueId, event(), "pending");
@@ -208,6 +214,7 @@ class VenueBookingReadTest {
     }
 
     @Test
+    @DisplayName("VS16 (negative): a signed-out user cannot see the pending queue")
     void pendingQueueRequiresAuthentication() throws Exception {
         mvc.perform(get("/api/venue-staff/booking-requests")
                 .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.anonymous()))
@@ -215,6 +222,7 @@ class VenueBookingReadTest {
     }
 
     @Test
+    @DisplayName("VS16 (negative): a missing booking or venue shows not found and a malformed ID shows a bad-request message")
     void missingRecordsAndMalformedIdsUseNormalErrors() throws Exception {
         for (String path : List.of("/api/venue-bookings/" + UUID.randomUUID(),
                 "/api/venues/" + UUID.randomUUID() + "/bookings")) {

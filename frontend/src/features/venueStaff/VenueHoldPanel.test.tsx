@@ -16,7 +16,7 @@ const hold: VenueHold = { holdId: 'h1', bookingId: 'b1', venueId: 'v1', eventId:
   createdBy: 'vs1', createdAt: '2027-03-01T00:00:00Z', endedAt: null }
 beforeEach(() => { vi.mocked(apiClient.get).mockResolvedValue([]) })
 afterEach(() => { cleanup(); vi.useRealTimers(); vi.resetAllMocks() })
-it('validates expiry and preserves entered values after a backend conflict', async () => {
+it('VS-C3 (negative): validates expiry and preserves entered values after a backend conflict', async () => {
   vi.mocked(apiClient.post).mockRejectedValue(new ApiClientError('Another reservation overlaps.', 409))
   render(<VenueHoldPanel bookingId="b1" pending onChanged={vi.fn()} />)
   const input = await screen.findByLabelText('Hold expiry (Singapore time)')
@@ -30,7 +30,7 @@ it('validates expiry and preserves entered values after a backend conflict', asy
   expect(await screen.findByRole('alert')).toHaveTextContent('Another reservation overlaps.')
   expect(await screen.findByLabelText('Hold expiry (Singapore time)')).toHaveValue('2099-03-01T10:00')
 })
-it('creates a hold and refreshes booking details without treating it as approved', async () => {
+it('VS-C3 (happy): creates a hold and refreshes booking details without treating it as approved', async () => {
   const changed = vi.fn()
   vi.mocked(apiClient.post).mockResolvedValue(hold)
   render(<VenueHoldPanel bookingId="b1" pending onChanged={changed} />)
@@ -45,7 +45,7 @@ it('creates a hold and refreshes booking details without treating it as approved
   expect(screen.queryByRole('button', { name: 'Place tentative hold' })).not.toBeInTheDocument()
 })
 
-it('reuses approval conflict cards and highlights occupied times for a buffer-only conflict', async () => {
+it('VS-C3 (conflict): reuses approval conflict cards and highlights occupied times for a buffer-only conflict', async () => {
   const booking = { bookingId: 'b1', status: 'pending', event: { eventName: 'Workshop',
     startDatetime: '2027-04-01T10:00:00+08:00', endDatetime: '2027-04-01T12:00:00+08:00' },
     timing: { effectiveStart: hold.reservedStart, effectiveEnd: hold.reservedEnd } } as VenueBookingDto
@@ -61,7 +61,7 @@ it('reuses approval conflict cards and highlights occupied times for a buffer-on
   expect(screen.getByRole('alert')).toHaveClass('notice--danger')
   expect(within(card).getByText(/12:15 pm.*02:00 pm/i)).toHaveClass('booking-time-conflict')
 })
-it.each(['release', 'convert'] as const)('shows expiry and performs %s for an active hold', async action => {
+it.each(['release', 'convert'] as const)('VS-C3 (happy): shows expiry and performs %s for an active hold', async action => {
   vi.mocked(apiClient.get).mockResolvedValue([hold])
   vi.mocked(apiClient.patch).mockResolvedValue(action === 'release' ? { ...hold, status: 'released' } : { status: 'approved', holds: [{ ...hold, status: 'converted' }] })
   const changed = vi.fn()
@@ -72,7 +72,7 @@ it.each(['release', 'convert'] as const)('shows expiry and performs %s for an ac
   await waitFor(() => expect(apiClient.patch).toHaveBeenCalledWith(`/venue-holds/h1/${action}`))
   expect(changed).toHaveBeenCalledOnce()
 })
-it('hides hold actions when status retrieval fails and offers retry', async () => {
+it('VS-C3 (failure): hides hold actions when status retrieval fails and offers retry', async () => {
   vi.mocked(apiClient.get).mockRejectedValueOnce(new Error('Offline'))
   render(<VenueHoldPanel bookingId="b1" pending onChanged={vi.fn()} />)
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not load details')
@@ -80,7 +80,7 @@ it('hides hold actions when status retrieval fails and offers retry', async () =
   fireEvent.click(screen.getByRole('button', { name: 'Retry hold details' }))
   expect(await screen.findByLabelText('Hold expiry (Singapore time)')).toBeInTheDocument()
 })
-it('uses server time to remove occupancy at the exact deadline even with a wrong client clock and failed refresh', () => {
+it('VS-C3 (boundary): uses server time to remove occupancy at the exact deadline even with a wrong client clock and failed refresh', () => {
   vi.useFakeTimers(); vi.setSystemTime(new Date('2030-01-01T00:00:00Z'))
   const refresh = vi.fn()
   const holds = [hold]
@@ -91,7 +91,7 @@ it('uses server time to remove occupancy at the exact deadline even with a wrong
   expect(result.current.has('h1')).toBe(true)
   expect(refresh).toHaveBeenCalledOnce()
 })
-it('calendar distinguishes a real hold from pending requests and applies its occupied interval once', () => {
+it('VS-C3 VS15 (happy): calendar distinguishes a real hold from pending requests and applies its occupied interval once', () => {
   const schedule = { settings: { setupMinutes: 30, turnaroundMinutes: 45 }, unavailablePeriods: [], holds: [hold],
     bookings: ['b1', 'b2'].map(bookingId => ({ bookingId, eventName: 'Workshop', status: 'pending',
       startDateTime: '2027-04-01T10:00:00+08:00', endDateTime: '2027-04-01T12:00:00+08:00',

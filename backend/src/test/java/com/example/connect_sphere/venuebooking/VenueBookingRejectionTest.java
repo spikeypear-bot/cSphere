@@ -13,6 +13,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -83,7 +84,7 @@ class VenueBookingRejectionTest {
         }
         for (UUID id : venueIds) jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
     }
-    @Test void rejectionPreservesDataAndOriginalReason() throws Exception {
+    @Test @DisplayName("VS04 (happy): rejecting a pending request saves the trimmed reason, keeps the booking details and removes it from the queue, and it cannot be decided again") void rejectionPreservesDataAndOriginalReason() throws Exception {
         UUID id = booking(venue(), "pending");
         var before = bookings.get(id);
         String unchanged = jdbc.queryForObject("SELECT (to_jsonb(b) - 'status' - 'reject_reason')::text FROM venue_bookings b WHERE booking_id=?", String.class, id);
@@ -106,7 +107,7 @@ class VenueBookingRejectionTest {
                 .andExpect(status().isConflict());
     }
 
-    @Test void rejectionSavesBothOptionalSuggestionsWithoutCreatingAnotherBooking() throws Exception {
+    @Test @DisplayName("VS04 VS09 (happy): staff can suggest an alternative venue and arrangement when rejecting, and no extra booking is created") void rejectionSavesBothOptionalSuggestionsWithoutCreatingAnotherBooking() throws Exception {
         UUID requestedVenue = venue();
         UUID alternativeVenue = venue();
         UUID id = booking(requestedVenue, "pending");
@@ -133,7 +134,7 @@ class VenueBookingRejectionTest {
                 Integer.class, id)).isEqualTo(1);
     }
 
-    @Test void rejectionCanSaveAnArrangementWithoutAnAlternativeVenue() throws Exception {
+    @Test @DisplayName("VS04 VS09 (happy): staff can suggest an alternative arrangement without naming another venue") void rejectionCanSaveAnArrangementWithoutAnAlternativeVenue() throws Exception {
         UUID id = booking(venue(), "pending");
         mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
                 .contentType("application/json")
@@ -145,7 +146,7 @@ class VenueBookingRejectionTest {
         assertThat(bookings.get(id).alternativeArrangement()).isEqualTo("Use an outdoor setup");
     }
 
-    @Test void invalidAlternativeVenueLeavesPendingBookingUntouched() throws Exception {
+    @Test @DisplayName("VS04 VS09 (negative): suggesting the same venue as the alternative is refused and the request stays pending and unchanged") void invalidAlternativeVenueLeavesPendingBookingUntouched() throws Exception {
         UUID requestedVenue = venue();
         UUID id = booking(requestedVenue, "pending");
         String before = snapshot(id);
@@ -159,7 +160,7 @@ class VenueBookingRejectionTest {
         assertThat(snapshot(id)).isEqualTo(before);
     }
 
-    @Test void overlongAlternativeArrangementLeavesPendingBookingUntouched() throws Exception {
+    @Test @DisplayName("VS04 VS09 (boundary): an alternative arrangement over 2000 characters is refused and the request stays pending and unchanged") void overlongAlternativeArrangementLeavesPendingBookingUntouched() throws Exception {
         UUID id = booking(venue(), "pending");
         String before = snapshot(id);
         String body = "{\"reason\":\"Unavailable\",\"alternativeArrangement\":\"" + "a".repeat(2001) + "\"}";
@@ -172,6 +173,7 @@ class VenueBookingRejectionTest {
         assertThat(snapshot(id)).isEqualTo(before);
     }
     @ParameterizedTest @ValueSource(strings={"{}", "{\"reason\":null}", "{\"reason\":\"\"}", "{\"reason\":\"   \"}"})
+    @DisplayName("VS04 (negative): rejecting without a reason is refused and the request stays pending and unchanged")
     void invalidReasonLeavesBookingUntouched(String body) throws Exception {
         UUID id = booking(venue(), "pending");
         String before = snapshot(id);
@@ -181,6 +183,7 @@ class VenueBookingRejectionTest {
         assertThat(snapshot(id)).isEqualTo(before);
     }
     @ParameterizedTest @ValueSource(strings={"approved","changed","rejected","cancelled"})
+    @DisplayName("VS04 (conflict): a request that is no longer pending cannot be rejected and keeps its status")
     void refusesNonPending(String state) throws Exception {
         UUID id = booking(venue(), state);
         mvc.perform(patch("/api/venue-bookings/" + id + "/reject").with(user("vs").roles("VS"))
@@ -188,7 +191,7 @@ class VenueBookingRejectionTest {
                 .andExpect(status().isConflict());
         assertThat(statusOf(id)).isEqualTo(state);
     }
-    @Test void missingAndUnauthorized() throws Exception {
+    @Test @DisplayName("VS04 (negative): rejecting a missing booking shows not found and a non-venue-staff user is forbidden") void missingAndUnauthorized() throws Exception {
         mvc.perform(patch("/api/venue-bookings/" + UUID.randomUUID() + "/reject").with(user("vs").roles("VS"))
                 .contentType("application/json").content("{\"reason\":\"Unavailable\"}"))
                 .andExpect(status().isNotFound());
@@ -197,7 +200,7 @@ class VenueBookingRejectionTest {
                 .contentType("application/json").content("{\"reason\":\"Unavailable\"}"))
                 .andExpect(status().isForbidden());
     }
-    @Test void failedWriteRollsBackRejectionAndSuggestionFields() throws Exception {
+    @Test @DisplayName("VS04 VS09 (failure): if saving the rejection fails, the request stays pending with no reason or suggestions saved") void failedWriteRollsBackRejectionAndSuggestionFields() throws Exception {
         UUID id = booking(venue(), "pending");
         UUID alternativeVenue = venue();
         String before = snapshot(id);
@@ -212,6 +215,7 @@ class VenueBookingRejectionTest {
         assertThat(snapshot(id)).isEqualTo(before);
     }
     @ParameterizedTest @ValueSource(booleans={false,true})
+    @DisplayName("VS04 (conflict): when two staff decide the same request at once, only one decision succeeds")
     void competingDecisionsOnlySucceedOnce(boolean approve) throws Exception {
         UUID id = booking(venue(), "pending");
         CountDownLatch start = new CountDownLatch(1);

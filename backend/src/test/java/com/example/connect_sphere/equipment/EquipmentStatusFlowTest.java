@@ -10,6 +10,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -133,6 +134,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (happy): a unit with no status change shows as Available for the period")
     void aUnitWithNoBlockShowsAsAvailableForThePeriod() throws Exception {
         units("ts1", START, END)
                 .andExpect(status().isOk())
@@ -143,6 +145,7 @@ class EquipmentStatusFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"Faulty", "Unavailable"})
+    @DisplayName("TS03 (happy): marking a unit Faulty or Unavailable is saved and the unit shows that status for the period")
     void markingAUnitSavesTheChangeAndTheUnitShowsThatStatusForThePeriod(String newStatus) throws Exception {
         mark("ts1", "MX-1", change(newStatus, START, END)).andExpect(status().isNoContent());
 
@@ -159,6 +162,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (boundary): a status change does not affect the periods just before and after it")
     void aBlockDoesNotChangeTheStatusShownForAdjacentPeriods() throws Exception {
         marked("MX-1", "Faulty", START, END);
 
@@ -168,6 +172,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (boundary): a status change with no end date covers every later period")
     void aBlockWithNoEndDateCoversEveryLaterPeriod() throws Exception {
         mark("ts1", "MX-1", change("Unavailable", START, null)).andExpect(status().isNoContent());
         sync();
@@ -181,6 +186,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (happy): marking a unit Available for the whole blocked period removes the block")
     void makingAUnitAvailableForTheWholeBlockRemovesTheBlock() throws Exception {
         marked("MX-1", "Faulty", START, END);
 
@@ -191,6 +197,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (happy): removing a status period makes the unit Available again")
     void removingABlockMakesTheUnitAvailableAgain() throws Exception {
         marked("MX-1", "Faulty", START, END);
         UUID periodId = onlyPeriodOf("MX-1");
@@ -203,6 +210,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (happy): marking a unit Faulty lowers the available quantity, and marking it Available raises it again")
     void markingAUnitFaultyLowersTheAvailableQuantityAndMakingItAvailableRaisesItAgain() throws Exception {
         UUID requestId = requestOf(eventRequestingMixers());
         availability(requestId)
@@ -219,6 +227,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (conflict): a unit reserved for an event cannot be marked Faulty for that time and keeps its status")
     void aUnitReservedForAnEventCannotBeMarkedFaultyForThatPeriodAndKeepsItsStatus() throws Exception {
         UUID eventId = eventRequestingMixers();
         mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1"))
@@ -237,6 +246,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (boundary): a reserved unit can be marked Faulty from the moment its reservation ends")
     void aReservedUnitCanBeMarkedFaultyForAPeriodThatStartsWhenItsReservationEnds() throws Exception {
         UUID eventId = eventRequestingMixers();
         mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1"))
@@ -252,6 +262,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (boundary): a change whose end is not after its start is refused and the previous status stays")
     void aChangeWhoseEndIsNotAfterItsStartIsRefusedAndThePreviousStatusRemains() throws Exception {
         marked("MX-1", "Unavailable", START, END);
 
@@ -268,6 +279,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (negative): a status other than Available, Faulty or Unavailable is refused and nothing is saved")
     void aStatusThatIsNotOneOfTheThreeIsRefusedAndNothingIsSaved() throws Exception {
         mark("ts1", "MX-1", change("Broken", START, END)).andExpect(status().isBadRequest());
 
@@ -275,6 +287,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (negative): a unit that does not exist is not found and nothing is saved")
     void aUnitThatDoesNotExistReturnsNotFound() throws Exception {
         mark("ts1", "MX-9", change("Faulty", START, END))
                 .andExpect(status().isNotFound())
@@ -284,6 +297,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (negative): removing a status period that does not exist is not found")
     void removingABlockThatDoesNotExistReturnsNotFound() throws Exception {
         mvc.perform(delete("/api/equipment/periods/" + UUID.randomUUID()).with(flow.as("ts1")))
                 .andExpect(status().isNotFound())
@@ -292,6 +306,7 @@ class EquipmentStatusFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"eo1", "ec1", "vs1", "att1"})
+    @DisplayName("TS03 (negative): other roles cannot change or remove a unit's status and nothing is saved")
     void otherRolesCannotChangeOrRemoveAStatusAndNothingIsSaved(String username) throws Exception {
         marked("MX-2", "Faulty", START, END);
         UUID periodId = onlyPeriodOf("MX-2");
@@ -305,6 +320,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (happy): a coordinator can view a unit's status")
     void aCoordinatorCanViewUnitStatus() throws Exception {
         marked("MX-1", "Faulty", START, END);
 
@@ -314,6 +330,7 @@ class EquipmentStatusFlowTest {
     }
 
     @Test
+    @DisplayName("TS03 (negative): a caller who is not signed in cannot change a status and nothing is saved")
     void anUnauthenticatedCallerCannotChangeAStatusAndNothingIsSaved() throws Exception {
         mvc.perform(post("/api/equipment/" + mixers + "/units/MX-1/periods")
                         .contentType(MediaType.APPLICATION_JSON).content(change("Faulty", START, END)))

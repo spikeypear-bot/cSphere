@@ -6,6 +6,7 @@ import java.util.List;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,7 @@ class VenuePersistenceTest {
     @Autowired EntityManager entityManager;
 
     @Test
+    @DisplayName("VS07 (happy): every accessibility and facility option is saved, and the selections can later be set to none or cleared")
     void persistsEveryEnumLabelAndCanClearSelections() {
         var features = java.util.Arrays.stream(AccessibilityFeature.values())
                 .filter(value -> value != AccessibilityFeature.none).toList();

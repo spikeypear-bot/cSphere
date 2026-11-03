@@ -16,6 +16,7 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -86,6 +87,7 @@ class EventRequestControllerTest {
     }
 
     @Test
+    @DisplayName("EO02 (negative): submitting a request with an invalid schedule is refused with a message against the end date and time field")
     void invalidScheduleReturns422WithAnActionableMessage() throws Exception {
         UUID id = UUID.randomUUID();
         // EO-C2: one message per field, so the form can show each next to its field.
@@ -98,6 +100,7 @@ class EventRequestControllerTest {
     }
 
     @Test
+    @DisplayName("EO01 (boundary): an empty draft can be saved and comes back as a draft")
     void savingADraftWithAnEmptyBodyReturns201() throws Exception {
         UUID id = UUID.randomUUID();
         when(service.saveNewDraft(eq(ACME), eq(USER_ID), any())).thenReturn(draft(id, ACME));
@@ -110,6 +113,7 @@ class EventRequestControllerTest {
     }
 
     @Test
+    @DisplayName("EO15 AU04 (negative): the request list is scoped to the organisation in the sign-in token, ignoring any organisation the client sends")
     void scopesByTheTokenClaimAndIgnoresAnyOrganisationTheClientSends() throws Exception {
         when(service.list(ACME)).thenReturn(List.of(draft(UUID.randomUUID(), ACME)));
 

@@ -10,6 +10,7 @@ import java.util.stream.Stream;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -37,7 +38,7 @@ class VenueServiceTest {
 
     @ParameterizedTest
     @ValueSource(strings={" ","x"})
-    @org.junit.jupiter.api.DisplayName("DEV16 (negative): blank or overlong venue names are refused before saving")
+    @DisplayName("DEV16 (negative): blank or overlong venue names are refused before saving")
     void invalidVenueNames(String value) {
         String name=value.equals("x") ? value.repeat(201) : value;
         var input=new CreateVenueDto("Hall address",100,List.of(VenueLayout.theatre),"",null,List.of(),List.of(),schedule(),null,null,name);
@@ -171,6 +172,7 @@ class VenueServiceTest {
     }
 
     @ParameterizedTest
+    @DisplayName("VS07 (happy): an update changes only the submitted fields")
     @ValueSource(strings = {"capacity", "layouts", "accessibility", "facilities", "hours", "all", "empty"})
     void updatesOnlySubmittedFields(String field) {
         var venue = new com.example.connect_sphere.venue.entity.Venue();
@@ -201,6 +203,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS07 (negative): an invalid update is refused before the venue is changed, and nothing is saved")
     void validatesBeforeMutatingExistingVenue() {
         var venue = new com.example.connect_sphere.venue.entity.Venue();
         venue.setVenueId(java.util.UUID.randomUUID()); venue.setVenueAddress("Venue");
@@ -217,6 +220,7 @@ class VenueServiceTest {
     }
 
     @Test
+    @DisplayName("VS07 (negative): updating a venue that does not exist saves nothing")
     void unknownUpdateDoesNotSave() {
         var id = java.util.UUID.randomUUID();
         assertThatThrownBy(() -> service.updateVenue(id, new com.example.connect_sphere.venue.dto.UpdateVenueDto()))

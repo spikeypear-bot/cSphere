@@ -14,6 +14,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -98,6 +99,7 @@ class ConcurrentDecisionTest {
     }
 
     @Test
+    @DisplayName("EC02 (conflict): two simultaneous approvals of one request create exactly one event")
     void twoSimultaneousApprovalsCreateExactlyOneEvent() throws Exception {
         UUID coordinator = id("ec5");
         UUID requestId = submittedAndAssigned(coordinator);

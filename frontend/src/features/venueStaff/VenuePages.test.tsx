@@ -21,7 +21,7 @@ function page(path = '/venue-staff/catalogue/new') {
 }
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
-it('defaults capacity to 50 and rejects missing fields without POST', async () => {
+it('VS06A (negative): defaults capacity to 50 and rejects missing fields without POST', async () => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); page()
   expect(screen.getByLabelText('Overall capacity')).toHaveValue(50)
   await userEvent.click(screen.getByRole('button', { name: 'Save venue' }))
@@ -32,7 +32,7 @@ it('defaults capacity to 50 and rejects missing fields without POST', async () =
   expect(screen.getByText('Select at least one operating day.')).toBeInTheDocument()
   expect(fetch).not.toHaveBeenCalled()
 })
-it.each(['-1', '0', '50001', '1.5'])('rejects capacity %s', async capacity => {
+it.each(['-1', '0', '50001', '1.5'])('VS06A (boundary): rejects capacity %s', async capacity => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch); page()
   const user = userEvent.setup()
   await user.clear(screen.getByLabelText('Overall capacity'))
@@ -43,7 +43,7 @@ it.each(['-1', '0', '50001', '1.5'])('rejects capacity %s', async capacity => {
   expect(screen.getByText('Enter the venue name.')).toBeInTheDocument()
   expect(fetch).not.toHaveBeenCalled()
 })
-it('shows only the edited invalid field and clears its error when corrected', async () => {
+it('VS06A (negative): shows only the edited invalid field and clears its error when corrected', async () => {
   page()
   const user = userEvent.setup()
   expect(screen.getByLabelText('Venue address')).toHaveAttribute('placeholder')
@@ -135,7 +135,7 @@ describe('DEV16 venue form coverage', () => {
     expect(screen.getByLabelText('Overall capacity')).toHaveValue(50)
   })
 })
-it('POSTs trimmed input then GETs the catalogue and displays success', async () => {
+it('VS06A (happy): POSTs trimmed input then GETs the catalogue and displays success', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(response(venue, 201)).mockResolvedValueOnce(response([venue]))
   vi.stubGlobal('fetch', fetch); page(); const user = await fillForm()
   await user.click(screen.getByRole('button', { name: 'Save venue' }))
@@ -152,7 +152,7 @@ it('POSTs trimmed input then GETs the catalogue and displays success', async () 
   await user.click(screen.getByRole('button', { name: 'Dismiss' }))
   expect(screen.queryByText('Venue saved successfully.')).not.toBeInTheDocument()
 })
-it('retains input after backend rejection', async () => {
+it('VS06A VS06B (negative): retains input after backend rejection', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ message: 'Invalid venue details' }, 422)))
   page(); const user = await fillForm()
   await user.click(screen.getByRole('button', { name: 'Elevators' }))
@@ -165,7 +165,7 @@ it('retains input after backend rejection', async () => {
   expect(screen.getByRole('button', { name: 'Save venue' })).toBeEnabled()
 })
 
-it('saves selections and displays the freshly fetched catalogue labels', async () => {
+it('VS06B (happy): saves selections and displays the freshly fetched catalogue labels', async () => {
   const saved = { ...venue, venueAccessibilities: ['step_free_access', 'elevators'], venueFacilities: ['projection', 'stage'] }
   const fetch = vi.fn().mockResolvedValueOnce(response(saved, 201))
     .mockResolvedValueOnce(response([{ ...saved, additionalInformation: 'Fresh server details' }]))
@@ -188,7 +188,7 @@ it('saves selections and displays the freshly fetched catalogue labels', async (
   expect(fetch.mock.calls[1][1].method).toBe('GET')
 })
 
-it('keeps no provisions exclusive and lets selections be cleared', async () => {
+it('VS06B (boundary): keeps no provisions exclusive and lets selections be cleared', async () => {
   page(); const user = userEvent.setup()
   const none = screen.getByRole('button', { name: 'No accessibility provisions' })
   const elevators = screen.getByRole('button', { name: 'Elevators' })
@@ -209,7 +209,7 @@ it('keeps no provisions exclusive and lets selections be cleared', async () => {
   expect(stage).toHaveAttribute('aria-pressed', 'false')
 })
 
-it('distinguishes empty selections from explicitly no accessibility provisions', async () => {
+it('VS06B (boundary): distinguishes empty selections from explicitly no accessibility provisions', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([
     venue, { ...venue, venueId: '456', venueAddress: 'Second venue', venueAccessibilities: ['none'] },
   ])))
@@ -218,7 +218,7 @@ it('distinguishes empty selections from explicitly no accessibility provisions',
   expect(screen.getAllByText('Not recorded')).toHaveLength(3)
   expect(screen.getAllByText('No additional information recorded.')).toHaveLength(2)
 })
-it('handles network failure and retries catalogue loading', async () => {
+it('VS06A (failure): handles network failure and retries catalogue loading', async () => {
   vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new Error()).mockResolvedValueOnce(response([])))
   page('/venue-staff/catalogue')
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not reach ConnectSphere')
@@ -226,7 +226,7 @@ it('handles network failure and retries catalogue loading', async () => {
   expect(await screen.findByText('No venues yet')).toBeInTheDocument()
 })
 
-it('saves explicit no provisions as none and displays the saved meaning', async () => {
+it('VS06B (happy): saves explicit no provisions as none and displays the saved meaning', async () => {
   const saved = { ...venue, venueAccessibilities: ['none'] }
   const fetch = vi.fn().mockResolvedValueOnce(response(saved, 201)).mockResolvedValueOnce(response([saved]))
   vi.stubGlobal('fetch', fetch); page(); const user = await fillForm()
@@ -238,7 +238,7 @@ it('saves explicit no provisions as none and displays the saved meaning', async 
   expect(JSON.parse(fetch.mock.calls[0][1].body)).toMatchObject({ venueAccessibilities: ['none'], venueFacilities: [] })
 })
 
-it.each(['capacity', 'layouts', 'operating hours'])('still validates %s when provisions are selected', async field => {
+it.each(['capacity', 'layouts', 'operating hours'])('VS06A VS06B (negative): still validates %s when provisions are selected', async field => {
   const fetch = vi.fn(); vi.stubGlobal('fetch', fetch)
   page(); const user = await fillForm()
   await user.click(screen.getByRole('button', { name: 'Elevators' }))
@@ -259,7 +259,7 @@ it.each(['capacity', 'layouts', 'operating hours'])('still validates %s when pro
   expect(screen.getByRole('button', { name: 'Stage' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-it('displays all supported provision and facility labels', async () => {
+it('VS06B (happy): displays all supported provision and facility labels', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([{ ...venue,
     venueAccessibilities: ['accessible_parking', 'drop_off_zone', 'public_transport', 'step_free_access',
       'wide_doorways', 'elevators', 'wheelchair_support'],
@@ -272,7 +272,7 @@ it('displays all supported provision and facility labels', async () => {
 })
 
 
-it.each(['capacity', 'layouts', 'accessibility', 'facilities', 'hours', 'additional'])('edits %s and reloads saved data', async field => {
+it.each(['capacity', 'layouts', 'accessibility', 'facilities', 'hours', 'additional'])('VS07 (happy): edits %s and reloads saved data', async field => {
   let saved = { ...venue, venueCapacity: 100, supportedLayouts: ['classroom'],
     venueAccessibilities: ['step_free_access'], venueFacilities: ['projection'] }
   const fetch = vi.fn().mockImplementation(async (url: string, options: RequestInit) => {
@@ -317,7 +317,7 @@ it.each(['capacity', 'layouts', 'accessibility', 'facilities', 'hours', 'additio
   }
 })
 
-it('shows edit validation and server rejection without losing input', async () => {
+it('VS07 (negative): shows edit validation and server rejection without losing input', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(response(venue)).mockResolvedValueOnce(response({ message: 'venueCapacity must be between 1 and 50000' }, 422))
   vi.stubGlobal('fetch', fetch)
   page('/venue-staff/catalogue/123/edit')
@@ -333,7 +333,7 @@ it('shows edit validation and server rejection without losing input', async () =
   expect(screen.getByRole('button', { name: 'Theatre' })).toHaveAttribute('aria-pressed', 'true')
 })
 
-it('shows loading errors and retries before enabling editing', async () => {
+it('VS07 (failure): shows loading errors and retries before enabling editing', async () => {
   const fetch = vi.fn().mockResolvedValueOnce(response({ message: 'Venue not found' }, 404)).mockResolvedValueOnce(response(venue))
   vi.stubGlobal('fetch', fetch)
   page('/venue-staff/catalogue/123/edit')
@@ -344,7 +344,7 @@ it('shows loading errors and retries before enabling editing', async () => {
 })
 
 
-it('saves multiple changes together, clears additional information and reopens current values', async () => {
+it('VS07 (happy): saves multiple changes together, clears additional information and reopens current values', async () => {
   let saved = { ...venue, additionalInformation: 'Use Level 2' }
   const fetch = vi.fn().mockImplementation(async (url: string, options: RequestInit) => {
     if (options.method === 'PUT') saved = { ...saved, ...JSON.parse(options.body as string) }

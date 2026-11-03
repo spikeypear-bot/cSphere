@@ -37,19 +37,19 @@ describe('RequestByline', () => {
     window.localStorage.clear()
   })
 
-  it('names the organiser who submitted and the coordinator who last acted, from the coordinator side', () => {
+  it('EC02 (happy): names the organiser who submitted and the coordinator who last acted, from the coordinator side', () => {
     seedSession('coordinator') // signed in as ec1
     const text = renderByline()
     expect(text).toMatch(/submitted .+ by eo1 · last updated .+ by you$/)
   })
 
-  it('says "by you" for the organiser who submitted, and names the coordinator', () => {
+  it('EO26 (happy): says "by you" for the organiser who submitted, and names the coordinator', () => {
     seedSession('organiser') // signed in as eo1
     const text = renderByline()
     expect(text).toMatch(/submitted .+ by you · last updated .+ by ec1$/)
   })
 
-  it('credits the organiser side when their saved edits are newer than the last timeline entry', () => {
+  it('EC02 EO26 (happy): credits the organiser side when their saved edits are newer than the last timeline entry', () => {
     seedSession('coordinator')
     expect(renderByline('2026-09-22T01:00:00Z')).toMatch(/last updated .+ by the organiser$/)
     cleanup()
@@ -58,7 +58,7 @@ describe('RequestByline', () => {
     expect(renderByline('2026-09-22T01:00:00Z')).toMatch(/last updated .+ by your organisation$/)
   })
 
-  it('falls back to the creator for requests submitted before the timeline existed', () => {
+  it('EC02 EO26 (boundary): falls back to the creator for requests submitted before the timeline existed', () => {
     seedSession('coordinator')
     expect(renderByline('2026-09-21T01:00:00Z', [], 'eo2')).toMatch(/submitted .+ ago by eo2 · /)
     cleanup()
@@ -67,7 +67,7 @@ describe('RequestByline', () => {
     expect(renderByline('2026-09-21T01:00:00Z', [], 'eo1')).toMatch(/submitted .+ ago by you · /)
   })
 
-  it('omits names it does not know, for requests older than the timeline', () => {
+  it('EC02 (boundary): omits names it does not know, for requests older than the timeline', () => {
     seedSession('coordinator')
     expect(renderByline('2026-09-21T01:00:00Z', [])).toMatch(/^Acme Pte Ltd · submitted .+ ago · last updated .+ ago$/)
   })

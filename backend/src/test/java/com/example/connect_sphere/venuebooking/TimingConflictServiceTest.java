@@ -9,6 +9,7 @@ import com.example.connect_sphere.venueavailability.service.TimingConflictServic
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -32,6 +33,7 @@ class TimingConflictServiceTest {
             "approved",s,e,occupied.start(),occupied.end());
     }
     @ParameterizedTest(name="VS-C4 AC3, AC4 (boundary): setup={0}, turnaround={1}, expected={2}")
+    @DisplayName("VS-C4 AC3, AC4 (boundary): two bookings conflict only when setup or turnaround makes their occupied periods strictly overlap")
     @CsvSource({"0,0,0", "60,0,0", "61,0,1", "0,60,0", "0,61,1", "30,31,1", "30,30,0"})
     void comparesEffectivePeriodsUsingStrictBounds(int setup,int turnaround,int count) {
         when(venues.existsById(venue)).thenReturn(true);
@@ -41,7 +43,7 @@ class TimingConflictServiceTest {
         assertThat(service.list(venue)).hasSize(count);
         verifyNoInteractions(jdbc);
     }
-    @Test void vsc4Ac3Ac4BoundaryCrossesMidnightAndReportsEveryPairOnce() {
+    @Test @DisplayName("VS-C4 AC3, AC4 (boundary): conflicts that cross midnight are found and each overlapping pair is reported once") void vsc4Ac3Ac4BoundaryCrossesMidnightAndReportsEveryPairOnce() {
         when(venues.existsById(venue)).thenReturn(true);
         var a=booking("1","2030-04-01T23:00:00","2030-04-01T23:50:00",0,30);
         var b=booking("2","2030-04-02T00:10:00","2030-04-02T01:00:00",30,0);
@@ -55,7 +57,7 @@ class TimingConflictServiceTest {
         verify(repository).bookings(venue);
         verifyNoInteractions(jdbc);
     }
-    @Test void vsc4Ac5Ac10NegativeRetrievalReflectsStoredChangesWithoutWrites() {
+    @Test @DisplayName("VS-C4 AC5, AC10 (negative): the conflict list reflects the latest saved bookings and viewing it changes nothing") void vsc4Ac5Ac10NegativeRetrievalReflectsStoredChangesWithoutWrites() {
         when(venues.existsById(venue)).thenReturn(true);
         var a=booking("1","2030-04-01T09:00:00","2030-04-01T11:00:00",0,0);
         var b=booking("2","2030-04-01T10:00:00","2030-04-01T12:00:00",0,0);
@@ -64,13 +66,13 @@ class TimingConflictServiceTest {
         assertThat(service.list(venue)).isEmpty();
         verifyNoInteractions(jdbc);
     }
-    @Test void vsc4Ac11FailurePropagatesInsteadOfReturningEmpty() {
+    @Test @DisplayName("VS-C4 AC11 (failure): when bookings cannot be read, an error is raised instead of an empty conflict list") void vsc4Ac11FailurePropagatesInsteadOfReturningEmpty() {
         when(venues.existsById(venue)).thenReturn(true);
         when(repository.bookings(venue)).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("Unavailable"));
         assertThatThrownBy(() -> service.list(venue)).isInstanceOf(org.springframework.dao.DataAccessException.class);
         verifyNoInteractions(jdbc);
     }
-    @Test void vsc4Ac6Ac11FailureApiReturns503RatherThanNoConflicts() throws Exception {
+    @Test @DisplayName("VS-C4 AC6, AC11 (failure): staff see a try-again error, not \"no conflicts\", when conflicts cannot be retrieved") void vsc4Ac6Ac11FailureApiReturns503RatherThanNoConflicts() throws Exception {
         var mockService=mock(TimingConflictService.class);
         when(mockService.list(venue)).thenThrow(new org.springframework.dao.DataAccessResourceFailureException("Unavailable"));
         var mvc=org.springframework.test.web.servlet.setup.MockMvcBuilders.standaloneSetup(new TimingConflictController(mockService)).build();

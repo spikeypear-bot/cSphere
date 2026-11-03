@@ -28,7 +28,7 @@ const COMPLETE: DraftFields = {
 }
 
 describe('eventRequestCompletion — mirrors EventRequestService.missingRequiredFields()', () => {
-  it('reports every required field missing on a blank draft', () => {
+  it('EO02 (boundary): a blank draft reports every required field as missing', () => {
     expect(getMissingRequiredFields(BLANK)).toEqual([
       'eventName',
       'purpose',
@@ -41,22 +41,22 @@ describe('eventRequestCompletion — mirrors EventRequestService.missingRequired
     expect(getCompletionPercent(BLANK)).toBe(0)
   })
 
-  it('reports nothing missing once every required field is filled in', () => {
+  it('EO02 (happy): nothing is reported missing once every required field is filled in', () => {
     expect(getMissingRequiredFields(COMPLETE)).toEqual([])
     expect(getCompletionPercent(COMPLETE)).toBe(100)
   })
 
-  it('treats whitespace-only text fields as missing, same as the backend', () => {
+  it('EO02 (negative): text fields with only spaces count as missing, same as the backend', () => {
     const whitespaceOnly: DraftFields = { ...COMPLETE, eventName: '   ' }
     expect(getMissingRequiredFields(whitespaceOnly)).toEqual(['eventName'])
   })
 
-  it('treats an empty accessibilityNeeds array as missing (must answer, even with "none")', () => {
+  it('EO02 (negative): an empty accessibility needs answer counts as missing (the organiser must answer, even with "none")', () => {
     const noAnswer: DraftFields = { ...COMPLETE, accessibilityNeeds: [] }
     expect(getMissingRequiredFields(noAnswer)).toEqual(['accessibilityNeeds'])
   })
 
-  it('computes a proportional percentage for a partially filled draft', () => {
+  it('EO01 (happy): a partly filled draft shows a proportional completion percentage', () => {
     const partial: DraftFields = {
       ...BLANK,
       eventName: 'Q1 Town Hall', // 1 of 7 required fields
@@ -64,7 +64,7 @@ describe('eventRequestCompletion — mirrors EventRequestService.missingRequired
     expect(getCompletionPercent(partial)).toBe(Math.round((1 / 7) * 100))
   })
 
-  it('does not count optional fields (description, equipment, registration) toward completion', () => {
+  it('EO01 (boundary): optional fields (description, equipment, registration) do not count toward completion', () => {
     const optionalOnly: DraftFields = {
       ...BLANK,
       description: 'Extra context',

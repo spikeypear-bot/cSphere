@@ -83,7 +83,7 @@ describe('EquipmentRequestPage (EC07)', () => {
       items: [{ equipmentId: 'mic-1', quantity: 3 }, { equipmentId: 'projector-1', quantity: 1 }] })
   })
 
-  it('submits an event equipment request with item quantities and shows it awaiting review', async () => {
+  it('EC07 (happy): submits an event equipment request with item quantities and shows it awaiting review', async () => {
     seedSession('coordinator')
     const calls = stubApi({
       ...getBaseRoutes(),
@@ -112,7 +112,7 @@ describe('EquipmentRequestPage (EC07)', () => {
     })
   })
 
-  it('shows an existing active request instead of allowing a duplicate', async () => {
+  it('EC07 (conflict): shows an existing active request instead of allowing a duplicate', async () => {
     seedSession('coordinator')
     stubApi({
       ...getBaseRoutes(),
@@ -214,7 +214,7 @@ describe('EquipmentRequestPage (EC07)', () => {
     expect(screen.getByRole('button', { name: 'Submit equipment request' })).toBeEnabled()
   })
 
-  it('shows Technical Support rejection status and reason', async () => {
+  it('EC07 (happy): shows Technical Support rejection status and reason', async () => {
     seedSession('coordinator')
     stubApi({
       ...getBaseRoutes(),

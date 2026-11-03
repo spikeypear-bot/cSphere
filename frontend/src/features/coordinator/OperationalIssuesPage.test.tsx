@@ -13,7 +13,7 @@ describe('OperationalIssuesPage (VS13)', () => {
     window.localStorage.clear()
   })
 
-  it('shows affected managed events without implying bookings were changed', async () => {
+  it('VS13 (happy): shows affected managed events without implying bookings were changed', async () => {
     stubApi({
       'GET /api/coordinator/operational-issues': () => jsonResponse(200, [{
         issueId: 'issue-1',
@@ -44,7 +44,7 @@ describe('OperationalIssuesPage (VS13)', () => {
     expect(screen.getByText(/Existing bookings remain unchanged/)).toBeInTheDocument()
   })
 
-  it('shows a clear empty state when no managed venue has an issue', async () => {
+  it('VS13 (boundary): shows a clear empty state when no managed venue has an issue', async () => {
     stubApi({
       'GET /api/coordinator/operational-issues': () => jsonResponse(200, []),
     })
@@ -59,7 +59,7 @@ describe('OperationalIssuesPage (VS13)', () => {
       .toBeInTheDocument()
   })
 
-  it('shows a retrieval error', async () => {
+  it('VS13 (failure): shows an error when the issues cannot be retrieved', async () => {
     const calls = stubApi({
       'GET /api/coordinator/operational-issues': () => jsonResponse(500, { message: 'Service unavailable.' }),
     })

@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -86,6 +87,7 @@ class EventReassignmentServiceTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (happy): the assigned coordinator submits a reason and the Lead is notified")
     void assignedCoordinatorCanSubmitReasonAndLeadReceivesNotification() {
         when(events.findForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
         when(requests.existsByEventIdAndStatus(EVENT_ID, EventReassignmentStatus.pending)).thenReturn(false);
@@ -106,6 +108,7 @@ class EventReassignmentServiceTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (negative): someone other than the assigned coordinator cannot ask for reassignment and nothing is saved")
     void someoneOtherThanTheAssignedCoordinatorCannotCreateARequest() {
         when(events.findForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
 
@@ -117,6 +120,7 @@ class EventReassignmentServiceTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (happy): the Lead's approval moves the event and its original request to the new coordinator and notifies everyone affected")
     void leadApprovalUpdatesEventAndOriginatingRequestAndNotifiesAffectedUsers() {
         EventReassignmentRequest request = pendingRequest();
         when(requests.findForUpdate(REQUEST_ID)).thenReturn(Optional.of(request));
@@ -146,6 +150,7 @@ class EventReassignmentServiceTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (negative): a completed event cannot be reassigned, the request stays pending and nothing changes")
     void completedEventsCannotBeReassignedAndTheRequestRemainsPending() {
         event.setStatus(EventStatus.completed);
         when(requests.findForUpdate(REQUEST_ID)).thenReturn(Optional.of(pendingRequest()));
@@ -161,6 +166,7 @@ class EventReassignmentServiceTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (conflict): a second request while one is pending is refused and nothing is saved")
     void aSecondPendingRequestIsRejectedWithoutCreatingAnotherRecord() {
         when(events.findForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
         when(requests.existsByEventIdAndStatus(EVENT_ID, EventReassignmentStatus.pending)).thenReturn(true);
@@ -174,6 +180,7 @@ class EventReassignmentServiceTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (negative): the Lead's decline leaves the event's coordinator unchanged and tells the requester why")
     void leadDeclineLeavesBothEventAssignmentsUntouchedAndNotifiesRequester() {
         EventReassignmentRequest request = pendingRequest();
         when(requests.findForUpdate(REQUEST_ID)).thenReturn(Optional.of(request));

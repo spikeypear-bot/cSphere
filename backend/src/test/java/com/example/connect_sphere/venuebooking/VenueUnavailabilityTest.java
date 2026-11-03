@@ -104,7 +104,8 @@ class VenueUnavailabilityTest {
             jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
         }
     }
-    @Test void cancellationReleasesBuffersAndPreservesOtherOccupancyAndHistory() {
+    @Test @DisplayName("VS01 (happy): cancelling an approved booking frees its buffered time but keeps other bookings, unavailable periods and history")
+    void cancellationReleasesBuffersAndPreservesOtherOccupancyAndHistory() {
         UUID v = venue();
         availability.updateSettings(v, new Settings(60, 60));
         UUID original = booking(v, "approved"), other = booking(v, "approved");
@@ -126,7 +127,7 @@ class VenueUnavailabilityTest {
         assertThat(availability.list(v)).containsExactly(maintenance);
     }
 
-    @Test @org.junit.jupiter.api.DisplayName("VS01 VS17 (conflict): replacement releases only its source and rechecks target conflicts")
+    @Test @DisplayName("VS01 VS17 (conflict): replacement releases only its source and rechecks target conflicts")
     void differentVenueReplacementReleasesOnlyItsOriginalPeriod() {
         UUID v = venue(), target=venue(), original = booking(v, "approved");
         record(v, period("10:00", "10:30"));
@@ -145,7 +146,8 @@ class VenueUnavailabilityTest {
         assertThat(availability.schedule(target).bookings()).extracting(Booking::bookingId).containsExactly(replacement);
     }
 
-    @Test void failedReplacementApprovalRollsBackOriginalRelease() {
+    @Test @DisplayName("VS01 EC10 (failure): if approving a replacement fails, the original booking stays approved and the replacement stays pending")
+    void failedReplacementApprovalRollsBackOriginalRelease() {
         UUID source = venue(), target = venue(), original = booking(source, "approved");
         record(source, period("10:00", "11:00"));
         UUID replacement = requests.submit(coordinator, event(original),
@@ -162,7 +164,8 @@ class VenueUnavailabilityTest {
         assertThat(availability.schedule(source).bookings()).extracting(Booking::bookingId).containsExactly(original);
     }
 
-    @Test void failedCancellationPreservesApprovedReservationAndEventStatus() {
+    @Test @DisplayName("VS01 (failure): if cancelling fails, the approved booking and the confirmed event stay unchanged")
+    void failedCancellationPreservesApprovedReservationAndEventStatus() {
         UUID v = venue(), original = booking(v, "approved");
         jdbc.update("UPDATE events SET status='confirmed' WHERE event_id=?", event(original));
         jdbc.execute("""
@@ -177,7 +180,8 @@ class VenueUnavailabilityTest {
         assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(original);
     }
 
-    @Test void concurrentCancellationAndApprovalKeepOneConsistentReservation() throws Exception {
+    @Test @DisplayName("VS01 (conflict): cancelling one booking while approving a competing one leaves exactly one reservation on the calendar")
+    void concurrentCancellationAndApprovalKeepOneConsistentReservation() throws Exception {
         UUID v = venue(), original = booking(v, "approved"), contender = booking(v, "pending");
         CountDownLatch start = new CountDownLatch(1);
         try (var pool = Executors.newFixedThreadPool(2)) {
@@ -193,7 +197,8 @@ class VenueUnavailabilityTest {
             assertThat(availability.schedule(v).bookings()).extracting(Booking::bookingId).containsExactly(contender);
         }
     }
-    @Test void submissionAndReplacementSnapshotTheirOwnVenueDefaults() {
+    @Test @DisplayName("VS01 EC10 (happy): new and replacement requests save the setup and turnaround times of the venue they ask for")
+    void submissionAndReplacementSnapshotTheirOwnVenueDefaults() {
         UUID source = venue(), target = venue(), original = booking(source, "approved");
         availability.updateSettings(target, new Settings(25, 55));
         record(source, period("10:00", "11:00"));
@@ -210,7 +215,8 @@ class VenueUnavailabilityTest {
                 .containsEntry("setup_duration_minutes", 10).containsEntry("turnaround_duration_minutes", 20);
     }
 
-    @Test void snapshotsSurviveDefaultChangesAcrossCalendarPreviewAndApproval() {
+    @Test @DisplayName("VS01 (boundary): a booking keeps its saved setup and turnaround times in the calendar, preview and approval after the venue defaults change")
+    void snapshotsSurviveDefaultChangesAcrossCalendarPreviewAndApproval() {
         UUID v = venue();
         availability.updateSettings(v, new Settings(60, 45));
         UUID pending = booking(v, "pending");
@@ -232,7 +238,8 @@ class VenueUnavailabilityTest {
         assertThat(statusOf(pending)).isEqualTo("pending");
     }
 
-    @Test void prospectiveRequestsUseDefaultsButExistingConflictsUseSnapshots() {
+    @Test @DisplayName("VS01 (boundary): a new request is checked with the current venue defaults while existing bookings keep their saved buffers")
+    void prospectiveRequestsUseDefaultsButExistingConflictsUseSnapshots() {
         UUID v = venue();
         availability.updateSettings(v, new Settings(0, 45));
         booking(v, "approved");
@@ -242,7 +249,8 @@ class VenueUnavailabilityTest {
         assertThat(availability.conflicts(v, UUID.randomUUID(), touching.startDateTime().minusMinutes(1), touching.endDateTime())).hasSize(1);
     }
 
-    @Test void completedBookingCalendarRetainsSnapshotAfterAllowedDefaultEdit() {
+    @Test @DisplayName("VS01 (boundary): a completed booking still shows its original buffers on the calendar after the venue defaults are edited")
+    void completedBookingCalendarRetainsSnapshotAfterAllowedDefaultEdit() {
         UUID v = venue();
         availability.updateSettings(v, new Settings(30, 45));
         UUID original = booking(v, "approved");
@@ -255,14 +263,16 @@ class VenueUnavailabilityTest {
         assertThat(calendar.bookings().getFirst().effectiveEnd()).isEqualTo(period("09:30", "12:45").endDateTime());
     }
 
-    @Test void approvalDoesNotPadSnapshotWithLargerCurrentVenueDefaults() {
+    @Test @DisplayName("VS01 (boundary): approval uses the booking's saved buffers, not larger current venue defaults")
+    void approvalDoesNotPadSnapshotWithLargerCurrentVenueDefaults() {
         UUID v = venue(), pending = booking(v, "pending");
         jdbc.update("UPDATE venues SET setup_minutes=60,turnaround_minutes=60 WHERE venue_id=?", v);
         record(v, period("09:00", "09:45"));
         assertThat(bookings.approve(pending).status().name()).isEqualTo("approved");
     }
 
-    @Test void calendarIncludesHistoryBuffersAndOverlapsWithoutChangingOperationalReads() throws Exception {
+    @Test @DisplayName("VS01 (happy): venue staff see completed and pending bookings with buffers and unavailable periods in the calendar range, and coordinators are refused")
+    void calendarIncludesHistoryBuffersAndOverlapsWithoutChangingOperationalReads() throws Exception {
         UUID v=venue();
         availability.updateSettings(v, new Settings(30,45));
         UUID approved=booking(v,"approved"), pending=booking(v,"pending");
@@ -290,7 +300,8 @@ class VenueUnavailabilityTest {
                 .param("start",start.toString()).param("end",end.toString())).andExpect(status().isForbidden());
     }
 
-    @Test void calendarRejectsInvalidRangesAndReturnsEmptyPeriods() throws Exception {
+    @Test @DisplayName("VS01 (negative): the calendar refuses missing, reversed, empty or too-long ranges and returns empty lists for a quiet month")
+    void calendarRejectsInvalidRangesAndReturnsEmptyPeriods() throws Exception {
         UUID v=venue();
         String start="2027-04-01T00:00:00+08:00", end="2027-05-01T00:00:00+08:00";
         mvc.perform(get("/api/venues/"+v+"/schedule").with(flow.as("vs1")).param("start",start).param("end",end))
@@ -305,7 +316,8 @@ class VenueUnavailabilityTest {
                 .andExpect(status().isBadRequest());
     }
 
-    @Test void overlappingPeriodsAreRejectedByPreviewAndCreateWithoutSideEffects() throws Exception {
+    @Test @DisplayName("VS01 (conflict): an unavailable period that overlaps an existing one is refused by preview and save, and nothing is recorded")
+    void overlappingPeriodsAreRejectedByPreviewAndCreateWithoutSideEffects() throws Exception {
         UUID v=venue(); record(v,period("10:00","12:00"));
         booking(v,"approved");
         for (String[] times : List.of(new String[]{"10:30","11:00"}, new String[]{"09:00","13:00"},
@@ -322,13 +334,15 @@ class VenueUnavailabilityTest {
         assertThat(availability.list(v)).hasSize(1);
         assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_unavailability_bookings WHERE unavailability_id IN (SELECT unavailability_id FROM venue_unavailability WHERE venue_id=?)",Integer.class,v)).isZero();
     }
-    @Test void separatedAndTouchingPeriodsAreAllowedAndVenuesAreIndependent() {
+    @Test @DisplayName("VS01 (boundary): back-to-back and separate unavailable periods are allowed, and other venues are not affected")
+    void separatedAndTouchingPeriodsAreAllowedAndVenuesAreIndependent() {
         UUID v=venue(); record(v,period("10:00","12:00"));
         record(v,period("09:00","10:00")); record(v,period("12:00","13:00")); record(v,period("15:00","16:00"));
         record(venue(),period("10:30","11:00"));
         assertThat(availability.list(v)).hasSize(4);
     }
-    @Test void multiDayOverlapAndEquivalentOffsetsAreCheckedAgainAfterPreview() {
+    @Test @DisplayName("VS01 (conflict): multi-day overlaps and the same time written in another time zone are caught, even after a preview was accepted")
+    void multiDayOverlapAndEquivalentOffsetsAreCheckedAgainAfterPreview() {
         UUID v=venue();
         Request inner=new Request(OffsetDateTime.parse("2027-10-08T10:00:00+08:00"),
                 OffsetDateTime.parse("2027-10-10T10:00:00+08:00"),"Maintenance",null,null);
@@ -344,7 +358,8 @@ class VenueUnavailabilityTest {
                 OffsetDateTime.parse("2027-10-30T10:00:00+08:00"),"Maintenance",null,null));
         assertThat(availability.list(v)).hasSize(2);
     }
-    @Test void simultaneousOverlappingRecordsAllowOnlyOneSave() throws Exception {
+    @Test @DisplayName("VS01 (conflict): when two overlapping unavailable periods are saved at the same time, only one is recorded")
+    void simultaneousOverlappingRecordsAllowOnlyOneSave() throws Exception {
         UUID v=venue(); CountDownLatch start=new CountDownLatch(1);
         try (var pool=Executors.newFixedThreadPool(2)) {
             var first=pool.submit(() -> { start.await(); try {
@@ -358,7 +373,8 @@ class VenueUnavailabilityTest {
             assertThat(availability.list(v)).hasSize(1);
         }
     }
-    @Test void buffersBoundariesStatusesAndVenueScoping() {
+    @Test @DisplayName("VS01 (boundary): the preview lists only active bookings at this venue whose buffered time overlaps, to the exact minute")
+    void buffersBoundariesStatusesAndVenueScoping() {
         UUID v = venue(); availability.updateSettings(v, new Settings(30,45));
         UUID approved = booking(v,"approved"), pending = booking(v,"pending");
         booking(v,"cancelled"); booking(v,"rejected"); booking(v,"changed"); booking(venue(),"approved");
@@ -368,7 +384,8 @@ class VenueUnavailabilityTest {
         assertThat(availability.preview(v, period("12:44","13:00")).affectedBookings()).hasSize(2);
         assertThat(availability.preview(v, period("12:45","13:00")).affectedBookings()).isEmpty();
     }
-    @Test void confirmationPreservesBookingsAndNotifiesAssignedCoordinator() {
+    @Test @DisplayName("VS01 VS-C1 (happy): a period that affects a booking needs confirmation, keeps the booking unchanged and notifies its coordinator once")
+    void confirmationPreservesBookingsAndNotifiesAssignedCoordinator() {
         UUID v = venue(), b = booking(v,"approved");
         String original = jdbc.queryForObject("SELECT to_jsonb(b)::text FROM venue_bookings b WHERE booking_id=?",String.class,b);
         assertThatThrownBy(() -> availability.create(v,actor,period("10:00","11:00"))).isInstanceOf(VenueBookingStateException.class);
@@ -381,6 +398,7 @@ class VenueUnavailabilityTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"pending", "approved"})
     @Tag("EC-C4")
+    @DisplayName("VS01 VS-C1 (happy): the coordinator's notice names the affected venue, date and Singapore time for pending and approved bookings")
     void EC_C4_notifiesCoordinatorWithTheAffectedBookingForPlannedAndConfirmedBookings(String status) throws Exception {
         UUID v = venue(), b = booking(v, status);
         record(v, period("10:00", "11:00"));
@@ -399,7 +417,8 @@ class VenueUnavailabilityTest {
                                         // EC-C4 AC3: the window is labelled as Singapore time.
                                         org.hamcrest.Matchers.containsString("Singapore time")))));
     }
-    @Test void stalePreviewRequiresAnotherConfirmation() {
+    @Test @DisplayName("VS01 (conflict): if bookings change after the preview, saving is refused until staff confirm again")
+    void stalePreviewRequiresAnotherConfirmation() {
         UUID v = venue(); booking(v,"approved"); Request r=period("10:00","11:00");
         Preview p=availability.preview(v,r); booking(v,"pending");
         assertThatThrownBy(() -> availability.create(v,actor,new Request(r.startDateTime(),r.endDateTime(),r.reason(),
@@ -407,14 +426,16 @@ class VenueUnavailabilityTest {
                 .isInstanceOf(VenueBookingStateException.class);
         assertThat(availability.list(v)).isEmpty();
     }
-    @Test void failedInsertRollsBackAllEffects() {
+    @Test @DisplayName("VS01 VS-C1 (failure): a failed save records no period, marks no booking affected and sends no notification")
+    void failedInsertRollsBackAllEffects() {
         UUID v=venue(), b=booking(v,"approved"); Request r=period("10:00","11:00"); Preview p=availability.preview(v,r);
         assertThatThrownBy(() -> availability.create(v,UUID.randomUUID(),new Request(r.startDateTime(),r.endDateTime(),r.reason(),
                 List.of(b),p.previewToken()))).isInstanceOf(org.springframework.dao.DataIntegrityViolationException.class);
         assertThat(availability.list(v)).isEmpty(); assertThat(availability.affected(b)).isFalse();
         assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=?",Integer.class,b)).isZero();
     }
-    @Test void unavailablePeriodBlocksShortlistSubmissionAndApproval() {
+    @Test @DisplayName("VS01 EC-C2 (conflict): an unavailable period shows the venue as blocked with its times and reason, and blocks submission and approval")
+    void unavailablePeriodBlocksShortlistSubmissionAndApproval() {
         UUID v=venue(); availability.updateSettings(v,new Settings(30,45)); UUID b=booking(v,"pending");
         Request unavailable = period("09:20","09:40");
         record(v, unavailable);
@@ -431,12 +452,14 @@ class VenueUnavailabilityTest {
         assertThatThrownBy(() -> requests.submit(coordinator,event(other),new SubmitVenueBookingRequest(v,null,null)))
                 .isInstanceOf(InvalidVenueBookingException.class);
     }
-    @Test void bufferAwareBookingConflicts() {
+    @Test @DisplayName("VS01 (boundary): a request starting one minute inside an approved booking's turnaround conflicts, and one starting right after it does not")
+    void bufferAwareBookingConflicts() {
         UUID v=venue(); availability.updateSettings(v,new Settings(30,45)); booking(v,"approved");
         assertThat(availability.conflicts(v,UUID.randomUUID(),period("13:14","14:00").startDateTime(),period("13:14","14:00").endDateTime())).hasSize(1);
         assertThat(availability.conflicts(v,UUID.randomUUID(),period("13:15","14:00").startDateTime(),period("13:15","14:00").endDateTime())).isEmpty();
     }
-    @Test void replacementApprovalChangesOnlyOriginalStatus() {
+    @Test @DisplayName("VS01 EC10 (happy): approving a replacement marks only the original booking as changed, and a second replacement request is refused")
+    void replacementApprovalChangesOnlyOriginalStatus() {
         UUID old=venue(), next=venue(), b=booking(old,"approved"); record(old,period("10:00","11:00"));
         var replacement=requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,"Replacement",null,b));
         assertThat(statusOf(b)).isEqualTo("approved");
@@ -447,7 +470,8 @@ class VenueUnavailabilityTest {
         assertThat(availability.affected(b)).isFalse();
         assertThat(jdbc.queryForObject("SELECT booking_notes FROM venue_bookings WHERE booking_id=?",String.class,b)).isEqualTo("Preserve me");
     }
-    @Test void rejectedAndCancelledBookingsCanBeRebookedWithoutChangingOtherEventBookings() {
+    @Test @DisplayName("EC10 (happy): a rejected or cancelled booking can be replaced without changing the event's other bookings")
+    void rejectedAndCancelledBookingsCanBeRebookedWithoutChangingOtherEventBookings() {
         for (String originalStatus : List.of("rejected", "cancelled")) {
             UUID sourceVenue=venue(), targetVenue=venue(), otherVenue=venue();
             UUID original=booking(sourceVenue, originalStatus);
@@ -473,7 +497,7 @@ class VenueUnavailabilityTest {
             assertThat(jdbc.queryForObject("SELECT count(*) FROM venue_bookings WHERE event_id=?",Integer.class,eventId)).isEqualTo(3);
         }
     }
-    @Test @org.junit.jupiter.api.DisplayName("EC10 (happy): a healthy booking can be replaced without releasing it early")
+    @Test @DisplayName("EC10 (happy): a healthy booking can be replaced without releasing it early")
     void healthyApprovedBookingCanBeReplaced() {
         UUID old=venue(), next=venue(), original=booking(old,"approved");
         var replacement=requests.submit(coordinator,event(original),new SubmitVenueBookingRequest(next,null,null,original));
@@ -483,7 +507,8 @@ class VenueUnavailabilityTest {
         assertThat(statusOf(original)).isEqualTo("changed");
         assertThat(statusOf(replacement.bookingId())).isEqualTo("approved");
     }
-    @Test void rejectedAndWithdrawnReplacementsKeepOriginalAndAllowRetry() {
+    @Test @DisplayName("VS01 EC10 (negative): a rejected or withdrawn replacement leaves the original booking affected and lets the coordinator try again")
+    void rejectedAndWithdrawnReplacementsKeepOriginalAndAllowRetry() {
         UUID old=venue(), next=venue(), b=booking(old,"pending"); record(old,period("10:00","11:00"));
         var first=requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b));
         bookings.reject(first.bookingId(),"No longer suitable",null,null);
@@ -493,14 +518,16 @@ class VenueUnavailabilityTest {
         assertThat(availability.affected(b)).isTrue();
         assertThat(requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b)).status().name()).isEqualTo("pending");
     }
-    @Test void confirmedEventCanRequestReplacementButAnotherCoordinatorCannot() {
+    @Test @DisplayName("VS01 EC10 (negative): the assigned coordinator of a confirmed event can request a replacement, but another coordinator cannot")
+    void confirmedEventCanRequestReplacementButAnotherCoordinatorCannot() {
         UUID v=venue(), b=booking(v,"approved"), next=venue(); record(v,period("10:00","11:00"));
         jdbc.update("UPDATE events SET status='confirmed' WHERE event_id=?",event(b));
         assertThatThrownBy(() -> requests.submit(UUID.randomUUID(),event(b),new SubmitVenueBookingRequest(next,null,null,b)))
                 .isInstanceOf(com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException.class);
         assertThat(requests.submit(coordinator,event(b),new SubmitVenueBookingRequest(next,null,null,b))).isNotNull();
     }
-    @Test void notificationFailureRollsBackPeriodAndAffectedLinks() {
+    @Test @DisplayName("VS01 VS-C1 (failure): if the coordinator notification fails, the period and its affected-booking links are not saved")
+    void notificationFailureRollsBackPeriodAndAffectedLinks() {
         UUID v=venue(), b=booking(v,"approved");
         // Only this test's booking can trigger the injected failure.
         jdbc.execute("CREATE FUNCTION vs01_fail_notification() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'VS01 notification failure'; END $$");
@@ -515,7 +542,8 @@ class VenueUnavailabilityTest {
             jdbc.execute("DROP FUNCTION IF EXISTS vs01_fail_notification()");
         }
     }
-    @Test void createAndScheduleWorkThroughAuthenticatedApi() throws Exception {
+    @Test @DisplayName("VS01 (happy): venue staff record a period through the API and see it on the schedule, and fractional buffer minutes are refused")
+    void createAndScheduleWorkThroughAuthenticatedApi() throws Exception {
         UUID v=venue();
         mvc.perform(post("/api/venues/"+v+"/unavailability").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"startDateTime\":\"2027-04-01T10:00:00+08:00\",\"endDateTime\":\"2027-04-01T11:00:00+08:00\",\"reason\":\"  Maintenance  \"}"))
@@ -525,7 +553,8 @@ class VenueUnavailabilityTest {
         mvc.perform(put("/api/venues/"+v+"/occupancy-settings").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON)
                 .content("{\"setupMinutes\":0.5,\"turnaroundMinutes\":0}")).andExpect(status().is4xxClientError());
     }
-    @Test void invalidCalendarAndPastDatesAreRejectedByBothEndpointsWithoutWrites() throws Exception {
+    @Test @DisplayName("VS01 (negative): impossible calendar dates and past start times are refused by preview and save, and nothing is recorded")
+    void invalidCalendarAndPastDatesAreRejectedByBothEndpointsWithoutWrites() throws Exception {
         UUID v=venue();
         String yesterday=java.time.LocalDate.now(java.time.ZoneId.of("Asia/Singapore")).minusDays(1)+"T10:00:00+08:00";
         for (String endpoint : List.of("/unavailability", "/unavailability/preview")) {
@@ -540,7 +569,8 @@ class VenueUnavailabilityTest {
         }
         assertThat(availability.list(v)).isEmpty();
     }
-    @Test void permissionValidationAndSettingsBoundaries() throws Exception {
+    @Test @DisplayName("VS01 (negative): only venue staff can manage unavailability, invalid periods and negative buffers are refused, and valid buffers are saved")
+    void permissionValidationAndSettingsBoundaries() throws Exception {
         UUID v=venue(); String url="/api/venues/"+v+"/unavailability";
         mvc.perform(get(url).with(flow.as("ec1"))).andExpect(status().isForbidden());
         mvc.perform(post(url).with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON).content("{}")).andExpect(status().isForbidden());
@@ -555,7 +585,8 @@ class VenueUnavailabilityTest {
         booking(v,"pending");
         assertThat(availability.updateSettings(v,new Settings(15,0))).isEqualTo(new Settings(15,0));
     }
-    @Test void approvalReportsBookingsAndAllUnavailablePeriodsTogether() throws Exception {
+    @Test @DisplayName("VS01 (conflict): a refused approval lists the clashing booking and every overlapping unavailable period together, and nothing changes")
+    void approvalReportsBookingsAndAllUnavailablePeriodsTogether() throws Exception {
         UUID v = venue(), approved = booking(v, "approved"), pending = booking(v, "pending");
         Period first = record(v, period("10:30", "11:00"));
         Period second = record(v, period("11:30", "12:30"));
@@ -577,6 +608,7 @@ class VenueUnavailabilityTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.CsvSource({"09:00,10:00,false", "12:00,13:00,false", "11:30,13:00,true", "09:00,10:30,true", "09:00,13:00,true", "10:30,11:00,true"})
+    @DisplayName("VS01 (boundary): approval is blocked only when an unavailable period overlaps the booking, not when it just touches it")
     void approvalUnavailabilityBoundaries(String start, String end, boolean blocked) throws Exception {
         UUID v = venue(), pending = booking(v, "pending");
         Period recorded = record(v, period(start, end));
@@ -588,7 +620,8 @@ class VenueUnavailabilityTest {
         assertThat(statusOf(pending)).isEqualTo(blocked ? "pending" : "approved");
     }
 
-    @Test void approvalIncludesBufferOnlyUnavailablePeriodButIgnoresOtherVenues() throws Exception {
+    @Test @DisplayName("VS01 (boundary): a period overlapping only the setup buffer blocks approval, while periods at other venues do not")
+    void approvalIncludesBufferOnlyUnavailablePeriodButIgnoresOtherVenues() throws Exception {
         UUID v = venue();
         availability.updateSettings(v, new Settings(30, 45));
         UUID pending = booking(v, "pending");
@@ -601,7 +634,8 @@ class VenueUnavailabilityTest {
         assertThat(bookings.approve(booking(venue(), "pending")).status().name()).isEqualTo("approved");
     }
 
-    @Test void approvalUnavailabilityComparesFullTimestampsAcrossMidnight() throws Exception {
+    @Test @DisplayName("VS01 (boundary): an overnight booking is blocked by an unavailable period given in another time zone across midnight")
+    void approvalUnavailabilityComparesFullTimestampsAcrossMidnight() throws Exception {
         UUID v = venue(), pending = booking(v, "pending");
         jdbc.update("UPDATE events SET start_datetime='2027-04-01T23:00:00+08:00', end_datetime='2027-04-02T02:00:00+08:00' WHERE event_id=?", event(pending));
         Period recorded = record(v, new Request(OffsetDateTime.parse("2027-04-01T17:00:00Z"),
@@ -611,7 +645,8 @@ class VenueUnavailabilityTest {
                 .andExpect(jsonPath("$.unavailablePeriods[0].unavailabilityId").value(recorded.unavailabilityId().toString()));
     }
 
-    @Test void simultaneousRecordingAndApprovalCannotSilentlyMissEachOther() throws Exception {
+    @Test @DisplayName("VS01 (conflict): recording a period and approving an affected booking at the same time lets exactly one succeed")
+    void simultaneousRecordingAndApprovalCannotSilentlyMissEachOther() throws Exception {
         UUID v=venue(), b=booking(v,"pending"); Request r=period("10:00","11:00"); Preview p=availability.preview(v,r);
         CountDownLatch start=new CountDownLatch(1);
         try (var pool=Executors.newFixedThreadPool(2)) {

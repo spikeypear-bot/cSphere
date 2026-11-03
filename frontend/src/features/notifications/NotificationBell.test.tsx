@@ -98,7 +98,7 @@ describe('NotificationBell — EO09/EO19', () => {
     window.localStorage.clear()
   })
 
-  it('shows an unread-count badge from the unread-count endpoint', async () => {
+  it('EO09 EO19 (happy): the bell shows a badge with the number of unread notifications', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url === '/api/notifications') return jsonResponse(200, [STATUS_CHANGE_NOTIFICATION])
@@ -112,7 +112,7 @@ describe('NotificationBell — EO09/EO19', () => {
     expect(screen.getByText('1')).toBeInTheDocument()
   })
 
-  it('lists notifications and distinguishes read from unread, including the rejection reason', async () => {
+  it('EO09 EO19 (happy): notifications are listed with read and unread told apart, including the rejection reason', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url === '/api/notifications') {
@@ -135,7 +135,7 @@ describe('NotificationBell — EO09/EO19', () => {
     expect(readItem).toHaveAttribute('data-read', 'true')
   })
 
-  it('marks a notification as read and navigates to its link when clicked', async () => {
+  it('EO09 EO19 (happy): clicking a notification marks it as read and opens its link', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/notifications') return jsonResponse(200, [STATUS_CHANGE_NOTIFICATION])
@@ -161,7 +161,7 @@ describe('NotificationBell — EO09/EO19', () => {
     )
   })
 
-  it('shows an empty state with nothing to fail on when there are no notifications', async () => {
+  it('EO09 EO19 (boundary): with no notifications the bell says there are none yet', async () => {
     vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input)
       if (url === '/api/notifications') return jsonResponse(200, [])

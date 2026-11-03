@@ -46,7 +46,7 @@ describe('SessionProvider', () => {
     window.localStorage.clear()
   })
 
-  it("maps the backend's role abbreviation onto the console vocabulary", async () => {
+  it("AU04 (happy): the backend's role abbreviation opens the matching console", async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(LOGIN_RESPONSE)))
     const user = userEvent.setup()
     render(
@@ -62,7 +62,7 @@ describe('SessionProvider', () => {
     expect(screen.getByText('user: eo1')).toBeInTheDocument()
   })
 
-  it('logs the user out when apiClient reports a session that could not be renewed', async () => {
+  it('DEV05 (failure): the user is logged out when the session could not be renewed', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(LOGIN_RESPONSE)))
     const user = userEvent.setup()
     render(
@@ -81,7 +81,7 @@ describe('SessionProvider', () => {
     expect(screen.getByText('role: none')).toBeInTheDocument()
   })
 
-  it('resumes a stored session on reload', () => {
+  it('DEV05 AU04 (happy): a stored session resumes on reload', () => {
     window.localStorage.setItem(
       AUTH_STORAGE_KEY,
       JSON.stringify({
@@ -100,7 +100,7 @@ describe('SessionProvider', () => {
     expect(screen.getByText('role: venue-staff')).toBeInTheDocument()
   })
 
-  it('treats an unrecognised role as not logged in rather than guessing a console', () => {
+  it('AU04 (negative): an unrecognised role is treated as not logged in rather than guessing a console', () => {
     window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ accessToken: 'a' }))
     render(
       <SessionProvider>

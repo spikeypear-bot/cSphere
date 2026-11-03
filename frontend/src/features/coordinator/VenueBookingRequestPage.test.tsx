@@ -22,7 +22,7 @@ afterEach(() => {
   window.localStorage.clear()
 })
 
-it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('marks %s history labels for booking-only colour styling', async status => {
+it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('EC03 (happy): marks %s history labels for booking-only colour styling', async status => {
   seedSession('coordinator')
   stubApi(routes([{ bookingId: 'colour-booking', status, venueAddress: 'Colour test venue' }]))
   renderPage()
@@ -34,7 +34,7 @@ it.each(['approved', 'pending', 'rejected', 'changed', 'cancelled'])('marks %s h
   vi.unstubAllGlobals()
 })
 
-it('submits one linked replacement for a rejected booking while preserving other active bookings', async () => {
+it('EC10 (happy): submits one linked replacement for a rejected booking while preserving other active bookings', async () => {
   seedSession('coordinator')
   const source = {
     bookingId: 'old-booking', status: 'rejected', venueId: 'old-venue', venueAddress: 'Old Hall',
@@ -169,7 +169,7 @@ describe('VenueBookingRequestPage: other events stay private (ECL-C7)', () => {
 })
 
 describe('VenueBookingRequestPage (EC03)', () => {
-  it('submits independent windows and buffers for multiple venues in Singapore time', async () => {
+  it('EC-C2 (happy): submits independent windows and buffers for multiple venues in Singapore time', async () => {
     const first = { ...OPTIONS[0], venue: { ...OPTIONS[0].venue, setupMinutes: 30, turnaroundMinutes: 15 } }
     const second = { ...OPTIONS[1], verdict: 'suitable' as const, missingAccessibility: [], reasons: [] }
     const available = [first, second]
@@ -207,7 +207,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     ] })
   })
 
-  it('blocks submission when a changed booking window has an occupied-time conflict', async () => {
+  it('EC-C2 (conflict): blocks submission when a changed booking window has an occupied-time conflict', async () => {
     const params = new URLSearchParams({ setupDurationMinutes: '0', turnaroundDurationMinutes: '0',
       startDatetime: '2027-03-10T02:00:00.000Z', endDatetime: '2027-03-10T04:00:00.000Z' })
     stubApi({ ...routes(), ['GET /api/events/' + EVENT + '/venue-options?' + params]: () => jsonResponse(200,
@@ -221,7 +221,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByRole('button', { name: 'Request venue' })).toBeDisabled()
   })
 
-  it('initialises saved venue defaults, rechecks overrides and requires a timing reason', async () => {
+  it("EC-C2 (negative): starts from the venue's saved timings, rechecks overrides and requires a reason for different timings", async () => {
     seedSession('coordinator')
     const timed = { ...OPTIONS[0], venue: { ...OPTIONS[0].venue, setupMinutes: 30, turnaroundMinutes: 45 } }
     let submitted: unknown
@@ -242,7 +242,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(submitted).toMatchObject({ setupDurationMinutes: 60, turnaroundDurationMinutes: 45, timingNote: 'Organiser needs early crew access' })
   })
-  it('allows a replacement for an affected confirmed event and sends the original booking id', async () => {
+  it('EC10 (happy): allows a replacement for an affected confirmed event and sends the original booking id', async () => {
     seedSession('coordinator')
     let submitted: unknown
     stubApi({ ...routes([{ bookingId: 'original', status: 'approved', venueAddress: 'Closed Hall', requiresAlternative: true }], body => {
@@ -255,7 +255,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(await screen.findByText('Event page')).toBeInTheDocument()
     expect(submitted).toMatchObject({ venueId: 'v1', replacesBookingId: 'original' })
   })
-  it('blocks another replacement while one is already pending', async () => {
+  it('EC10 (conflict): blocks another replacement while one is already pending', async () => {
     seedSession('coordinator')
     stubApi(routes([
       { bookingId: 'replacement', status: 'pending', venueAddress: 'New Hall', replacesBookingId: 'original' },
@@ -266,7 +266,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.queryByRole('list', { name: 'Venues ranked for this event' })).not.toBeInTheDocument()
   })
   beforeEach(() => seedSession('coordinator'))
-  it('lists bookable venues in the server ranking and hides unavailable ones until asked', async () => {
+  it('EC03 (happy): lists bookable venues in the server ranking and hides unavailable ones until asked', async () => {
     stubApi(routes())
     const user = userEvent.setup()
     renderPage()
@@ -286,7 +286,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByRole('table')).toHaveTextContent('100 ✗')
   })
 
-  it('explains missing facilities and prevents submitting the venue', async () => {
+  it('EC03 (negative): explains missing facilities and prevents submitting the venue', async () => {
     stubApi(routes())
     const user = userEvent.setup()
     renderPage()
@@ -300,7 +300,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByRole('button', { name: 'Request venue' })).toBeDisabled()
   })
 
-  it('shows coordinators the recorded unavailability reason and time window', async () => {
+  it('EC03 (happy): shows coordinators the recorded unavailability reason and time window', async () => {
     const unavailable = {
       ...OPTIONS[0],
       verdict: 'blocked' as const,
@@ -325,7 +325,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(venue).toHaveTextContent('10:30')
   })
 
-  it('search narrows the list by address or details, and says so when nothing matches', async () => {
+  it('EC03 (boundary): search narrows the list by address or details, and says so when nothing matches', async () => {
     stubApi(routes())
     const user = userEvent.setup()
     renderPage()
@@ -342,14 +342,14 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(screen.getByText(/No venues match/)).toBeInTheDocument()
   })
 
-  it('shows capacity against attendance for each venue', async () => {
+  it('EC03 (happy): shows capacity against attendance for each venue', async () => {
     stubApi(routes())
     renderPage()
 
     expect(await screen.findByText('150 of 160 seats · 10 spare')).toBeInTheDocument()
   })
 
-  it('submits the selected suitable venue with notes and returns to the event', async () => {
+  it('EC03 (happy): submits the selected suitable venue with notes and returns to the event', async () => {
     const calls = stubApi(routes([], () => jsonResponse(201, { bookingId: 'b1', status: 'pending' })))
     const user = userEvent.setup()
     renderPage()
@@ -366,7 +366,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     })
   })
 
-  it('reviews and submits multiple venues for the same event', async () => {
+  it('EC03 EC-C2 (happy): reviews and submits multiple venues for the same event', async () => {
     const calls = stubApi(routes([], () => jsonResponse(201, { status: 'pending' })))
     const user = userEvent.setup()
     renderPage()
@@ -387,7 +387,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     })
   })
 
-  it('a venue missing a requested accessibility feature cannot be requested without a justification', async () => {
+  it('EC03 (negative): a venue missing a requested accessibility feature cannot be requested without a justification', async () => {
     const calls = stubApi(routes([], () => jsonResponse(201, { bookingId: 'b2', status: 'pending' })))
     const user = userEvent.setup()
     renderPage()
@@ -404,7 +404,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(calls.find((c) => c.method === 'POST')?.body).toMatchObject({ suitabilityNote: 'Ramp hire arranged' })
   })
 
-  it('allows adding another venue when the event already has an active request', async () => {
+  it('EC03 (happy): allows adding another venue when the event already has an active request', async () => {
     stubApi(routes([{ bookingId: 'b1', status: 'pending', venueId: 'v1', venueAddress: '1 Harbour Road',
       venueCapacity: 160, bookingNotes: null, suitabilityNote: null, rejectReason: null, submittedAt: null, submittedBy: 'ec1' }]))
     renderPage()
@@ -412,7 +412,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(await screen.findByRole('list', { name: 'Venues ranked for this event' })).toBeInTheDocument()
   })
 
-  it('shows rejection reason and alternative suggestions in coordinator booking history', async () => {
+  it('EC03 (happy): shows rejection reason and alternative suggestions in coordinator booking history', async () => {
     stubApi(routes([{
       bookingId: 'b1', status: 'rejected', venueId: 'v1', venueAddress: '1 Harbour Road', venueCapacity: 160,
       bookingNotes: null, suitabilityNote: null, rejectReason: 'Unavailable on that date',
@@ -428,7 +428,7 @@ describe('VenueBookingRequestPage (EC03)', () => {
     expect(history).toHaveTextContent('Move the event to the afternoon')
   })
 
-  it('shows the server reason when a submission is refused and stays on the page', async () => {
+  it('EC03 (failure): shows the server reason when a submission is refused and stays on the page', async () => {
     stubApi(routes([], () => jsonResponse(422, {
       message: "This venue already has a approved booking that overlaps the event's time (Board Meeting). Choose another venue.",
     })))

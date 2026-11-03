@@ -4,13 +4,13 @@ import { occupiedPeriod, validMinutes } from './bookingTiming'
 import { approvedOverlaps } from '../features/venueStaff/venueCalendar'
 import type { VenueSchedule } from '../features/venueStaff/VenueUnavailabilityPanel'
 
-it('validates minutes and calculates across midnight using timestamp instants', () => {
+it('VS-C2 (boundary): validates setup and turnaround minutes and calculates the occupied period across midnight', () => {
   for (const value of [null, undefined, '', -1, 0.5, 10081, 'bad']) expect(validMinutes(value)).toBe(false)
   for (const value of [0, 30, 10080, '45']) expect(validMinutes(value)).toBe(true)
   expect(occupiedPeriod('2030-01-01T00:15:00+08:00', '2030-01-01T01:00:00+08:00', 30, 15))
     .toEqual({ effectiveStart: '2029-12-31T15:45:00.000Z', effectiveEnd: '2029-12-31T17:15:00.000Z' })
 })
-it('identifies approved snapshot overlaps, allowing touching boundaries and ignoring pending holds', () => {
+it('VS-C2 (conflict): flags overlapping approved bookings, allowing touching boundaries and ignoring pending holds', () => {
   const first = { bookingId: 'a', eventName: 'A', status: 'approved', startDateTime: '2030-01-01T10:00:00Z', endDateTime: '2030-01-01T11:00:00Z',
     effectiveStart: '2030-01-01T09:30:00Z', effectiveEnd: '2030-01-01T11:30:00Z' }
   const second = { ...first, bookingId: 'b', eventName: 'B', effectiveStart: '2030-01-01T11:30:00Z', effectiveEnd: '2030-01-01T13:00:00Z' }

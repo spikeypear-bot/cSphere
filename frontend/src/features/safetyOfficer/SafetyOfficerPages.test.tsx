@@ -41,7 +41,7 @@ afterEach(() => {
 })
 
 describe('Safety Officer event views (SO-C1–SO-C4)', () => {
-  it('shows confirmed events with their venue and the empty state when there are none', async () => {
+  it('SO-C1 (happy): shows confirmed events with their venue, and the empty state when none are waiting for review', async () => {
     seedSession('safety-officer')
     stubApi({
       'GET /api/safety/events/planning': () => jsonResponse(200, []),
@@ -113,7 +113,7 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(within(card).getByRole('link', { name: 'Town Hall' })).toHaveAttribute('href', `/safety-officer/events/${EVENT_ID}`)
   })
 
-  it('persists checklist changes, shows event logistics, and blocks approval while incomplete', async () => {
+  it('SO-C1 SO-C3 SO-C4 (negative): checklist changes are saved and event logistics shown, but Approve stays disabled while the checklist is incomplete', async () => {
     seedSession('safety-officer')
     let checklist = READINESS
     const calls = stubApi({
@@ -163,7 +163,7 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
     expect(calls.some((call) => call.method === 'PATCH')).toBe(true)
   })
 
-  it('asks for a note before requesting changes, and sends the decision', async () => {
+  it('SO-C4 SO-C6 (negative): Request changes stays disabled until a note and an item are given, then sends the decision', async () => {
     seedSession('safety-officer')
     const complete = { ...READINESS, completedItems: 6, totalItems: 6 }
     const calls = stubApi({

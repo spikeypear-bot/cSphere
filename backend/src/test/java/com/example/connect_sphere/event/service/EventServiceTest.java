@@ -96,6 +96,7 @@ class EventServiceTest {
     // confirmed" shortcut no longer exists.
 
     @Test
+    @DisplayName("EC08 (happy): confirming the event hands over to the lifecycle and returns the confirmed event")
     void confirmingDelegatesToTheLifecycleAndReturnsTheUpdatedEvent() {
         Event event = pendingEvent(ORG);
         event.setStatus(EventStatus.confirmed);
@@ -109,6 +110,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC08 (negative): a refused confirmation is passed back to the caller and no one is notified")
     void aRefusedConfirmationPropagatesAndNotifiesNoOne() {
         Event event = pendingEvent(ORG);
         when(lifecycle.confirm(OTHER_COORDINATOR_ID, event.getEventId()))
@@ -182,6 +184,7 @@ class EventServiceTest {
     // ---- EC09: events assigned to me --------------------------------------
 
     @Test
+    @DisplayName("EC09 (happy): the list reads only the caller's events, and only while they are still active, including those in safety review")
     void assignedEventsAreReadForTheCallerOnlyAndOnlyWhileStillActive() {
         when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any())).thenReturn(List.of());
 
@@ -197,6 +200,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC09 (happy): assigned events keep their soonest-first order and carry what the list shows")
     void assignedEventsKeepTheirSoonestFirstOrderAndCarryWhatTheListShows() {
         Event sooner = pendingEvent(ORG);
         sooner.setEventName("Product Launch");
@@ -224,6 +228,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC09 (boundary): a coordinator with no active events gets an empty list")
     void aCoordinatorWithNoActiveEventsGetsAnEmptyList() {
         when(repository.findByCoordinatorIdAndStatusInOrderByStartDatetimeAsc(any(), any())).thenReturn(List.of());
 
@@ -231,6 +236,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("EC09 (cross-cutting): listing assigned events changes nothing")
     void listingAssignedEventsIsReadOnly() {
         Event event = pendingEvent(ORG);
         event.setCoordinatorId(COORDINATOR_ID);

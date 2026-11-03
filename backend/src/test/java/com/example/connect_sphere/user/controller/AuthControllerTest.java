@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -54,6 +55,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 AU04 (happy): signing in returns tokens and the verified account, including its role and organisation")
     void loginReturnsTokensAndEchoesTheVerifiedAccount() throws Exception {
         JsonNode response = login("eo1", PASSWORD);
 
@@ -69,6 +71,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 AU04 (happy): the token from signing in opens a protected endpoint")
     void theTokenLoginReturnsOpensAProtectedEndpoint() throws Exception {
         String accessToken = login("eo1", PASSWORD).get("accessToken").asString();
 
@@ -82,6 +85,7 @@ class AuthControllerTest {
      * accounts exist, one request at a time.
      */
     @ParameterizedTest(name = "[{index}] {0}")
+    @DisplayName("DEV05 (negative): a wrong password, an unknown username and blank input all get the same refusal")
     @ValueSource(strings = {
             "eo1|wrong-password",
             "no-such-user|123456",
@@ -97,6 +101,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 (happy): refreshing issues a new token and the old one stops working")
     void refreshRotatesAndTheOldTokenStopsWorking() throws Exception {
         String first = login("eo1", PASSWORD).get("refreshToken").asString();
 
@@ -108,6 +113,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 (conflict): reusing an already-rotated token also ends the session it was rotated into")
     void reusingARotatedTokenAlsoKillsItsSuccessor() throws Exception {
         String first = login("eo1", PASSWORD).get("refreshToken").asString();
         String second = objectMapper
@@ -123,6 +129,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 (boundary): signing out ends the session, and signing out again still succeeds")
     void logoutEndsTheSessionAndIsIdempotent() throws Exception {
         String refreshToken = login("eo1", PASSWORD).get("refreshToken").asString();
 
@@ -137,11 +144,13 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 (negative): a refresh token that was never issued is refused")
     void anUnknownRefreshTokenIsRejected() throws Exception {
         refresh("never-issued").andExpect(status().isUnauthorized());
     }
 
     @Test
+    @DisplayName("DEV05 (happy): signing in works without already holding a token")
     void theAuthEndpointsNeedNoTokenOfTheirOwn() throws Exception {
         // permitAll, and reached without an Authorization header — the closed
         // loop SecurityConfig's comment describes.
@@ -151,6 +160,7 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("DEV05 AU04 (negative): an access token with a tampered signature is refused")
     void aTamperedTokenIsRejected() throws Exception {
         String accessToken = login("eo1", PASSWORD).get("accessToken").asString();
 

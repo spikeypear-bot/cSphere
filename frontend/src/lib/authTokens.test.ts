@@ -10,24 +10,24 @@ function loginResponse(role: string): LoginResponse {
 }
 
 describe('authTokens — role claim to console (ECL-C1)', () => {
-  it("maps the backend's `ecl` claim to the Event Coordinator Lead console", () => {
+  it("ECL-C1 (happy): the backend's `ecl` claim opens the Event Coordinator Lead console", () => {
     expect(roleFromClaim('ecl')).toBe('coordinator-lead')
     expect(HOME_BY_ROLE['coordinator-lead']).toBe('/coordinator-lead')
   })
 
-  it('keeps the Lead distinct from an Event Coordinator', () => {
+  it('ECL-C1 (boundary): a Lead stays distinct from an Event Coordinator', () => {
     // `ec` and `ecl` differ by one letter.
     expect(roleFromClaim('ec')).toBe('coordinator')
     expect(roleFromClaim('ecl')).not.toBe(roleFromClaim('ec'))
   })
 
-  it('signs a Lead in from a login response carrying the `ecl` role', () => {
+  it('ECL-C1 (happy): a Lead is signed in from a login response carrying the `ecl` role', () => {
     expect(tokensFromResponse(loginResponse('ecl'))).toMatchObject({
       username: 'ecl1', role: 'coordinator-lead', organisation: 'ConnectSphere',
     })
   })
 
-  it('still treats a role this build does not know as not signed in', () => {
+  it('ECL-C1 (negative): a role this build does not know is treated as not signed in', () => {
     expect(tokensFromResponse(loginResponse('lead'))).toBeNull()
   })
 

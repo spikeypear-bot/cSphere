@@ -12,6 +12,7 @@ import java.util.Set;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -108,6 +109,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): a request is listed under its coordinator while submitted or waiting on clarification, whichever organisation it came from")
     void aRequestIsListedUnderItsCoordinatorWhileSubmittedOrWaitingOnClarificationAcrossOrganisations()
             throws Exception {
         UUID acmeSubmitted = assignedOn(10, "eo1", "ec1");
@@ -126,6 +128,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (negative): unassigned, draft, approved, rejected and cancelled requests are not listed")
     void unassignedDraftApprovedRejectedAndCancelledRequestsAreNotListed() throws Exception {
         UUID stillUnderReview = assignedOn(10, "eo1", "ec1");
         UUID unassigned = flow.submitted("eo1", eventOn(11));
@@ -146,6 +149,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): within a coordinator, requests are ordered by event start, soonest first, whatever order they were assigned in")
     void withinACoordinatorRequestsAreOrderedByEventStartSoonestFirstWhateverOrderTheyWereAssignedIn()
             throws Exception {
         UUID middle = assignedOn(15, "eo1", "ec1");
@@ -158,6 +162,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (boundary): requests that start at the same moment keep one fixed order")
     void requestsThatStartAtTheSameMomentKeepOneFixedOrder() throws Exception {
         UUID first = assignedOn(10, "eo1", "ec1");
         UUID second = assignedOn(10, "eo1", "ec1");
@@ -171,6 +176,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (boundary): every coordinator is listed in name order, including one who holds nothing and has no other role")
     void everyCoordinatorIsListedInNameOrderIncludingOneWhoHoldsNothingAndNoOtherRole() {
         User newcomer = new User();
         newcomer.setUserId(UUID.randomUUID());
@@ -192,6 +198,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): the number each coordinator holds follows assignments and decisions")
     void theNumberEachCoordinatorHoldsFollowsAssignmentAndDecisions() throws Exception {
         int ec1Before = assignmentsOf("ec1").requests().size();
         int ec2Before = assignmentsOf("ec2").requests().size();
@@ -209,6 +216,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (happy): each request shows the date it was submitted, not when it was assigned or created")
     void eachRequestCarriesTheDateItWasSubmittedNotWhenItWasAssignedOrCreated() throws Exception {
         UUID id = assignedOn(10, "eo1", "ec1");
         // Drafted nine days ago and last touched tomorrow: neither is the submission.
@@ -227,6 +235,7 @@ class AssignedRequestsQueryTest {
     }
 
     @Test
+    @DisplayName("ECL-C2 (cross-cutting): reading the list leaves every request, timeline and notification as it was")
     void readingTheListLeavesEveryRequestTimelineAndNotificationAsItWas() throws Exception {
         UUID id = assignedOn(10, "eo1", "ec1");
         entityManager.flush();

@@ -156,6 +156,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): the coordinator submits items with quantities and notes, and the request is saved as processing")
     void coordinatorSubmitsItemsWithQuantitiesAndNotesAndTheRequestIsSavedAsProcessing() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -189,6 +190,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): a submitted request appears in the Technical Support queue with its items")
     void aSubmittedRequestAppearsInTheTechnicalSupportQueueWithItsItems() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -211,6 +213,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): the coordinator can view the request and its quantities after submitting")
     void theCoordinatorCanViewTheRequestAndItsQuantitiesAfterSubmitting() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -230,6 +233,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): an event with no equipment request shows an empty list")
     void anEventWithNoRequestShowsAnEmptyList() throws Exception {
         UUID eventId = event();
 
@@ -265,6 +269,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): a quantity of one is accepted")
     void aQuantityOfOneIsAccepted() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -277,6 +282,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): a quantity of zero is refused and nothing is saved")
     void aQuantityOfZeroIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -290,6 +296,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): an equipment type that does not exist is refused with a message and nothing is saved")
     void anEquipmentTypeThatDoesNotExistIsRefusedWithAMessageAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -302,6 +309,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (conflict): a second request is refused while one is processing, and the first is unchanged")
     void aSecondRequestIsRefusedWhileOneIsProcessingAndTheFirstIsUnchanged() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -320,6 +328,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (cross-cutting): submitting a request leaves the event's status unchanged")
     void submittingDoesNotChangeTheEventsStatus() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -331,6 +340,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): an event that is no longer being planned cannot take a request and nothing is saved")
     void anEventThatIsNoLongerInPlanningCannotTakeARequest() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -346,6 +356,7 @@ class EquipmentRequestFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
+    @DisplayName("EC07 (negative): other roles cannot submit or view a request and nothing is saved")
     void otherRolesCannotSubmitOrViewAndNothingIsSaved(String username) throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -358,6 +369,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): a coordinator not assigned to the event cannot submit or view a request and nothing is saved")
     void aCoordinatorNotAssignedToTheEventCannotSubmitOrViewAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -370,6 +382,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): a caller who is not signed in cannot submit and nothing is saved")
     void anUnauthenticatedCallerCannotSubmitAndNothingIsSaved() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -382,6 +395,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): submitting for an event that does not exist is not found and nothing is saved")
     void anEventThatDoesNotExistReturnsNotFound() throws Exception {
         UUID projector = equipment("EC07 Projector");
         UUID missing = UUID.randomUUID();
@@ -392,6 +406,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): a malformed event id is refused as a bad request")
     void aMalformedEventIdReturnsBadRequest() throws Exception {
         UUID projector = equipment("EC07 Projector");
 
@@ -405,6 +420,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): revising a processing request supersedes it with a new processing request holding the new items")
     void revisingAProcessingRequestSupersedesItAndCreatesANewOneWithTheNewItems() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -653,6 +669,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): revising an event that has no equipment request is refused and nothing is saved")
     void revisingAnEventWithNoEquipmentRequestIsRefused() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -664,6 +681,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): a rejected request cannot be revised")
     void revisingAfterARejectionIsRefused() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -679,6 +697,7 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): a coordinator not assigned to the event cannot revise the request and nothing changes")
     void aCoordinatorNotAssignedToTheEventCannotReviseAndNothingChanges() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
@@ -692,6 +711,7 @@ class EquipmentRequestFlowTest {
     @ParameterizedTest
     @ValueSource(strings = {"eo1", "vs1", "ts1", "att1"})
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): other roles cannot revise the request and nothing changes")
     void otherRolesCannotReviseAndNothingChanges(String username) throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");

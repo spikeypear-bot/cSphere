@@ -57,7 +57,7 @@ describe('EC04 VenueSearchPage', () => {
     window.localStorage.clear()
   })
 
-  it('searches with event time, capacity and all selected facilities', async () => {
+  it('EC04 (happy): searches with event time, capacity and all selected facilities', async () => {
     const calls = stubApi({ [`GET ${searchUrl()}`]: () => jsonResponse(200, [match]) })
     const user = userEvent.setup()
     renderPage()
@@ -84,7 +84,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(url.searchParams.getAll('facility')).toEqual(['stage', 'projection'])
   })
 
-  it('shows a no-matches message when the server returns no venues', async () => {
+  it('EC04 (boundary): shows a no-matches message when the server returns no venues', async () => {
     stubApi({ [`GET ${searchUrl()}`]: () => jsonResponse(200, []) })
     const user = userEvent.setup()
     renderPage()
@@ -97,7 +97,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(await screen.findByRole('status')).toHaveTextContent('No matching venues found.')
   })
 
-  it('rejects invalid event times without requesting or showing stale results', async () => {
+  it('EC04 (negative): rejects invalid event times without requesting or showing stale results', async () => {
     const calls = stubApi({})
     const user = userEvent.setup()
     renderPage()
@@ -110,7 +110,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(screen.queryByRole('heading', { name: 'Search results' })).not.toBeInTheDocument()
   })
 
-  it('rejects an impossible calendar date without requesting venues', async () => {
+  it('EC04 (negative): rejects an impossible calendar date without requesting venues', async () => {
     const calls = stubApi({})
     const user = userEvent.setup()
     renderPage()
@@ -122,7 +122,7 @@ describe('EC04 VenueSearchPage', () => {
     expect(calls).toHaveLength(0)
   })
 
-  it('rejects a negative or non-integer capacity without requesting venues', async () => {
+  it('EC04 (negative): rejects a negative or non-integer capacity without requesting venues', async () => {
     const calls = stubApi({})
     const user = userEvent.setup()
     renderPage()

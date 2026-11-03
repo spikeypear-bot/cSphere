@@ -78,7 +78,7 @@ it('VS17 (happy): queue identifies the event and booking, current coordinator an
   expect(within(pending).getAllByText('None specified')).toHaveLength(2)
 })
 
-it('separates tentative holds from pending requests and filters the two queues with counts', async () => {
+it('VS02 (happy): separates tentative holds from pending requests and filters the two queues with counts', async () => {
   vi.stubGlobal('fetch', vi.fn(async () => response([booking, { ...booking, bookingId: 'b2', holds: [activeHold],
     event: { ...booking.event, eventName: 'Held workshop' } }])))
   page()
@@ -95,7 +95,7 @@ it('separates tentative holds from pending requests and filters the two queues w
   expect(screen.getByRole('region', { name: 'Pending booking requests' })).toBeInTheDocument()
 })
 
-it('automatically moves a remotely released hold back to pending without a page refresh', async () => {
+it('VS02 (happy): automatically moves a remotely released hold back to pending without a page refresh', async () => {
   vi.useFakeTimers()
   let held = true
   vi.stubGlobal('fetch', vi.fn(async () => response([{ ...booking, holds: [{ ...activeHold, status: held ? 'active' : 'released' }] }])))
@@ -107,7 +107,7 @@ it('automatically moves a remotely released hold back to pending without a page 
   expect(within(screen.getByRole('region', { name: 'Tentative venue holds' })).queryByText('Workshop')).not.toBeInTheDocument()
 })
 
-it('renders pending summaries with status and opens the selected existing booking details', async () => {
+it('VS02 (happy): renders pending summaries with status and opens the selected existing booking details', async () => {
   const fetch = vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/venue-staff/booking-requests')) return response([booking,
       ...(['approved', 'changed', 'rejected', 'cancelled'] as const).map(status => ({ ...booking, bookingId: status, status, event: { ...booking.event, eventName: status } })),
@@ -134,7 +134,7 @@ it('renders pending summaries with status and opens the selected existing bookin
   expect(fetch.mock.calls.every(call => call[1].method === 'GET')).toBe(true)
 })
 
-it('keeps initial loading separate from an empty queue', async () => {
+it('VS02 (boundary): keeps initial loading separate from an empty queue', async () => {
   let finish!: (value: Response) => void
   vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(resolve => { finish = resolve })))
   page()
@@ -146,7 +146,7 @@ it('keeps initial loading separate from an empty queue', async () => {
   expect(screen.getByRole('heading', { name: 'Pending booking requests' })).toBeInTheDocument()
 })
 
-it('shows retrieval errors separately from empty state and retries successfully', async () => {
+it('VS02 (failure): shows retrieval errors separately from empty state and retries successfully', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValueOnce(response({ message: 'Service unavailable' }, 503))
     .mockResolvedValue(response([booking])))
   page()
@@ -157,7 +157,7 @@ it('shows retrieval errors separately from empty state and retries successfully'
   expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })
 
-it('shows a refresh state and replaces the list with the latest pending results', async () => {
+it('VS02 (happy): shows a refresh state and replaces the list with the latest pending results', async () => {
   let finish!: (value: Response) => void
   const fetch = vi.fn().mockResolvedValueOnce(response([booking]))
     .mockImplementationOnce(() => new Promise<Response>(resolve => { finish = resolve }))
@@ -172,7 +172,7 @@ it('shows a refresh state and replaces the list with the latest pending results'
   expect(fetch).toHaveBeenCalledTimes(2)
 })
 
-it('uses a placeholder for missing requirements and shortens long requirements', async () => {
+it('VS02 (boundary): uses a placeholder for missing requirements and shortens long requirements', async () => {
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response([
     { ...booking, event: { ...booking.event, venueRequirements: '  ' } },
     { ...booking, bookingId: 'b2', event: { ...booking.event, eventName: 'Long requirements', venueRequirements: 'A'.repeat(500) } },
@@ -183,7 +183,7 @@ it('uses a placeholder for missing requirements and shortens long requirements',
   expect(screen.queryByText('A'.repeat(500))).not.toBeInTheDocument()
 })
 
-it('keeps the queue behind the existing Venue Staff route gate', async () => {
+it('VS02 (negative): keeps the queue behind the existing Venue Staff route gate', async () => {
   const fetch = vi.fn()
   vi.stubGlobal('fetch', fetch); page('attendee')
   expect(await screen.findByRole('alert')).toHaveTextContent('Access denied')
@@ -193,7 +193,7 @@ it('keeps the queue behind the existing Venue Staff route gate', async () => {
 })
 
 it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
-  'reads fresh details when a pending booking becomes %s and refreshes the queue on return', async status => {
+  'VS02 (conflict): reads fresh details when a pending booking becomes %s and refreshes the queue on return', async status => {
     let queueReads = 0
     const fetch = vi.fn().mockImplementation(async (url: string) => {
       if (url.endsWith('/venue-staff/booking-requests')) return response(++queueReads === 1 ? [booking] : [])
@@ -217,7 +217,7 @@ it.each(['approved', 'changed', 'rejected', 'cancelled'] as const)(
   },
 )
 
-it('preserves queue context on direct navigation and reopening with current detail data', async () => {
+it('VS02 (happy): preserves queue context on direct navigation and reopening with current detail data', async () => {
   let attendance = 120
   const fetch = vi.fn().mockImplementation(async () => response({ ...booking,
     event: { ...booking.event, expectedAttendance: attendance } }))
@@ -237,7 +237,7 @@ it('preserves queue context on direct navigation and reopening with current deta
 it.each([
   [404, 'missing', 'Venue booking not found'],
   [400, 'not-a-uuid', 'Venue and booking IDs must be valid UUIDs.'],
-])('handles HTTP %s detail errors with queue navigation and retry', async (status, id, message) => {
+])('VS02 (failure): handles HTTP %s detail errors with queue navigation and retry', async (status, id, message) => {
   const fetch = vi.fn().mockResolvedValueOnce(response({ message }, status as number))
     .mockResolvedValue(response(booking))
   vi.stubGlobal('fetch', fetch); page('venue-staff', `/venue-staff/bookings/${id}?from=booking-approvals`)
@@ -248,7 +248,7 @@ it.each([
   expect(await screen.findByRole('region', { name: 'Event Requirements' })).toHaveTextContent('Workshop')
 })
 
-it('ignores a late detail response after returning to the queue', async () => {
+it('VS02 (boundary): ignores a late detail response after returning to the queue', async () => {
   let finish!: (value: Response) => void
   const fetch = vi.fn().mockImplementation(async (url: string) => {
     if (url.endsWith('/venue-staff/booking-requests')) return response([booking])
@@ -265,7 +265,7 @@ it('ignores a late detail response after returning to the queue', async () => {
   expect(screen.queryByText('Late response')).not.toBeInTheDocument()
 })
 
-it('approves from the queue and removes the booking when returning', async () => {
+it('VS02 (happy): approves from the queue and removes the booking when returning', async () => {
   let approved = false
   vi.stubGlobal('fetch', vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
     if (init.method === 'PATCH') { approved = true; return response({ ...booking, status: 'approved' }) }

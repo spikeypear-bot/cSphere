@@ -12,6 +12,7 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -90,7 +91,9 @@ class VenueBookingApprovalTest {
             jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
         }
     }
-    @Test void migrationRenamesExistingCommittedRowsWithoutChangingTheirData() throws Exception {
+    @Test
+    @DisplayName("VS03 (cross-cutting): the upgrade renames confirmed bookings to approved without changing any other saved data")
+    void migrationRenamesExistingCommittedRowsWithoutChangingTheirData() throws Exception {
         String migration = new org.springframework.core.io.ClassPathResource(
                 "db/migration/V16__rename_venue_booking_confirmed_to_approved.sql")
                 .getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
@@ -120,7 +123,9 @@ class VenueBookingApprovalTest {
         }
     }
 
-    @Test void approvalPreservesRecordAndRelationshipsAndLeavesPendingQueue() throws Exception {
+    @Test
+    @DisplayName("VS03 (happy): venue staff approve a pending booking, its details and links stay the same and it leaves the pending queue")
+    void approvalPreservesRecordAndRelationshipsAndLeavesPendingQueue() throws Exception {
         UUID venue = venue(), id = booking(venue, "pending");
         String before = snapshot(id);
         var details = bookings.get(id);
@@ -139,31 +144,39 @@ class VenueBookingApprovalTest {
                 .andExpect(status().isConflict());
     }
     @ParameterizedTest @ValueSource(strings={"approved","changed","rejected","cancelled"})
+    @DisplayName("VS03 (negative): a booking that is no longer pending cannot be approved and keeps its status")
     void refusesNonPending(String state) throws Exception {
         UUID id = booking(venue(), state);
         mvc.perform(patch("/api/venue-bookings/" + id + "/approve").with(user("vs").roles("VS")))
                 .andExpect(status().isConflict());
         assertThat(statusOf(id)).isEqualTo(state);
     }
-    @Test void missingAndInvalidIds() throws Exception {
+    @Test
+    @DisplayName("VS03 (negative): approving an unknown booking is not found and a malformed id is a bad request")
+    void missingAndInvalidIds() throws Exception {
         mvc.perform(patch("/api/venue-bookings/" + UUID.randomUUID() + "/approve").with(user("vs").roles("VS")))
                 .andExpect(status().isNotFound());
         mvc.perform(patch("/api/venue-bookings/invalid/approve").with(user("vs").roles("VS")))
                 .andExpect(status().isBadRequest());
     }
     @ParameterizedTest @ValueSource(strings={"EC","EO","TECHNICIAN","ATTENDEE"})
+    @DisplayName("VS03 (negative): other roles cannot approve a booking and it stays pending")
     void onlyVenueStaffMayApprove(String role) throws Exception {
         UUID id = booking(venue(), "pending");
         mvc.perform(patch("/api/venue-bookings/" + id + "/approve").with(user("other").roles(role)))
                 .andExpect(status().isForbidden());
         assertThat(statusOf(id)).isEqualTo("pending");
     }
-    @Test void anonymousCannotApprove() throws Exception {
+    @Test
+    @DisplayName("VS03 (negative): a signed-out user cannot approve a booking and it stays pending")
+    void anonymousCannotApprove() throws Exception {
         UUID id = booking(venue(), "pending");
         mvc.perform(patch("/api/venue-bookings/" + id + "/approve")).andExpect(status().isUnauthorized());
         assertThat(statusOf(id)).isEqualTo("pending");
     }
-    @Test void conflictsBlockButBackToBackAndOtherVenuesRemainAvailable() throws Exception {
+    @Test
+    @DisplayName("VS03 VS08 (conflict): an overlapping booking cannot be approved, but back-to-back bookings and other venues still can")
+    void conflictsBlockButBackToBackAndOtherVenuesRemainAvailable() throws Exception {
         UUID venue = venue();
         booking(venue, "approved");
         UUID conflict = booking(venue, "pending");
@@ -174,7 +187,9 @@ class VenueBookingApprovalTest {
         assertThat(bookings.approve(adjacent).status().name()).isEqualTo("approved");
         assertThat(bookings.approve(booking(venue(), "pending")).status().name()).isEqualTo("approved");
     }
-    @Test void bufferOnlyConflictExplainsRestrictionAndKeepsBookingsUnchanged() throws Exception {
+    @Test
+    @DisplayName("VS03 VS08 (conflict): a clash only with setup or turnaround time is refused with an explanation and both bookings stay unchanged")
+    void bufferOnlyConflictExplainsRestrictionAndKeepsBookingsUnchanged() throws Exception {
         UUID venue = venue();
         jdbc.update("UPDATE venues SET setup_minutes=30, turnaround_minutes=45 WHERE venue_id=?", venue);
         UUID existing = booking(venue, "approved");
@@ -197,7 +212,9 @@ class VenueBookingApprovalTest {
         assertThat(bookings.approve(adjacent).status().name()).isEqualTo("approved");
     }
 
-    @Test void approvalUsesBothBookingSnapshotsRatherThanCurrentDefaults() {
+    @Test
+    @DisplayName("VS03 VS08 (boundary): approval checks the setup and turnaround saved on each booking, not the venue's current defaults")
+    void approvalUsesBothBookingSnapshotsRatherThanCurrentDefaults() {
         UUID v = venue(), existing = booking(v, "approved");
         jdbc.update("UPDATE venue_bookings SET turnaround_duration_minutes=45 WHERE booking_id=?", existing);
         UUID pending = booking(v, "pending", "2027-04-01T13:00:00+08:00", "2027-04-01T14:00:00+08:00");
@@ -212,7 +229,9 @@ class VenueBookingApprovalTest {
         assertThat(bookings.approve(pending).status().name()).isEqualTo("approved");
     }
 
-    @Test void concurrentApprovalsCannotOverlapOnlyThroughBookingSnapshots() throws Exception {
+    @Test
+    @DisplayName("VS03 VS08 (conflict): two simultaneous approvals that overlap only through saved buffers approve just one")
+    void concurrentApprovalsCannotOverlapOnlyThroughBookingSnapshots() throws Exception {
         UUID v = venue();
         UUID first = booking(v, "pending", "2027-04-01T09:00:00+08:00", "2027-04-01T10:00:00+08:00");
         UUID second = booking(v, "pending", "2027-04-01T11:00:00+08:00", "2027-04-01T12:00:00+08:00");
@@ -231,7 +250,9 @@ class VenueBookingApprovalTest {
         }
     }
 
-    @Test void failedDatabaseWriteRollsBack() throws Exception {
+    @Test
+    @DisplayName("VS03 (failure): if saving the approval fails, the user gets an error and the booking stays pending and unchanged")
+    void failedDatabaseWriteRollsBack() throws Exception {
         UUID id = booking(venue(), "pending");
         String before = snapshot(id);
         jdbc.execute("CREATE FUNCTION vs03_fail_update() RETURNS trigger LANGUAGE plpgsql AS $$ BEGIN RAISE EXCEPTION 'Test failure'; END $$");
@@ -242,7 +263,9 @@ class VenueBookingApprovalTest {
         assertThat(snapshot(id)).isEqualTo(before);
     }
 
-    @Test void overlapResponseIdentifiesEveryConflictAndPreservesRecords() throws Exception {
+    @Test
+    @DisplayName("VS03 VS08 (conflict): a refused approval lists every overlapping booking and changes no record")
+    void overlapResponseIdentifiesEveryConflictAndPreservesRecords() throws Exception {
         UUID venue = venue(), first = booking(venue, "approved"), second = booking(venue, "approved"),
                 requested = booking(venue, "pending");
         String firstBefore = snapshot(first), secondBefore = snapshot(second), requestedBefore = snapshot(requested);
@@ -273,6 +296,7 @@ class VenueBookingApprovalTest {
     @ParameterizedTest
     @CsvSource({"10:00,13:00,true", "08:00,10:00,true", "08:00,13:00,true",
             "10:00,11:00,true", "09:00,12:00,true", "12:00,14:00,false", "07:00,09:00,false"})
+    @DisplayName("VS03 VS08 (boundary): partial, enclosing and exact overlaps block approval while touching times do not")
     void overlapBoundaries(String start, String end, boolean conflict) throws Exception {
         UUID venue = venue();
         UUID existing = booking(venue, "approved");
@@ -284,6 +308,7 @@ class VenueBookingApprovalTest {
     }
 
     @ParameterizedTest @ValueSource(strings={"pending", "rejected", "cancelled", "changed"})
+    @DisplayName("VS03 VS08 (boundary): pending, rejected, cancelled and changed bookings do not block approval")
     void nonApprovedBookingsDoNotBlock(String state) {
         UUID venue = venue();
         booking(venue, state);
@@ -291,7 +316,7 @@ class VenueBookingApprovalTest {
     }
 
     @ParameterizedTest @ValueSource(strings={"completed", "cancelled"})
-    @org.junit.jupiter.api.DisplayName("VS08 VS17 (boundary): final-event reservations do not block approval, matching search")
+    @DisplayName("VS08 VS17 (boundary): final-event reservations do not block approval, matching search")
     void finalEventBookingDoesNotBlockApproval(String eventStatus) throws Exception {
         UUID venue = venue(), existing = booking(venue, "approved"), requested = booking(venue, "pending");
         jdbc.update("UPDATE events SET status=?::event_status WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)", eventStatus, existing);
@@ -301,7 +326,9 @@ class VenueBookingApprovalTest {
         assertThat(statusOf(requested)).isEqualTo("approved");
     }
 
-    @Test void midnightOverlapUsesInstantsAcrossOffsets() throws Exception {
+    @Test
+    @DisplayName("VS03 VS08 (boundary): an overlap past midnight is found even when the times use different time zones")
+    void midnightOverlapUsesInstantsAcrossOffsets() throws Exception {
         UUID venue = venue();
         UUID existing = booking(venue, "approved", "2027-04-01T23:00:00+08:00", "2027-04-02T02:00:00+08:00");
         UUID requested = booking(venue, "pending", "2027-04-01T17:00:00Z", "2027-04-01T19:00:00Z");
@@ -321,12 +348,16 @@ class VenueBookingApprovalTest {
                     .containsExactlyInAnyOrder("approved", "conflict");
         }
     }
-    @Test void concurrentDuplicateApprovalSucceedsOnlyOnce() throws Exception {
+    @Test
+    @DisplayName("VS03 (conflict): approving the same booking twice at once succeeds only once")
+    void concurrentDuplicateApprovalSucceedsOnlyOnce() throws Exception {
         UUID id = booking(venue(), "pending");
         race(id, id);
         assertThat(statusOf(id)).isEqualTo("approved");
     }
-    @Test void concurrentOverlappingApprovalsCommitOnlyOneBooking() throws Exception {
+    @Test
+    @DisplayName("VS03 VS08 (conflict): two overlapping bookings approved at once leave only one approved, and the other is refused naming it")
+    void concurrentOverlappingApprovalsCommitOnlyOneBooking() throws Exception {
         UUID venue = venue(), a = booking(venue, "pending"), b = booking(venue, "pending");
         race(a, b);
         assertThat(List.of(statusOf(a), statusOf(b))).containsExactlyInAnyOrder("approved", "pending");
@@ -337,7 +368,7 @@ class VenueBookingApprovalTest {
     }
 
     @ParameterizedTest @ValueSource(strings={"", "   "})
-    @org.junit.jupiter.api.DisplayName("VS03 (negative): changed accessibility requires a nonblank justification before approval")
+    @DisplayName("VS03 (negative): changed accessibility requires a nonblank justification before approval")
     void currentAccessibilityIsRevalidated(String justification) throws Exception {
         UUID v=venue(),id=booking(v,"pending");
         jdbc.update("UPDATE events SET accessibility_needs='{step_free_access}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
@@ -350,14 +381,14 @@ class VenueBookingApprovalTest {
             .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value(org.hamcrest.Matchers.containsString("justification")));
         assertThat(statusOf(id)).isEqualTo("pending");assertThat(snapshot(id)).isEqualTo(before);
     }
-    @Test @org.junit.jupiter.api.DisplayName("VS03 (happy): existing accessibility justification permits approval with missing access")
+    @Test @DisplayName("VS03 (happy): existing accessibility justification permits approval with missing access")
     void justifiedAccessibilityRemainsSupported() throws Exception {
         UUID id=booking(venue(),"pending");
         jdbc.update("UPDATE events SET accessibility_needs='{step_free_access}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
         mvc.perform(patch("/api/venue-bookings/"+id+"/approve").with(user("another-vs").roles("VS"))).andExpect(status().isOk());
         assertThat(statusOf(id)).isEqualTo("approved");
     }
-    @Test @org.junit.jupiter.api.DisplayName("VS03 (boundary): explicit empty accessibility override does not inherit event needs")
+    @Test @DisplayName("VS03 (boundary): explicit empty accessibility override does not inherit event needs")
     void emptyAccessibilityOverrideIsPreserved() throws Exception {
         UUID id=booking(venue(),"pending");
         jdbc.update("UPDATE events SET accessibility_needs='{step_free_access}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
@@ -365,7 +396,7 @@ class VenueBookingApprovalTest {
         mvc.perform(patch("/api/venue-bookings/"+id+"/approve").with(user("vs").roles("VS"))).andExpect(status().isOk());
         assertThat(statusOf(id)).isEqualTo("approved");
     }
-    @Test @org.junit.jupiter.api.DisplayName("VS02 (happy): list and detail resolve inherited and explicit room requirements consistently")
+    @Test @DisplayName("VS02 (happy): list and detail resolve inherited and explicit room requirements consistently")
     void effectiveRequirementsAreConsistent() throws Exception {
         UUID id=booking(venue(),"pending");
         jdbc.update("UPDATE events SET required_facilities='{stage}' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",id);
@@ -381,7 +412,7 @@ class VenueBookingApprovalTest {
         mvc.perform(get("/api/venue-bookings/"+id).with(user("vs").roles("VS")))
             .andExpect(status().isOk()).andExpect(jsonPath("$.effectiveRequirements.requiredFacilities").isEmpty());
     }
-    @Test @org.junit.jupiter.api.DisplayName("VS02 VS03 (cross-cutting): related bookings are event-scoped read-only summaries and decisions stay independent")
+    @Test @DisplayName("VS02 VS03 (cross-cutting): related bookings are event-scoped read-only summaries and decisions stay independent")
     void relatedBookingsAndIndependentDecision() throws Exception {
         UUID a=booking(venue(),"pending"),b=booking(venue(),"pending"),unrelated=booking(venue(),"pending");
         UUID event=jdbc.queryForObject("SELECT event_id FROM venue_bookings WHERE booking_id=?",UUID.class,a);

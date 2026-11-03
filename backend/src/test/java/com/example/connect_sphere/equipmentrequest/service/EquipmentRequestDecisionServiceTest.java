@@ -25,6 +25,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -71,6 +72,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
+    @DisplayName("TS06 (failure): approval is refused until every requested unit is reserved for the full event, and nothing is saved")
     void cannotApproveUntilEveryRequestedUnitIsReservedForTheFullEvent() {
         when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(
                 reservation(1, EVENT_START, EVENT_END)));
@@ -86,6 +88,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
+    @DisplayName("TS06 (boundary): a reservation that misses part of the event period does not count toward approval")
     void reservationOutsideTheWholeEventPeriodDoesNotCountTowardApproval() {
         when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(
                 reservation(2, EVENT_START.plusSeconds(60), EVENT_END)));
@@ -98,6 +101,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
+    @DisplayName("TS06 (happy): a fully reserved request can be approved without changing its reservations or the event")
     void fullyReservedRequestCanBeApprovedWithoutChangingReservationsOrEvent() {
         when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(
                 reservation(2, EVENT_START, EVENT_END)));
@@ -113,7 +117,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): approving a revision supersedes the approved request and keeps only what the revision needs")
+    @DisplayName("EC-NEW3 (happy): approving a revision supersedes the approved request and keeps only what the revision needs")
     void approvingARevisionReplacesTheApprovedRequest() {
         request.markRevision();
         EquipmentRequest replaced = new EquipmentRequest(UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.attention, "Old");
@@ -131,7 +135,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (negative): rejecting a revision gives back only its own reservations and leaves the approved request alone")
+    @DisplayName("EC-NEW3 (negative): rejecting a revision gives back only its own reservations and leaves the approved request alone")
     void rejectingARevisionReleasesNothing() {
         request.markRevision();
         EquipmentRequest approved = new EquipmentRequest(UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Old");
@@ -147,7 +151,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("TS06 (happy): approving a request that is not a revision replaces nothing")
+    @DisplayName("TS06 (happy): approving a request that is not a revision replaces nothing")
     void approvingANonRevisionReplacesNothing() {
         when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(reservation(2, EVENT_START, EVENT_END)));
 
@@ -159,6 +163,7 @@ class EquipmentRequestDecisionServiceTest {
     }
 
     @Test
+    @DisplayName("TS06 (negative): rejecting needs a reason, and the trimmed reason is stored")
     void rejectionRequiresAndStoresAReason() {
         assertThatThrownBy(() -> service.updateStatus(
                 REQUEST_ID, new UpdateEquipmentRequestStatus("rejected", "  ")))
@@ -190,7 +195,7 @@ class EquipmentRequestDecisionServiceTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings = {"attention", "superseded"})
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37) (negative): Technical Support can only approve or reject, not set a coordinator-side status")
+    @DisplayName("EC-NEW3 (D37) (negative): Technical Support can only approve or reject, not set a coordinator-side status")
     void technicalSupportCannotSetACoordinatorSideStatus(String status) {
         assertThatThrownBy(() -> service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus(status, null)))
                 .isInstanceOf(ResponseStatusException.class)

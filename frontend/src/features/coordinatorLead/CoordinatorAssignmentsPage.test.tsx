@@ -67,7 +67,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     window.localStorage.clear()
   })
 
-  it("shows each request's event, organisation, dates, attendance, status, date submitted and coordinator", async () => {
+  it("ECL-C2 (happy): shows each request's event, organisation, dates, attendance, status, date submitted and coordinator", async () => {
     stubApi({
       [ASSIGNED]: () => jsonResponse(200, [
         coordinator('ec1', [
@@ -94,7 +94,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(within(card).getByText('Event Coordinator').nextElementSibling).toHaveTextContent('ec1')
   })
 
-  it('groups requests under their Event Coordinator, keeping the order the server sends', async () => {
+  it('ECL-C2 (happy): groups requests under their Event Coordinator, keeping the order the server sends', async () => {
     // Neither alphabetical nor by id, so any client-side re-sort shows.
     stubApi({
       [ASSIGNED]: () => jsonResponse(200, [
@@ -112,7 +112,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
       .toHaveTextContent('ec2')
   })
 
-  it('shows how many requests each coordinator holds, including a coordinator who holds none', async () => {
+  it('ECL-C2 (boundary): shows how many requests each coordinator holds, including a coordinator who holds none', async () => {
     stubApi({
       [ASSIGNED]: () => jsonResponse(200, [
         coordinator('ec1', [assigned('r1', 'Offsite'), assigned('r2', 'Annual Gala')]),
@@ -130,7 +130,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(screen.queryByText(/No assigned requests right now\./)).not.toBeInTheDocument()
   })
 
-  it('shows a clear message when no requests are assigned, with every coordinator holding none', async () => {
+  it('ECL-C2 (boundary): shows a clear message when no requests are assigned, with every coordinator holding none', async () => {
     stubApi({ [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1'), coordinator('ec2')]) })
     renderPage()
 
@@ -141,7 +141,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('shows the access-denied message and no request data when the server refuses the caller', async () => {
+  it('ECL-C2 (negative): shows the access-denied message and no request data when the server refuses the caller', async () => {
     stubApi({
       [ASSIGNED]: () => jsonResponse(403, { message: 'You do not have permission to perform this action.' }),
     })
@@ -154,7 +154,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(screen.queryAllByRole('listitem')).toHaveLength(0)
   })
 
-  it('refreshing re-reads the list: a newly assigned request appears and a decided one drops off', async () => {
+  it('ECL-C2 (happy): refreshing re-reads the list: a newly assigned request appears and a decided one drops off', async () => {
     let reads = 0
     const calls = stubApi({
       [ASSIGNED]: () => {
@@ -178,7 +178,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(calls.filter((call) => call.url === '/api/event-requests/assigned')).toHaveLength(2)
   })
 
-  it('only ever reads: a card offers its view link and nothing that changes the request', async () => {
+  it('ECL-C2 (cross-cutting): only ever reads: a card offers its view link and nothing that changes the request', async () => {
     const calls = stubApi({ [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [assigned('r1', 'Offsite')])]) })
     renderPage()
 
@@ -197,7 +197,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
   it.each([
     ['pending'],
     ['clarification_required'],
-  ])('selecting a %s request opens its review page, shown as assigned and offering only Reassign', async (status) => {
+  ])('ECL-C2 ELC-C5 (happy): selecting a %s request opens its review page, shown as assigned and offering only Reassign', async (status) => {
     const listed = assigned('r1', 'Offsite', { status })
     const calls = stubApi({
       [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
@@ -220,7 +220,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(calls.every((call) => call.method === 'GET')).toBe(true)
   })
 
-  it('after a reassignment, confirms it and shows the request under its new coordinator with both counts updated', async () => {
+  it('ELC-C5 (happy): after a reassignment, confirms it and shows the request under its new coordinator with both counts updated', async () => {
     const listed = assigned('r1', 'Offsite')
     let reassigned = false
     const calls = stubApi({
@@ -258,7 +258,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     ])
   })
 
-  it('shows no confirmation when the page is opened on its own', async () => {
+  it('ELC-C5 (boundary): shows no confirmation when the page is opened on its own', async () => {
     stubApi({ [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [assigned('r1', 'Offsite')])]) })
     renderPage()
 
@@ -266,7 +266,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(screen.queryByText(/was reassigned to/)).not.toBeInTheDocument()
   })
 
-  it('the review page opened from a card leads back to the coordinator assignments', async () => {
+  it('ECL-C2 (happy): the review page opened from a card leads back to the coordinator assignments', async () => {
     const listed = assigned('r1', 'Offsite')
     stubApi({
       [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
@@ -285,7 +285,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(await screen.findByRole('heading', { level: 1, name: 'Coordinator assignments' })).toBeInTheDocument()
   })
 
-  it('does not name the coordinator on the card once the request is held by someone else', async () => {
+  it('ECL-C2 (conflict): does not name the coordinator on the card once the request is held by someone else', async () => {
     const listed = assigned('r1', 'Offsite')
     stubApi({
       [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
@@ -313,7 +313,7 @@ describe('CoordinatorAssignmentsPage status filter (EC-NEW2)', () => {
     window.localStorage.clear()
   })
 
-  it('filters assigned requests by the shared status and keeps every coordinator heading', async () => {
+  it('EC-NEW2 (happy): filters assigned requests by the shared status and keeps every coordinator heading', async () => {
     stubApi({ [ASSIGNED]: () => jsonResponse(200, [
       coordinator('ec1', [assigned('r1', 'Town Hall', { journeyStatus: sv('UNDER_REVIEW', 'Under Review') })]),
       coordinator('ec2', [assigned('r2', 'Gala', { status: 'clarification_required',

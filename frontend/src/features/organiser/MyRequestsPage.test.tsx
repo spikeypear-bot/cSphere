@@ -51,7 +51,7 @@ describe('MyRequestsPage — EO15 (view requests) and EO02 (submission confirmat
     window.localStorage.clear()
   })
 
-  it('shows a success confirmation once, right after arriving from a successful submission', async () => {
+  it('EO02 (happy): shows a success confirmation once, right after arriving from a successful submission', async () => {
     renderHome({ justSubmitted: true })
 
     expect(
@@ -59,7 +59,7 @@ describe('MyRequestsPage — EO15 (view requests) and EO02 (submission confirmat
     ).toBeInTheDocument()
   })
 
-  it('shows no confirmation on an ordinary visit', async () => {
+  it('EO02 (negative): shows no confirmation on an ordinary visit', async () => {
     renderHome()
 
     await screen.findByText('Your event requests')
@@ -81,7 +81,7 @@ describe('MyRequestsPage — EO01/EO15 UX enhancements (docs/decision-log.md D17
     window.localStorage.clear()
   })
 
-  it('shows a relative last-edited time and completion ring for a draft', async () => {
+  it('EO01 EO15 (happy): a draft shows a relative last-edited time and a completion ring', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>
@@ -109,7 +109,7 @@ describe('MyRequestsPage — EO01/EO15 UX enhancements (docs/decision-log.md D17
     expect(await screen.findByText(/Edited 5 minutes ago/)).toBeInTheDocument()
   })
 
-  it('shows the status timeline for a submitted request, not only the badge', async () => {
+  it('EO15 (happy): a submitted request shows the status timeline, not only the badge', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () =>

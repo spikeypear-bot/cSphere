@@ -19,6 +19,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -113,7 +114,7 @@ class EventRequestServiceTest {
     // ---- EO01/EO02 (unchanged behaviour, updated call shape only) --------
 
     @Test
-    @org.junit.jupiter.api.DisplayName("EO01 (happy): the picker stores catalogue IDs and quantities alongside compatible requirements text")
+    @DisplayName("EO01 (happy): the picker stores catalogue IDs and quantities alongside compatible requirements text")
     void pickerItemsAreRetainedOnDraftSave() {
         var item = new com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item(UUID.randomUUID(), 3);
         var input = new SaveEventRequestRequest("Workshop", null, null, null, null, null, null,
@@ -127,7 +128,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("EO01 (boundary): legacy saves retain selected items and an explicit empty selection clears them")
+    @DisplayName("EO01 (boundary): legacy saves retain selected items and an explicit empty selection clears them")
     void equipmentSelectionIsNotLostByALegacyDraftEdit() {
         UUID id = UUID.randomUUID();
         EventRequest existing = draftEntity(id, ORG);
@@ -142,6 +143,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (boundary): saving a new draft succeeds with every field missing")
     void savingANewDraftSucceedsWithEveryFieldMissing() {
         EventRequestDto dto = service.saveNewDraft(ORG, CREATED_BY, blankRequest());
 
@@ -151,6 +153,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): saving a new draft records who created it")
     void savingANewDraftRecordsWhoCreatedIt() {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenAnswer(inv -> Optional.empty());
@@ -162,6 +165,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): a new draft is saved as Draft, never as Submitted or any other status")
     void aNewDraftIsNeverVisibleAsSubmittedOrAnyOtherStatus() {
         EventRequestDto dto = service.saveNewDraft(ORG, CREATED_BY, blankRequest());
 
@@ -169,6 +173,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): reopening and editing a draft keeps the same request")
     void reopeningAndEditingADraftKeepsTheSameId() {
         UUID id = UUID.randomUUID();
         EventRequest existing = draftEntity(id, ORG);
@@ -184,6 +189,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): saving changes updates the same draft rather than creating a new one")
     void savingChangesUpdatesTheSameDraftRatherThanCreatingANewOne() {
         UUID id = UUID.randomUUID();
         EventRequest existing = draftEntity(id, ORG);
@@ -197,6 +203,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): saving a new draft records both when it was created and when it was last updated")
     void savingANewDraftSetsBothCreatedAndUpdatedAt() {
         EventRequestDto dto = service.saveNewDraft(ORG, CREATED_BY, blankRequest());
 
@@ -205,6 +212,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (happy): editing a draft moves its last-updated time forward but keeps its created time")
     void editingADraftAdvancesUpdatedAtButNotCreatedAt() {
         UUID id = UUID.randomUUID();
         java.time.OffsetDateTime originalCreatedAt = java.time.OffsetDateTime.now().minusDays(1);
@@ -221,6 +229,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (negative): an organiser cannot view or edit another organisation's draft")
     void cannotViewOrEditAnotherOrganisationsDraft() {
         UUID id = UUID.randomUUID();
         EventRequest existing = draftEntity(id, "Other Org Pte Ltd");
@@ -233,6 +242,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (negative): saving without an organisation is refused")
     void savingWithoutAnOrganisationIsRejected() {
         assertThatThrownBy(() -> service.saveNewDraft(null, CREATED_BY, blankRequest()))
                 .isInstanceOf(MissingOrganisationException.class);
@@ -241,6 +251,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO02 (negative): submission is blocked while required fields are missing, and lists which ones")
     void submissionIsBlockedWhileRequiredFieldsAreMissingAndListsWhichOnes() {
         UUID id = UUID.randomUUID();
         EventRequest existing = draftEntity(id, ORG);
@@ -254,6 +265,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO02 (negative): submission is blocked when accessibility needs were never answered")
     void submissionIsBlockedWhenAccessibilityNeedsWasNeverAnswered() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -267,6 +279,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO02 (happy): submitting a complete draft makes it Submitted")
     void submittingACompleteDraftTransitionsItToPending() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -278,6 +291,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO02 (negative): a request that has already left Draft cannot be edited or submitted again")
     void aRequestThatHasAlreadyLeftDraftCannotBeEditedOrResubmitted() {
         UUID id = UUID.randomUUID();
         EventRequest submitted = completeDraftEntity(id, ORG);
@@ -291,6 +305,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO01 (negative): the list shows only the organiser's own organisation's requests")
     void listOnlyReturnsRequestsForTheGivenOrganisation() {
         when(repository.findByOrganisationOrderByCreatedAtDesc(ORG))
                 .thenReturn(List.of(draftEntity(UUID.randomUUID(), ORG)));
@@ -320,6 +335,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO19 ELC-C6 (happy): assigning a coordinator tells the organiser the coordinator's name and contact, as a first assignment")
     void assigningACoordinatorNotifiesTheOrganiserWithTheirNameAndContactAsAnInitialAssignment() {
         UUID id = UUID.randomUUID();
         awaitingAssignment(id);
@@ -338,6 +354,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (conflict): a request that already has a coordinator cannot be assigned to another one")
     void aRequestThatAlreadyHasACoordinatorCannotBeAssignedToAnotherOne() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -352,6 +369,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO19 ELC-C6 (conflict): assigning the coordinator a request already has is refused and sends no notification")
     void assigningTheCoordinatorARequestAlreadyHasIsRefusedAndSendsNoNotification() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -366,6 +384,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (negative): assigning a user who is not an Event Coordinator is refused and nothing changes")
     void assigningANonCoordinatorUserIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -381,6 +400,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (negative): assigning a user that does not exist is refused and nothing changes")
     void assigningANonexistentUserIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -394,6 +414,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (negative): assigning without choosing a coordinator is refused and nothing changes")
     void assigningWithNoCoordinatorSpecifiedIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -405,6 +426,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (negative): assigning a coordinator to a request that does not exist is reported as not found")
     void assigningACoordinatorToARequestThatDoesNotExistIsReportedAsNotFound() {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
@@ -415,6 +437,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO19 (boundary): assigning a coordinator to a request with no recorded creator still works but notifies no organiser")
     void assigningACoordinatorNeverNotifiesWhenTheRequestHasNoRecordedCreator() {
         // Historical rows saved before createdBy was populated — the
         // notification simply has no valid recipient, not an error.
@@ -432,6 +455,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (happy): the Lead's coordinator list is every Event Coordinator, in username order")
     void theLeadsCoordinatorListIsEveryEventCoordinatorByUsername() {
         when(userRepository.findByRole(UserRole.ec)).thenReturn(List.of(
                 coordinatorUser(OTHER_COORDINATOR_ID, "ec2", "ec2@connectsphere.test"),
@@ -445,6 +469,7 @@ class EventRequestServiceTest {
     // ---- EO09: approve / reject --------------------------------------------
 
     @Test
+    @DisplayName("EO09 (happy): approving a submitted request assigned to the caller creates an event and notifies the organiser")
     void approvingAPendingRequestAssignedToTheCallerCreatesAnEventAndNotifies() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -466,6 +491,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (negative): approving without being the assigned coordinator is refused, no event is created and no one is notified")
     void approvingWithoutBeingTheAssignedCoordinatorIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -481,6 +507,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (negative): approving a request that is not submitted is refused")
     void approvingARequestThatIsNotPendingIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -493,6 +520,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (conflict): approving twice fails the second time, so at most one approval notification is ever sent")
     void approvingTwiceTheSecondTimeFailsSoAtMostOneApprovalNotificationIsEverSent() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -512,6 +540,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): rejecting records the reason and notifies the organiser with it")
     void rejectingRecordsTheReasonAndNotifies() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -530,6 +559,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (negative): rejecting without a reason is refused and no one is notified")
     void rejectingWithoutAReasonIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -546,6 +576,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (negative): rejecting without being the assigned coordinator is refused")
     void rejectingWithoutBeingTheAssignedCoordinatorIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -560,6 +591,7 @@ class EventRequestServiceTest {
     // ---- EC review queue ----------------------------------------------
 
     @Test
+    @DisplayName("ELC-C6 (happy): a coordinator's review queue holds only their own requests, split by who needs to act")
     void reviewQueueHoldsOnlyTheCallersOwnRequestsSplitByWhoNeedsToAct() {
         EventRequest mine = completeDraftEntity(UUID.randomUUID(), ORG);
         EventRequest waiting = completeDraftEntity(UUID.randomUUID(), ORG);
@@ -655,6 +687,7 @@ class EventRequestServiceTest {
     // ---- EO12/EC03 schedule validation (merged from main) -------------
 
     @Test
+    @DisplayName("EO02 EO-C2 (negative): an end before the start cannot be submitted and the draft is unchanged")
     void reversedRangeCannotBeSubmittedAndDoesNotChangeTheDraft() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);
@@ -671,6 +704,7 @@ class EventRequestServiceTest {
     /** Superseded by EO-C2 (decision log D28): equal instants and past dates
      * were allowed by the 22 Sep 2026 date-range decision; both are now refused. */
     @Test
+    @DisplayName("EO-C2 (boundary): an end at the same moment as the start, written in another time zone, and past dates are refused")
     void equalInstantsWithDifferentOffsetsAndPastDatesAreRefused() {
         UUID id = UUID.randomUUID();
         EventRequest existing = completeDraftEntity(id, ORG);

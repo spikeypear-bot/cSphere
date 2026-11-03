@@ -8,7 +8,7 @@ const venueCss = readFileSync('src/features/venueStaff/VenueCataloguePage.css', 
 
 afterEach(() => { document.head.querySelectorAll('[data-status-colour-test]').forEach(node => node.remove()); document.body.innerHTML = '' })
 
-it('uses green/red theme colours for approved, rejected and attention booking labels and pills', () => {
+it('VS02 VS15 VS17 (cross-cutting): uses green/red theme colours for approved, rejected and attention booking labels and pills', () => {
   const style = document.createElement('style')
   style.dataset.statusColourTest = ''
   // JSDOM does not resolve custom properties in stylesheet declarations.

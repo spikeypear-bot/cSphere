@@ -39,7 +39,7 @@ afterEach(() => {
 })
 
 describe('EventDetailsPage planning panels (EC02/EC03)', () => {
-  it('labels an approved, unconfirmed event as Planning and shows its history', async () => {
+  it('EC02 (happy): an approved event that is not yet confirmed shows as Planning, with its history', async () => {
     seedSession('organiser')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -51,7 +51,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
     expect(await screen.findByRole('list', { name: 'Request timeline' })).toHaveTextContent('approved the request')
   })
 
-  it('offers the coordinator a venue request when none is active', async () => {
+  it('EC03 (happy): the coordinator is offered a venue request when the event has none active', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -64,7 +64,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
       .toHaveAttribute('href', `/coordinator/events/${EVENT}/venue-booking`)
   })
 
-  it('shows the pending request instead of offering another', async () => {
+  it('EC03 (negative): a pending venue request is shown and the coordinator is not offered another', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -80,7 +80,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
     expect(screen.queryByRole('link', { name: 'Request a venue' })).not.toBeInTheDocument()
   })
 
-  it('shows every active venue booking for the event', async () => {
+  it('EC03 VS17 (happy): every active venue booking for the event is shown', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -99,7 +99,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
     expect(screen.getByRole('list', { name: 'Venue bookings' })).toHaveTextContent('Approved')
   })
 
-  it.each(['rejected', 'cancelled'])('offers a linked rebooking action for a %s venue booking', async status => {
+  it.each(['rejected', 'cancelled'])('EC03 (happy): a %s venue booking offers a linked Rebook this venue action', async status => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -123,7 +123,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
       .toBeInTheDocument()
   })
 
-  it('shows replacement attempts without repeating their venue in the source history', async () => {
+  it('EC03 (boundary): replacement attempts are shown without repeating their venue in the original request history', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -149,7 +149,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
       .toContain(`/coordinator/events/${EVENT}/venue-booking?replacesBookingId=replacement`)
   })
 
-  it('offers a replacement action for an unavailable active booking', async () => {
+  it('EC03 (happy): an active booking whose venue became unavailable offers a Find replacement venue action', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -168,7 +168,7 @@ describe('EventDetailsPage planning panels (EC02/EC03)', () => {
 })
 
 describe('Cancelling a pending venue booking request (EC03)', () => {
-  it('retains the approved booking and displays a cancellation failure', async () => {
+  it('EC03 (failure): when cancelling fails, the approved booking stays and the error is shown', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -186,7 +186,7 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
     expect(screen.getByRole('list', { name: 'Venue bookings' })).toHaveTextContent('Approved')
   })
 
-  it('opens cancellation for only the selected booking', async () => {
+  it('EC03 (boundary): Cancel opens the confirmation for the chosen booking only', async () => {
     seedSession('coordinator')
     stubApi({
       [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
@@ -203,7 +203,7 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
     expect(screen.getByText('Other Hall')).toBeInTheDocument()
   })
 
-  it.each(['pending', 'approved'])('cancels a %s booking with an optional reason and then offers a new request', async status => {
+  it.each(['pending', 'approved'])('EC03 (happy): cancelling a %s booking with an optional reason then offers a new venue request', async status => {
     seedSession('coordinator')
     let cancelled = false
     const booking = { bookingId: 'b1', status, venueId: 'v1', venueAddress: '1 Harbour Road', venueCapacity: 160,
@@ -236,7 +236,7 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
 })
 
 describe('MyRequestsPage clarification row (EO26)', () => {
-  it("highlights a request that needs clarification, shows the question, and links to Respond", async () => {
+  it("EO26 (happy): a request that needs clarification is highlighted, shows the question, and links to Respond", async () => {
     seedSession('organiser')
     stubApi({
       'GET /api/event-requests': () => jsonResponse(200, [{
@@ -259,7 +259,7 @@ describe('MyRequestsPage clarification row (EO26)', () => {
 })
 
 describe('NotificationBell new notification types', () => {
-  it('describes a clarification request and shows its message', async () => {
+  it('EO26 (happy): a clarification request notification says what it is and shows the coordinator\'s message', async () => {
     seedSession('organiser')
     stubApi({
       'GET /api/notifications': () => jsonResponse(200, [{

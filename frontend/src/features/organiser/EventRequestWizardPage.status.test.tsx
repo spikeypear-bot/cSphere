@@ -32,13 +32,13 @@ describe('EventRequestWizardPage on a request that is no longer a draft', () => 
     localStorage.clear()
   })
 
-  it('says a rejected request was rejected, not submitted', async () => {
+  it('EO15 (happy): a rejected request says it was rejected, not submitted', async () => {
     renderFor('rejected')
     expect(await screen.findByText(/This request was rejected, so it can no longer be edited/)).toBeInTheDocument()
     expect(screen.queryByText(/already been submitted/)).not.toBeInTheDocument()
   })
 
-  it('still says a submitted request was submitted', async () => {
+  it('EO15 (happy): a submitted request still says it was submitted', async () => {
     renderFor('pending')
     expect(await screen.findByText('This request has already been submitted and can no longer be edited here.')).toBeInTheDocument()
   })

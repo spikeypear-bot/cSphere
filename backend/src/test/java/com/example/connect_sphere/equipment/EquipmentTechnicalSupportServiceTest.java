@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.StreamSupport;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -92,6 +93,7 @@ class EquipmentTechnicalSupportServiceTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): reserving exactly the available quantity is allowed and saved")
     void reservationAllowsQuantityExactlyEqualToAvailableAndPersistsIt() {
         when(logRepository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
 
@@ -104,6 +106,7 @@ class EquipmentTechnicalSupportServiceTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): reserving more than the available quantity is refused")
     void reservationRejectsQuantityAboveAvailable() {
         assertThatThrownBy(() -> reservationService.reserve(
                 new ReserveEquipmentRequest(EVENT_ID, EQUIPMENT_ID, 4, null, START, END, false)))
@@ -112,6 +115,7 @@ class EquipmentTechnicalSupportServiceTest {
     }
 
     @Test
+    @DisplayName("TS03 (happy): marking part of a blocked period Available splits the block around it")
     void availableStatusChangeSplitsTheExistingBlockedPeriod() {
         Instant earlier = START.minusSeconds(3600);
         Instant later = END.plusSeconds(3600);
@@ -136,6 +140,7 @@ class EquipmentTechnicalSupportServiceTest {
     }
 
     @Test
+    @DisplayName("TS03 (conflict): a reserved unit cannot be marked Faulty for the time it is committed to an event")
     void cannotMarkAReservedUnitFaultyForItsCommittedPeriod() {
         when(periodRepository.findOverlappingForUnit(EQUIPMENT_ID, "P-01", START, END))
                 .thenReturn(List.of());

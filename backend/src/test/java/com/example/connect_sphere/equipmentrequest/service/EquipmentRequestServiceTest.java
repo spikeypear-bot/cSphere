@@ -24,6 +24,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -61,6 +62,7 @@ class EquipmentRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC07 (happy): submitting creates a processing request and its item lines")
     void submitCreatesAProcessingRequestAndItsItemLines() {
         var result = service.submit(COORDINATOR_ID, EVENT_ID,
                 new SubmitEquipmentRequest("  Two wireless microphones  ",
@@ -75,6 +77,7 @@ class EquipmentRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC07 (negative): only the assigned coordinator can submit a request")
     void onlyTheAssignedCoordinatorCanViewOrSubmitARequest() {
         assertThatThrownBy(() -> service.submit(UUID.randomUUID(), EVENT_ID,
                 new SubmitEquipmentRequest("Microphones", List.of())))
@@ -82,6 +85,7 @@ class EquipmentRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC07 (conflict): an active request stops a second one being submitted")
     void activeRequestPreventsDuplicateSubmission() {
         EquipmentRequest existing = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.processing, "Microphones");
@@ -93,6 +97,7 @@ class EquipmentRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC07 (boundary): an empty request or a quantity of zero is refused")
     void rejectsEmptyRequestsAndNonPositiveQuantities() {
         assertThatThrownBy(() -> service.submit(COORDINATOR_ID, EVENT_ID,
                 new SubmitEquipmentRequest(" ", List.of())))
@@ -104,7 +109,7 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): revising an approved request keeps it and its reservations; the revision waits for Technical Support")
+    @DisplayName("EC-NEW3 (happy): revising an approved request keeps it and its reservations; the revision waits for Technical Support")
     void reviseKeepsAnApprovedRequestAndItsReservationsUntilTechnicalSupportDecide() {
         EquipmentRequest existing = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
@@ -124,7 +129,7 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): revising a request still awaiting review replaces it at once and is not a revision of an approved one")
+    @DisplayName("EC-NEW3 (happy): revising a request still awaiting review replaces it at once and is not a revision of an approved one")
     void revisingAProcessingRequestSupersedesItAndReleasesNow() {
         EquipmentRequest pending = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.processing, "Two wireless microphones");
@@ -140,7 +145,7 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): revising again replaces the pending revision but still keeps the approved request")
+    @DisplayName("EC-NEW3 (happy): revising again replaces the pending revision but still keeps the approved request")
     void revisingAgainReplacesOnlyThePendingRevision() {
         EquipmentRequest approved = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two");
@@ -161,7 +166,7 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37, D40) (happy): revising a request that needs attention keeps it until Technical Support decide")
+    @DisplayName("EC-NEW3 (D37, D40) (happy): revising a request that needs attention keeps it until Technical Support decide")
     void revisingARequestThatNeedsAttentionKeepsItUntilTechnicalSupportDecide() {
         EquipmentRequest flagged = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
@@ -179,6 +184,7 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): revising when there is no active request is refused")
     void reviseWithNoActiveRequestIsRefused() {
         when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of());
 
@@ -189,6 +195,7 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): only the assigned coordinator can revise the request")
     void onlyTheAssignedCoordinatorCanRevise() {
         EquipmentRequest existing = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Microphones");

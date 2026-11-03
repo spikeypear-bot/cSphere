@@ -8,6 +8,7 @@ import java.util.UUID;
 import com.example.connect_sphere.common.enums.AccessibilityFeature;
 import com.example.connect_sphere.common.enums.Facility;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mapstruct.factory.Mappers;
@@ -22,7 +23,7 @@ class VenueMapperTest {
     private final VenueMapper mapper = Mappers.getMapper(VenueMapper.class);
 
     @Test
-    @org.junit.jupiter.api.DisplayName("VS17 (cross-cutting): deriving operating hours retains the public venue name")
+    @DisplayName("VS17 (cross-cutting): deriving operating hours retains the public venue name")
     void preservesPublicNameWhenDerivingHours() {
         Venue venue = new Venue();
         venue.setVenueName("Public Hall");
@@ -34,6 +35,7 @@ class VenueMapperTest {
     }
 
     @Test
+    @DisplayName("VS07 (boundary): a venue with no accessibility or facility selections shows empty lists")
     void mapsEmptySelectionsToEmptyResponseLists() {
         var dto = mapper.toDto(new Venue());
         assertEquals(List.of(), dto.venueAccessibilities());
@@ -41,6 +43,7 @@ class VenueMapperTest {
     }
 
     @Test
+    @DisplayName("VS07 (happy): every saved accessibility feature and facility is shown back as its option")
     void mapsEveryDatabaseEnumLabel() {
         var venue = new Venue();
         venue.setVenueAccessibilities(java.util.Arrays.stream(AccessibilityFeature.values()).map(Enum::name).toList());
@@ -51,6 +54,7 @@ class VenueMapperTest {
     }
 
     @Test
+    @DisplayName("VS07 (happy): saved layouts, accessibility and facilities are shown as their options, with one shared capacity")
     void mapsStoredLayoutStringsToApiEnumsWithOneSharedCapacity() {
         Venue venue = new Venue();
         venue.setVenueId(UUID.randomUUID());

@@ -15,6 +15,7 @@ import java.util.List;
 import java.util.UUID;
 import java.util.stream.Stream;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -91,6 +92,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): the Lead can open a request's review")
     void aLeadCanOpenARequestsReview() throws Exception {
         mockMvc.perform(leadCall("review").with(tokenFor("ecl")))
                 .andExpect(status().isOk());
@@ -99,6 +101,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): the Lead's rejection is recorded against the signed-in Lead")
     void aLeadsRejectionIsRecordedAgainstTheSignedInLead() throws Exception {
         mockMvc.perform(leadCall("reject").with(tokenFor("ecl")))
                 .andExpect(status().isOk());
@@ -107,6 +110,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 (happy): the Lead's clarification request is recorded against the signed-in Lead")
     void aLeadsClarificationIsRecordedAgainstTheSignedInLead() throws Exception {
         mockMvc.perform(leadCall("clarify").with(tokenFor("ecl")))
                 .andExpect(status().isOk());
@@ -115,6 +119,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (happy): the Lead can list the Event Coordinators to assign a request to")
     void aLeadCanListTheEventCoordinatorsToAssignTo() throws Exception {
         when(service.coordinators()).thenReturn(List.of(new CoordinatorDto(COORDINATOR, "ec1")));
 
@@ -129,6 +134,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @Test
+    @DisplayName("ELC-C6 (happy): the Lead's assignment is recorded against the signed-in Lead")
     void aLeadsAssignmentIsRecordedAgainstTheSignedInLead() throws Exception {
         mockMvc.perform(leadCall("assign").with(tokenFor("ecl")))
                 .andExpect(status().isOk());
@@ -144,6 +150,7 @@ class LeadRequestReviewAccessTest {
 
     @ParameterizedTest
     @MethodSource("everyOtherRoleAndCall")
+    @DisplayName("ECL-C3 ELC-C6 AU04 (negative): every other role is refused the Lead's review, rejection, clarification, coordinator list and assignment, and no request data is read or changed")
     void everyOtherRoleIsDeniedAndNoRequestDataIsReadOrChanged(String otherRole, String call) throws Exception {
         mockMvc.perform(leadCall(call).with(tokenFor(otherRole)))
                 .andExpect(status().isForbidden())
@@ -155,6 +162,7 @@ class LeadRequestReviewAccessTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "review", "reject", "clarify", "coordinators", "assign" })
+    @DisplayName("ECL-C3 ELC-C6 AU04 (negative): a call without signing in is rejected and no request data is read or changed")
     void aCallWithNoTokenIsRejectedAndNoRequestDataIsReadOrChanged(String call) throws Exception {
         mockMvc.perform(leadCall(call))
                 .andExpect(status().isUnauthorized());
@@ -166,6 +174,7 @@ class LeadRequestReviewAccessTest {
      * own review, rejection and clarification. */
     @ParameterizedTest
     @ValueSource(strings = { "approve", "reject", "clarifications" })
+    @DisplayName("ECL-C3 AU04 (negative): the Lead cannot approve, reject or ask for clarification through the coordinator's actions")
     void aLeadTokenDoesNotOpenTheCoordinatorsActions(String action) throws Exception {
         mockMvc.perform(json(post("/api/event-requests/" + REQUEST + "/" + action), "{}").with(tokenFor("ecl")))
                 .andExpect(status().isForbidden());
@@ -182,6 +191,7 @@ class LeadRequestReviewAccessTest {
     /** ELC-C6: coordinators no longer assign, to themselves or anyone else. */
     @ParameterizedTest
     @ValueSource(strings = { "ec", "ecl", "vs", "technician", "attendee" })
+    @DisplayName("ELC-C6 (negative): the removed self-assignment call is refused for every role and assigns nothing")
     void theRemovedSelfAssignmentCallIsDeniedAndAssignsNothing(String role) throws Exception {
         mockMvc.perform(removedSelfAssignment().with(tokenFor(role)))
                 .andExpect(status().isForbidden())
@@ -192,6 +202,7 @@ class LeadRequestReviewAccessTest {
 
     /** It falls under the organisers' blanket rule now, where no such call exists. */
     @Test
+    @DisplayName("ELC-C6 (negative): the removed self-assignment call is refused for an organiser too and assigns nothing")
     void theRemovedSelfAssignmentCallDoesNotExistForAnOrganiserEither() throws Exception {
         mockMvc.perform(removedSelfAssignment().with(tokenFor("eo")))
                 .andExpect(status().is4xxClientError());
@@ -200,6 +211,7 @@ class LeadRequestReviewAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C3 AU04 (negative): the Lead cannot open the coordinator's review screen")
     void aLeadTokenDoesNotOpenTheCoordinatorsReviewScreen() throws Exception {
         mockMvc.perform(get("/api/event-requests/" + REQUEST + "/review").with(tokenFor("ecl")))
                 .andExpect(status().isForbidden());

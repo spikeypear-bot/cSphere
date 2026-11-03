@@ -15,7 +15,7 @@ const entries: ActivityDto[] = [
 describe('ActivityTimeline', () => {
   afterEach(cleanup)
 
-  it('renders each entry in the order given, with who acted and what they did', () => {
+  it('EC01 EC02 (happy): shows each entry in the order given, with who acted and what they did', () => {
     render(<ActivityTimeline entries={entries} />)
     const items = within(screen.getByRole('list', { name: 'Request timeline' })).getAllByRole('listitem')
       .filter((li) => li.classList.contains('activity-timeline__entry'))
@@ -55,7 +55,7 @@ describe('ActivityTimeline', () => {
     expect(within(entry).getByText('Reassigned from ec1 to ec2')).toBeInTheDocument()
   })
 
-  it('shows the message, the flagged fields by name, and the status change', () => {
+  it('EC01 (happy): shows the message, the flagged fields by name, and the status change', () => {
     render(<ActivityTimeline entries={entries} />)
 
     expect(screen.getByText('Is 150 final?').tagName).toBe('BLOCKQUOTE')
@@ -80,7 +80,7 @@ describe('ActivityTimeline', () => {
     expect(document.body).not.toHaveTextContent('Approved →')
   })
 
-  it('shows the empty text when there is no history', () => {
+  it('EC01 EC02 (boundary): shows the empty text when there is no history', () => {
     render(<ActivityTimeline entries={[]} emptyText="No history yet." />)
     expect(screen.getByText('No history yet.')).toBeInTheDocument()
   })
@@ -107,7 +107,7 @@ describe('SO-C5 / SO-C6 safety decisions on the timeline', () => {
 describe('ActivityTimeline (V14 details)', () => {
   afterEach(cleanup)
 
-  it('lists each question under its field instead of one block of text', () => {
+  it('EC01 (happy): lists each question under its field instead of one block of text', () => {
     render(<ActivityTimeline entries={[{ ...entries[1], fieldQuestions: {
       expectedAttendance: 'Is 150 final?', endDatetime: 'Can it end at 5pm?' } }]} />)
 

@@ -54,7 +54,7 @@ describe('ClarificationResponsePage (EO26)', () => {
     window.localStorage.clear()
   })
 
-  it("shows the coordinator's question and puts the flagged field first, highlighted", async () => {
+  it("EO26 (happy): the coordinator's question is shown and the flagged field comes first, highlighted", async () => {
     stubApi(routes())
     renderPage()
 
@@ -84,14 +84,14 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(document.querySelector('.clarify__who')).toHaveTextContent('ecl1 (the Event Coordinator Lead) asked')
   })
 
-  it('cannot resubmit without a reply to the coordinator', async () => {
+  it('EO26 (negative): the organiser cannot resubmit without a reply to the coordinator', async () => {
     stubApi(routes())
     renderPage()
 
     expect(await screen.findByRole('button', { name: 'Save and resubmit' })).toBeDisabled()
   })
 
-  it('sends the edited details and the reply together in one call, and returns home', async () => {
+  it('EO26 (happy): the edited details and the reply are sent together in one call, then the organiser returns home', async () => {
     const calls = stubApi(routes({
       [`POST /api/event-requests/${ID}/resubmit`]: () => jsonResponse(200, { ...request, status: 'pending' }),
     }))
@@ -113,7 +113,7 @@ describe('ClarificationResponsePage (EO26)', () => {
     })
   })
 
-  it('saving alone keeps the request with the organiser', async () => {
+  it('EO26 (happy): saving alone keeps the request with the organiser', async () => {
     const calls = stubApi(routes({ [`PUT /api/event-requests/${ID}`]: () => jsonResponse(200, request) }))
     const user = userEvent.setup()
     renderPage()
@@ -124,7 +124,7 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(calls.some((c) => c.url.endsWith('/resubmit'))).toBe(false)
   })
 
-  it('tells the organiser when saving fails and does not claim it was saved', async () => {
+  it('EO26 (failure): when saving fails the organiser is told and the page does not claim it was saved', async () => {
     stubApi(routes({ [`PUT /api/event-requests/${ID}`]: () => jsonResponse(409, {
       message: 'This request can no longer be edited.' }) }))
     const user = userEvent.setup()
@@ -136,7 +136,7 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(screen.queryByText(/Your request is still with you/)).not.toBeInTheDocument()
   })
 
-  it('shows which required details are missing when resubmission is refused', async () => {
+  it('EO26 (negative): when resubmission is refused the page shows which required details are missing', async () => {
     stubApi(routes({
       [`POST /api/event-requests/${ID}/resubmit`]: () => jsonResponse(422, {
         message: 'Event request is missing required fields: purpose', missingFields: ['purpose'],
@@ -152,7 +152,7 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(screen.queryByText('Organiser home')).not.toBeInTheDocument()
   })
 
-  it("shows the coordinator's question for each field right beside that field", async () => {
+  it("EO26 (happy): the coordinator's question for each field is shown right beside that field", async () => {
     stubApi(routes({
       [`GET /api/event-requests/${ID}/timeline`]: () => jsonResponse(200, [timeline[0], {
         ...timeline[1], fieldQuestions: { expectedAttendance: 'Is 150 the final headcount?' },
@@ -208,7 +208,7 @@ describe('ClarificationResponsePage (EO26)', () => {
     expect(attendance).toHaveValue(150)
   })
 
-  it('says so when the request is no longer waiting for clarification', async () => {
+  it('EO26 (negative): the page says so when the request is no longer waiting for clarification', async () => {
     stubApi(routes({}, 'pending'))
     renderPage()
 

@@ -78,6 +78,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C3 (happy): the checklist has the six standard items and starts with none ticked and no decision")
     void checklistHasStandardItemsAndStartsIncomplete() {
         ReadinessDto result = service.forSafetyOfficer(EVENT_ID);
 
@@ -90,6 +91,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C3 (happy): ticking an item saves its note, who ticked it and when")
     void updatingAnItemPersistsTheActorAndTimestamp() {
         service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking",
                 new UpdateReadinessItemRequest(true, "Venue booking approved"));
@@ -105,6 +107,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C4 (negative): approval is refused while the checklist is incomplete, names the outstanding items, and nothing is saved or sent")
     void incompleteChecklistBlocksApprovalAndListsOutstandingItems() {
         event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         assertThatThrownBy(() -> service.review(
@@ -121,6 +124,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C4 EC08 (happy): with every standard item ticked, the approval is recorded and the event moves to Safety Approved")
     void approvalRecordsTheSafetyApprovalOnlyAfterEveryStandardItemIsChecked() {
         event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         OffsetDateTime checkedAt = OffsetDateTime.now().minusMinutes(1);
@@ -149,6 +153,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C4 EC08 (conflict): the Safety Officer cannot decide until the coordinator sends the event for review, and nothing is saved")
     void aDecisionIsRefusedUntilTheCoordinatorSendsTheEventForReview() {
         assertThatThrownBy(() -> service.review(
                 SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("approve", "")))
@@ -159,6 +164,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C5 SO-C6 (negative): rejecting or requesting changes needs a note, and either decision sends the event back to the coordinator")
     void requestingChangesOrRejectingNeedsANoteAndSendsTheEventBackToTheCoordinator() {
         event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
 
@@ -178,6 +184,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C3 (conflict): the checklist can be ticked while awaiting review but not once the event is approved")
     void checklistCanBeWorkedOnWhileAwaitingReviewButNotOnceApproved() {
         event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
         service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking", new UpdateReadinessItemRequest(true, ""));
@@ -189,6 +196,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C3 (boundary): unticking an item keeps who last ticked it and when")
     void uncheckingAnItemKeepsTheLastCheckerAndCheckTime() {
         OffsetDateTime checkedAt = OffsetDateTime.now().minusDays(1);
         ReadinessItemState state = new ReadinessItemState(
@@ -202,6 +210,7 @@ class ReadinessServiceTest {
     }
 
     @Test
+    @DisplayName("SO-C3 (negative): a coordinator can read only their own event's readiness checklist")
     void coordinatorCanOnlyReadTheirOwnEventsReadiness() {
         event.setCoordinatorId(UUID.randomUUID());
 

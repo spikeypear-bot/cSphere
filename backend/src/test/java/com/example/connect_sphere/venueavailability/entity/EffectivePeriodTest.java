@@ -2,6 +2,7 @@ package com.example.connect_sphere.venueavailability.entity;
 
 import static org.assertj.core.api.Assertions.*;
 import java.time.OffsetDateTime;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -13,7 +14,9 @@ import com.example.connect_sphere.venuebooking.service.InvalidVenueBookingExcept
 @Tag("unit")
 @Tag("VS-C2")
 class EffectivePeriodTest {
-    @Test void calculatesAcrossMidnightAndYearBoundariesWithoutChangingAdvertisedTimes() {
+    @Test
+    @DisplayName("VS-C2 (boundary): setup and turnaround time is added across midnight and year boundaries without changing the advertised times")
+    void calculatesAcrossMidnightAndYearBoundariesWithoutChangingAdvertisedTimes() {
         var start = OffsetDateTime.parse("2027-01-01T00:15:00+08:00");
         var end = OffsetDateTime.parse("2027-01-01T23:45:00+08:00");
         var period = EffectivePeriod.of(start, end, new Settings(30, 60));
@@ -30,12 +33,15 @@ class EffectivePeriodTest {
 
     @ParameterizedTest
     @CsvSource({"-1,0", "0,-1", "10081,0", "0,10081", ",0", "0,"})
+    @DisplayName("VS-C2 (boundary): a negative, too long or missing setup or turnaround time is refused")
     void rejectsInvalidDurations(Integer setup, Integer turnaround) {
         assertThatThrownBy(() -> EffectivePeriod.validate(new Settings(setup, turnaround)))
                 .isInstanceOf(InvalidVenueBookingException.class);
     }
 
-    @Test void rejectsMissingDurationsAndFractionalJsonValues() {
+    @Test
+    @DisplayName("VS-C2 (negative): missing durations and fractional minutes are refused")
+    void rejectsMissingDurationsAndFractionalJsonValues() {
         assertThatThrownBy(() -> EffectivePeriod.validate(null)).isInstanceOf(InvalidVenueBookingException.class);
         assertThatThrownBy(() -> Settings.fromJson(new java.math.BigDecimal("0.5"), java.math.BigDecimal.ZERO))
                 .isInstanceOf(InvalidVenueBookingException.class);

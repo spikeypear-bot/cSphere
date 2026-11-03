@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import java.util.List;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -60,6 +61,7 @@ class UnassignedRequestsAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (happy): the Event Coordinator Lead can open the unassigned queue")
     void anEventCoordinatorLeadCanOpenTheUnassignedQueue() throws Exception {
         when(service.unassignedRequests()).thenReturn(List.of());
 
@@ -71,6 +73,7 @@ class UnassignedRequestsAccessTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "ec", "eo", "vs", "technician", "attendee" })
+    @DisplayName("ECL-C1 AU04 (negative): every other role is refused the unassigned queue with a message and no request data is read")
     void everyOtherRoleIsDeniedAndNoRequestDataIsRead(String otherRole) throws Exception {
         mockMvc.perform(get(UNASSIGNED).with(tokenFor(otherRole)))
                 .andExpect(status().isForbidden())
@@ -81,6 +84,7 @@ class UnassignedRequestsAccessTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 AU04 (negative): a call without signing in is rejected and no request data is read")
     void aCallWithNoTokenIsRejectedAndNoRequestDataIsRead() throws Exception {
         mockMvc.perform(get(UNASSIGNED))
                 .andExpect(status().isUnauthorized());
@@ -91,6 +95,7 @@ class UnassignedRequestsAccessTest {
     /** The Lead is a separate role: it does not open EC or EO endpoints. */
     @ParameterizedTest
     @ValueSource(strings = { "/api/event-requests/queue", "/api/event-requests" })
+    @DisplayName("ECL-C1 AU04 (negative): the Lead cannot open the coordinator's queue or the organiser's request list")
     void aLeadTokenDoesNotOpenCoordinatorOrOrganiserEndpoints(String path) throws Exception {
         mockMvc.perform(get(path).with(tokenFor("ecl")))
                 .andExpect(status().isForbidden());

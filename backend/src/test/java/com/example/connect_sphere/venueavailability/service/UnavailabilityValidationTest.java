@@ -3,6 +3,7 @@ package com.example.connect_sphere.venueavailability.service;
 import static org.assertj.core.api.Assertions.*;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -45,7 +46,9 @@ class UnavailabilityValidationTest {
         if (accepted) assertThat(error).isNull(); else assertThat(error).isNotNull();
     }
 
-    @Test void pastDateUsesSingaporeCalendarRatherThanSuppliedOffset() {
+    @Test
+    @DisplayName("VS01 (boundary): whether a date is in the past follows the Singapore calendar, not the offset supplied")
+    void pastDateUsesSingaporeCalendarRatherThanSuppliedOffset() {
         var start = OffsetDateTime.parse("2026-10-06T16:00:00Z");
         assertThatCode(() -> AvailabilityService.validate(new Request(start,start.plusHours(1),"Maintenance",null,null),TODAY)).doesNotThrowAnyException();
         assertThatThrownBy(() -> AvailabilityService.validate(new Request(start.minusSeconds(1),start.plusHours(1),"Maintenance",null,null),TODAY))

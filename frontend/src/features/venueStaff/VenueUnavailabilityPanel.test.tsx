@@ -35,7 +35,7 @@ it('VS17 (happy): unavailability preview identifies same-name bookings by event 
   expect(preview).toHaveTextContent('Event ID: event-two · Booking ID: b2')
   expect(apiClient.post).toHaveBeenCalledTimes(1)
 })
-it('rejects missing and equal timestamps near the relevant fields', async () => {
+it('VS01 (negative): rejects missing and equal timestamps near the relevant fields', async () => {
   mount()
   await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
   expect(screen.getByText('Reason is required.')).toBeInTheDocument()
@@ -47,7 +47,7 @@ it('rejects missing and equal timestamps near the relevant fields', async () => 
   expect(screen.getByRole('button', { name: 'Record Unavailability' })).toBeDisabled()
   expect(apiClient.post).not.toHaveBeenCalled()
 })
-it('updates the end minimum, retains invalid dates, and clears live errors when corrected', () => {
+it('VS01 (boundary): updates the end minimum, retains invalid dates, and clears live errors when corrected', () => {
   mount()
   const start = screen.getByLabelText('Start date/time')
   const end = screen.getByLabelText('End date/time')
@@ -70,7 +70,7 @@ it('updates the end minimum, retains invalid dates, and clears live errors when 
     'e.g. Scheduled maintenance, renovation, safety restrictions, or an internal activity.')
   expect(apiClient.post).not.toHaveBeenCalled()
 })
-it('requires conflict acknowledgement and allows returning without saving', async () => {
+it('VS-C1 (conflict): requires conflict acknowledgement and allows returning without saving', async () => {
   mount(); fill()
   vi.mocked(apiClient.post).mockResolvedValue({ affectedBookings: [booking], previewToken: 'token' })
   await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
@@ -81,7 +81,7 @@ it('requires conflict acknowledgement and allows returning without saving', asyn
   expect(screen.getByLabelText('Reason')).toHaveValue(' Maintenance ')
   expect(apiClient.post).toHaveBeenCalledTimes(1)
 })
-it('sends Singapore timestamps and acknowledged bookings, then refreshes', async () => {
+it('VS01 VS-C1 (happy): sends Singapore timestamps and acknowledged bookings, then refreshes', async () => {
   const recorded = mount(); fill()
   vi.mocked(apiClient.post).mockResolvedValueOnce({ affectedBookings: [booking], previewToken: 'token' }).mockResolvedValueOnce({})
   await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
@@ -93,14 +93,14 @@ it('sends Singapore timestamps and acknowledged bookings, then refreshes', async
   expect(recorded).toHaveBeenCalledOnce()
   expect(screen.getByLabelText('Reason')).toHaveValue('')
 })
-it('saves a period without conflicts after checking', async () => {
+it('VS01 (happy): saves a period without conflicts after checking', async () => {
   const recorded = mount(); fill()
   vi.mocked(apiClient.post).mockResolvedValueOnce({ affectedBookings: [], previewToken: 'empty' }).mockResolvedValueOnce({})
   await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
   await waitFor(() => expect(recorded).toHaveBeenCalledOnce())
   expect(apiClient.post).toHaveBeenCalledTimes(2)
 })
-it('keeps the form and requires review again when saving fails', async () => {
+it('VS01 VS-C1 (failure): keeps the form and requires review again when saving fails', async () => {
   const recorded = mount(); fill()
   vi.mocked(apiClient.post).mockResolvedValueOnce({ affectedBookings: [booking], previewToken: 'token' })
     .mockRejectedValueOnce(new Error('Save failed'))
@@ -111,14 +111,14 @@ it('keeps the form and requires review again when saving fails', async () => {
   expect(recorded).not.toHaveBeenCalled()
   expect(screen.queryByRole('button', { name: 'Confirm recording unavailability' })).not.toBeInTheDocument()
 })
-it('does not save when checking affected bookings fails', async () => {
+it('VS-C1 (failure): does not save when checking affected bookings fails', async () => {
   mount(); fill()
   vi.mocked(apiClient.post).mockRejectedValue(new Error('Offline'))
   await userEvent.click(screen.getByRole('button', { name: 'Record Unavailability' }))
   expect(await screen.findByRole('alert')).toHaveTextContent('Could not check affected bookings')
   expect(apiClient.post).toHaveBeenCalledTimes(1)
 })
-it.each(['preview', 'save'])('shows an overlapping-period error from %s and preserves input', async stage => {
+it.each(['preview', 'save'])('VS01 (conflict): shows an overlapping-period error from %s and preserves input', async stage => {
   const recorded = mount(); fill()
   const message = 'This period overlaps an existing unavailable period for this venue. Choose dates and times outside the recorded periods.'
   if (stage === 'save') {

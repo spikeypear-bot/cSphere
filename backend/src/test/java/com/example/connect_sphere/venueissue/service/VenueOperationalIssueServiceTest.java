@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -45,6 +46,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): an issue is saved for an existing venue without touching its bookings")
     void createsAnIssueForAnExistingVenue() {
         when(venues.existsById(venueId)).thenReturn(true);
         var from = OffsetDateTime.parse("2027-03-10T09:00:00+08:00");
@@ -63,6 +65,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (boundary): the issue description is saved without surrounding spaces")
     void trimsTheDescriptionBeforeSaving() {
         when(venues.existsById(venueId)).thenReturn(true);
 
@@ -73,6 +76,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): a blank issue description is refused")
     void rejectsBlankDescription() {
         when(venues.existsById(venueId)).thenReturn(true);
 
@@ -83,6 +87,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): an affected period with only a start is refused")
     void rejectsOnlyOnePeriodBoundary() {
         when(venues.existsById(venueId)).thenReturn(true);
         var from = OffsetDateTime.parse("2027-03-10T09:00:00+08:00");
@@ -94,6 +99,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (boundary): an affected end equal to the start is refused")
     void rejectsAnEndThatIsNotAfterTheStart() {
         when(venues.existsById(venueId)).thenReturn(true);
         var from = OffsetDateTime.parse("2027-03-10T12:00:00+08:00");
@@ -105,6 +111,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (negative): reporting an issue at a venue that does not exist is refused")
     void rejectsAnUnknownVenue() {
         when(venues.existsById(venueId)).thenReturn(false);
 
@@ -114,6 +121,7 @@ class VenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): issues are listed for an existing venue")
     void listsIssuesForAnExistingVenue() {
         when(venues.existsById(venueId)).thenReturn(true);
         when(issues.findByVenueIdOrderByAffectedFromAscCreatedAtDesc(venueId)).thenReturn(List.of());

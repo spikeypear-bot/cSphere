@@ -107,7 +107,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     window.localStorage.clear()
   })
 
-  it('shows the request as the organiser submitted it', async () => {
+  it('ECL-C3 (happy): shows the request as the organiser submitted it', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
     renderPage()
 
@@ -129,7 +129,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(detail('Registration')).toHaveTextContent('Registration needed')
   })
 
-  it('says a detail was not provided rather than leaving it blank', async () => {
+  it('ECL-C3 (boundary): says a detail was not provided rather than leaving it blank', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review({ equipmentRequirements: null, requiredFacilities: [] })) })
     renderPage()
 
@@ -138,7 +138,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(detail('Required facilities')).toHaveTextContent('Not provided')
   })
 
-  it("shows the request's history, including a clarification and the organiser's response", async () => {
+  it("ECL-C3 (happy): shows the request's history, including a clarification and the organiser's response", async () => {
     stubApi({
       [REVIEW]: () => jsonResponse(200, review({}, [
         entry('submitted', 'eo1', 'eo'),
@@ -154,7 +154,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(history.getByText('Our enterprise customers.')).toBeInTheDocument()
   })
 
-  it('links back to the unassigned requests list', async () => {
+  it('ECL-C3 (happy): links back to the unassigned requests list', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
     renderPage()
 
@@ -162,7 +162,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests')
   })
 
-  it('shows "request not found" and no request data for a draft or unknown request', async () => {
+  it('ECL-C3 (negative): shows "request not found" and no request data for a draft or unknown request', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(404, { message: 'Event request r1 was not found' }) })
     renderPage()
 
@@ -171,7 +171,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(screen.getByRole('link', { name: 'Back to unassigned requests' })).toBeInTheDocument()
   })
 
-  it('shows the access-denied message and no request data when the server refuses the caller', async () => {
+  it('ECL-C3 (negative): shows the access-denied message and no request data when the server refuses the caller', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(403, { message: 'You do not have permission to perform this action.' }) })
     renderPage()
 
@@ -180,7 +180,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
   })
 
   it.each(['pending', 'clarification_required'])(
-    'says so and offers no review actions when the %s request already has a coordinator', async (status) => {
+    'ECL-C3 (negative): says so and offers no review actions when the %s request already has a coordinator', async (status) => {
       stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
       renderPage()
 
@@ -192,7 +192,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     ['approved', /has been approved/],
     ['rejected', /has been rejected/],
     ['cancelled', /has been cancelled/],
-  ])('says so and offers no review actions when the request is already %s', async (status, message) => {
+  ])('ECL-C3 (negative): says so and offers no review actions when the request is already %s', async (status, message) => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
     renderPage()
 
@@ -200,7 +200,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(reviewActions()).toEqual([])
   })
 
-  it('offers only Assign while an unassigned request waits on the organiser', async () => {
+  it('ECL-C3 ELC-C6 (boundary): offers only Assign while an unassigned request waits on the organiser', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review({ status: 'clarification_required' })) })
     renderPage()
 
@@ -208,7 +208,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(reviewActions()).toEqual(['Assign'])
   })
 
-  it('shows an assigned request that waits on the organiser as assigned, not as returning to the unassigned list', async () => {
+  it('ECL-C3 (boundary): shows an assigned request that waits on the organiser as assigned, not as returning to the unassigned list', async () => {
     stubApi({
       [REVIEW]: () => jsonResponse(200, review({ status: 'clarification_required', coordinatorId: 'ec-1' })),
     })
@@ -219,7 +219,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(reviewActions()).toEqual([])
   })
 
-  it('offers assign, clarification and reject on an unassigned request, and never approve', async () => {
+  it('ECL-C3 (happy): offers assign, clarification and reject on an unassigned request, and never approve', async () => {
     stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
     renderPage()
 
@@ -228,7 +228,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(screen.queryByRole('button', { name: /approve/i })).not.toBeInTheDocument()
   })
 
-  it('lists every Event Coordinator to choose from, with none chosen to begin with', async () => {
+  it('ELC-C6 (happy): lists every Event Coordinator to choose from, with none chosen to begin with', async () => {
     const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()), [COORDINATORS]: coordinators })
     const user = userEvent.setup()
     renderPage()
@@ -243,7 +243,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     ])
   })
 
-  it('assigning sends the chosen coordinator, then returns to the queue with a confirmation naming them', async () => {
+  it('ELC-C6 (happy): assigning sends the chosen coordinator, then returns to the queue with a confirmation naming them', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review()),
       [COORDINATORS]: coordinators,
@@ -264,7 +264,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     ])
   })
 
-  it('a request waiting on the organiser can be assigned the same way', async () => {
+  it('ELC-C6 (boundary): a request waiting on the organiser can be assigned the same way', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review({ status: 'clarification_required' })),
       [COORDINATORS]: coordinators,
@@ -284,7 +284,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     ])
   })
 
-  it('assigning without choosing a coordinator is blocked with a message and sends nothing', async () => {
+  it('ELC-C6 (negative): assigning without choosing a coordinator is blocked with a message and sends nothing', async () => {
     const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()), [COORDINATORS]: coordinators })
     const user = userEvent.setup()
     renderPage()
@@ -298,7 +298,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
   })
 
-  it('says so when the Event Coordinators cannot be loaded, and assigning sends nothing', async () => {
+  it('ELC-C6 (failure): says so when the Event Coordinators cannot be loaded, and assigning sends nothing', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review()),
       [COORDINATORS]: () => jsonResponse(403, { message: 'You do not have permission to perform this action.' }),
@@ -314,7 +314,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(calls.filter((call) => call.method === 'POST')).toEqual([])
   })
 
-  it('rejecting sends the reason, then returns to the queue with a confirmation and the request gone', async () => {
+  it('ECL-C3 (happy): rejecting sends the reason, then returns to the queue with a confirmation and the request gone', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review()),
       [REJECT]: () => jsonResponse(200, review({ status: 'rejected' }).request),
@@ -335,7 +335,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     ])
   })
 
-  it('asking for clarification sends the message, then returns to the queue with a confirmation', async () => {
+  it('ECL-C3 (happy): asking for clarification sends the message, then returns to the queue with a confirmation', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review()),
       [CLARIFY]: () => jsonResponse(200, review({ status: 'clarification_required' }).request),
@@ -362,7 +362,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     ['Reject', 'Confirm rejection', /Reason for rejection/, 'Enter a reason before rejecting.'],
     ['Ask for clarification', 'Send clarification request', 'What do you need from the organiser?',
       'Enter a message for the organiser before sending.'],
-  ])('%s with nothing entered, or only spaces, is blocked with a message and sends nothing',
+  ])('ECL-C3 (negative): %s with nothing entered, or only spaces, is blocked with a message and sends nothing',
     async (choice, confirm, field, expected) => {
       const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
       const user = userEvent.setup()
@@ -381,7 +381,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
       expect(calls.map((call) => call.method)).toEqual(['GET'])
     })
 
-  it('when the request was assigned meanwhile, shows the refusal, stays on the page and withdraws the actions', async () => {
+  it('ECL-C3 (conflict): when the request was assigned meanwhile, shows the refusal, stays on the page and withdraws the actions', async () => {
     let reads = 0
     const calls = stubApi({
       [REVIEW]: () => {
@@ -413,7 +413,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
       { coordinatorId: 'ec-1' }, /has been assigned to ec1, who now reviews it/],
     ['rejected', 'This request is no longer waiting for assignment (current status: Rejected).',
       { status: 'rejected' }, /has been rejected/],
-  ])('when the request was %s meanwhile, assigning shows the refusal, stays on the page and withdraws the actions',
+  ])('ELC-C6 (conflict): when the request was %s meanwhile, assigning shows the refusal, stays on the page and withdraws the actions',
     async (_what, refusal, now, closedText) => {
       let reads = 0
       const calls = stubApi({
@@ -440,7 +440,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
   // ---- Reassigning (ELC-C5) ----------------------------------------
 
   it.each(['pending', 'clarification_required'])(
-    'offers Reassign and nothing else when the %s request already has a coordinator', async (status) => {
+    'ELC-C5 (happy): offers Reassign and nothing else when the %s request already has a coordinator', async (status) => {
       stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
       renderPage()
 
@@ -450,7 +450,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     })
 
   it.each(['approved', 'rejected', 'cancelled'])(
-    'does not offer Reassign once the assigned request is %s', async (status) => {
+    'ELC-C5 (negative): does not offer Reassign once the assigned request is %s', async (status) => {
       stubApi({ [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })) })
       renderPage()
 
@@ -459,7 +459,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
       expect(screen.queryByRole('button', { name: /reassign/i })).not.toBeInTheDocument()
     })
 
-  it('lists every Event Coordinator to reassign to, showing the current one, who cannot be picked', async () => {
+  it('ELC-C5 (happy): lists every Event Coordinator to reassign to, showing the current one, who cannot be picked', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review({ coordinatorId: 'ec-1' })),
       [COORDINATORS]: coordinators,
@@ -482,7 +482,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
   })
 
   it.each(['pending', 'clarification_required'])(
-    'reassigning a %s request sends the chosen coordinator, then returns to the assignments with a confirmation naming them',
+    'ELC-C5 (happy): reassigning a %s request sends the chosen coordinator, then returns to the assignments with a confirmation naming them',
     async (status) => {
       const calls = stubApi({
         [REVIEW]: () => jsonResponse(200, review({ status, coordinatorId: 'ec-1' })),
@@ -505,7 +505,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
       ])
     })
 
-  it('reassigning without choosing a coordinator is blocked with a message and sends nothing', async () => {
+  it('ELC-C5 (negative): reassigning without choosing a coordinator is blocked with a message and sends nothing', async () => {
     const calls = stubApi({
       [REVIEW]: () => jsonResponse(200, review({ coordinatorId: 'ec-1' })),
       [COORDINATORS]: coordinators,
@@ -522,7 +522,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(calls.map((call) => call.method)).toEqual(['GET', 'GET'])
   })
 
-  it('when the coordinator approved the request meanwhile, reassigning shows the refusal, stays on the page and withdraws Reassign', async () => {
+  it('ELC-C5 (conflict): when the coordinator approved the request meanwhile, reassigning shows the refusal, stays on the page and withdraws Reassign', async () => {
     const refusal = 'This request can no longer be reassigned (current status: Approved).'
     let reads = 0
     const calls = stubApi({
@@ -546,7 +546,7 @@ describe('IncomingRequestReviewPage (ECL-C3 Lead review, ELC-C6 assignment, ELC-
     expect(calls.map((call) => call.method)).toEqual(['GET', 'GET', 'POST', 'GET'])
   })
 
-  it('opening the page only reads the request', async () => {
+  it('ECL-C3 (cross-cutting): opening the page only reads the request', async () => {
     const calls = stubApi({ [REVIEW]: () => jsonResponse(200, review()) })
     renderPage()
 

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.data.domain.Sort;
@@ -42,7 +43,7 @@ class VenueSearchServiceTest {
 
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.ValueSource(strings={"1.5","2147483648","-1","0"})
-    @org.junit.jupiter.api.DisplayName("DEV16 (negative): non-whole, overflowing and nonpositive capacities are refused before querying venues")
+    @DisplayName("DEV16 (negative): non-whole, overflowing and nonpositive capacities are refused before querying venues")
     void invalidCapacityBeforeRead(String capacity) {
         assertThatThrownBy(() -> service.search("2027-04-01T02:00:00Z","2027-04-01T04:00:00Z",capacity,List.of()))
                 .isInstanceOf(InvalidVenueSearchException.class).hasMessage("Required capacity must be a whole number greater than 0.");
@@ -52,7 +53,7 @@ class VenueSearchServiceTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.NullAndEmptySource
     @org.junit.jupiter.params.provider.ValueSource(strings={" "})
-    @org.junit.jupiter.api.DisplayName("DEV16 (negative): missing search times are refused before querying venues")
+    @DisplayName("DEV16 (negative): missing search times are refused before querying venues")
     void missingTimesBeforeRead(String value) {
         assertThatThrownBy(() -> service.search(value,"2027-04-01T04:00:00Z",null,null))
                 .isInstanceOf(InvalidVenueSearchException.class).hasMessage("Start date and time is required.");
@@ -64,7 +65,7 @@ class VenueSearchServiceTest {
     @org.junit.jupiter.params.ParameterizedTest
     @org.junit.jupiter.params.provider.NullAndEmptySource
     @org.junit.jupiter.params.provider.ValueSource(strings={" ","unknown_facility"})
-    @org.junit.jupiter.api.DisplayName("DEV16 (negative): null, blank and unknown facility selections cannot broaden a venue search")
+    @DisplayName("DEV16 (negative): null, blank and unknown facility selections cannot broaden a venue search")
     void invalidFacilitiesBeforeRead(String value) {
         assertThatThrownBy(() -> service.search("2027-04-01T02:00:00Z","2027-04-01T04:00:00Z",null,java.util.Arrays.asList(value)))
                 .isInstanceOf(InvalidVenueSearchException.class).hasMessage("Required facilities must be valid facility selections.");
@@ -72,6 +73,7 @@ class VenueSearchServiceTest {
     }
 
     @Test
+    @DisplayName("EC04 (boundary): a venue with exactly the requested capacity and every required facility is found; one seat short or one facility missing is not")
     void filtersByMinimumCapacityAndEveryRequiredFacility() {
         Venue exactFit = venue(100, "stage", "projection");
         Venue tooSmall = venue(99, "stage", "projection");
@@ -90,6 +92,7 @@ class VenueSearchServiceTest {
     }
 
     @Test
+    @DisplayName("EC04 (negative): an invalid date or a capacity below 1 is refused before searching")
     void rejectsInvalidDatesAndCapacityBeforeSearching() {
         assertThatThrownBy(() -> service.search(
                 "not-a-date", "2027-03-10T12:00:00+08:00", null, List.of()))

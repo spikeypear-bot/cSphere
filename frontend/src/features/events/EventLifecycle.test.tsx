@@ -77,7 +77,7 @@ describe('EC-NEW2 one consistent status on the event page', () => {
 })
 
 describe('EC08 readiness, send for safety review, withdraw and confirm', () => {
-  it('refreshes lifecycle readiness after cancelling an approved venue booking', async () => {
+  it('EC08 (happy): after an approved venue booking is cancelled, the readiness checklist refreshes and the event can no longer be sent for review', async () => {
     seedSession('coordinator')
     let cancelled = false
     const calls = stubApi({

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -87,6 +88,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 EO26 EC02 (happy): a full clarification round trip is recorded in order from submission to approval")
     void aFullClarificationRoundTripIsRecordedInOrderFromSubmissionToApproval() throws Exception {
         UUID id = submittedRequest();
 
@@ -126,6 +128,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 (happy): each flagged field's question and its value at that moment reach the organiser")
     void eachFlaggedFieldsQuestionAndTheValuesAtThatMomentReachTheOrganiser() throws Exception {
         UUID id = submittedRequest();
 
@@ -139,6 +142,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 (negative): a question about an unflagged field, or a flagged field with no question, is refused and the request stays pending")
     void aQuestionAboutAnUnflaggedFieldOrABlankQuestionIsRefused() throws Exception {
         UUID id = submittedRequest();
 
@@ -150,6 +154,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 (boundary): a single field question over 2000 characters is refused and the request stays pending")
     void aSingleFieldQuestionOver2000CharactersIsRefused() throws Exception {
         UUID id = submittedRequest();
 
@@ -159,6 +164,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EO26 (failure): a resubmission refused for a missing field leaves the organiser's edits unsaved and the request still waiting for clarification")
     void aRefusedResubmissionLeavesTheOrganisersEditsUnsaved() throws Exception {
         UUID id = submittedRequest();
         clarify(id, "ec1", "{\"message\":\"Please confirm.\"}", 200);
@@ -177,6 +183,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EO26 (happy): a successful resubmission saves the edits and records the new values beside the old ones")
     void aSuccessfulResubmissionSavesTheEditsAndRecordsTheNewValues() throws Exception {
         UUID id = submittedRequest();
         clarify(id, "ec1", "{\"message\":\"Is 150 final?\",\"flaggedFields\":[\"expectedAttendance\"]}", 200);
@@ -195,6 +202,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC02 (conflict): approving an already approved request again is refused with a plain message")
     void decidingTwiceIsRefusedWithAPlainMessage() throws Exception {
         UUID id = submittedRequest();
         mvc.perform(post("/api/event-requests/" + id + "/approve").with(flow.as("ec1"))).andExpect(status().isOk());
@@ -205,6 +213,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC02 (happy): the review screen names the organiser who created the request")
     void theReviewScreenNamesTheOrganiserWhoCreatedTheRequest() throws Exception {
         UUID id = submittedRequest();
 
@@ -214,6 +223,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 EC02 (conflict): a request waiting for clarification cannot be approved, says why, and stays waiting")
     void aRequestWaitingForClarificationCannotBeApprovedAndSaysWhy() throws Exception {
         UUID id = submittedRequest();
         clarify(id, "ec1", "{\"message\":\"Please confirm the date.\"}", 200);
@@ -226,6 +236,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 (negative): a blank clarification is refused and leaves no trace")
     void aBlankClarificationIsRejectedAndLeavesNoTrace() throws Exception {
         UUID id = submittedRequest();
 
@@ -238,6 +249,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 EC02 (negative): a coordinator not assigned to the request cannot open it, ask for clarification or approve it, and nothing changes")
     void aCoordinatorNotAssignedToTheRequestCannotOpenOrActOnIt() throws Exception {
         UUID id = submittedRequest();
 
@@ -251,6 +263,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC02 (happy): the review queue shows only my requests, not unassigned ones or another coordinator's")
     void theReviewQueueShowsOnlyMyRequestsNotUnassignedOnesOrAnotherCoordinators() throws Exception {
         UUID mine = submittedRequest();
         UUID theirs = flow.submittedAndAssigned("eo1", "ec2", FlowSupport.requestBody("Theirs", 50, "none"));
@@ -265,6 +278,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 EC02 (negative): an organiser cannot request clarification or open the review screen")
     void anOrganiserCannotRequestClarificationOrOpenTheReviewScreen() throws Exception {
         UUID id = submittedRequest();
 
@@ -274,6 +288,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EO26 (negative): an organiser of another organisation cannot see the timeline or resubmit, and the request is unchanged")
     void anOrganiserOfAnotherOrganisationCannotSeeTheTimelineOrResubmit() throws Exception {
         UUID id = submittedRequest();
         clarify(id, "ec1", "{\"message\":\"Please confirm.\"}", 200);
@@ -287,6 +302,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 (negative): timeline entries cannot be edited, even directly in the database")
     void timelineEntriesCannotBeEditedInTheDatabase() throws Exception {
         UUID id = submittedRequest();
         flush();
@@ -298,6 +314,7 @@ class EventRequestReviewFlowTest {
     }
 
     @Test
+    @DisplayName("EC01 (negative): timeline entries cannot be deleted, even directly in the database")
     void timelineEntriesCannotBeDeletedInTheDatabase() throws Exception {
         UUID id = submittedRequest();
         flush();

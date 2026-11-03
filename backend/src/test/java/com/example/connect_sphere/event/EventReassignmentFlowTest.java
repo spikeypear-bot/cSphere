@@ -7,6 +7,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -41,6 +42,7 @@ class EventReassignmentFlowTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (happy): the coordinator asks to be reassigned, only the Lead sees the request, and approving moves the event and its original request to the new coordinator")
     void coordinatorRequestIsLeadOnlyAndApprovalMovesTheEventAndOriginatingRequest() throws Exception {
         UUID eventId = flow.approvedEvent("eo1", "ec1",
                 FlowSupport.requestBody("Reassignment Summit " + UUID.randomUUID(), 100, "none"));
@@ -87,6 +89,7 @@ class EventReassignmentFlowTest {
     }
 
     @Test
+    @DisplayName("EC-C1 (conflict): a second reassignment request is refused while one is pending")
     void pendingRequestCannotBeSubmittedTwice() throws Exception {
         UUID eventId = flow.approvedEvent("eo1", "ec1",
                 FlowSupport.requestBody("Pending Reassignment " + UUID.randomUUID(), 100, "none"));

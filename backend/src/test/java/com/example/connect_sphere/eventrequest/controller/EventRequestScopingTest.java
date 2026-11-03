@@ -6,6 +6,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -58,6 +59,7 @@ class EventRequestScopingTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): an organiser cannot read another organisation's request by naming it in a header")
     void anOrganiserCannotReadAnotherOrganisationsRequestByNamingItInAHeader() throws Exception {
         String location = mvc.perform(post("/api/event-requests").with(organiser(ACME))
                         .contentType(MediaType.APPLICATION_JSON)
@@ -79,6 +81,7 @@ class EventRequestScopingTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): listing requests returns only the caller's own organisation's requests")
     void listingOnlyReturnsTheCallersOwnOrganisation() throws Exception {
         mvc.perform(post("/api/event-requests").with(organiser(ACME))
                         .contentType(MediaType.APPLICATION_JSON)

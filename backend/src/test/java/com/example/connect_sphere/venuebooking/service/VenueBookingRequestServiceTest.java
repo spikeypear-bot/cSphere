@@ -14,6 +14,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -81,6 +82,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): every venue staff member is notified when a coordinator requests a venue")
     void everyVenueStaffMemberIsNotifiedOfTheNewRequest() {
         Event event = event(150, List.of("none"));
         Venue venue = venue(150, List.of());
@@ -93,6 +95,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the venue request and its notes appear on the original event request's timeline")
     void theRequestIsRecordedOnTheOriginatingRequestsTimeline() {
         Event event = event(150, List.of("none"));
         Venue venue = venue(150, List.of());
@@ -113,6 +116,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the coordinator's booking history shows the rejection reason and the suggested alternative venue and arrangement")
     void coordinatorBookingHistoryIncludesRejectedAlternativeSuggestions() {
         Event event = event(150, List.of("none"));
         Venue requestedVenue = venue(150, List.of());
@@ -139,16 +143,19 @@ class VenueBookingRequestServiceTest {
     // ---- VenueSuitability boundaries -----------------------------------
 
     @Test
+    @DisplayName("EC03 (boundary): an event whose attendance equals the venue capacity fits")
     void attendanceEqualToCapacityFits() {
         assertThat(VenueSuitability.of(event(150, List.of()), venue(150, List.of())).capacityOk()).isTrue();
     }
 
     @Test
+    @DisplayName("EC03 (boundary): an event one person over the venue capacity does not fit")
     void attendanceOneOverCapacityDoesNotFit() {
         assertThat(VenueSuitability.of(event(151, List.of()), venue(150, List.of())).capacityOk()).isFalse();
     }
 
     @Test
+    @DisplayName("EC03 (boundary): an event with no accessibility needs never needs a justification")
     void noAccessibilityNeededNeverRequiresAJustification() {
         var suitability = VenueSuitability.of(event(10, List.of("none")), venue(50, List.of()));
 
@@ -156,6 +163,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): only the accessibility features the venue lacks are reported and a justification is needed")
     void onlyTheAccessibilityFeaturesTheVenueLacksAreReported() {
         var suitability = VenueSuitability.of(
                 event(10, List.of("step_free_access", "elevators")), venue(50, List.of("elevators")));
@@ -165,6 +173,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): only the facilities the venue lacks are reported")
     void onlyTheFacilitiesTheVenueLacksAreReported() {
         Event event = event(10, List.of());
         event.setRequiredFacilities(List.of("stage", "projection"));
@@ -178,6 +187,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): a venue issue that overlaps the event blocks the request and names the issue")
     void operationalIssueOverlappingEventBlocksSubmission() {
         Event event = event(10, List.of());
         Venue venue = venue(50, List.of());

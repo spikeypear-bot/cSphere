@@ -26,10 +26,10 @@ it.each([
   [18, '2027-02-28T10:00', '2027-02-29T11:00', false],
   [19, '2027-04-31T10:00', '2027-05-01T11:00', false],
   [20, '2027-04-30T10:00', '2027-04-31T11:00', false],
-] as const)('scenario %s: %s → %s is accepted=%s', (_id, start, end, accepted) => {
+] as const)('VS01 (boundary): scenario %s: %s → %s is accepted=%s', (_id, start, end, accepted) => {
   expect(Object.keys(unavailabilityDateErrors(start, end, now)).length === 0).toBe(accepted)
 })
-it('uses Singapore midnight and the Gregorian century leap-year rule', () => {
+it('VS01 (boundary): uses Singapore midnight and the Gregorian century leap-year rule', () => {
   expect(singaporeToday(new Date('2026-10-06T16:00:00Z'))).toBe('2026-10-07')
   expect(unavailabilityDateErrors('2026-10-06T23:59', '2026-10-07T01:00', new Date('2026-10-06T16:00:00Z')).start).toMatch(/before today/)
   expect(unavailabilityDateErrors('2100-02-29T10:00', '2100-03-01T10:00', now).start).toMatch(/valid start/)

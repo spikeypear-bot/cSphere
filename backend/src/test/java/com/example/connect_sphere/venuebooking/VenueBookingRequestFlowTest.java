@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -131,6 +132,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): notes of exactly 2000 characters are saved in full and the timeline entry is shortened to fit")
     void maximumLengthNotesArePersistedWithoutOverflowingTheActivityTimeline() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(150, List.of());
@@ -148,6 +150,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): a venue whose capacity equals the expected attendance can be requested and the request is pending")
     void attendanceEqualToCapacityCanBeBookedAndCreatesAPendingRequest() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(150, List.of());
@@ -162,6 +165,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): attendance one over the venue capacity is refused and no booking is created")
     void attendanceOneOverCapacityIsRefusedAndNothingIsCreated() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(149, List.of());
@@ -174,6 +178,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): an approved booking overlapping the event by one minute blocks the venue and nothing is saved")
     void anApprovedBookingOverlappingTheEventBlocksTheVenue() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());
@@ -184,6 +189,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): approved bookings ending as the event starts or starting as it ends do not block the venue")
     void aBackToBackApprovedBookingIsNotAnOverlap() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());
@@ -194,6 +200,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): another event's pending request for the same time does not block the venue")
     void anotherEventsPendingRequestDoesNotBlockTheVenue() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());
@@ -203,6 +210,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 EC-C2 (happy): one event can hold active requests for two different venues at once")
     void anEventCanHaveMultipleActiveRequestsForDifferentVenues() throws Exception {
         UUID eventId = event(150, "none");
         UUID first = venue(200, List.of());
@@ -214,6 +222,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): a venue missing a needed accessibility feature is refused until the coordinator gives a justification")
     void aVenueMissingARequestedAccessibilityFeatureNeedsAJustification() throws Exception {
         UUID eventId = event(150, "step_free_access");
         UUID venueId = venue(200, List.of(AccessibilityFeature.elevators));
@@ -229,6 +238,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): submitting a booking request without choosing a venue is refused")
     void submittingWithoutAVenueIsRefused() throws Exception {
         UUID eventId = event(150, "none");
 
@@ -238,6 +248,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): a confirmed event cannot take a new booking request and nothing is saved")
     void onlyAnEventInPlanningCanTakeABookingRequest() throws Exception {
         UUID eventId = event(150, "none");
         sync();
@@ -249,6 +260,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): another coordinator cannot request a venue or see venue options for the event")
     void onlyTheAssignedCoordinatorCanRequestOrSeeOptions() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());
@@ -260,6 +272,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): organisers and venue staff cannot see venue options or submit booking requests")
     void organisersAndVenueStaffCannotUseTheCoordinatorEndpoints() throws Exception {
         UUID eventId = event(150, "none");
 
@@ -269,6 +282,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): venue options list bookable venues smallest first and mark a too-small venue as blocked")
     void venueOptionsListBookableVenuesFirstAndExplainWhyOthersAreBlocked() throws Exception {
         UUID eventId = event(150, "none");
         UUID tooSmall = venue(100, List.of());
@@ -290,6 +304,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): venue search returns only free venues with enough capacity and every required facility")
     void venueSearchCombinesAvailabilityCapacityAndAllRequiredFacilities() throws Exception {
         UUID exactCapacity = searchableVenue(100, List.of(Facility.stage, Facility.projection));
         UUID insufficientCapacity = searchableVenue(99, List.of(Facility.stage, Facility.projection));
@@ -319,6 +334,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): venue search refuses invalid dates, negative capacity and an end before the start, and venue staff cannot use it")
     void venueSearchRejectsInvalidDateTimeAndCapacityAndIsCoordinatorOnly() throws Exception {
         mvc.perform(get("/api/venues/search").with(flow.as("ec1"))
                         .param("startDatetime", "not-a-date")
@@ -355,6 +371,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the coordinator cancels a pending request with a reason shown on the timeline and then requests another venue")
     void theCoordinatorCanCancelAPendingRequestAndThenRequestAnotherVenue() throws Exception {
         UUID eventId = event(150, "none");
         String first = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
@@ -368,6 +385,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the assigned coordinator can cancel an approved booking")
     void anApprovedBookingCanBeCancelledByItsAssignedCoordinator() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
@@ -379,6 +397,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): another coordinator, venue staff, or a request made through the wrong event cannot cancel the booking")
     void onlyTheAssignedCoordinatorCanCancelAndOnlyForTheirOwnEvent() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
@@ -390,6 +409,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): notes and justification of 2000 characters are accepted, 2001 is refused and nothing is saved")
     void textLimitsAre2000CharactersForNotesAndJustification() throws Exception {
         UUID eventId = event(150, "step_free_access");
         UUID venueId = venue(200, List.of());
@@ -407,6 +427,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (boundary): a cancellation reason over 2000 characters is refused and the request stays pending")
     void aCancellationReasonOver2000CharactersIsRefusedAndTheRequestStaysPending() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
@@ -421,6 +442,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): a request that is already cancelled cannot be cancelled again")
     void anAlreadyCancelledRequestCannotBeCancelledAgain() throws Exception {
         UUID eventId = event(150, "none");
         String id = bookingIdOf(submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated()));
@@ -430,6 +452,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @org.junit.jupiter.params.ParameterizedTest
+    @DisplayName("EC03 (negative): confirmed, cancelled or completed events cannot take a booking request and nothing is saved")
     @org.junit.jupiter.params.provider.ValueSource(strings = {"confirmed", "cancelled", "completed"})
     void onlyAnEventInPlanningCanTakeARequest(String eventStatus) throws Exception {
         UUID eventId = event(150, "none");
@@ -442,6 +465,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): requesting a venue that does not exist returns not found and nothing is saved")
     void requestingAVenueThatDoesNotExistIsNotFound() throws Exception {
         UUID eventId = event(150, "none");
 
@@ -450,6 +474,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): the booking request appears on the coordinator's timeline but not on the organiser's")
     void theRequestIsOnTheCoordinatorsTimelineButNotTheOrganisers() throws Exception {
         UUID eventId = event(150, "none");
         submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());
@@ -463,6 +488,7 @@ class VenueBookingRequestFlowTest {
     // SO-C2: the Safety Officer reads any active event's bookings, with a real
     // safety_officer token, including once the event awaits its safety review.
     @ParameterizedTest
+    @DisplayName("EC03 (happy): the safety officer can view the venue bookings of an active event")
     @ValueSource(strings = {"pending", "awaiting_safety_review", "safety_changes_requested", "safety_approved", "confirmed"})
     void theSafetyOfficerCanViewTheBookingsOfAnActiveEvent(String eventStatus) throws Exception {
         UUID eventId = event(150, "none");
@@ -477,6 +503,7 @@ class VenueBookingRequestFlowTest {
     }
 
     @Test
+    @DisplayName("EC03 (negative): the safety officer cannot view the venue bookings of a cancelled event")
     void theSafetyOfficerCannotViewTheBookingsOfACancelledEvent() throws Exception {
         UUID eventId = event(150, "none");
         submit(eventId, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());
@@ -486,6 +513,7 @@ class VenueBookingRequestFlowTest {
                 .andExpect(status().isNotFound());
     }
     @Test
+    @DisplayName("EC03 (happy): when venue staff reject a request, the coordinator sees it rejected with the reason")
     void staffRejectionIsVisibleToAssignedCoordinator() throws Exception {
         UUID eventId = event(150, "none");
         UUID venueId = venue(200, List.of());

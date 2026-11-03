@@ -51,7 +51,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     window.localStorage.clear()
   })
 
-  it('shows every submitted detail and the request history', async () => {
+  it('EC02 (happy): shows every submitted detail and the request history', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review()) })
     renderPage()
 
@@ -63,7 +63,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('list', { name: 'Request timeline' })).toHaveTextContent('submitted the request')
   })
 
-  it('explains what blocks approval and disables Approve while details are missing', async () => {
+  it('EC02 (negative): explains what blocks approval and disables Approve while details are missing', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({ purpose: null }, { missingFields: ['purpose'] })) })
     renderPage()
 
@@ -82,7 +82,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('button', { name: 'Approve' })).toBeDisabled()
   })
 
-  it('asking about missing details pre-flags them, each with its own question box', async () => {
+  it('EC01 (happy): asking about missing details pre-flags them, each with its own question box', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({ purpose: null }, { missingFields: ['purpose'] })) })
     const user = userEvent.setup()
     renderPage()
@@ -93,7 +93,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByLabelText('What do you need to know more from the organiser about the Purpose?')).toHaveValue('')
   })
 
-  it('shows one question per flagged field and updates as fields are flagged and unflagged', async () => {
+  it('EC01 (happy): shows one question per flagged field and updates as fields are flagged and unflagged', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review()) })
     const user = userEvent.setup()
     renderPage()
@@ -115,7 +115,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
       .toBeInTheDocument()
   })
 
-  it('cannot send until every flagged field has a question', async () => {
+  it('EC01 (negative): cannot send until every flagged field has a question', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review()) })
     const user = userEvent.setup()
     renderPage()
@@ -128,7 +128,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('button', { name: 'Send clarification request' })).toBeDisabled()
   })
 
-  it('sends a clarification with the flagged fields and confirms it was sent', async () => {
+  it('EC01 (happy): sends a clarification with the flagged fields and confirms it was sent', async () => {
     let sent = false
     const calls = stubApi({
       [REVIEW_URL]: () => jsonResponse(200, sent ? review({ status: 'clarification_required' }) : review()),
@@ -155,7 +155,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     })
   })
 
-  it('will not send a blank clarification', async () => {
+  it('EC01 (negative): will not send a blank clarification', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review()) })
     const user = userEvent.setup()
     renderPage()
@@ -166,7 +166,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('button', { name: 'Send clarification request' })).toBeDisabled()
   })
 
-  it('will not send a clarification over 2000 characters', async () => {
+  it('EC01 (boundary): will not send a clarification over 2000 characters', async () => {
     stubApi({ [REVIEW_URL]: () => jsonResponse(200, review()) })
     const user = userEvent.setup()
     renderPage()
@@ -180,7 +180,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('button', { name: 'Send clarification request' })).toBeDisabled()
   })
 
-  it('approving opens the new event', async () => {
+  it('EC02 (happy): approving opens the new event', async () => {
     stubApi({
       [REVIEW_URL]: () => jsonResponse(200, review()),
       [`POST /api/event-requests/${ID}/approve`]: () => jsonResponse(200, { ...review().request, status: 'approved', eventId: 'ev-9' }),
@@ -194,7 +194,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(await screen.findByText('Event page')).toBeInTheDocument()
   })
 
-  it('while waiting for the organiser, only rejection is offered and the question is shown', async () => {
+  it('EC01 EC02 (happy): while waiting for the organiser, only rejection is offered and the question is shown', async () => {
     stubApi({
       [REVIEW_URL]: () => jsonResponse(200, review({ status: 'clarification_required' }, {
         timeline: [{ activityId: 'a2', type: 'clarification_requested', actorName: 'ec1', actorRole: 'ec',
@@ -210,7 +210,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('button', { name: 'Reject' })).toBeInTheDocument()
   })
 
-  it('after a resubmission, shows the reply and what changed since the question, and marks changed rows', async () => {
+  it('EC01 (happy): after a resubmission, shows the reply and what changed since the question, and marks changed rows', async () => {
     stubApi({
       [REVIEW_URL]: () => jsonResponse(200, review({ expectedAttendance: 120 }, {
         timeline: [
@@ -231,7 +231,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByText('Updated').closest('.request-review__row')).toHaveTextContent('120 people')
   })
 
-  it('rejecting needs a reason, sends it trimmed, and confirms the organiser was notified', async () => {
+  it('EC02 (negative): rejecting needs a reason, sends it trimmed, and confirms the organiser was notified', async () => {
     let rejected = false
     const calls = stubApi({
       [REVIEW_URL]: () => jsonResponse(200, rejected ? review({ status: 'rejected' }) : review()),
@@ -263,7 +263,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
     expect(screen.getByRole('link', { name: 'Go to the review queue' })).toHaveAttribute('href', '/coordinator/review-queue')
   })
 
-  it('shows a server error from a failed clarification and keeps what was typed', async () => {
+  it('EC01 (failure): shows a server error from a failed clarification and keeps what was typed', async () => {
     stubApi({
       [REVIEW_URL]: () => jsonResponse(200, review()),
       [`POST /api/event-requests/${ID}/clarifications`]: () => jsonResponse(409, {
@@ -283,7 +283,7 @@ describe('RequestReviewPage (EC02 review, EC01 clarification)', () => {
 })
 
 describe('composeClarification', () => {
-  it('labels each question with its field, in flag order, skipping blank ones', () => {
+  it('EC01 (happy): labels each question with its field, in flag order, skipping blank ones', () => {
     expect(composeClarification([], {})).toBe('')
     expect(composeClarification(['endDatetime', 'purpose', 'description'],
       { purpose: '  Why? ', endDatetime: '5pm?', description: '   ' }))

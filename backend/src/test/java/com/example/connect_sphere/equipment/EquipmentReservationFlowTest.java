@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -141,6 +142,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (happy): Technical Support reserve a quantity for the event and the reservation is saved")
     void aTechnicianReservesAQuantityAndTheReservationIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -164,6 +166,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (happy): a saved reservation can be viewed for the event")
     void theReservationCanBeViewedForTheEventAfterSaving() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -182,6 +185,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (happy): availability lists only the requested equipment, with its total and available quantity")
     void availabilityListsOnlyRequestedEquipmentWithItsTotalAndAvailableQuantity() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -199,6 +203,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (happy): a saved reservation lowers availability for its own period only")
     void aSavedReservationReducesLaterAvailabilityForThatPeriodOnly() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -213,6 +218,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): reserving one more than the available quantity is refused and nothing is saved")
     void reservingOneMoreThanTheAvailableQuantityIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -225,6 +231,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (conflict): quantity already reserved for an overlapping period cannot be reserved by another event")
     void quantityCommittedToAnOverlappingPeriodCannotBeReservedByAnotherEvent() throws Exception {
         UUID first = event("Town Hall");
         UUID second = event("Board Meeting");
@@ -241,6 +248,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (conflict): the quantity left over in an overlapping period can still be reserved")
     void theQuantityLeftOverInAnOverlappingPeriodCanStillBeReserved() throws Exception {
         UUID first = event("Town Hall");
         UUID second = event("Board Meeting");
@@ -255,6 +263,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): a period that starts when another ends is not an overlap and can be fully reserved")
     void aBackToBackPeriodIsNotAnOverlap() throws Exception {
         UUID first = event("Town Hall");
         UUID second = event("Board Meeting");
@@ -270,6 +279,7 @@ class EquipmentReservationFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"FAULTY", "UNAVAILABLE"})
+    @DisplayName("TS02 (conflict): a unit marked Faulty or Unavailable for part of the period cannot be reserved and nothing is saved")
     void aUnitMarkedFaultyOrUnavailableForThePeriodCannotBeReserved(String blockedStatus) throws Exception {
         UUID eventId = event("Town Hall");
         UUID mixers = equipment("TS02 Mixer", 3, true);
@@ -286,6 +296,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): a block that ends exactly when the period starts does not stop the unit being reserved")
     void aBlockThatEndsWhenThePeriodStartsDoesNotPreventReservingTheUnit() throws Exception {
         UUID eventId = event("Town Hall");
         UUID mixers = equipment("TS02 Mixer", 3, true);
@@ -300,6 +311,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (negative): blocked units are left out of the available quantity and cannot be reserved")
     void blockedUnitsAreExcludedFromTheAvailableQuantity() throws Exception {
         UUID eventId = event("Town Hall");
         UUID mixers = equipment("TS02 Mixer", 3, true);
@@ -324,6 +336,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (conflict): a unit already reserved for an overlapping period cannot be reserved again, but can be for a later period")
     void aUnitAlreadyReservedForAnOverlappingPeriodCannotBeReservedAgain() throws Exception {
         UUID first = event("Town Hall");
         UUID second = event("Board Meeting");
@@ -343,6 +356,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (cross-cutting): reserving equipment leaves the event pending, not confirmed")
     void reservingEquipmentDoesNotConfirmTheEvent() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -355,6 +369,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS06 (failure): approval is refused until every requested quantity is reserved, and nothing changes")
     void approvalIsRejectedUntilEveryRequestedQuantityIsReservedAndChangesNothing() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
@@ -375,6 +390,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS06 (boundary): approval is refused when reservations do not cover the whole event, and reservations and event stay unchanged")
     void approvalRequiresReservationsToCoverTheFullEventAndLeavesReservationsAndEventUnchanged()
             throws Exception {
         UUID eventId = event("Town Hall");
@@ -391,6 +407,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS06 (happy): a fully reserved request can be approved and the coordinator sees it approved straight away")
     void fullyReservedRequestCanBeApprovedAndTheCoordinatorSeesItImmediately() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
@@ -410,6 +427,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS06 EC-NEW3 (negative): rejecting needs a reason, the coordinator sees it, and the request's reservations are given back")
     void rejectionRequiresAndPersistsAReasonForTheCoordinator() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
@@ -434,6 +452,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS06 (negative): only Technical Support can change an equipment request's status, and nothing changes for a coordinator")
     void onlyTechnicalSupportCanChangeEquipmentRequestStatus() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS06 Speaker", 10, false);
@@ -452,6 +471,7 @@ class EquipmentReservationFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"eo1", "ec1", "vs1", "att1"})
+    @DisplayName("TS02 (negative): other roles cannot reserve equipment and nothing is saved")
     void onlyTechnicalSupportCanReserveAndNothingIsSavedForOtherRoles(String username) throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -463,6 +483,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (negative): a caller who is not signed in cannot reserve and nothing is saved")
     void anUnauthenticatedCallerCannotReserveAndNothingIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -475,6 +496,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (negative): equipment that is not on the event's request cannot be reserved and nothing is saved")
     void equipmentThatIsNotPartOfTheEventsRequestCannotBeReserved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -488,6 +510,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (negative): equipment that does not exist is not found and nothing is saved")
     void equipmentThatDoesNotExistReturnsNotFoundAndNothingIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -500,6 +523,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): a quantity of zero is refused and nothing is saved")
     void aQuantityOfZeroIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);
@@ -512,6 +536,7 @@ class EquipmentReservationFlowTest {
     }
 
     @Test
+    @DisplayName("TS02 (boundary): a period that ends when it starts is refused and nothing is saved")
     void aPeriodThatEndsWhenItStartsIsRefusedAndNothingIsSaved() throws Exception {
         UUID eventId = event("Town Hall");
         UUID speakers = equipment("TS02 Speaker", 10, false);

@@ -44,7 +44,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     window.localStorage.clear()
   })
 
-  it("shows each event's name, organisation, start and end, expected attendance and current status", async () => {
+  it("EC09 (happy): shows each event's name, organisation, start and end, expected attendance and current status", async () => {
     stubApi({
       [MY_EVENTS]: () => jsonResponse(200, [
         event('e1', 'Tech Summit', {
@@ -69,7 +69,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     expect(within(await cardFor('Town Hall')).getByText('Planning', { selector: '.status-badge' })).toBeInTheDocument()
   })
 
-  it('keeps the order the server sends — soonest first — and says how many are assigned', async () => {
+  it('EC09 (happy): keeps the order the server sends — soonest first — and says how many are assigned', async () => {
     // Neither alphabetical nor reverse-alphabetical, so any client-side re-sort shows.
     stubApi({
       [MY_EVENTS]: () => jsonResponse(200, [
@@ -86,7 +86,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     expect(screen.getByText('3 events are assigned to you.')).toBeInTheDocument()
   })
 
-  it("links each event to that event's details page", async () => {
+  it("EC09 (happy): links each event to that event's details page", async () => {
     stubApi({ [MY_EVENTS]: () => jsonResponse(200, [event('e1', 'Offsite'), event('e2', 'Annual Gala')]) })
     renderPage()
 
@@ -97,7 +97,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     expect(screen.queryByRole('link', { name: 'Request reassignment' })).not.toBeInTheDocument()
   })
 
-  it('shows a clear message when no events are assigned to the coordinator', async () => {
+  it('EC09 (boundary): shows a clear message when no events are assigned to the coordinator', async () => {
     stubApi({ [MY_EVENTS]: () => jsonResponse(200, []) })
     renderPage()
 
@@ -106,7 +106,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
-  it('shows the access-denied message, not an empty list, when the server refuses the caller', async () => {
+  it('EC09 (negative): shows the access-denied message, not an empty list, when the server refuses the caller', async () => {
     stubApi({
       [MY_EVENTS]: () => jsonResponse(403, { message: 'You do not have permission to perform this action.' }),
     })
@@ -118,7 +118,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     expect(screen.queryAllByRole('listitem')).toHaveLength(0)
   })
 
-  it('refreshing re-reads the list: a newly assigned event appears and a reassigned one drops off', async () => {
+  it('EC09 (happy): refreshing re-reads the list: a newly assigned event appears and a reassigned one drops off', async () => {
     let reads = 0
     const calls = stubApi({
       [MY_EVENTS]: () => {
@@ -141,7 +141,7 @@ describe('AssignedEventsPage (EC09 my events)', () => {
     expect(calls.filter((call) => call.url === '/api/events/assigned')).toHaveLength(2)
   })
 
-  it('only ever reads, and never names a coordinator in the request', async () => {
+  it('EC09 (cross-cutting): only ever reads, and never names a coordinator in the request', async () => {
     const calls = stubApi({ [MY_EVENTS]: () => jsonResponse(200, [event('e1', 'Offsite')]) })
     renderPage()
 

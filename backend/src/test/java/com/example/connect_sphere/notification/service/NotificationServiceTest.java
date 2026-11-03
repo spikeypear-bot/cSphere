@@ -49,6 +49,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): a status notice names the event, the new status and when it happened, and starts unread")
     void eo09NotificationCarriesEventReferenceStatusAndTimestamp() {
         UUID requestId = UUID.randomUUID();
         service.createStatusChangeNotification(RECIPIENT, requestId, null, "Town Hall", "approved", null);
@@ -63,6 +64,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): a rejection notice carries the rejection reason")
     void eo09RejectionNotificationCarriesTheReason() {
         service.createStatusChangeNotification(
                 RECIPIENT, UUID.randomUUID(), null, "Town Hall", "rejected", "No venue available");
@@ -71,6 +73,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO19 (happy): a coordinator notice says whether it is the first assignment or a reassignment")
     void eo19NotificationDistinguishesInitialFromReassignment() {
         service.createCoordinatorAssignmentNotification(
                 RECIPIENT, UUID.randomUUID(), null, "Town Hall", "ec1", "ec1@connectsphere.test", false);
@@ -101,6 +104,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (failure): a notice that fails to save does not break the action that triggered it")
     void aNotificationSaveFailureIsSwallowedNotThrown() {
         when(repository.save(any())).thenThrow(new RuntimeException("db blip"));
 
@@ -110,6 +114,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (happy): the notification list shows the newest first and which are read")
     void listReturnsNewestFirstAndMapsReadState() {
         Notification unread = notification(RECIPIENT, null);
         Notification read = notification(RECIPIENT, OffsetDateTime.now());
@@ -124,6 +129,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): a notice links to the event once one exists, otherwise to the request")
     void linkPathPointsAtTheEventWhenOneExistsOtherwiseTheRequest() {
         UUID requestId = UUID.randomUUID();
         UUID eventId = UUID.randomUUID();
@@ -138,6 +144,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (boundary): marking a notice read twice changes nothing the second time")
     void markingAsReadIsIdempotent() {
         Notification unread = notification(RECIPIENT, null);
         when(repository.findById(unread.getNotificationId())).thenReturn(Optional.of(unread));
@@ -154,6 +161,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (negative): a user cannot mark someone else's notice as read")
     void cannotMarkSomeoneElsesNotificationAsRead() {
         Notification othersNotification = notification(SOMEONE_ELSE, null);
         when(repository.findById(othersNotification.getNotificationId()))
@@ -164,6 +172,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (negative): marking a notice that does not exist as read is reported as not found")
     void markingANonexistentNotificationAsReadIsReportedAsNotFound() {
         UUID ghost = UUID.randomUUID();
         when(repository.findById(ghost)).thenReturn(Optional.empty());
@@ -173,6 +182,7 @@ class NotificationServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 EO19 (happy): the unread count is the number of the user's unread notices")
     void unreadCountDelegatesToTheRepositoryCount() {
         when(repository.countByRecipientUserIdAndReadAtIsNull(RECIPIENT)).thenReturn(3L);
         assertThat(service.unreadCount(RECIPIENT)).isEqualTo(3L);

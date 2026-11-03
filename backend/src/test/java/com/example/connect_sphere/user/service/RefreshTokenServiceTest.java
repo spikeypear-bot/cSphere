@@ -11,6 +11,7 @@ import java.time.OffsetDateTime;
 import java.util.HexFormat;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -64,6 +65,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (cross-cutting): only a hash of each refresh token is stored, so a leaked table yields nothing usable")
     void storesOnlyAHashSoALeakedTableYieldsNothingUsable() {
         String raw = service.issueForNewSession(user);
 
@@ -72,6 +74,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (happy): refreshing issues a new token and spends the one presented")
     void rotationIssuesASuccessorAndSpendsTheTokenPresented() {
         String first = service.issueForNewSession(user);
 
@@ -84,6 +87,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (happy): every token rotated from one sign-in stays in that sign-in's session")
     void successorsStayInTheSameFamilySoOneLoginCanBeRevokedAsAUnit() {
         String first = service.issueForNewSession(user);
         String second = service.rotate(first).refreshToken();
@@ -92,6 +96,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (happy): separate sign-ins get separate sessions")
     void separateLoginsGetSeparateFamilies() {
         String a = service.issueForNewSession(user);
         String b = service.issueForNewSession(user);
@@ -100,6 +105,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (conflict): presenting an already-rotated token ends the whole session, including its newer token")
     void presentingARotatedTokenRevokesTheWholeFamilyIncludingItsSuccessor() {
         String first = service.issueForNewSession(user);
         String second = service.rotate(first).refreshToken();
@@ -116,6 +122,7 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (happy): signing out revokes every live token of that session")
     void logoutRevokesEveryLiveTokenInTheFamily() {
         String first = service.issueForNewSession(user);
         String second = service.rotate(first).refreshToken();
@@ -128,17 +135,20 @@ class RefreshTokenServiceTest {
     }
 
     @Test
+    @DisplayName("DEV05 (negative): signing out with an unknown token succeeds silently, revealing nothing")
     void logoutIsSilentForAnUnknownTokenRatherThanAnOracle() {
         assertThatCode(() -> service.revokeSession("never-issued")).doesNotThrowAnyException();
     }
 
     @Test
+    @DisplayName("DEV05 (negative): a refresh token that was never issued is refused")
     void anUnknownTokenIsRejected() {
         assertThatThrownBy(() -> service.rotate("never-issued"))
                 .isInstanceOf(InvalidRefreshTokenException.class);
     }
 
     @Test
+    @DisplayName("DEV05 (boundary): an expired refresh token is refused even though it was never used")
     void anExpiredTokenIsRejectedEvenThoughItWasNeverUsed() {
         String raw = service.issueForNewSession(user);
         // Native update because expires_at is mapped updatable = false: a token's

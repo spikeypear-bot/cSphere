@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -66,7 +67,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
-    @org.junit.jupiter.api.DisplayName("AT01 (negative): an opening date in the past cannot open an unconfirmed event")
+    @DisplayName("AT01 (negative): an opening date in the past cannot open an unconfirmed event")
     void initialPlanningAndReconfirmationPauseRegistration() {
         event.setRegistrationOpensAt(OffsetDateTime.now().minusDays(1));
         event.setStartDatetime(OffsetDateTime.now().plusDays(3));
@@ -83,11 +84,13 @@ class EventRegistrationServiceTest {
     // ---------------------------------------------------------------- EO10
 
     @Test
+    @DisplayName("EO10 AC1 (negative): an organiser from another organisation cannot see the registration information")
     void EO10_AC1_otherOrganisationIsRefused() {
         assertThatThrownBy(() -> service.forOrganiser("Other", id)).isInstanceOf(EventNotFoundException.class);
     }
 
     @Test
+    @DisplayName("EO10 AC4 (boundary): only confirmed registrations take places, and a full event is reported as full")
     void EO10_AC4_onlyConfirmedConsumePlacesAndFullIsReported() {
         when(regs.findByEventIdOrderByRegisteredAtAsc(id))
                 .thenReturn(List.of(reg("confirmed"), reg("withdrawn"), reg("event_cancelled"), reg("confirmed")));
@@ -99,6 +102,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("EO10 AC5 (happy): registration shows not yet open before the opening date and closed once the event has started")
     void EO10_AC5_statesFollowOpeningAndClosing() {
         event.setRegistrationOpensAt(OffsetDateTime.now().plusDays(1));
         assertThat(service.forOrganiser(ACME, id).registrationState()).isEqualTo("not_yet_open");
@@ -108,6 +112,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("EO10 AC6 (boundary): an event with no registrations says so, and one that needs no registration shows not required")
     void EO10_AC6_notRequiredAndEmptyMessages() {
         assertThat(service.forOrganiser(ACME, id).message()).isEqualTo("No registrations yet.");
         event.setRegistrationNeeds(false);
@@ -115,6 +120,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("EO10 AC3, AC4 (happy): cancelling the event releases its confirmed registrations and their places")
     void EO10_AC3_AC4_cancelledEventReleasesConfirmedRegistrations() {
         event.setStatus(EventStatus.cancelled);
         when(regs.findByEventIdOrderByRegisteredAtAsc(id)).thenReturn(List.of(reg("confirmed")));
@@ -125,6 +131,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("EO10 AC5 (happy): registration is open once the window has opened and the event has not started")
     void EO10_AC5_openWhenWindowStartedAndEventNotStarted() {
         event.setRegistrationOpensAt(OffsetDateTime.now().minusDays(1));
         event.setStartDatetime(OffsetDateTime.now().plusDays(5));
@@ -133,6 +140,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("EO10 AC4 (boundary): places remaining never goes below zero when confirmed registrations exceed capacity")
     void EO10_AC4_placesRemainingNeverNegative() {
         event.setRegistrationCapacity(1);
         when(regs.findByEventIdOrderByRegisteredAtAsc(id))
@@ -141,6 +149,7 @@ class EventRegistrationServiceTest {
     }
 
     @Test
+    @DisplayName("EO10 AC3 (boundary): when the event is cancelled, a withdrawn registration still shows as withdrawn")
     void EO10_AC3_cancelledEventKeepsWithdrawnAsWithdrawn() {
         event.setStatus(EventStatus.cancelled);
         when(regs.findByEventIdOrderByRegisteredAtAsc(id)).thenReturn(List.of(reg("withdrawn")));
@@ -151,6 +160,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (happy): a valid capacity is saved and the places remaining are recalculated")
     void EO11_validCapacityIsSavedAndReturned() {
         when(regs.findByEventIdOrderByRegisteredAtAsc(id)).thenReturn(List.of(reg("confirmed"), reg("withdrawn")));
         RegistrationInfoDto dto = service.updateCapacity(ACME, id, 5);
@@ -161,6 +171,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (conflict): changing the capacity locks the event so a registration cannot land between the count and the save")
     void EO11_updateTakesTheEventRowLock() {
         // Same lock as attendee registration, so a registration cannot land between the count and the save.
         when(regs.findByEventIdOrderByRegisteredAtAsc(id)).thenReturn(List.of());
@@ -170,6 +181,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (negative): zero, negative, fractional, text or missing capacity is refused and the capacity is unchanged")
     void EO11_invalidInputsAreRejectedAndCapacityUnchanged() {
         for (Object bad : new Object[] { 0, -3, 2.5, "ten", null }) {
             assertThatThrownBy(() -> service.updateCapacity(ACME, id, bad))
@@ -181,6 +193,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (boundary): capacity cannot go below the confirmed count, but equal to it is allowed and shows full")
     void EO11_cannotGoBelowConfirmedButEqualIsAllowed() {
         when(regs.findByEventIdOrderByRegisteredAtAsc(id))
                 .thenReturn(List.of(reg("confirmed"), reg("confirmed"), reg("withdrawn")));
@@ -193,6 +206,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (negative): another organisation, or an event with no registration, cannot change the capacity and nothing is saved")
     void EO11_otherOrganisationOrNoRegistrationRefused() {
         assertThatThrownBy(() -> service.updateCapacity("Other", id, 5)).isInstanceOf(EventNotFoundException.class);
         event.setRegistrationNeeds(false);
@@ -203,6 +217,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (boundary): a number too large to store is refused cleanly and the capacity is unchanged")
     void EO11_tooLargeNumbersAreRejected() {
         // registration_capacity is a Postgres integer, so these must give a clean 422, not a 500
         for (Object bad : new Object[] { 2147483648L, Long.MAX_VALUE, "9999999999999999999" }) {
@@ -214,6 +229,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (negative): blank, true/false, decimal or exponent input is refused and the capacity is unchanged")
     void EO11_otherNonNumericInputIsRejected() {
         for (Object bad : new Object[] { "", "   ", true, 3.0, "1e3" }) {
             assertThatThrownBy(() -> service.updateCapacity(ACME, id, bad))
@@ -224,6 +240,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (negative): a cancelled event's capacity cannot be changed and nothing is saved")
     void EO11_cancelledEventRefusesCapacityChange() {
         event.setStatus(EventStatus.cancelled);
         assertThatThrownBy(() -> service.updateCapacity(ACME, id, 10))
@@ -234,6 +251,7 @@ class EventRegistrationServiceTest {
 
     @Test
     @Tag("EO11")
+    @DisplayName("EO11 (negative): changing the capacity of an event that does not exist is not found")
     void EO11_missingEventIsNotFound() {
         UUID unknown = UUID.randomUUID();
         when(events.findForUpdate(unknown)).thenReturn(Optional.empty());

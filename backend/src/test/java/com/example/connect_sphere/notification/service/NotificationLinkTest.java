@@ -63,6 +63,7 @@ class NotificationLinkTest {
     }
 
     @Test
+    @DisplayName("EC01 EO26 (happy): a clarification request reaches every organiser and opens their respond page")
     void aClarificationRequestReachesEveryOrganiserAndOpensTheirRespondPage() {
         service.createClarificationRequestedNotifications(
                 List.of(ORGANISER, SECOND_ORGANISER), REQUEST, "Town Hall", "Is 150 final?");
@@ -77,6 +78,7 @@ class NotificationLinkTest {
     }
 
     @Test
+    @DisplayName("EO26 EC01 (happy): the organiser's response notifies the coordinator and opens their review screen")
     void aResponseOpensTheCoordinatorsReviewScreen() {
         service.createClarificationRespondedNotification(UUID.randomUUID(), REQUEST, "Town Hall", "120 confirmed");
 
@@ -86,6 +88,7 @@ class NotificationLinkTest {
     }
 
     @Test
+    @DisplayName("EC03 (happy): booking requested and booking cancelled notices both open the booking for venue staff")
     void bookingRequestedAndCancelledBothOpenTheBookingForVenueStaff() {
         service.createVenueBookingRequestedNotifications(List.of(UUID.randomUUID()), BOOKING, EVENT, "Town Hall");
         service.createVenueBookingCancelledNotifications(List.of(UUID.randomUUID()), BOOKING, EVENT, "Town Hall",

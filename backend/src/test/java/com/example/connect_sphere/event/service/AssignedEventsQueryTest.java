@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -87,6 +88,7 @@ class AssignedEventsQueryTest {
     }
 
     @Test
+    @DisplayName("EC09 (happy): a coordinator sees their own events across organisations and never another coordinator's")
     void aCoordinatorSeesTheirOwnEventsAcrossOrganisationsAndNeverAnotherCoordinators() throws Exception {
         UUID acmeEvent = eventOn(10, "eo1", "ec1");
         UUID globexEvent = eventOn(11, "eo3", "ec1");
@@ -99,6 +101,7 @@ class AssignedEventsQueryTest {
     }
 
     @Test
+    @DisplayName("EC09 (boundary): pending and confirmed events are listed, cancelled and completed ones are not")
     void pendingAndConfirmedEventsAreListedWhileCancelledAndCompletedAreNot() throws Exception {
         UUID pending = eventOn(10, "eo1", "ec1");
         UUID confirmed = eventOn(11, "eo1", "ec1");
@@ -116,6 +119,7 @@ class AssignedEventsQueryTest {
     }
 
     @Test
+    @DisplayName("EC09 (happy): events are listed soonest start first, whatever order they were created in")
     void eventsAreOrderedByStartDateSoonestFirstWhateverOrderTheyWereCreatedIn() throws Exception {
         UUID middle = eventOn(15, "eo1", "ec1");
         UUID latest = eventOn(20, "eo1", "ec1");
@@ -126,6 +130,7 @@ class AssignedEventsQueryTest {
     }
 
     @Test
+    @DisplayName("EC09 (happy): a newly approved event appears in the list, and a reassigned one moves to its new coordinator's list")
     void aNewlyApprovedEventAppearsAndAReassignedOneMovesToItsNewCoordinator() throws Exception {
         UUID requestId = flow.submittedAndAssigned("eo1", "ec1", FlowSupport.requestBody("Town Hall", 150, "none"));
         int before = service.assignedEvents(flow.idOf("ec1")).size();
@@ -146,6 +151,7 @@ class AssignedEventsQueryTest {
 
     /** The endpoint through the real filter chain: the list follows the token's subject. */
     @Test
+    @DisplayName("EC09 (negative): over HTTP each coordinator gets only their own events and other roles are refused")
     void overHttpEachCoordinatorGetsOnlyTheirOwnEventsAndOtherRolesAreRefused() throws Exception {
         UUID mine = eventOn(10, "eo1", "ec1");
         UUID theirs = eventOn(11, "eo1", "ec2");
@@ -165,6 +171,7 @@ class AssignedEventsQueryTest {
     }
 
     @Test
+    @DisplayName("EC09 (cross-cutting): reading the list changes no event and sends no notification")
     void readingTheListLeavesEveryEventAndNotificationAsItWas() throws Exception {
         UUID eventId = eventOn(10, "eo1", "ec1");
         entityManager.flush();

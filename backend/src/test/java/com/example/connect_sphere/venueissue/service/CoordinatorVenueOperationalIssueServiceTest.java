@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mock;
@@ -43,6 +44,7 @@ class CoordinatorVenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (happy): the coordinator sees issues overlapping their approved bookings, including setup and turnaround time")
     void returnsOverlappingIssuesForApprovedManagedBookings() {
         UUID eventId = UUID.randomUUID();
         var from = OffsetDateTime.parse("2027-03-10T09:00:00+08:00");
@@ -89,6 +91,7 @@ class CoordinatorVenueOperationalIssueServiceTest {
     }
 
     @Test
+    @DisplayName("VS13 (boundary): a coordinator with no approved bookings sees no issues")
     void hidesIssuesWhenCoordinatorHasNoApprovedManagedBookings() {
         when(bookings.findApprovedForCoordinator(coordinatorId, VenueBookingStatus.approved))
                 .thenReturn(List.of());

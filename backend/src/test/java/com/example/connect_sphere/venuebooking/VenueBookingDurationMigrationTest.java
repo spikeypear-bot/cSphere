@@ -5,6 +5,7 @@ import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +18,7 @@ import org.springframework.core.io.ClassPathResource;
 class VenueBookingDurationMigrationTest {
     @Autowired DataSource dataSource;
 
-    @Test void upgradesIncomingV26WithoutLosingBookingWindowsOrLifecycleNotifications() throws Exception {
+    @Test @DisplayName("VS-C2 (happy): upgrading an existing database keeps every booking's times and notifications and copies the venue's setup and turnaround onto each booking") void upgradesIncomingV26WithoutLosingBookingWindowsOrLifecycleNotifications() throws Exception {
         String schema = "vsc2_upgrade_" + UUID.randomUUID().toString().replace("-", "");
         var config = org.flywaydb.core.Flyway.configure().dataSource(dataSource)
                 .schemas(schema).defaultSchema(schema);
@@ -65,7 +66,7 @@ class VenueBookingDurationMigrationTest {
         }
     }
 
-    @Test void backfillPreservesEveryStatusAndEnforcesSnapshotConstraints() throws Exception {
+    @Test @DisplayName("VS-C2 (boundary): every existing booking, whatever its status, gets its venue's durations saved, later venue edits do not change them, and out-of-range durations are refused") void backfillPreservesEveryStatusAndEnforcesSnapshotConstraints() throws Exception {
         String migration = new ClassPathResource("db/migration/V27__venue_booking_duration_snapshots.sql")
                 .getContentAsString(StandardCharsets.UTF_8);
         try (var connection = dataSource.getConnection()) {

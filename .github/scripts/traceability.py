@@ -94,7 +94,7 @@ def test_names(path, source):
     if path.endswith('.java'):
         for m in re.finditer(r'@(?:org\.junit\.jupiter\.(?:api|params)\.)?(?:Test|ParameterizedTest|RepeatedTest)\b'
                              r'(.{0,800}?)\bvoid\s+(\w+)\s*\(', source, re.S):
-            shown = re.search(r'@DisplayName\(\s*"((?:[^"\\]|\\.)*)"', m.group(1))
+            shown = re.search(r'@(?:org\.junit\.jupiter\.api\.)?DisplayName\(\s*"((?:[^"\\]|\\.)*)"', m.group(1))
             yield shown.group(1) if shown else m.group(2)
     else:
         for m in re.finditer(r'\b(?:it|test)(?:\.each\(.*?\))?\(\s*([\'"`])((?:(?!\1).)*)\1', source, re.S):
