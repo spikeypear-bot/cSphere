@@ -29,11 +29,6 @@ public enum AccessibilityFeature {
         this.label = label;
     }
 
-    /** The wording people see (same as the frontend's ACCESSIBILITY_LABELS). */
-    public String label() {
-        return label;
-    }
-
     /** The label for a stored code, or the code itself if it is unknown. */
     public static String labelOf(String code) {
         for (AccessibilityFeature feature : values()) {
