@@ -1,5 +1,5 @@
 // @stories DEV16 EC03 EC04 EC-C2 EC10 AU04
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -67,6 +67,9 @@ function addCard(name: string) {
 const added = (name: string) => within(card(name)).queryByText('Added')
 const map = () => screen.findByRole('region', { name: 'Interactive venue map' })
 afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
+// VenueMapPanel loads the map with React.lazy. Resolve that import once up front so the
+// first test does not spend findByRole's 1 s window on module loading under CPU load.
+beforeAll(async () => { await import('../venueMap/VenueMap') })
 
 describe('DEV16 EC request map', () => {
   it('DEV16 (happy): right column starts with the map and both map and list use the exact text/unavailable filters', async () => {
