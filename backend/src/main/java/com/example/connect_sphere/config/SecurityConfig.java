@@ -145,11 +145,11 @@ public class SecurityConfig {
 						// EC-C1: event reassignment decisions and queue are Lead-only.
 						.requestMatchers("/api/event-reassignment-requests", "/api/event-reassignment-requests/**")
 						.hasRole("ECL")
-						// ELC-C6's assign action and coordinator list share the rule below.
+						// ECL-C6's assign action and coordinator list share the rule below.
 						// ECL-C1 queue and ECL-C3 review, reject and clarification: Lead
 						// only. Must sit above the blanket EO rule below.
 						.requestMatchers("/api/event-requests/unassigned/**").hasRole("ECL")
-						// ECL-C2 assignments list and ELC-C5 reassign action: Lead only,
+						// ECL-C2 assignments list and ECL-C5 reassign action: Lead only,
 						// above the same blanket rule.
 						.requestMatchers("/api/event-requests/assigned", "/api/event-requests/assigned/**")
 						.hasRole("ECL")

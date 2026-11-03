@@ -61,7 +61,7 @@ describe('ReviewQueuePage (EC02 queue)', () => {
     expect(within(waiting).getByRole('link', { name: 'Gala' })).toHaveAttribute('href', '/coordinator/requests/r2')
   })
 
-  it('shows no unassigned requests and offers no way to assign one (ELC-C6)', async () => {
+  it('shows no unassigned requests and offers no way to assign one (ECL-C6)', async () => {
     const calls = stubApi({
       // Even if a server still sent unassigned requests, they are not the coordinator's to see.
       'GET /api/event-requests/queue': () => jsonResponse(200, {

@@ -117,7 +117,7 @@ export async function requestIdOf(request: APIRequestContext, eventName: string)
   return found!.requestId
 }
 
-/** ECL-C3/ELC-C6: the Lead assigns the request to ec1. */
+/** ECL-C3/ECL-C6: the Lead assigns the request to ec1. */
 export async function leadAssigns(page: Page, requestId: string) {
   await page.goto(`/coordinator-lead/unassigned-requests/${requestId}`)
   await page.getByRole('group', { name: 'Choose an outcome' }).getByRole('button', { name: 'Assign' }).click()

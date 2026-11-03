@@ -27,6 +27,8 @@ import jakarta.persistence.EntityManager;
 @Transactional
 @Tag("VS07")
 @Tag("VS17")
+@Tag("VS06A")
+@Tag("VS06B")
 class VenuePersistenceTest {
     @Autowired VenueService service;
     @Autowired VenueRepository repository;
@@ -66,6 +68,7 @@ class VenuePersistenceTest {
 
     @ParameterizedTest
     @ValueSource(booleans = {true, false})
+    @DisplayName("VS06A VS06B (boundary): a saved venue keeps its layouts and capacity whether its optional selections are left out or empty")
     void persistsLayoutsAndEmptyOptionalSelections(boolean omitted) {
         var saved = service.createVenue(new CreateVenueDto("Test venue", 50,
                 List.of(VenueLayout.theatre, VenueLayout.classroom), "Mon-Fri 9-5", " Level 2 ",

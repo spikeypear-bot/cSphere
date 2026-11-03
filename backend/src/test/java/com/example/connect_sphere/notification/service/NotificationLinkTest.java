@@ -36,6 +36,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("EC03")
 @Tag("EO19")
 @Tag("EC-C3")
+@Tag("EO09")
 class NotificationLinkTest {
 
     @Mock private NotificationRepository repository;
@@ -116,6 +117,7 @@ class NotificationLinkTest {
     }
 
     @Test
+    @DisplayName("EO09 (happy): status-change notices still link an approved request to its event and a rejected one to the request")
     void theOriginalStatusAndAssignmentLinksAreUnchanged() {
         service.createStatusChangeNotification(ORGANISER, REQUEST, EVENT, "Town Hall", "approved", null);
         service.createStatusChangeNotification(ORGANISER, REQUEST, null, "Town Hall", "rejected", "No venue");

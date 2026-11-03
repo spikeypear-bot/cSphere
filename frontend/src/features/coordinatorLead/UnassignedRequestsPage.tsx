@@ -56,7 +56,7 @@ export function UnassignedRequestsPage() {
             {shown.map((request) => (
               <li key={request.requestId}>
                 {/* For a pending request, updatedAt is when it was submitted. One
-                    waiting for clarification (ELC-C6) was sent back, and perhaps
+                    waiting for clarification (ECL-C6) was sent back, and perhaps
                     edited by its organiser, since then. */}
                 <LeadRequestCard request={request} submittedAt={request.updatedAt}
                   timeLabel={request.status === 'clarification_required' ? 'Last updated' : 'Submitted'} />

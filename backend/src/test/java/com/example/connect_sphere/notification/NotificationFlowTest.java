@@ -47,6 +47,7 @@ import com.example.connect_sphere.venue.service.VenueService;
 @AutoConfigureMockMvc
 @Tag("EC08")
 @Tag("SO-C4")
+@Tag("EC-NEW4")
 class NotificationFlowTest {
     @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
 
@@ -249,7 +250,8 @@ class NotificationFlowTest {
     }
 
     @Test
-    void reassigningNotifiesNeitherCoordinatorNorTheLead() throws Exception {
+    @DisplayName("EC-NEW4 (happy): reassigning a request tells both coordinators, and the Lead who did it is not told")
+    void reassigningNotifiesBothCoordinatorsButNotTheLead() throws Exception {
         UUID requestId = assignedRequest();
 
         reassign(requestId, "ec2").andExpect(status().isOk());

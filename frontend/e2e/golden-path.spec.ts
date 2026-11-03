@@ -1,4 +1,4 @@
-// @stories EO01 EO02 ECL-C3 ELC-C6 EC02 EC03 VS02 VS03 EC08 SO-C1 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5 VS17 EC-C2
+// @stories EO01 EO02 ECL-C3 ECL-C6 EC02 EC03 VS02 VS03 EC08 SO-C1 SO-C3 SO-C4 EC-NEW2 EO04 EO09 EC-NEW5 VS17 EC-C2
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, createVenue, leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName, addVenueToRequest } from './support.ts'
 
@@ -29,7 +29,7 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
   })
 
   const lead = await signedIn(browser, 'ecl1')
-  await test.step('ECL-C3/ELC-C6: the Lead assigns the request to ec1', async () => {
+  await test.step('ECL-C3/ECL-C6: the Lead assigns the request to ec1', async () => {
     await leadAssigns(lead, requestId)
   })
 

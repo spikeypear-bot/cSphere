@@ -59,7 +59,7 @@ function eventNames(container: HTMLElement = document.body) {
   return within(container).queryAllByRole('heading', { level: 3 }).map((heading) => heading.textContent)
 }
 
-describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignment)', () => {
+describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ECL-C5 reassignment)', () => {
   beforeEach(() => seedSession('coordinator-lead', 'ecl-1'))
   afterEach(() => {
     cleanup()
@@ -197,7 +197,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
   it.each([
     ['pending'],
     ['clarification_required'],
-  ])('ECL-C2 ELC-C5 (happy): selecting a %s request opens its review page, shown as assigned and offering only Reassign', async (status) => {
+  ])('ECL-C2 ECL-C5 (happy): selecting a %s request opens its review page, shown as assigned and offering only Reassign', async (status) => {
     const listed = assigned('r1', 'Offsite', { status })
     const calls = stubApi({
       [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [listed])]),
@@ -220,7 +220,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     expect(calls.every((call) => call.method === 'GET')).toBe(true)
   })
 
-  it('ELC-C5 (happy): after a reassignment, confirms it and shows the request under its new coordinator with both counts updated', async () => {
+  it('ECL-C5 (happy): after a reassignment, confirms it and shows the request under its new coordinator with both counts updated', async () => {
     const listed = assigned('r1', 'Offsite')
     let reassigned = false
     const calls = stubApi({
@@ -258,7 +258,7 @@ describe('CoordinatorAssignmentsPage (ECL-C2 assigned requests, ELC-C5 reassignm
     ])
   })
 
-  it('ELC-C5 (boundary): shows no confirmation when the page is opened on its own', async () => {
+  it('ECL-C5 (boundary): shows no confirmation when the page is opened on its own', async () => {
     stubApi({ [ASSIGNED]: () => jsonResponse(200, [coordinator('ec1', [assigned('r1', 'Offsite')])]) })
     renderPage()
 

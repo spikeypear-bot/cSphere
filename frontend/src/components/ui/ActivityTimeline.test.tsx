@@ -33,7 +33,7 @@ describe('ActivityTimeline', () => {
     expect(screen.getByRole('listitem')).toHaveTextContent('ecl1 (Event Coordinator Lead) rejected the request')
   })
 
-  it('says the Lead assigned a coordinator and names the coordinator (ELC-C6)', () => {
+  it('says the Lead assigned a coordinator and names the coordinator (ECL-C6)', () => {
     render(<ActivityTimeline entries={[{ activityId: 'a4', type: 'coordinator_assigned', actorName: 'ecl1',
       actorRole: 'ecl', message: 'Assigned to ec1', flaggedFields: [], fromStatus: null, toStatus: null,
       occurredAt: '2026-09-21T01:00:00Z' }]} />)
@@ -45,7 +45,7 @@ describe('ActivityTimeline', () => {
     expect(entry).not.toHaveTextContent(/ecl1.*is coordinating/)
   })
 
-  it('says the Lead reassigned the coordinator and names the previous and the new one (ELC-C5)', () => {
+  it('says the Lead reassigned the coordinator and names the previous and the new one (ECL-C5)', () => {
     render(<ActivityTimeline entries={[{ activityId: 'a5', type: 'coordinator_reassigned', actorName: 'ecl1',
       actorRole: 'ecl', message: 'Reassigned from ec1 to ec2', flaggedFields: [], fromStatus: null, toStatus: null,
       occurredAt: '2026-09-21T01:00:00Z' }]} />)

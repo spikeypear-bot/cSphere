@@ -1,4 +1,4 @@
-// @stories ECL-C7 ELC-C5 ECL-C2 EC09 EO01 EO02 EC02
+// @stories ECL-C7 ECL-C5 ECL-C2 EC09 EO01 EO02 EC02
 import { expect, test } from '@playwright/test'
 import { leadAssigns, requestIdOf, signedIn, submitRequest, uniqueName } from './support.ts'
 

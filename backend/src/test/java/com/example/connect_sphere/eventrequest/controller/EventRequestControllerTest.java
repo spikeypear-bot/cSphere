@@ -46,6 +46,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @Tag("EO02")
 @Tag("EO15")
 @Tag("AU04")
+@Tag("ECL-C1")
 class EventRequestControllerTest {
 
     private static final String ACME = "Acme Conferences";
@@ -133,6 +134,7 @@ class EventRequestControllerTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (happy): the unassigned queue returns the waiting requests in the order the service gives them")
     void unassignedQueueReturnsTheServicesListInItsOrder() throws Exception {
         UUID waitingLongest = UUID.randomUUID();
         UUID submittedLater = UUID.randomUUID();
@@ -154,6 +156,7 @@ class EventRequestControllerTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (boundary): the unassigned queue is an empty list when nothing is waiting")
     void unassignedQueueIsAnEmptyArrayWhenNothingIsWaiting() throws Exception {
         when(service.unassignedRequests()).thenReturn(List.of());
 

@@ -1,3 +1,4 @@
+// @stories ECL-C1 SO-C1
 import { describe, expect, it } from 'vitest'
 import { roleFromClaim, tokensFromResponse, type LoginResponse } from './authTokens'
 import { HOME_BY_ROLE } from './sessionContext'
@@ -31,7 +32,7 @@ describe('authTokens — role claim to console (ECL-C1)', () => {
     expect(tokensFromResponse(loginResponse('lead'))).toBeNull()
   })
 
-  it('maps the Safety Officer role to its protected console', () => {
+  it('SO-C1 (happy): the Safety Officer role maps to its protected console', () => {
     expect(roleFromClaim('safety_officer')).toBe('safety-officer')
     expect(HOME_BY_ROLE['safety-officer']).toBe('/safety-officer')
     expect(tokensFromResponse(loginResponse('safety_officer'))?.role).toBe('safety-officer')

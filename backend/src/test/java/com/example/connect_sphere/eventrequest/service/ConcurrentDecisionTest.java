@@ -43,7 +43,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingRequestServic
  */
 @Tag("integration")
 @SpringBootTest
-@Tag("ELC-C6")
+@Tag("ECL-C6")
 @Tag("EC02")
 class ConcurrentDecisionTest {
 
@@ -69,7 +69,7 @@ class ConcurrentDecisionTest {
         // No creator from here on, so no organiser's notification bell
         // receives these automated requests.
         jdbc.update("UPDATE event_requests SET created_by = NULL WHERE request_id = ?", requestId);
-        requests.assignCoordinator(id("ecl1"), requestId, coordinator); // ELC-C6: the Lead assigns
+        requests.assignCoordinator(id("ecl1"), requestId, coordinator); // ECL-C6: the Lead assigns
         return requestId;
     }
 

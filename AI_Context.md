@@ -80,7 +80,7 @@ The customer says all six must be in the Week 12 submission and expects no furth
 2. **Venue becomes unavailable after booking** — Venue Staff can mark a venue temporarily unavailable even with future bookings. The event is **not** cancelled: affected bookings are identified, their coordinators informed, original event information preserved, and the coordinator can search for and request a replacement venue. (VS-C1, EC-C4, EC10, EO-C1)
 3. **Multiple venues for one event** — an event can have several venue bookings, each checked independently for suitability, availability and conflicts; changing or cancelling one does not remove the others unless explicitly required. (EC-C2)
 4. **Tentative venue holds expire** — Venue Staff may hold a venue while a coordinator finalises; every hold has an expiry date/time, after which the venue becomes available again; the coordinator is told before or at expiry; an expired hold is never a confirmed booking. (VS-C3, EC-C3)
-5. **Event Coordinator Lead role** — see Users. (ECL-C1–C3, ECL-C7, ELC-C4–C6, EC-C1)
+5. **Event Coordinator Lead role** — see Users. (ECL-C1–C3, ECL-C7, ECL-C4–C6, EC-C1)
 6. **Operational Safety Check (Safety Officer role)** — see Users. The event cannot proceed to preparation until the Safety Officer approves; assume they always respond. (SO-C1–C6)
 
 **How to handle changes (Week 7 Guide to Managing Changes):**

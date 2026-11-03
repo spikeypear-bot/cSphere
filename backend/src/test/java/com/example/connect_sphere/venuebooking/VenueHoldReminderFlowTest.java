@@ -244,7 +244,7 @@ class VenueHoldReminderFlowTest {
         eventIds.add(event);
         UUID b=bookingFor(venue(),event);hold(b,Duration.ofHours(1));
         UUID requestId=jdbc.queryForObject("SELECT request_id FROM event_requests WHERE event_id=?",UUID.class,event);
-        // The Lead's reassignment (ELC-C5/ECL-C7) moves the request and its event to ec2.
+        // The Lead's reassignment (ECL-C5/ECL-C7) moves the request and its event to ec2.
         mvc.perform(post("/api/event-requests/assigned/"+requestId+"/reassign").with(flow.as("ecl1"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"coordinatorUserId\":\""+otherCoordinator+"\"}"))
             .andExpect(status().isOk());

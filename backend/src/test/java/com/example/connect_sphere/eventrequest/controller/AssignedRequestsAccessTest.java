@@ -40,7 +40,7 @@ import com.example.connect_sphere.eventrequest.entity.EventRequestStatus;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
 /**
- * ECL-C2 and ELC-C5: only the Event Coordinator Lead may open the list of
+ * ECL-C2 and ECL-C5: only the Event Coordinator Lead may open the list of
  * assigned requests or reassign one of them. Controller slice with the real
  * SecurityConfig imported; no database needed.
  */
@@ -48,7 +48,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
 @WebMvcTest(EventRequestController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 @Tag("ECL-C2")
-@Tag("ELC-C5")
+@Tag("ECL-C5")
 @Tag("AU04")
 class AssignedRequestsAccessTest {
 
@@ -138,10 +138,10 @@ class AssignedRequestsAccessTest {
         verifyNoInteractions(service);
     }
 
-    // ---- Reassigning (ELC-C5) ----------------------------------------
+    // ---- Reassigning (ECL-C5) ----------------------------------------
 
     @Test
-    @DisplayName("ELC-C5 (happy): the Lead reassigns a request to the coordinator they chose, recorded as the signed-in Lead")
+    @DisplayName("ECL-C5 (happy): the Lead reassigns a request to the coordinator they chose, recorded as the signed-in Lead")
     void anEventCoordinatorLeadReassignsAsThemselvesToTheCoordinatorTheyChose() throws Exception {
         UUID lead = UUID.randomUUID();
         EventRequestDto reassigned = new EventRequestDto(REQUEST, 'C', null, "Annual Summit", null, null,
@@ -162,7 +162,7 @@ class AssignedRequestsAccessTest {
 
     @ParameterizedTest
     @ValueSource(strings = { "ec", "eo", "vs", "technician", "attendee", "safety_officer" })
-    @DisplayName("ELC-C5 AU04 (negative): every other role is refused reassigning with a message and nothing is changed")
+    @DisplayName("ECL-C5 AU04 (negative): every other role is refused reassigning with a message and nothing is changed")
     void everyOtherRoleIsDeniedReassigningAndNothingIsChanged(String otherRole) throws Exception {
         mockMvc.perform(post(REASSIGN).with(tokenFor(otherRole))
                         .contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
@@ -174,7 +174,7 @@ class AssignedRequestsAccessTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 AU04 (negative): a reassign call without signing in is rejected and nothing is changed")
+    @DisplayName("ECL-C5 AU04 (negative): a reassign call without signing in is rejected and nothing is changed")
     void aReassignCallWithNoTokenIsRejectedAndNothingIsChanged() throws Exception {
         mockMvc.perform(post(REASSIGN).contentType(MediaType.APPLICATION_JSON).content(REASSIGN_BODY))
                 .andExpect(status().isUnauthorized());

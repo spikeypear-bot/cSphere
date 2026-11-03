@@ -43,6 +43,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("AU04")
 class EventRequestDraftSubmitFlowTest {
 
     private static final String START = "2027-03-10T01:00:00Z";
@@ -316,7 +317,7 @@ class EventRequestDraftSubmitFlowTest {
         unassignedQueue()
                 .andExpect(jsonPath(entry(requestId) + ".eventName", contains(eventName)))
                 .andExpect(jsonPath(entry(requestId) + ".status", contains("pending")));
-        // ELC-C6: coordinators see it only once the Lead assigns it to them.
+        // ECL-C6: coordinators see it only once the Lead assigns it to them.
         reviewQueue()
                 .andExpect(jsonPath("$.unassigned").doesNotExist())
                 .andExpect(jsonPath(queued("needsReview", requestId), empty()))
@@ -387,6 +388,7 @@ class EventRequestDraftSubmitFlowTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): an organiser is forbidden from coordinator, Venue Staff and Technical Support functions, and the request stays pending")
     void anOrganiserCannotUseCoordinatorVenueStaffOrTechnicalSupportFunctions() throws Exception {
         UUID requestId = draft("eo1", json(complete()));
         submit(requestId, "eo1").andExpect(status().isOk());

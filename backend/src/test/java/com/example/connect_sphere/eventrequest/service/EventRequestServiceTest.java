@@ -56,7 +56,8 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @Tag("EO-C2")
 @Tag("EO09")
 @Tag("EO19")
-@Tag("ELC-C6")
+@Tag("ECL-C6")
+@Tag("ECL-C1")
 class EventRequestServiceTest {
 
     @Mock
@@ -316,7 +317,7 @@ class EventRequestServiceTest {
         assertThat(results.get(0).organisation()).isEqualTo(ORG);
     }
 
-    // ---- EO19 / ELC-C6: coordinator assignment, by the Lead ----------------
+    // ---- EO19 / ECL-C6: coordinator assignment, by the Lead ----------------
 
     /** A request as the Lead assigns it: submitted by CREATED_BY, nobody assigned. */
     private EventRequest awaitingAssignment(UUID id) {
@@ -335,7 +336,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("EO19 ELC-C6 (happy): assigning a coordinator tells the organiser the coordinator's name and contact, as a first assignment")
+    @DisplayName("EO19 ECL-C6 (happy): assigning a coordinator tells the organiser the coordinator's name and contact, as a first assignment")
     void assigningACoordinatorNotifiesTheOrganiserWithTheirNameAndContactAsAnInitialAssignment() {
         UUID id = UUID.randomUUID();
         awaitingAssignment(id);
@@ -354,7 +355,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("ELC-C6 (conflict): a request that already has a coordinator cannot be assigned to another one")
+    @DisplayName("ECL-C6 (conflict): a request that already has a coordinator cannot be assigned to another one")
     void aRequestThatAlreadyHasACoordinatorCannotBeAssignedToAnotherOne() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -369,7 +370,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("EO19 ELC-C6 (conflict): assigning the coordinator a request already has is refused and sends no notification")
+    @DisplayName("EO19 ECL-C6 (conflict): assigning the coordinator a request already has is refused and sends no notification")
     void assigningTheCoordinatorARequestAlreadyHasIsRefusedAndSendsNoNotification() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -384,7 +385,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("ELC-C6 (negative): assigning a user who is not an Event Coordinator is refused and nothing changes")
+    @DisplayName("ECL-C6 (negative): assigning a user who is not an Event Coordinator is refused and nothing changes")
     void assigningANonCoordinatorUserIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -400,7 +401,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("ELC-C6 (negative): assigning a user that does not exist is refused and nothing changes")
+    @DisplayName("ECL-C6 (negative): assigning a user that does not exist is refused and nothing changes")
     void assigningANonexistentUserIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -414,7 +415,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("ELC-C6 (negative): assigning without choosing a coordinator is refused and nothing changes")
+    @DisplayName("ECL-C6 (negative): assigning without choosing a coordinator is refused and nothing changes")
     void assigningWithNoCoordinatorSpecifiedIsRejected() {
         UUID id = UUID.randomUUID();
         EventRequest existing = awaitingAssignment(id);
@@ -426,7 +427,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("ELC-C6 (negative): assigning a coordinator to a request that does not exist is reported as not found")
+    @DisplayName("ECL-C6 (negative): assigning a coordinator to a request that does not exist is reported as not found")
     void assigningACoordinatorToARequestThatDoesNotExistIsReportedAsNotFound() {
         UUID id = UUID.randomUUID();
         when(repository.findById(id)).thenReturn(Optional.empty());
@@ -455,7 +456,7 @@ class EventRequestServiceTest {
     }
 
     @Test
-    @DisplayName("ELC-C6 (happy): the Lead's coordinator list is every Event Coordinator, in username order")
+    @DisplayName("ECL-C6 (happy): the Lead's coordinator list is every Event Coordinator, in username order")
     void theLeadsCoordinatorListIsEveryEventCoordinatorByUsername() {
         when(userRepository.findByRole(UserRole.ec)).thenReturn(List.of(
                 coordinatorUser(OTHER_COORDINATOR_ID, "ec2", "ec2@connectsphere.test"),
@@ -591,7 +592,7 @@ class EventRequestServiceTest {
     // ---- EC review queue ----------------------------------------------
 
     @Test
-    @DisplayName("ELC-C6 (happy): a coordinator's review queue holds only their own requests, split by who needs to act")
+    @DisplayName("ECL-C6 (happy): a coordinator's review queue holds only their own requests, split by who needs to act")
     void reviewQueueHoldsOnlyTheCallersOwnRequestsSplitByWhoNeedsToAct() {
         EventRequest mine = completeDraftEntity(UUID.randomUUID(), ORG);
         EventRequest waiting = completeDraftEntity(UUID.randomUUID(), ORG);
@@ -605,7 +606,7 @@ class EventRequestServiceTest {
         assertThat(queue.needsReview()).extracting(EventRequestDto::requestId).containsExactly(mine.getRequestId());
         assertThat(queue.awaitingOrganiser()).extracting(EventRequestDto::requestId)
                 .containsExactly(waiting.getRequestId());
-        // ELC-C6: nothing is read but the caller's own requests, so no unassigned ones.
+        // ECL-C6: nothing is read but the caller's own requests, so no unassigned ones.
         verify(repository).findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(COORDINATOR_ID, EventRequestStatus.pending);
         verify(repository).findByCoordinatorIdAndStatusOrderByUpdatedAtAsc(
                 COORDINATOR_ID, EventRequestStatus.clarification_required);
@@ -623,11 +624,12 @@ class EventRequestServiceTest {
         return entity;
     }
 
-    /** The two states an unassigned request can wait in (ELC-C6). */
+    /** The two states an unassigned request can wait in (ECL-C6). */
     private static final List<EventRequestStatus> UNASSIGNED_STATUSES =
             List.of(EventRequestStatus.pending, EventRequestStatus.clarification_required);
 
     @Test
+    @DisplayName("ECL-C1 (happy): the unassigned queue lists every organisation's waiting requests, longest waiting first")
     void unassignedRequestsListsEveryOrganisationsWaitingRequestsLongestWaitingFirst() {
         EventRequest waitingLongest = submittedUnassigned(ORG);
         EventRequest submittedLater = submittedUnassigned(OTHER_ORG);
@@ -643,6 +645,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (boundary): the queue asks only for submitted or clarifying requests that have no coordinator")
     void unassignedRequestsAsksOnlyForSubmittedOrClarifyingRequestsWithNoCoordinator() {
         service.unassignedRequests();
 
@@ -652,6 +655,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (happy): a request waiting for clarification is listed with that status")
     void aRequestWaitingForClarificationIsListedWithThatStatus() {
         EventRequest clarifying = submittedUnassigned(ORG);
         clarifying.setStatus(EventRequestStatus.clarification_required);
@@ -663,6 +667,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (boundary): the queue is empty when nothing is waiting")
     void unassignedRequestsIsAnEmptyListWhenNothingIsWaiting() {
         when(repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES))
                 .thenReturn(List.of());
@@ -671,6 +676,7 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C1 (happy): viewing the queue changes no request and notifies no one")
     void viewingUnassignedRequestsChangesNothingAndNotifiesNoOne() {
         EventRequest waiting = submittedUnassigned(ORG);
         when(repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(UNASSIGNED_STATUSES))

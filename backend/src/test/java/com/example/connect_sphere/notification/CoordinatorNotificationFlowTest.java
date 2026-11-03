@@ -43,8 +43,8 @@ import jakarta.persistence.EntityManager;
  */
 @Tag("integration")
 @Tag("EC-NEW4")
-@Tag("ELC-C6")
-@Tag("ELC-C5")
+@Tag("ECL-C6")
+@Tag("ECL-C5")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional

@@ -36,9 +36,9 @@ public enum ActivityType {
     venue_hold_converted(Set.of(UserRole.ec, UserRole.vs)),
     /** EO02: the organiser submitted the request for review. */
     submitted(Set.of(UserRole.eo, UserRole.ec)),
-    /** ELC-C6: the Lead assigned an Event Coordinator, named in the message. */
+    /** ECL-C6: the Lead assigned an Event Coordinator, named in the message. */
     coordinator_assigned(Set.of(UserRole.eo, UserRole.ec)),
-    /** ELC-C5: the Lead moved the request to another Event Coordinator;
+    /** ECL-C5: the Lead moved the request to another Event Coordinator;
      * the message names both. */
     coordinator_reassigned(Set.of(UserRole.eo, UserRole.ec), true),
     /** EC-C1: an Event Coordinator asked the Lead to transfer an active event. */

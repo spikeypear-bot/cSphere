@@ -35,6 +35,7 @@ import jakarta.persistence.EntityManager;
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
+@Tag("SO-C2")
 class EquipmentRequestFlowTest {
 
     @Autowired MockMvc mvc;
@@ -246,6 +247,7 @@ class EquipmentRequestFlowTest {
     // safety_officer token, including once the event awaits its safety review.
     @ParameterizedTest
     @ValueSource(strings = {"pending", "awaiting_safety_review", "safety_changes_requested", "safety_approved", "confirmed"})
+    @DisplayName("SO-C2 (happy): the Safety Officer can view an active event's equipment requests, from Planning to Confirmed")
     void theSafetyOfficerCanViewTheRequestsOfAnActiveEvent(String eventStatus) throws Exception {
         UUID eventId = event();
         UUID requestId = submitted(eventId, body("Two screens on stage", item(equipment("EC07 Projector"), 2)));
@@ -259,6 +261,7 @@ class EquipmentRequestFlowTest {
     }
 
     @Test
+    @DisplayName("SO-C2 (negative): the Safety Officer cannot view the equipment requests of a cancelled event")
     void theSafetyOfficerCannotViewTheRequestsOfACancelledEvent() throws Exception {
         UUID eventId = event();
         submitted(eventId, body("Two screens on stage", item(equipment("EC07 Projector"), 2)));

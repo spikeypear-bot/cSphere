@@ -48,7 +48,7 @@ import jakarta.persistence.EntityManager;
  */
 @Tag("integration") @Tag("VS17") @Tag("EC-C2")
 @Tag("ECL-C7")
-@Tag("ELC-C5")
+@Tag("ECL-C5")
 @Tag("AU04")
 @Tag("EO07")
 @Tag("TS11")

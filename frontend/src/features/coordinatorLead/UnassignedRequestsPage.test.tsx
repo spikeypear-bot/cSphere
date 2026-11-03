@@ -141,7 +141,7 @@ describe('UnassignedRequestsPage (ECL-C1 unassigned queue)', () => {
       .toHaveAttribute('href', '/coordinator-lead/unassigned-requests/r2')
   })
 
-  it('marks a request that is waiting for clarification, and still links it to its review page (ELC-C6)', async () => {
+  it('marks a request that is waiting for clarification, and still links it to its review page (ECL-C6)', async () => {
     stubApi({
       [QUEUE]: () => jsonResponse(200, [
         request('r1', 'Offsite'),

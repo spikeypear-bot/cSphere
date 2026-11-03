@@ -33,7 +33,7 @@ import jakarta.persistence.EntityManager;
 import tools.jackson.databind.JsonNode;
 
 /**
- * ECL-C2 and ELC-C5 end to end through the real filter chain and a real
+ * ECL-C2 and ECL-C5 end to end through the real filter chain and a real
  * PostgreSQL database: what the Lead's assignments list returns as requests
  * are assigned and decided, what the Lead finds on opening one of them, and
  * what reassigning one to another Event Coordinator changes. Each test
@@ -44,7 +44,7 @@ import tools.jackson.databind.JsonNode;
 @AutoConfigureMockMvc
 @Transactional
 @Tag("ECL-C2")
-@Tag("ELC-C5")
+@Tag("ECL-C5")
 @Tag("ECL-C7")
 class AssignedRequestsFlowTest {
 
@@ -238,10 +238,10 @@ class AssignedRequestsFlowTest {
         }
     }
 
-    // ---- Reassigning (ELC-C5) ----------------------------------------
+    // ---- Reassigning (ECL-C5) ----------------------------------------
 
     @Test
-    @DisplayName("ELC-C5 (happy): a reassigned request keeps its status and moves to the new coordinator in the Lead's list and both review queues")
+    @DisplayName("ECL-C5 (happy): a reassigned request keeps its status and moves to the new coordinator in the Lead's list and both review queues")
     void aReassignedRequestKeepsItsStatusAndMovesToTheNewCoordinatorInTheLeadsListAndBothQueues() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         int ec1Before = heldBy("ec1").size();
@@ -265,7 +265,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (happy): the new coordinator sees the full history and approves a reassigned request as before")
+    @DisplayName("ECL-C5 (happy): the new coordinator sees the full history and approves a reassigned request as before")
     void theNewCoordinatorSeesTheFullHistoryAndApprovesAReassignedRequestAsBefore() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         reassign(id, "ec2", 200);
@@ -283,7 +283,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (negative): the previous coordinator can no longer open or decide a reassigned request, and nothing changes")
+    @DisplayName("ECL-C5 (negative): the previous coordinator can no longer open or decide a reassigned request, and nothing changes")
     void thePreviousCoordinatorCanNoLongerOpenOrDecideAReassignedRequest() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         reassign(id, "ec2", 200);
@@ -302,7 +302,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (happy): reassigning appears on the timeline with the Lead as its actor and both coordinators' names")
+    @DisplayName("ECL-C5 (happy): reassigning appears on the timeline with the Lead as its actor and both coordinators' names")
     void reassigningIsOnTheTimelineWithTheLeadAsItsActorAndBothCoordinatorsNames() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
 
@@ -317,7 +317,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (happy): reassigning changes no detail of the request and creates no event")
+    @DisplayName("ECL-C5 (happy): reassigning changes no detail of the request and creates no event")
     void reassigningChangesNoDetailOfTheRequestAndCreatesNoEvent() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         int eventsBefore = jdbc.queryForObject("SELECT count(*) FROM events", Integer.class);
@@ -344,7 +344,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (boundary): a request reassigned while it waits for clarification goes to the new coordinator when resubmitted")
+    @DisplayName("ECL-C5 (boundary): a request reassigned while it waits for clarification goes to the new coordinator when resubmitted")
     void aRequestReassignedWhileItWaitsForClarificationGoesToTheNewCoordinatorWhenResubmitted() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         act("ec1", id + "/clarifications", "{\"message\":\"Who is the event for?\"}", 200);
@@ -365,7 +365,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (negative): reassigning without choosing a coordinator is refused with a message and nothing changes")
+    @DisplayName("ECL-C5 (negative): reassigning without choosing a coordinator is refused with a message and nothing changes")
     void reassigningWithoutACoordinatorIsRefusedWithAMessageAndNothingChanges() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         int entriesBefore = timelineEntries(id);
@@ -381,7 +381,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (negative): reassigning to another role, the Lead, the current coordinator or an unknown user is refused with a message and nothing changes")
+    @DisplayName("ECL-C5 (negative): reassigning to another role, the Lead, the current coordinator or an unknown user is refused with a message and nothing changes")
     void reassigningToSomeoneWhoCannotTakeItIsRefusedWithAMessageAndNothingChanges() throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         int entriesBefore = timelineEntries(id);
@@ -400,7 +400,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (conflict): a request with no coordinator yet cannot be reassigned and nothing changes")
+    @DisplayName("ECL-C5 (conflict): a request with no coordinator yet cannot be reassigned and nothing changes")
     void aRequestWithNoCoordinatorCannotBeReassigned() throws Exception {
         UUID id = flow.submitted("eo1", FlowSupport.requestBody("Town Hall", 150, "none"));
 
@@ -412,7 +412,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (conflict): a request its coordinator has already rejected cannot be reassigned and nothing changes")
+    @DisplayName("ECL-C5 (conflict): a request its coordinator has already rejected cannot be reassigned and nothing changes")
     void aRequestItsCoordinatorHasAlreadyRejectedCannotBeReassigned() throws Exception {
         UUID rejected = assignedTo("ec1", "eo1");
         act("ec1", rejected + "/reject", "{\"reason\":\"No capacity\"}", 200);
@@ -446,7 +446,7 @@ class AssignedRequestsFlowTest {
     }
 
     @Test
-    @DisplayName("ELC-C5 (negative): a draft or unknown request is not found for reassigning and nothing changes")
+    @DisplayName("ECL-C5 (negative): a draft or unknown request is not found for reassigning and nothing changes")
     void aDraftOrUnknownRequestCannotBeReassigned() throws Exception {
         UUID draft = flow.draft("eo1", FlowSupport.requestBody("Town Hall", 150, "none"));
 
@@ -459,7 +459,7 @@ class AssignedRequestsFlowTest {
 
     @ParameterizedTest
     @ValueSource(strings = {"ec1", "ec2", "eo1", "vs1", "ts1", "att1", "so1"})
-    @DisplayName("ELC-C5 (negative): nobody but the Lead can reassign, even by calling the API directly, and nothing changes")
+    @DisplayName("ECL-C5 (negative): nobody but the Lead can reassign, even by calling the API directly, and nothing changes")
     void nobodyButTheLeadCanReassignEvenByCallingTheApiDirectly(String username) throws Exception {
         UUID id = assignedTo("ec1", "eo1");
         int entriesBefore = timelineEntries(id);

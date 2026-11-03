@@ -260,7 +260,7 @@ public class EventRequestService {
      * internal staff, so none of this is scoped by organisation. Unassigned
      * requests and requests assigned to other coordinators are left out:
      * EC02 says a coordinator "cannot view or review an event request that
-     * is not assigned to them", and assigning is the Lead's (ELC-C6).
+     * is not assigned to them", and assigning is the Lead's (ECL-C6).
      */
     @Transactional(readOnly = true)
     public ReviewQueueDto reviewQueue(UUID coordinatorId) {
@@ -440,7 +440,7 @@ public class EventRequestService {
 
     /** ECL-C1: requests with no coordinator, across all organisations,
      * longest-waiting first. One the Lead sent back for clarification stays
-     * listed while it waits (ELC-C6), so it can still be assigned. Read-only. */
+     * listed while it waits (ECL-C6), so it can still be assigned. Read-only. */
     @Transactional(readOnly = true)
     public List<EventRequestDto> unassignedRequests() {
         return repository.findByStatusInAndCoordinatorIdIsNullOrderByUpdatedAtAsc(
@@ -448,7 +448,7 @@ public class EventRequestService {
                 .stream().map(mapper::toDto).toList();
     }
 
-    /** ELC-C6: every Event Coordinator, by username, for the Lead to pick
+    /** ECL-C6: every Event Coordinator, by username, for the Lead to pick
      * one from. Read-only. */
     @Transactional(readOnly = true)
     public List<CoordinatorDto> coordinators() {
@@ -475,7 +475,7 @@ public class EventRequestService {
     }
 
     /**
-     * ELC-C6: the Lead hands an unassigned request to one Event Coordinator.
+     * ECL-C6: the Lead hands an unassigned request to one Event Coordinator.
      * Allowed while it is Submitted or waiting for the organiser's
      * clarification; the status and the organiser's details stay as they
      * are. A request that already has a coordinator is refused, even when
@@ -491,7 +491,7 @@ public class EventRequestService {
     }
 
     /**
-     * ELC-C5: the Lead moves a request that is still under review from its
+     * ECL-C5: the Lead moves a request that is still under review from its
      * Event Coordinator to a different one. Only the coordinator changes:
      * the status and the organiser's details stay as they are. The organiser
      * learns of the change (EO19) once it commits.
@@ -628,7 +628,7 @@ public class EventRequestService {
     }
 
     /** {@code orClarifying} also accepts a request that is waiting for the
-     * organiser's clarification: it can still be assigned (ELC-C6), but not
+     * organiser's clarification: it can still be assigned (ECL-C6), but not
      * rejected or sent back a second time. */
     private EventRequest findAwaitingAssignment(UUID requestId, boolean orClarifying) {
         EventRequest entity = repository.findForUpdate(requestId)
@@ -647,7 +647,7 @@ public class EventRequestService {
         return entity;
     }
 
-    /** A request the Lead may reassign (ELC-C5): it has a coordinator and is
+    /** A request the Lead may reassign (ECL-C5): it has a coordinator and is
      * still under review, or (ECL-C7) it was approved and its event has not
      * finished or been cancelled. A rejected or cancelled request, or a
      * finished event, stays with whoever handled it. */

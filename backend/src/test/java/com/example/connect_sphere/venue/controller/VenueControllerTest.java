@@ -33,6 +33,9 @@ import jakarta.persistence.EntityManager;
 @Tag("VS07")
 @Tag("VS17")
 @Tag("VS18")
+@Tag("VS06A")
+@Tag("VS06B")
+@Tag("AU04")
 class VenueControllerTest {
     @Autowired MockMvc mvc;
     @Autowired EntityManager entityManager;
@@ -72,6 +75,7 @@ class VenueControllerTest {
     @ParameterizedTest
     @ValueSource(strings = {"", ",\"venueAccessibilities\":[],\"venueFacilities\":[]",
             ",\"venueAccessibilities\":null,\"venueFacilities\":null"})
+    @DisplayName("VS06A VS06B (boundary): a venue sent with no, empty or null accessibility and facility lists is created with empty lists and its basic details")
     void emptySelectionsRemainCompatibleWithBasicCreation(String selections) throws Exception {
         var response = mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
                 {"venueAddress":"Basic venue","venueCapacity":50,
@@ -98,6 +102,7 @@ class VenueControllerTest {
             "\"venueAccessibilities\":[\"elevators\",\"elevators\"]",
             "\"venueFacilities\":[null]",
             "\"venueFacilities\":[\"stage\",\"stage\"]"})
+    @DisplayName("VS06B (negative): duplicate, null or contradictory accessibility and facility selections are refused with 422 and no venue is saved")
     void invalidSelectionsReturn422WithoutSaving(String selections) throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""
@@ -128,6 +133,7 @@ class VenueControllerTest {
             "{\"venueCapacity\":\"many\"}", "{\"venueAccessibilities\":[\"unknown\"]}",
             "{\"venueFacilities\":[\"unknown\"]}", "{\"venueFacilities\":\"stage\"}",
             "{\"venueAccessibilities\":\"elevators\"}", "{\"venueAccessibilities\":[{}]}", "{\"venueFacilities\":[{}]}"})
+    @DisplayName("VS06A VS06B (negative): malformed JSON or unknown layout, capacity, accessibility or facility values are refused with 400 and no venue is saved")
     void malformedInputReturns400WithoutSaving(String body) throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content(body))
@@ -136,6 +142,7 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS06A (negative): a venue with no fields is refused with 422 naming the missing capacity, and nothing is saved")
     void missingFieldsReturn422WithoutSaving() throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("{}"))
@@ -422,6 +429,7 @@ class VenueControllerTest {
 
     @Test
     @WithMockUser(roles = "ATTENDEE")
+    @DisplayName("VS06A AU04 (negative): an attendee cannot create a venue; the request is forbidden and nothing is saved")
     void createByDisallowedRoleReturns403WithoutSaving() throws Exception {
         long before = repository.count();
         mvc.perform(post("/api/venues").contentType(MediaType.APPLICATION_JSON).content("""

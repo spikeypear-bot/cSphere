@@ -43,6 +43,7 @@ import com.example.connect_sphere.notification.service.NotificationService;
 @Tag("EC08")
 @Tag("EO09")
 @Tag("ECL-C7")
+@Tag("AU04")
 class EventServiceTest {
 
     @Mock
@@ -71,6 +72,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("AU04 (happy): an organiser can view their own organisation's event")
     void anOrganiserCanViewTheirOwnOrganisationsEvent() {
         Event event = pendingEvent(ORG);
         when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
@@ -82,6 +84,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("AU04 (negative): an organiser cannot view another organisation's event; it is reported as not found")
     void anOrganiserCannotViewAnotherOrganisationsEvent() {
         Event event = pendingEvent("Other Org Pte Ltd");
         when(repository.findById(event.getEventId())).thenReturn(Optional.of(event));
