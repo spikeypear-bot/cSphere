@@ -103,7 +103,7 @@ public class EquipmentChangeReviewService {
         EquipmentChangeReview review = reviews.findForUpdate(reviewId)
                 .orElseThrow(() -> notFound(reviewId));
         ReviewOutcome outcome = outcomeOf(input == null ? null : input.outcome());
-        String note = input == null || input.note() == null ? null : input.note().strip();
+        String note = input.note() == null ? null : input.note().strip(); // outcomeOf refused a null input
         if (note != null && note.isEmpty()) {
             note = null;
         }
@@ -138,10 +138,7 @@ public class EquipmentChangeReviewService {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
         var held = reservations.reservationsForEvent(eventId);
         return held.stream().allMatch(r -> r.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))
-                && com.example.connect_sphere.equipmentrequest.service.EquipmentRequirementCoverage.covered(event,
-                    id -> held.stream().filter(r -> id.equals(r.equipmentId())
-                            && r.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))
-                            .mapToLong(r -> r.quantity()).sum());
+                && com.example.connect_sphere.equipmentrequest.service.EquipmentRequirementCoverage.coveredBy(event, held);
     }
 
     /** AC13 (amended, EC-NEW3 D37): Technical Support judged the equipment
@@ -170,7 +167,7 @@ public class EquipmentChangeReviewService {
     @Transactional(readOnly = true)
     public List<Summary> forEvent(UUID callerId, boolean lead, UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        if (!lead && (callerId == null || !callerId.equals(event.getCoordinatorId()))) {
+        if (!lead && !callerId.equals(event.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(eventId);
         }
         return reviews.findByEventIdOrderByChangedAtDesc(eventId).stream()

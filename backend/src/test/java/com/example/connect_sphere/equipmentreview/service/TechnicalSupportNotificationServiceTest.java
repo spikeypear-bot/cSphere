@@ -147,6 +147,44 @@ class TechnicalSupportNotificationServiceTest {
     }
 
     @Test
+    @DisplayName("TS11 AC1 (boundary): a request for an event with no coordinator says so, and its notes follow the items")
+    void noCoordinatorAndNotes() {
+        event.setCoordinatorId(null);
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-10T09:00+08:00"));
+        event.setEndDatetime(OffsetDateTime.parse("2027-03-10T12:00+08:00"));
+        UUID requestId = UUID.randomUUID();
+        when(requests.findById(requestId)).thenReturn(Optional.of(
+                new EquipmentRequest(requestId, event.getEventId(), EquipmentRequestStatus.processing, "Stage left")));
+
+        assertThat(service.describeRequest(requestId).orElseThrow().message()).isEqualTo("Gala, "
+                + "10 Mar 2027, 9:00 AM – 10 Mar 2027, 12:00 PM (Singapore time). Coordinator: not assigned. "
+                + "No itemised equipment. Notes: Stage left");
+    }
+
+    @Test
+    @DisplayName("TS11 AC4, AC8 (boundary): a change to the equipment items alone names no changed time or wording, and says the reservations still cover the event")
+    void anItemsOnlyChangeListsNoOtherChange() {
+        request(EquipmentRequestStatus.approved);
+        ChangeApproved itemsOnly = new ChangeApproved(UUID.randomUUID(), event.getEventId(),
+                Map.of("equipmentItems", List.of()),
+                Map.of("equipmentItems", List.of(Map.of("equipmentId", UUID.randomUUID().toString(), "quantity", 2))),
+                Set.of("equipmentItems"), OffsetDateTime.parse("2027-02-28T10:30+08:00"));
+
+        assertThat(service.openReview(itemsOnly).orElseThrow().message()).isEqualTo("An approved change to Gala on "
+                + "28 Feb 2027, 10:30 AM affects its equipment. Coordinator: ec1. "
+                + "Existing reservations still cover the event.");
+    }
+
+    @Test
+    @DisplayName("TS11 AC4 (negative): an approved change for an event that cannot be found opens no review")
+    void aMissingEventOpensNoReview() {
+        when(events.findById(event.getEventId())).thenReturn(Optional.empty());
+
+        assertThat(service.openReview(approved)).isEmpty();
+        verify(reviews, never()).saveAndFlush(any());
+    }
+
+    @Test
     @DisplayName("TS11 AC4 (happy): a processing request counts as a live request")
     void processingCounts() {
         request(EquipmentRequestStatus.processing);

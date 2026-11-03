@@ -672,4 +672,49 @@ class TechnicalSupportNotificationFlowTest {
         assertThat(jdbc.queryForObject("SELECT outcome IS NULL FROM equipment_change_reviews WHERE review_id = ?",
                 Boolean.class, reviewId)).isTrue();
     }
+
+    // ---- structured equipment items (AC4, AC8) -------------------------------------------------
+
+    /** The organiser asks for {@code quantity} of {@code equipmentId} as a structured item, times unchanged. */
+    private UUID askedForItems(UUID eventId, UUID equipmentId, int quantity) throws Exception {
+        String details = """
+                {"eventName":"%s","purpose":"Quarterly update","description":"All hands",
+                 "startDatetime":"2027-03-10T09:00:00+08:00","endDatetime":"2027-03-10T12:00:00+08:00",
+                 "expectedAttendance":150,"venueRequirements":"Theatre seating",
+                 "equipmentItems":[{"equipmentId":"%s","quantity":%d}],
+                 "accessibilityNeeds":["none"],"registrationNeeds":false}
+                """.formatted(eventName, equipmentId, quantity);
+        String body = mvc.perform(post("/api/change-requests").with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"requestId\":\"" + requestOf(eventId) + "\",\"reason\":\"More mics\",\"details\":"
+                                + details + "}"))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        return UUID.fromString(flow.read(body).get("changeRequestId").asString());
+    }
+
+    @Test
+    @DisplayName("TS11 AC4, AC8, AC13 (happy): an approved change to the equipment items is reviewed, the review names each item's equipment, and it is not still suitable while fewer are reserved")
+    void changedItemsAreReviewedByName() throws Exception {
+        String name = "TS11 Mic " + UUID.randomUUID();
+        UUID mics = equipment(name, 5);
+        UUID eventId = event();
+        UUID requestId = reservedAndApproved(eventId, mics, 2);
+
+        approved(askedForItems(eventId, mics, 3));
+
+        markStillSuitable(eventId, requestId)
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("The approved equipment items and quantities are not reserved. "
+                        + "Revise the request for Technical Support review."));
+        assertThat(requestStatus(requestId)).isEqualTo("attention");
+        UUID reviewId = reviewOf(eventId);
+        mvc.perform(get("/api/equipment-change-reviews/" + reviewId).with(flow.as("ts1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.requirementsChanged").value(true))
+                .andExpect(jsonPath("$.updated.equipmentItems[0].equipmentName").value(name))
+                .andExpect(jsonPath("$.updated.equipmentItems[0].quantity").value(3));
+        outcome(reviewId, "{\"outcome\":\"still_suitable\"}")
+                .andExpect(status().isConflict());
+        assertThat(jdbc.queryForObject("SELECT outcome IS NULL FROM equipment_change_reviews WHERE review_id = ?",
+                Boolean.class, reviewId)).isTrue();
+    }
 }

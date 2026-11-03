@@ -152,7 +152,7 @@ public class TechnicalSupportNotificationService {
             String message = shortfall + event.getEventName() + ", " + period(event.getStartDatetime(), event.getEndDatetime())
                     + " (Singapore time). Coordinator: " + coordinatorName(event.getCoordinatorId()) + ". "
                     + (items.isEmpty() ? "No itemised equipment." : "Requested: " + String.join(", ", items) + ".")
-                    + (notes == null || notes.isBlank() ? "" : " Notes: " + notes);
+                    + (notes.isBlank() ? "" : " Notes: " + notes);
             return new Notice(requestId, event.getEventId(), event.getEventName(), message);
         }));
     }
