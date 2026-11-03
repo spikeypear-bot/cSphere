@@ -418,7 +418,8 @@ public class EquipmentDamageService {
      * rules apply unchanged. */
     private void close(EquipmentDamageReport report) {
         DamageBlockStatus block = report.getBlockStatus();
-        if (block != null && report.isSerialised()
+        // A block is only ever asked for a serialised unit (V39 chk_damage_block_serialised).
+        if (block != null
                 && logs.findOverlappingForUnit(report.getEquipmentId(), report.getSerialNumber(),
                         report.getPeriodStart(), DamageImpact.endOf(report)).isEmpty()) {
             statusService.addPeriod(report.getEquipmentId(), report.getSerialNumber(), block.equipmentStatus(),

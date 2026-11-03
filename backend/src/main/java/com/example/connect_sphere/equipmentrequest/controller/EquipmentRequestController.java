@@ -112,7 +112,7 @@ public class EquipmentRequestController {
             @PathVariable UUID eventId,
             @PathVariable UUID requestId,
             @RequestBody StillSuitableNote request) {
-        return service.markStillSuitable(userIdOf(jwt), eventId, requestId, request == null ? null : request.note());
+        return service.markStillSuitable(userIdOf(jwt), eventId, requestId, request.note());
     }
 
     /** EC-NEW3 (D37): why the coordinator judged a flagged request still suitable. */

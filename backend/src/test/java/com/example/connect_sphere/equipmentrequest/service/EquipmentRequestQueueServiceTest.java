@@ -142,6 +142,13 @@ class EquipmentRequestQueueServiceTest {
     }
 
     @Test
+    @DisplayName("TS01 (boundary): a blank status means processing, like no status")
+    void aBlankStatusMeansProcessing() {
+        assertThat(queue.list("  ")).extracting(EquipmentRequestResponse::requestId)
+                .containsExactly(soonerRequest.getId(), laterRequest.getId());
+    }
+
+    @Test
     @DisplayName("TS09 (negative): requests of cancelled or completed events are left out")
     void closedEventsAreLeftOut() {
         later.setStatus(EventStatus.cancelled);

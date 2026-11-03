@@ -30,6 +30,10 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
 import com.example.connect_sphere.equipment.service.EquipmentReservationService;
 import com.example.connect_sphere.equipmentreview.dto.EquipmentChangeReviewDto.OutcomeRequest;
+import com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
@@ -177,5 +181,103 @@ class EquipmentChangeReviewServiceTest {
         when(reviews.findByEventIdOrderByChangedAtDesc(event.getEventId())).thenReturn(List.of(review));
         assertThat(service.forEvent(coordinator, false, event.getEventId())).hasSize(1);
         assertThat(service.forEvent(UUID.randomUUID(), true, event.getEventId())).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("TS11 AC11 (negative): a blank outcome is refused and nothing is saved")
+    void aBlankOutcomeIsRefused() {
+        assertThatThrownBy(() -> service.recordOutcome(reviewer, review.getReviewId(), new OutcomeRequest("  ", null)))
+                .isInstanceOfSatisfying(ResponseStatusException.class,
+                        e -> assertThat(e.getReason()).isEqualTo("Choose a review outcome."));
+        verify(reviews, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("TS11 AC10 (negative): an unknown review is not found")
+    void anUnknownReviewIsNotFound() {
+        UUID unknown = UUID.randomUUID();
+
+        assertThatThrownBy(() -> service.detail(unknown))
+                .isInstanceOfSatisfying(ResponseStatusException.class, e -> {
+                    assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
+                    assertThat(e.getReason()).isEqualTo("Equipment change review " + unknown + " not found");
+                });
+    }
+
+    private EquipmentChangeReview reviewed(String changedAt, ReviewOutcome outcome) {
+        EquipmentChangeReview other = new EquipmentChangeReview();
+        other.setReviewId(UUID.randomUUID());
+        other.setEventId(event.getEventId());
+        other.setChangedAt(OffsetDateTime.parse(changedAt));
+        other.setAffectedReservations(List.of());
+        other.setOutcome(outcome);
+        if (outcome != null) {
+            other.setReviewedBy(reviewer);
+            other.setReviewedAt(OffsetDateTime.parse(changedAt));
+        }
+        return other;
+    }
+
+    @Test
+    @DisplayName("TS11 AC10 (happy): the queue lists changes still to review first, each group newest first")
+    void theQueueListsOpenReviewsFirst() {
+        EquipmentChangeReview newerReviewed = reviewed("2027-03-01T10:00+08:00", ReviewOutcome.still_suitable);
+        EquipmentChangeReview olderOpen = reviewed("2027-02-01T10:00+08:00", null);
+        when(reviews.findAllByOrderByChangedAtDesc()).thenReturn(List.of(newerReviewed, olderOpen));
+
+        assertThat(service.queue()).extracting(s -> s.reviewId())
+                .containsExactly(olderOpen.getReviewId(), newerReviewed.getReviewId());
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (boundary): still suitable on an older change leaves the flag when the newest change needs the coordinator")
+    void anOlderStillSuitableDoesNotOverrideTheNewest() {
+        reservationCoversTheEvent();
+        EquipmentRequestRepository requests = mock(EquipmentRequestRepository.class);
+        service.setRequests(requests);
+        EquipmentChangeReview newest = reviewed("2027-03-01T10:00+08:00", ReviewOutcome.needs_coordinator_action);
+        when(reviews.findByEventIdOrderByChangedAtDesc(event.getEventId())).thenReturn(List.of(newest, review));
+
+        service.recordOutcome(reviewer, review.getReviewId(), new OutcomeRequest("still_suitable", null));
+
+        assertThat(review.getOutcome()).isEqualTo(ReviewOutcome.still_suitable);
+        verify(requests, never()).findByEventIdForUpdate(any());
+        verify(requests, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (boundary): with no flagged request, still suitable changes no request")
+    void noFlaggedRequestMeansNothingToClear() {
+        reservationCoversTheEvent();
+        EquipmentRequestRepository requests = mock(EquipmentRequestRepository.class);
+        service.setRequests(requests);
+        when(reviews.findByEventIdOrderByChangedAtDesc(event.getEventId())).thenReturn(List.of(review));
+        EquipmentRequest approved = new EquipmentRequest(UUID.randomUUID(), event.getEventId(),
+                EquipmentRequestStatus.approved, "");
+        when(requests.findByEventIdForUpdate(event.getEventId())).thenReturn(List.of(approved));
+
+        service.recordOutcome(reviewer, review.getReviewId(), new OutcomeRequest("still_suitable", null));
+
+        assertThat(approved.getStatus()).isEqualTo(EquipmentRequestStatus.approved);
+        verify(requests, never()).saveAll(any());
+    }
+
+    @Test
+    @DisplayName("TS11 AC13 (negative): still suitable is refused while the event's approved items are not all reserved for its time; once they are, it is accepted")
+    void stillSuitableNeedsEveryApprovedItemReserved() {
+        UUID mics = UUID.randomUUID();
+        event.setEquipmentItems(List.of(new SubmitEquipmentRequest.Item(mics, 3)));
+        when(reservations.reservationsForEvent(event.getEventId())).thenReturn(List.of(
+                new EquipmentReservationResponse(logId, event.getEventId(), mics, "Mic", 2, null,
+                        Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T05:00:00Z"), null, false),
+                new EquipmentReservationResponse(UUID.randomUUID(), event.getEventId(), UUID.randomUUID(), "Cable", 5,
+                        null, Instant.parse("2027-03-10T01:00:00Z"), Instant.parse("2027-03-10T05:00:00Z"), null, false)));
+
+        refused(new OutcomeRequest("still_suitable", null), HttpStatus.CONFLICT);
+        assertThat(review.getOutcome()).isNull();
+
+        event.setEquipmentItems(List.of(new SubmitEquipmentRequest.Item(mics, 2)));
+        service.recordOutcome(reviewer, review.getReviewId(), new OutcomeRequest("still_suitable", null));
+        assertThat(review.getOutcome()).isEqualTo(ReviewOutcome.still_suitable);
     }
 }

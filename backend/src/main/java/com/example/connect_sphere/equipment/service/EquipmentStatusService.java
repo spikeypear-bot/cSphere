@@ -177,7 +177,7 @@ public class EquipmentStatusService {
     }
 
     private void requireValidPeriod(Instant start, Instant end) {
-        if (start == null || end == null || !end.isAfter(start)) {
+        if (!end.isAfter(start)) { // both are required request parameters
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "end must be after start");
         }
     }

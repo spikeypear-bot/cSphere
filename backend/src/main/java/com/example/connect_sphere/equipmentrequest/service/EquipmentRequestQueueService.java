@@ -6,7 +6,6 @@ import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
 import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.EnumSet;
@@ -79,10 +78,8 @@ public class EquipmentRequestQueueService {
                         .collect(Collectors.toSet())).stream()
                 .collect(Collectors.toMap(Event::getEventId, Function.identity()));
         List<EquipmentRequest> open = found.stream()
-                .filter(r -> {
-                    Event event = eventsById.get(r.getEventId());
-                    return event == null || !CLOSED.contains(event.getStatus());
-                })
+                // Every request has its event (equipment_requests.event_id: NOT NULL foreign key, V2).
+                .filter(r -> !CLOSED.contains(eventsById.get(r.getEventId()).getStatus()))
                 .toList();
         if (open.isEmpty()) {
             return List.of();
@@ -120,17 +117,16 @@ public class EquipmentRequestQueueService {
     private EquipmentRequestResponse toResponse(EquipmentRequest r, Event event,
             Map<UUID, List<EquipmentRequestResponse.Item>> items, Map<UUID, String> names,
             Set<UUID> shortfallRequests, Map<UUID, UUID> shortfallReports) {
-        Instant start = event != null && event.getStartDatetime() != null ? event.getStartDatetime().toInstant() : null;
-        Instant end = event != null && event.getEndDatetime() != null ? event.getEndDatetime().toInstant() : null;
-        UUID coordinator = event != null ? event.getCoordinatorId() : null;
+        UUID coordinator = event.getCoordinatorId();
         EquipmentRequestResponse.Person requestedBy = coordinator == null ? null
                 : new EquipmentRequestResponse.Person(coordinator, names.get(coordinator));
+        // events.start_datetime and end_datetime are NOT NULL (V2).
         return new EquipmentRequestResponse(r.getId(), r.getEventId(),
-                event != null ? event.getEventName() : "Unknown event", start, end,
+                event.getEventName(), event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant(),
                 r.getTechnicalRequirement(), r.getStatus().name(),
-                event != null ? event.getOrganisation() : null, requestedBy,
+                event.getOrganisation(), requestedBy,
                 shortfallRequests.contains(r.getId()), shortfallReports.get(r.getId()), items.getOrDefault(r.getId(), List.of()),
-                event != null ? statuses.journeyOf(event).name() : null, r.isRevision());
+                statuses.journeyOf(event).name(), r.isRevision());
     }
 
     private static Set<EquipmentRequestStatus> statusesFor(String status) {

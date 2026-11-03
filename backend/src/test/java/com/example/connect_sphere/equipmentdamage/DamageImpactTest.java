@@ -4,10 +4,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Clock;
 import java.time.Instant;
+import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.UUID;
@@ -25,6 +27,8 @@ import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageRepo
 import com.example.connect_sphere.equipmentdamage.service.DamageImpact;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
 import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.event.entity.Event;
+import com.example.connect_sphere.event.entity.EventStatus;
 
 /**
  * TS09 AC6, AC11: when a non-serialised kind's reservations exceed its
@@ -40,12 +44,13 @@ class DamageImpactTest {
     private final EquipmentLogRepository logs = mock(EquipmentLogRepository.class);
     private final EquipmentDamageReportRepository reports = mock(EquipmentDamageReportRepository.class);
     private final UUID equipmentId = UUID.randomUUID();
+    private final EquipmentRequestRepository requests = mock(EquipmentRequestRepository.class);
     private final Equipment kind = mock(Equipment.class);
     private DamageImpact impact;
 
     @BeforeEach
     void setUp() {
-        impact = new DamageImpact(logs, reports, mock(EquipmentRequestRepository.class),
+        impact = new DamageImpact(logs, reports, requests,
                 mock(EquipmentRequestLineRepository.class), Clock.fixed(FROM, ZoneOffset.UTC));
         when(kind.getId()).thenReturn(equipmentId);
         when(kind.getQuantity()).thenReturn(10);
@@ -100,5 +105,53 @@ class DamageImpactTest {
                 List.of(damaged(3, "2027-03-10T04:00:00Z"), damaged(2, "2027-03-10T00:00:00Z")));
 
         assertThat(impact.overCommitted(kind, FROM, UNTIL)).isEmpty();
+    }
+
+    @Test
+    @DisplayName("TS09 AC6, AC11 (boundary): a reservation running past the period's end is only checked up to that end")
+    void aReservationPastTheEndIsCutAtTheEnd() {
+        given(List.of(reserved(11, "2027-03-10T01:00:00Z", "2027-03-10T06:00:00Z")), List.of());
+
+        List<DamageImpact.Segment> over = impact.overCommitted(kind, FROM, Instant.parse("2027-03-10T03:00:00Z"));
+
+        assertThat(over).hasSize(1);
+        assertThat(over.get(0).from()).isEqualTo(Instant.parse("2027-03-10T01:00:00Z"));
+        assertThat(over.get(0).until()).isEqualTo(Instant.parse("2027-03-10T03:00:00Z"));
+        assertThat(over.get(0).excess()).isEqualTo(1);
+    }
+
+    @Test
+    @DisplayName("TS09 AC5, AC6 (boundary): damage that ends part-way through a reservation counts only until it ends")
+    void damageThatEndsCountsOnlyUntilItEnds() {
+        EquipmentDamageReport ended = damaged(3, "2027-03-10T00:00:00Z");
+        ended.setPeriodEnd(Instant.parse("2027-03-10T02:00:00Z"));
+        given(List.of(reserved(8, "2027-03-10T01:00:00Z", "2027-03-10T04:00:00Z")), List.of(ended));
+
+        List<DamageImpact.Segment> over = impact.overCommitted(kind, FROM, UNTIL);
+
+        assertThat(over).hasSize(1);
+        assertThat(over.get(0).from()).isEqualTo(Instant.parse("2027-03-10T01:00:00Z"));
+        assertThat(over.get(0).until()).isEqualTo(Instant.parse("2027-03-10T02:00:00Z"));
+        assertThat(over.get(0).working()).isEqualTo(7);
+    }
+
+    private static Event event(EventStatus status, String end) {
+        Event event = new Event();
+        event.setEventId(UUID.randomUUID());
+        event.setStatus(status);
+        event.setStartDatetime(OffsetDateTime.parse("2027-03-09T20:00:00Z"));
+        event.setEndDatetime(OffsetDateTime.parse(end));
+        return event;
+    }
+
+    @Test
+    @DisplayName("TS09 AC6 (boundary): an event is affected until its end; one that has ended or is cancelled is not, and its requests are not read")
+    void onlyARunningEventIsActive() {
+        assertThat(impact.isActive(event(EventStatus.confirmed, "2027-03-10T00:00:00Z"))).isTrue();
+        assertThat(impact.isActive(event(EventStatus.confirmed, "2027-03-09T23:59:59Z"))).isFalse();
+        assertThat(impact.isActive(event(EventStatus.cancelled, "2027-03-11T00:00:00Z"))).isFalse();
+
+        assertThat(impact.qualifies(event(EventStatus.pending, "2027-03-09T23:59:59Z"), equipmentId)).isFalse();
+        verifyNoInteractions(requests);
     }
 }

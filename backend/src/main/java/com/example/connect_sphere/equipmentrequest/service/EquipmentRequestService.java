@@ -281,10 +281,7 @@ public class EquipmentRequestService {
             throw new EquipmentRequestStateException(
                     "Technical Support said this request needs changing. Revise the request instead.");
         }
-        var held = reservations.reservationsForEvent(eventId);
-        if (!EquipmentRequirementCoverage.covered(event, id -> held.stream()
-                .filter(row -> id.equals(row.equipmentId()) && row.covers(event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))
-                .mapToLong(row -> row.quantity()).sum())) {
+        if (!EquipmentRequirementCoverage.coveredBy(event, reservations.reservationsForEvent(eventId))) {
             throw new EquipmentRequestStateException("The approved equipment items and quantities are not reserved. Revise the request for Technical Support review.");
         }
         String note = rawNote == null ? "" : rawNote.strip();
@@ -361,7 +358,7 @@ public class EquipmentRequestService {
     }
 
     private static void requireAssigned(UUID coordinatorId, Event event) {
-        if (coordinatorId == null || !coordinatorId.equals(event.getCoordinatorId())) {
+        if (!coordinatorId.equals(event.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(event.getEventId());
         }
     }

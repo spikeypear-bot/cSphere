@@ -59,6 +59,15 @@ class DevEquipmentSeederTest {
     }
 
     @Test
+    @DisplayName("TS09 (boundary): a format with no prefix is only its random part; one with no random part at all is refused")
+    void noPrefixOrNoRandomPart() {
+        assertThat(new SerialNumberPattern(null, "##").generate(RandomGenerator.getDefault())).matches("[0-9]{2}");
+        assertThatThrownBy(() -> new SerialNumberPattern("EPS-", null))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("A serial number needs a random part");
+    }
+
+    @Test
     @DisplayName("TS09 (happy): every seeded kind has a unique key and name, and serialised kinds fit VARCHAR(64)")
     void catalogueIsConsistent() {
         List<SeedEquipment> seeds = DevEquipmentSeeder.SEED_EQUIPMENT;

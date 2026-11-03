@@ -29,6 +29,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
 @Tag("unit")
@@ -177,6 +178,70 @@ class EquipmentRequestDecisionServiceTest {
         assertThat(response.status()).isEqualTo("rejected");
         assertThat(response.rejectReason()).isEqualTo("Not suitable");
         assertThat(request.getRejectReason()).isEqualTo("Not suitable");
+    }
+
+    private void refused(UpdateEquipmentRequestStatus input, HttpStatus status, String message) {
+        assertThatThrownBy(() -> service.updateStatus(REQUEST_ID, input))
+                .isInstanceOfSatisfying(ResponseStatusException.class, e -> {
+                    assertThat(e.getStatusCode()).isEqualTo(status);
+                    assertThat(e.getReason()).isEqualTo(message);
+                });
+        assertThat(request.getStatus()).isEqualTo(EquipmentRequestStatus.processing);
+        assertThat(request.getRejectReason()).isNull();
+        verify(releaser, never()).releaseForRequest(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @DisplayName("TS06 (negative): no status, an unknown one, or processing is refused and nothing changes")
+    void onlyApprovedOrRejectedCanBeChosen() {
+        refused(new UpdateEquipmentRequestStatus(null, null), HttpStatus.BAD_REQUEST, "status is required");
+        refused(new UpdateEquipmentRequestStatus("maybe", null), HttpStatus.BAD_REQUEST,
+                "status must be approved or rejected");
+        refused(new UpdateEquipmentRequestStatus("processing", null), HttpStatus.BAD_REQUEST,
+                "A reviewed request cannot be returned to processing");
+    }
+
+    @Test
+    @DisplayName("TS06 (conflict): a request that has already been reviewed cannot be reviewed again")
+    void aReviewedRequestCannotBeReviewedAgain() {
+        request.decide(EquipmentRequestStatus.rejected, "Not suitable");
+
+        assertThatThrownBy(() -> service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus("approved", null)))
+                .isInstanceOfSatisfying(ResponseStatusException.class, e -> {
+                    assertThat(e.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+                    assertThat(e.getReason()).isEqualTo("Only a processing equipment request can be reviewed");
+                });
+        assertThat(request.getStatus()).isEqualTo(EquipmentRequestStatus.rejected);
+        assertThat(request.getRejectReason()).isEqualTo("Not suitable");
+    }
+
+    @Test
+    @DisplayName("TS06 (boundary): a rejection reason of 2,001 characters is refused and nothing changes")
+    void aRejectionReasonIsAtMost2000Characters() {
+        refused(new UpdateEquipmentRequestStatus("rejected", "x".repeat(2001)), HttpStatus.BAD_REQUEST,
+                "Rejection reason must be 2000 characters or fewer");
+    }
+
+    @Test
+    @DisplayName("TS06 (negative): approving with a rejection reason is refused; a blank one is ignored")
+    void approvingTakesNoRejectionReason() {
+        when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(reservation(2, EVENT_START, EVENT_END)));
+
+        refused(new UpdateEquipmentRequestStatus("approved", "Looks wrong"), HttpStatus.BAD_REQUEST,
+                "A rejection reason can only be provided when rejecting");
+
+        service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus("approved", "  "));
+        assertThat(request.getStatus()).isEqualTo(EquipmentRequestStatus.approved);
+        assertThat(request.getRejectReason()).isNull();
+    }
+
+    @Test
+    @DisplayName("TS06 (negative): a completed event's request can no longer be reviewed, and nothing changes")
+    void aCompletedEventsRequestCannotBeReviewed() {
+        events.findById(EVENT_ID).orElseThrow().setStatus(com.example.connect_sphere.event.entity.EventStatus.completed);
+
+        refused(new UpdateEquipmentRequestStatus("rejected", "Too late"), HttpStatus.CONFLICT,
+                "This event has been cancelled or has finished, so its equipment request can no longer be reviewed.");
     }
 
     private static EquipmentRequestLine requestLine(int quantity) {
