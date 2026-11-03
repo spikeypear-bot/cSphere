@@ -121,7 +121,7 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
       await expect(officer.getByText(`${i + 1} of ${total} items complete`)).toBeVisible()
       if (i + 1 < total) await expect(officer.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled()
     }
-    await officer.getByRole('button', { name: 'Approve' }).click()
+    await officer.getByRole('button', { name: 'Approve', exact: true }).click()
     await expect(officer.locator('.safety-decision').getByText('Approved', { exact: true })).toBeVisible()
   })
 
