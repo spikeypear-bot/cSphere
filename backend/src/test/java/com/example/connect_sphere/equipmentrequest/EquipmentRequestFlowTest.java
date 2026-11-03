@@ -825,4 +825,127 @@ class EquipmentRequestFlowTest {
         assertThat(statusOf(requestId)).isEqualTo("processing");
         assertThat(suitableEntries(eventId)).isEmpty();
     }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (D37) (negative): a request with no note at all is refused and stays flagged")
+    void noNoteAtAllIsRefused() throws Exception {
+        UUID eventId = event();
+        UUID requestId = flagged(eventId);
+
+        markStillSuitable(eventId, requestId, "ec1", null)
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Say why the request is still suitable, in 2000 characters or fewer."));
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+        assertThat(suitableEntries(eventId)).isEmpty();
+    }
+
+    // ---- EC07: the remaining submission rules ----
+
+    @Test
+    @DisplayName("EC07 (boundary): technical requirements of 2,001 characters are refused and nothing is saved")
+    void technicalRequirementsAreAtMost2000Characters() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+
+        submit(eventId, "ec1", body("x".repeat(2001), item(projector, 1)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Technical requirements must be 2000 characters or fewer."));
+        assertThat(requestsFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("EC07 (boundary): items with no technical requirements, or requirements with no items, are each enough on their own")
+    void itemsOrRequirementsAloneAreEnough() throws Exception {
+        UUID itemsOnly = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requirementsOnly = event();
+
+        submit(itemsOnly, "ec1", "{\"items\":[" + item(projector, 2) + "]}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.technicalRequirement").value(""))
+                .andExpect(jsonPath("$.lines[0].quantity").value(2));
+        submit(requirementsOnly, "ec1", "{\"technicalRequirement\":\"  A lectern  \"}")
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.technicalRequirement").value("A lectern"))
+                .andExpect(jsonPath("$.lines").isEmpty());
+        assertThat(linesFor(requirementsOnly)).isZero();
+    }
+
+    @Test
+    @DisplayName("EC07 (negative): a missing item, an item with no equipment, or the same equipment twice is refused and nothing is saved")
+    void malformedItemsAreRefused() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+
+        submit(eventId, "ec1", "{\"technicalRequirement\":\"Stage\",\"items\":[null]}")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Each equipment item must have a valid selection and a quantity greater than zero."));
+        submit(eventId, "ec1", "{\"technicalRequirement\":\"Stage\",\"items\":[{\"quantity\":2}]}")
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value(
+                        "Each equipment item must have a valid selection and a quantity greater than zero."));
+        submit(eventId, "ec1", body("Stage", item(projector, 1), item(projector, 2)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.message").value("Select each equipment type only once and adjust its quantity."));
+
+        assertThat(requestsFor(eventId)).isZero();
+        assertThat(linesFor(eventId)).isZero();
+    }
+
+    @Test
+    @DisplayName("EC07 (happy): after Technical Support reject the only request, the coordinator can submit a new one")
+    void aNewRequestCanFollowARejection() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID rejected = submitted(eventId, body("Two screens", item(projector, 2)));
+        mvc.perform(patch("/api/equipment-requests/" + rejected + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"rejected\",\"rejectReason\":\"Not available\"}"))
+                .andExpect(status().isOk());
+        sync();
+
+        UUID second = submitted(eventId, body("One screen", item(projector, 1)));
+
+        assertThat(statusOf(second)).isEqualTo("processing");
+        assertThat(statusOf(rejected)).isEqualTo("rejected");
+        assertThat(requestsFor(eventId)).isEqualTo(2);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): a cancelled event's request cannot be revised and nothing changes")
+    void aCancelledEventsRequestCannotBeRevised() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        moveTo(eventId, "cancelled");
+
+        revise(eventId, "ec1", body("Three screens", item(projector, 3)))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message").value("This event has been cancelled or has finished, "
+                        + "so its equipment request can no longer be revised."));
+
+        assertThat(statusOf(requestId)).isEqualTo("processing");
+        assertThat(requestsFor(eventId)).isEqualTo(1);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): a revision of items alone is recorded on the timeline without requirement text")
+    void aRevisionOfItemsAloneIsRecorded() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        submitted(eventId, body("Two screens", item(projector, 2)));
+
+        revise(eventId, "ec1", "{\"items\":[" + item(projector, 3) + "]}").andExpect(status().isOk());
+
+        sync();
+        assertThat(jdbc.queryForList("SELECT message FROM event_request_activity WHERE event_id = ? "
+                + "AND activity_type = 'equipment_revised'", String.class, eventId))
+                .containsExactly("Revised the equipment request: now 3 items of equipment, replacing the previous request");
+    }
 }
