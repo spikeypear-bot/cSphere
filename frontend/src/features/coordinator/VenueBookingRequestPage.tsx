@@ -436,7 +436,7 @@ export function VenueBookingRequestPage() {
                   {submitError ? <p role="alert" className="error-text">{submitError}</p> : null}
                   <Button className="venue-request__submit-button" disabled={!canSubmit || submitting} onClick={() => void submit()}>
                     {submitting ? 'Submitting…' : selected.length === 1
-                      ? `${replacing ? 'Request replacement' : 'Request'} ${selected[0].venue.venueAddress}`
+                      ? replacing ? `Request replacement ${selected[0].venue.venueAddress}` : 'Request venue'
                       : `Request ${selected.length} venues`}
                   </Button>
                 </Card>
@@ -475,11 +475,14 @@ export function VenueBookingRequestPage() {
                       .map(replacement => BOOKING_STATUS_LABELS[replacement.status]).join(', ')}</p>
                   )}
                   {(b.status === 'approved' || b.status === 'attention' || b.status === 'rejected' || b.requiresAlternative) &&
-                    <Link to={`/coordinator/events/${eventId}/venue-booking?replacesBookingId=${b.bookingId}`}>Replace or reschedule this booking</Link>}
-                  {b.requirementOutstanding && (b.status === 'rejected' || b.status === 'cancelled') && <div>
+                    <Link className="venue-request__replacement-link" to={`/coordinator/events/${eventId}/venue-booking?replacesBookingId=${b.bookingId}`}>Replace or reschedule this booking</Link>}
+                  {b.requirementOutstanding && (b.status === 'rejected' || b.status === 'cancelled') && <div className="venue-request__withdrawal">
                     <p>This venue requirement still blocks event readiness.</p>
-                    <label>Reason this venue is no longer required<input value={withdrawReasons[b.bookingId] ?? ''}
-                      onChange={e => setWithdrawReasons(current => ({...current,[b.bookingId]:e.target.value}))} /></label>
+                    <div className="field">
+                      <label htmlFor={`withdraw-reason-${b.bookingId}`}>Reason this venue is no longer required</label>
+                      <input id={`withdraw-reason-${b.bookingId}`} value={withdrawReasons[b.bookingId] ?? ''}
+                        onChange={e => setWithdrawReasons(current => ({...current,[b.bookingId]:e.target.value}))} />
+                    </div>
                     <Button disabled={!withdrawReasons[b.bookingId]?.trim() || submitting} onClick={async () => {
                       setSubmitting(true);setSubmitError(null)
                       try {
@@ -537,17 +540,18 @@ export function VenueBookingRequestPage() {
 
 function RoomRequirements({input,event,onChange}:{input:BookingInput;event:EventDto;onChange:(value:BookingRequirements|undefined)=>void}) {
   const req=input.requirements
-  return <fieldset className="venue-request__timings"><legend>Requirements for this room</legend>
-    <label>Expected attendees (leave blank to use event attendance: {event.expectedAttendance})
-      <input type="number" min="1" step="1" value={req?.expectedAttendance ?? ''}
-        onChange={e => onChange({...req,expectedAttendance:e.target.value===''?null:Number(e.target.value)})} /></label>
-    <label><input type="checkbox" checked={req?.requiredFacilities != null}
+  return <fieldset className="venue-request__timings venue-request__requirements"><legend>Requirements for this room</legend>
+    <label>Expected attendees
+      <input type="number" min="1" step="1" value={req?.expectedAttendance ?? ''} placeholder={String(event.expectedAttendance)}
+        onChange={e => onChange({...req,expectedAttendance:e.target.value===''?null:Number(e.target.value)})} />
+      <span className="venue-request__hint">Leave blank to use the event attendance ({event.expectedAttendance}).</span></label>
+    <label className="venue-request__toggle"><input type="checkbox" checked={req?.requiredFacilities != null}
       onChange={e => onChange({...req,requiredFacilities:e.target.checked?[]:null})} />Choose room-specific facilities</label>
-    {req?.requiredFacilities != null && <div>{Object.entries(venueFacilityLabels).map(([key,label]) => <label key={key}>
+    {req?.requiredFacilities != null && <div className="venue-request__choices">{Object.entries(venueFacilityLabels).map(([key,label]) => <label key={key} className="venue-request__choice">
       <input type="checkbox" checked={req.requiredFacilities!.includes(key)} onChange={e => onChange({...req,requiredFacilities:e.target.checked?[...req.requiredFacilities!,key]:req.requiredFacilities!.filter(v=>v!==key)})} />{label}</label>)}</div>}
-    <label><input type="checkbox" checked={req?.accessibilityNeeds != null}
+    <label className="venue-request__toggle"><input type="checkbox" checked={req?.accessibilityNeeds != null}
       onChange={e => onChange({...req,accessibilityNeeds:e.target.checked?[]:null})} />Choose room-specific accessibility needs</label>
-    {req?.accessibilityNeeds != null && <div>{Object.entries(ACCESSIBILITY_LABELS).filter(([key])=>key!=='none').map(([key,label]) => <label key={key}>
+    {req?.accessibilityNeeds != null && <div className="venue-request__choices">{Object.entries(ACCESSIBILITY_LABELS).filter(([key])=>key!=='none').map(([key,label]) => <label key={key} className="venue-request__choice">
       <input type="checkbox" checked={req.accessibilityNeeds!.includes(key)} onChange={e => onChange({...req,accessibilityNeeds:e.target.checked?[...req.accessibilityNeeds!,key]:req.accessibilityNeeds!.filter(v=>v!==key)})} />{label}</label>)}</div>}
     <label>Room requirements (optional)<textarea maxLength={MAX_TEXT} value={req?.venueRequirements ?? ''}
       onChange={e => onChange({...req,venueRequirements:e.target.value || null})} /></label>
@@ -616,9 +620,11 @@ function VenueOptionCard({ option, attendance, selected, requestedStatus, onOpen
       disabled={disabled} onClick={onOpen}>
       <span className="venue-option__head">
         <span className="venue-option__name">{venue.venueAddress}</span>
-        <span className="venue-option__verdict">{VERDICT_LABELS[option.verdict]}</span>
-        {selected ? <span className="dash-badge dash-badge--success">Added</span> : null}
-        {requestedStatus !== undefined ? <span className="dash-badge dash-badge--neutral">Already requested</span> : null}
+        <span className="venue-option__statuses">
+          <span className="venue-option__verdict">{VERDICT_LABELS[option.verdict]}</span>
+          {selected ? <span className="dash-badge dash-badge--success">Added</span> : null}
+          {requestedStatus !== undefined ? <span className="dash-badge dash-badge--neutral">Already requested</span> : null}
+        </span>
       </span>
       <span className="venue-option__capacity">
         <span className="venue-option__bar" aria-hidden="true"><span style={{ width: `${fill}%` }} /></span>
@@ -685,7 +691,7 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
   return (
     <table className="venue-request__compare">
       <thead>
-        <tr><th scope="col">Requirement</th><th scope="col">Event needs</th><th scope="col">{venue.venueAddress} offers</th></tr>
+        <tr><th scope="col">Requirement</th><th scope="col">Event needs</th><th scope="col">Venue offers<small>{venue.venueAddress}</small></th></tr>
       </thead>
       <tbody>
         <tr data-ok={option.capacityOk}>
@@ -726,10 +732,12 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
         })}
         <tr>
           <th scope="row">Layout &amp; facilities</th>
-          <td>{input.requirements?.venueRequirements ?? event.venueRequirements}</td>
+          <td>{input.requirements?.venueRequirements ?? event.venueRequirements ?? 'None stated'}</td>
           <td>
-            {venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ')}
-            {venue.venueFacilities.length ? <> · {venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ')}</> : null}
+            <dl className="venue-request__offers">
+              <div><dt>Layouts</dt><dd>{venue.supportedLayouts.map((l) => venueLayoutLabels[l as VenueLayout] ?? l).join(', ') || '—'}</dd></div>
+              <div><dt>Facilities</dt><dd>{venue.venueFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ') || '—'}</dd></div>
+            </dl>
           </td>
         </tr>
         <tr>

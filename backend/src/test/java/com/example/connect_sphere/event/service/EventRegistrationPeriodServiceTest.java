@@ -71,6 +71,8 @@ class EventRegistrationPeriodServiceTest {
         when(events.findById(EVENT_ID)).thenReturn(Optional.of(event));
         when(registrations.findByEventIdOrderByRegisteredAtAsc(EVENT_ID)).thenReturn(java.util.List.of());
         when(requests.findByEventId(EVENT_ID)).thenReturn(Optional.of(origin));
+        when(requests.findRequestIdByEventId(EVENT_ID)).thenReturn(Optional.of(REQUEST_ID));
+        when(requests.findForUpdate(REQUEST_ID)).thenReturn(Optional.of(origin));
     }
 
     @Test

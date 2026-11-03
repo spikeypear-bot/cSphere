@@ -2,7 +2,7 @@
 import { expect, test } from '@playwright/test'
 import { apiGet, apiToken, signedIn } from './support.ts'
 
-test('DEV16 (cross-cutting): persisted rooms, shared markers and mobile layout work beneath the staff console', async ({ browser, request }, testInfo) => {
+test('DEV16 (cross-cutting): persisted rooms, shared markers and mobile layout work beneath the staff console', { tag: '@ui' }, async ({ browser, request }, testInfo) => {
   test.setTimeout(90_000)
   const token = await apiToken(request, 'vs1')
   const venues = await apiGet<{ venueId: string; venueName: string; venueAddress: string; latitude: number | null; longitude: number | null }[]>(request, token, '/api/venues')
@@ -44,13 +44,11 @@ test('DEV16 (cross-cutting): persisted rooms, shared markers and mobile layout w
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true)
   await page.screenshot({ path: testInfo.outputPath('venue-map-mobile.png'), fullPage: true })
   expect(errors).toEqual([])
-  const coordinator = await apiToken(request, 'ec1')
-  const denied = await request.get('/api/venue-staff/map/activity', { headers: { Authorization: `Bearer ${coordinator}` } })
-  expect(denied.status()).toBe(403)
+  // Other roles being refused the map data is VenueMapTest's "every non-staff role is denied both map reads".
   await page.context().close()
 })
 
-test('DEV16 (failure): failed map tiles preserve searchable venues and keyboard marker selection', async ({ browser, request }) => {
+test('DEV16 (failure): failed map tiles preserve searchable venues and keyboard marker selection', { tag: '@ui' }, async ({ browser, request }) => {
   const token = await apiToken(request, 'vs1')
   const venues = await apiGet<{ venueId: string; venueName: string; latitude: number | null }[]>(request, token, '/api/venues')
   const room = venues.find(v => v.latitude != null)!

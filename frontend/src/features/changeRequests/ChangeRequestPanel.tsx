@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useRefreshingResource } from '../../lib/useRefreshingResource'
 import { Link } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -24,31 +24,21 @@ export function ChangeRequestPanel({ eventId, requestId, journeyCode }: {
   journeyCode?: string | null
 }) {
   const { role } = useSession()
-  const [views, setViews] = useState<ChangeRequestView[] | null>(null)
-  const [failed, setFailed] = useState(false)
-  const [attempt, setAttempt] = useState(0)
   const query = requestId ? `requestId=${requestId}` : eventId ? `eventId=${eventId}` : null
-
-  useEffect(() => {
-    if (!query) return
-    let cancelled = false
-    apiClient.get<ChangeRequestView[]>(`/change-requests?${query}`)
-      .then((result) => {
-        if (cancelled) return
-        // Anything but a list is treated as a failed load.
-        setViews(Array.isArray(result) ? result : null)
-        setFailed(!Array.isArray(result))
-      })
-      .catch(() => { if (!cancelled) setFailed(true) })
-    return () => { cancelled = true }
-  }, [query, attempt])
+  const resource = useRefreshingResource(async () => {
+    const result = await apiClient.get<ChangeRequestView[]>(`/change-requests?${query}`, { cache: 'no-store' })
+    if (!Array.isArray(result)) throw new Error('Invalid change-request response.')
+    return result
+  }, query)
+  const views = resource.data
+  const failed = resource.error
 
   if (!query || !role) return null
   if (failed) {
     return (
       <p className="field-hint change-request__panel-error">
         Change requests could not be loaded.{' '}
-        <Button variant="ghost" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+        <Button variant="ghost" onClick={resource.retry}>Try again</Button>
       </p>
     )
   }

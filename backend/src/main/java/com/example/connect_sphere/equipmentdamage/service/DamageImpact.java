@@ -13,16 +13,16 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Component;
 
-import com.example.connect_sphere.equipment.Equipment;
-import com.example.connect_sphere.equipment.EquipmentLog;
-import com.example.connect_sphere.equipment.EquipmentAvailabilityService;
-import com.example.connect_sphere.equipment.EquipmentLogRepository;
-import com.example.connect_sphere.equipment.EquipmentStatusService;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.entity.EquipmentLog;
+import com.example.connect_sphere.equipment.service.EquipmentAvailabilityService;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.service.EquipmentStatusService;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageReport;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageReportRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 

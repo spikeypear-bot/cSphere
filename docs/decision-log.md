@@ -642,7 +642,16 @@ Each rule is one targeted query: `findOverlappingForUnit` for blocks and reserva
 
 **Why open only.** A report closes once every affected event has an outcome. At that point any block it asked for is a TS03 status period, which the first rule already checks. A serialised report must ask for a block (Faulty or Unavailable; a report without one is refused with 400, user decision 2026-10-25), so a closed serialised report always leaves its unit blocked through TS03 once no event holds it. If closed reports still counted, a closed report with no end date would make its unit unreservable for good, with no way to undo it. Before D35, TS09's replacement refused a unit with *any* overlapping report, open or closed. It now follows the same open-only rule.
 
-**Not changed.** Availability counts (D32) still count only blocked serialised units as out of action. A unit with an open report is usually reserved by the event the report affects, so it is already counted there, and counting it again would understate stock. Non-serialised damage is still counted by quantity (TS09 AC5).
+**Updated 3 November 2026 (user-authorised faulty/inventory repair, TS02/TS03/TS09).**
+Availability now counts serialised units with open damage reports as out of action,
+alongside Faulty/Unavailable status periods. Serial numbers are deduplicated across
+reports and blocks. A unit that is both reserved and out of action appears in both
+counts but reduces available stock only once. Unit-status reads (including inventory
+detail) also include overlapping open reports, so the reservation UI excludes them
+before suggesting serials. New automatic reservations continue choosing the next
+free working serial number. Existing damaged reservations retain the explicit TS09
+replacement/covered/short decision flow. Non-serialised damage remains counted by
+quantity (TS09 AC5).
 
 **Evidence:** `EquipmentBatchReservationFlowTest` (real PostgreSQL) covers:
 - a named unit with an open report refused, singly and in a batch, with nothing saved;
@@ -1104,3 +1113,26 @@ User instruction: carry out the audit fixes. The user subsequently chose shared 
 The user explicitly chose: rejected required venues block readiness until replacement approval or explicit withdrawal; healthy approved arrangements may be replaced or rescheduled at the same venue while retaining the original reservation until approval. This supersedes the different-venue restriction in the 25 October repair decision. Preserve shared VS access, independent reservations, live unavailability impact flags and historical records. See [implementation contract](multiple-venue-bookings.md).
 
 D20 additions: the assigned EC may read booking history and withdraw rejected/cancelled requirements under `/api/events/{eventId}/venue-bookings/{bookingId}`; staff history `/api/venue-bookings/{bookingId}/history` is VS-only. Assignment and booking/event membership are enforced in the service.
+
+### D39 — Release 1 cross-role integration repairs
+
+3 November 2026, branch `fix/fix-bugs`, explicitly authorised by the user.
+
+Registration capacity remains independent of expected attendance. An attendance
+change retaining capacity requires EO confirmation; approval checks the current
+confirmed-registration floor without deleting registrations. Capacity and period
+updates keep EventRequest and Event aligned. Change snapshots preserve closing time.
+
+V69 adds structured approved equipment requirements using EC07 catalogue IDs and
+quantities; free text remains supported. A proposal does not alter an EC request
+or reservation. Approval extends D37/TS11 reassessment; EC explicitly uses D36 to
+revise, and TS retains reservation/approval responsibility. Structured quantities
+must be covered by reservations before approval or a still-suitable decision.
+
+V70 adds the SO safety-review notice to the existing transactional outbox. The
+locked workflow transition produces one notice set per genuine review cycle.
+Existing refresh hooks underpin guarded staff refresh, without new infrastructure.
+V71 aligns legacy originating requests with the Event's authoritative registration
+settings; historical change proposals and attendee registrations are retained.
+See [repair contract and verification](release1-integration-repairs.md). The live
+backlog remains inaccessible here and requires the team’s normal synchronisation.

@@ -1,0 +1,9 @@
+.readiness-item .readiness-item__notes[hidden] { display: none; }
+.readiness-item .readiness-item__notes-toggle { margin: 0.5rem 0 0 1.5rem; }
+.safety-panel .safety-note-field {
+  width: 100%; min-height: 4.5rem; font: inherit;
+  box-sizing: border-box; padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hairline-strong); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink); resize: vertical;
+}
+.safety-panel .safety-note-field:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }

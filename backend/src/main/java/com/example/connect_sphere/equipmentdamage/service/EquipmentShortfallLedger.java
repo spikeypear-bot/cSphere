@@ -12,12 +12,12 @@ import org.springframework.web.server.ResponseStatusException;
 import com.example.connect_sphere.equipmentdamage.entity.EquipmentDamageOutcome;
 import com.example.connect_sphere.equipmentdamage.entity.ShortfallResolution;
 import com.example.connect_sphere.equipmentdamage.repository.EquipmentDamageOutcomeRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLine;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStateException;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.service.EquipmentRequestStateException;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 
 /**
  * TS09: the one place that knows how shortfalls change what an event is owed.

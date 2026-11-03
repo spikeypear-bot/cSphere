@@ -363,9 +363,10 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
 
     const savedBody = fetchMock.mock.calls
       .filter(([, init]) => init?.method === 'POST' || init?.method === 'PUT')
-      .map(([, init]) => JSON.parse(String(init?.body)) as { equipmentRequirements?: string | null })
+      .map(([, init]) => JSON.parse(String(init?.body)) as { equipmentRequirements?: string | null; equipmentItems?: { equipmentId: string; quantity: number }[] })
       .find((body) => body.equipmentRequirements?.includes('2 × Projector'))
     expect(savedBody?.equipmentRequirements).toContain('2 × Projector')
+    expect(savedBody?.equipmentItems).toEqual([{ equipmentId: 'projector-id', quantity: 2 }])
   })
 })
 

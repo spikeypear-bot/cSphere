@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useRefreshingResource } from '../../lib/useRefreshingResource'
 import { Link, Navigate, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -34,14 +35,16 @@ export function When({ iso }: { iso: string }) {
 
 export function ChangesTable({ view }: { view: ChangeRequestView }) {
   return (
-    <table className="change-request__diff">
-      <thead><tr><th scope="col">Detail</th><th scope="col">Before</th><th scope="col">Asked for</th></tr></thead>
-      <tbody>
-        {shownChanges(view.changes).map((c) => (
-          <tr key={c.field}><th scope="row">{c.label}</th><td>{c.before}</td><td><strong>{c.after}</strong></td></tr>
-        ))}
-      </tbody>
-    </table>
+    <div className="change-request__comparison" role="region" aria-label="Original and requested details" tabIndex={0}>
+      <table className="change-request__diff">
+        <thead><tr><th scope="col">Detail</th><th scope="col">Before</th><th scope="col">Asked for</th></tr></thead>
+        <tbody>
+          {shownChanges(view.changes).map((c) => (
+            <tr key={c.field}><th scope="row">{c.label}</th><td>{c.before}</td><td><strong>{c.after}</strong></td></tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   )
 }
 
@@ -54,11 +57,12 @@ export function ChangeRequestsPage() {
   const { role } = useSession()
   const location = useLocation()
   const navigate = useNavigate()
-  const [views, setViews] = useState<ChangeRequestView[] | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [notAssigned, setNotAssigned] = useState(false)
-  const [denied, setDenied] = useState(false)
-  const [attempt, setAttempt] = useState(0)
+  const resource = useRefreshingResource(() => apiClient.get<ChangeRequestView[]>(
+    '/change-requests?requestId=' + requestId), requestId ?? null)
+  const views = resource.data
+  const error = resource.error
+  const notAssigned = isNotAssigned(resource.cause)
+  const denied = resource.cause instanceof ApiClientError && [403, 404].includes(resource.cause.status)
   const [confirming, setConfirming] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
   const [justAsked] = useState(() => Boolean((location.state as { justAsked?: boolean } | null)?.justAsked))
@@ -70,34 +74,16 @@ export function ChangeRequestsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  useEffect(() => {
-    let cancelled = false
-    apiClient.get<ChangeRequestView[]>(`/change-requests?requestId=${requestId}`)
-      .then((result) => {
-        if (!cancelled) {
-          setViews(result)
-          setError(null)
-        }
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        if (isNotAssigned(err)) setNotAssigned(true)
-        // EO03 AC1: someone else's request; the server says "not found" either way.
-        else if (err instanceof ApiClientError && (err.status === 403 || err.status === 404)) setDenied(true)
-        setError(err instanceof ApiClientError ? err.message : 'The change requests could not be loaded.')
-      })
-    return () => { cancelled = true }
-  }, [requestId, attempt])
 
   async function withdraw(id: string) {
     setActionError(null)
     try {
       await apiClient.post(`/change-requests/${id}/withdraw`)
       setConfirming(null)
-      setAttempt((n) => n + 1)
+      resource.retry()
     } catch (err) {
       setActionError(err instanceof ApiClientError ? err.message : 'It could not be withdrawn. Please try again.')
-      setAttempt((n) => n + 1)
+      resource.retry()
     }
   }
 
@@ -132,7 +118,7 @@ export function ChangeRequestsPage() {
       {error ? (
         <div role="alert" className="change-request__error">
           <p>The change requests could not be loaded.</p>
-          <Button variant="secondary" onClick={() => setAttempt((n) => n + 1)}>Try again</Button>
+          <Button variant="secondary" onClick={() => resource.retry()}>Try again</Button>
         </div>
       ) : null}
       {!views && !error ? <p role="status">Loading change requests…</p> : null}

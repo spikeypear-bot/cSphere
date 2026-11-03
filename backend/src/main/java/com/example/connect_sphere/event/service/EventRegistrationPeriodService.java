@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,13 +29,7 @@ public class EventRegistrationPeriodService {
     private final EventRegistrationService registrationInfo;
     private final Clock clock;
 
-    @Autowired
     public EventRegistrationPeriodService(EventRepository events, EventRequestRepository eventRequests,
-            ActivityService activity, EventRegistrationService registrationInfo) {
-        this(events, eventRequests, activity, registrationInfo, Clock.systemUTC());
-    }
-
-    EventRegistrationPeriodService(EventRepository events, EventRequestRepository eventRequests,
             ActivityService activity, EventRegistrationService registrationInfo, Clock clock) {
         this.events = events;
         this.eventRequests = eventRequests;
@@ -48,6 +41,9 @@ public class EventRegistrationPeriodService {
     @Transactional
     public RegistrationInfoDto update(String organisation, UUID organiserId, UUID eventId,
             RegistrationPeriodRequest request) {
+        var origin = eventRequests.findRequestIdByEventId(eventId)
+                .flatMap(eventRequests::findForUpdate)
+                .orElseThrow(() -> new EventNotFoundException(eventId));
         Event event = events.findForUpdate(eventId)
                 .filter(value -> organisation != null && organisation.equals(value.getOrganisation()))
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -88,8 +84,6 @@ public class EventRegistrationPeriodService {
             throw invalid("The registration opening date and time cannot be in the past.");
         }
 
-        var origin = eventRequests.findByEventId(eventId)
-                .orElseThrow(() -> new IllegalStateException("The event's originating request was not found."));
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("registrationOpensAt", opensAt.toString());
         values.put("registrationClosesAt", closesAt.toString());
@@ -97,6 +91,9 @@ public class EventRegistrationPeriodService {
         event.setRegistrationOpensAt(opensAt);
         event.setRegistrationClosesAt(closesAt);
         events.save(event);
+        origin.setRegistrationOpensAt(opensAt);
+        origin.setRegistrationClosesAt(closesAt);
+        eventRequests.save(origin);
         activity.record(new ActivityService.Entry(origin.getRequestId(), eventId,
                 ActivityType.registration_period_updated, organiserId, "Registration period updated.",
                 null, null, null, null, values));

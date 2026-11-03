@@ -17,9 +17,10 @@ import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.common.status.JourneyStatusResolver;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.common.time.SingaporeTime;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.event.dto.EventReadinessDto;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
@@ -31,7 +32,7 @@ import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
-import com.example.connect_sphere.venueavailability.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.hold.VenueHoldService;
@@ -79,21 +80,12 @@ public class EventLifecycleService {
     private final JourneyStatusResolver statuses;
     private final Clock clock;
     @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.venuebooking.service.BookingPlanService bookingPlan;
-    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.VenueSafetyChecklist venueChecklist;
+    @org.springframework.beans.factory.annotation.Autowired private com.example.connect_sphere.safety.service.VenueSafetyChecklist venueChecklist;
 
     /** EO07: releases a cancelled event's active venue holds. Null only for
      * callers built before EO07 that never cancel an event. */
     private final VenueHoldService holds;
     @Autowired private com.example.connect_sphere.venue.repository.VenueRepository cancellationVenues;
-
-    @Autowired
-    public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
-            EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
-            AvailabilityService availability, ActivityService activity, NotificationService notifications,
-            UserRepository users, JourneyStatusResolver statuses, VenueHoldService holds) {
-        this(events, bookings, equipmentRequests, eventRequests, availability, activity, notifications, users,
-                statuses, Clock.systemUTC(), holds);
-    }
 
     /** Without EO07's hold release, for callers built before it. */
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
@@ -104,6 +96,7 @@ public class EventLifecycleService {
                 statuses, clock, null);
     }
 
+    @Autowired
     public EventLifecycleService(EventRepository events, VenueBookingRecordRepository bookings,
             EquipmentRequestRepository equipmentRequests, EventRequestRepository eventRequests,
             AvailabilityService availability, ActivityService activity, NotificationService notifications,
@@ -261,6 +254,10 @@ public class EventLifecycleService {
         event.setSafetyFeedback(null);
         events.save(event);
         record(event, ActivityType.sent_for_safety_review, coordinatorId, null, from);
+        notifications.createSafetyReviewRequestedNotifications(
+                users.findByRole(com.example.connect_sphere.user.entity.UserRole.safety_officer).stream()
+                        .map(com.example.connect_sphere.user.entity.User::getUserId).toList(),
+                eventId, event.getEventName());
         return readinessOf(event);
     }
 
@@ -275,6 +272,10 @@ public class EventLifecycleService {
         event.setStatus(EventStatus.pending);
         events.save(event);
         record(event, ActivityType.safety_review_withdrawn, coordinatorId, why, JourneyStatus.AWAITING_SAFETY_REVIEW);
+        notifications.createSafetyReviewWithdrawnNotifications(
+                users.findByRole(com.example.connect_sphere.user.entity.UserRole.safety_officer).stream()
+                        .map(com.example.connect_sphere.user.entity.User::getUserId).toList(),
+                eventId, event.getEventName(), why);
         return readinessOf(event);
     }
 
@@ -503,7 +504,7 @@ public class EventLifecycleService {
 
     // ---- helpers --------------------------------------------------------------
 
-    private static final ZoneId SINGAPORE = ZoneId.of("Asia/Singapore");
+    private static final ZoneId SINGAPORE = SingaporeTime.ZONE;
 
     /** The event's calendar date as people in Singapore read it. Stored times come back from
      * Postgres in UTC, so a plain toLocalDate() puts an event before 8 am SGT on the previous day. */

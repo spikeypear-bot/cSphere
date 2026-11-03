@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,14 +46,7 @@ public class EventReassignmentService {
     private final NotificationService notifications;
     private final Clock clock;
 
-    @Autowired
     public EventReassignmentService(EventRepository events, EventReassignmentRequestRepository requests,
-            EventRequestRepository eventRequests, UserRepository users, ActivityService activity,
-            NotificationService notifications) {
-        this(events, requests, eventRequests, users, activity, notifications, Clock.systemUTC());
-    }
-
-    EventReassignmentService(EventRepository events, EventReassignmentRequestRepository requests,
             EventRequestRepository eventRequests, UserRepository users, ActivityService activity,
             NotificationService notifications, Clock clock) {
         this.events = events;

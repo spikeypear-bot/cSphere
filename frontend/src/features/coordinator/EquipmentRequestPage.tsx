@@ -1,4 +1,8 @@
+import { EquipmentPicker, EquipmentSummary } from '../../components/equipment/EquipmentPicker'
+import { equipmentDraftFrom } from '../../lib/equipmentRequirements'
 import { useEffect, useState } from 'react'
+import { useRefreshingResource } from '../../lib/useRefreshingResource'
+import { ChangeRequestPanel } from '../changeRequests/ChangeRequestPanel'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
 import { Button } from '../../components/ui/Button'
 import { Card } from '../../components/ui/Card'
@@ -48,13 +52,19 @@ export function EquipmentRequestPage() {
   const shortfallId = params.get('shortfall')
   // TS11 AC12: Technical Support asked for action, so the same exception applies.
   const forChange = params.get('additional') === 'change'
+  const [loading, setLoading] = useState(true)
+  const live = useRefreshingResource(() => Promise.all([
+    apiClient.get<EventDto>(`/events/${eventId}`),
+    apiClient.get<EquipmentRequestDetails[]>(`/events/${eventId}/equipment-requests`),
+  ]), loading ? null : eventId ?? null)
   const [shortfall, setShortfall] = useState<EventEquipmentDamage | null>(null)
-  const [event, setEvent] = useState<EventDto | null>(null)
+  const [initialEvent, setEvent] = useState<EventDto | null>(null)
   const [catalogue, setCatalogue] = useState<EquipmentCatalogueItem[]>([])
-  const [requests, setRequests] = useState<EquipmentRequestDetails[]>([])
+  const [initialRequests, setRequests] = useState<EquipmentRequestDetails[]>([])
+  const event = live.data?.[0] ?? initialEvent
+  const requests = live.data?.[1] ?? initialRequests
   const [technicalRequirement, setTechnicalRequirement] = useState('')
   const [items, setItems] = useState<DraftLine[]>([])
-  const [loading, setLoading] = useState(true)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [notAssigned, setNotAssigned] = useState(false)
@@ -85,7 +95,11 @@ export function EquipmentRequestPage() {
         setItems([{ equipmentId: missing.equipmentId, quantity: missing.shortfall }])
         setTechnicalRequirement(`Replaces ${missing.shortfall} × ${missing.equipmentName} reported damaged.`)
       } else {
-        setTechnicalRequirement(loadedEvent.equipmentRequirements ?? '')
+        const approved = equipmentDraftFrom(loadedEvent.equipmentRequirements, loadedCatalogue)
+        setTechnicalRequirement(approved.notes)
+        if (!forChange) setItems(loadedEvent.equipmentItems?.length ? loadedEvent.equipmentItems
+          : Object.entries(approved.selected).map(([equipmentId, quantity]) => ({ equipmentId, quantity: Number(quantity) })))
+        else setItems([])
       }
     }).catch((err: unknown) => {
       if (!cancelled) {
@@ -96,7 +110,7 @@ export function EquipmentRequestPage() {
       if (!cancelled) setLoading(false)
     })
     return () => { cancelled = true }
-  }, [eventId, shortfallId])
+  }, [eventId, shortfallId, forChange])
 
   // An additional request for a shortfall sits beside the approved one; only a
   // request still awaiting review blocks it. A superseded request (EC-NEW3)
@@ -107,8 +121,6 @@ export function EquipmentRequestPage() {
     // EC-NEW3 (D37): a flagged request comes first, so a second one (TS09) can still be resolved.
     : requests.find((request) => request.status === 'attention')
       ?? requests.find((request) => request.status !== 'rejected' && request.status !== 'superseded')
-  const availableItems = catalogue.filter((equipment) =>
-    !items.some((item) => item.equipmentId === equipment.equipmentId))
   const hasDetails = technicalRequirement.trim() !== '' || items.length > 0
   const itemsAreValid = items.every((item) => Number.isInteger(item.quantity) && item.quantity > 0)
 
@@ -116,85 +128,22 @@ export function EquipmentRequestPage() {
   // differ only in their surrounding copy and submit button.
   const itemFields = (
     <>
+      <EquipmentPicker selectedOnly catalogue={catalogue}
+        selected={Object.fromEntries(items.map(item => [item.equipmentId, String(item.quantity)]))}
+        onToggle={(equipmentId, checked) => setItems(current => checked
+          ? [...current, { equipmentId, quantity: 1 }] : current.filter(item => item.equipmentId !== equipmentId))}
+        onQuantityChange={(equipmentId, quantity) => setItems(current => current.map(item => item.equipmentId === equipmentId
+          ? { ...item, quantity: Number(quantity) } : item))} disabled={submitting} />
       <label className="equipment-request__field">
         Technical requirements or notes
-        <textarea
-          value={technicalRequirement}
-          maxLength={2000}
-          rows={4}
-          onChange={(eventChange) => setTechnicalRequirement(eventChange.target.value)}
-          aria-describedby="equipment-request-hint"
-        />
+        <textarea value={technicalRequirement} maxLength={2000} rows={4}
+          onChange={change => setTechnicalRequirement(change.target.value)} aria-describedby="equipment-request-hint" />
       </label>
       <p id="equipment-request-hint" className="field-hint">
         Add a note or select at least one item. Event requirements are prefilled when available.
       </p>
-
-      <div className="equipment-request__items">
-        <div className="equipment-request__items-header">
-          <h2>Equipment items</h2>
-          <Button type="button" variant="secondary" onClick={addItem} disabled={!availableItems.length}>
-            Add item
-          </Button>
-        </div>
-        {items.length === 0 ? <p className="field-hint">No specific catalogue items added.</p> : null}
-        {items.map((item, index) => (
-          <div className="equipment-request__line" key={`${index}-${item.equipmentId}`}>
-            <label>
-              Equipment
-              <select
-                value={item.equipmentId}
-                onChange={(eventChange) => updateItem(index, 'equipmentId', eventChange.target.value)}
-              >
-                {catalogue.filter((equipment) =>
-                  equipment.equipmentId === item.equipmentId ||
-                  !items.some((other, otherIndex) =>
-                    otherIndex !== index && other.equipmentId === equipment.equipmentId))
-                  .map((equipment) => (
-                    <option key={equipment.equipmentId} value={equipment.equipmentId}>
-                      {equipment.equipmentName} ({equipment.totalQuantity} in catalogue)
-                    </option>
-                  ))}
-              </select>
-            </label>
-            <label>
-              Quantity
-              <input
-                type="number"
-                min="1"
-                step="1"
-                value={item.quantity}
-                onChange={(eventChange) => updateItem(index, 'quantity', eventChange.target.value)}
-              />
-            </label>
-            <Button
-              type="button"
-              variant="ghost"
-              aria-label={`Remove ${catalogue.find((equipment) => equipment.equipmentId === item.equipmentId)?.equipmentName ?? 'equipment'} item`}
-              onClick={() => setItems((current) => current.filter((_, itemIndex) => itemIndex !== index))}
-            >
-              Remove
-            </Button>
-          </div>
-        ))}
-      </div>
     </>
   )
-
-  function addItem() {
-    const firstAvailable = availableItems[0]
-    if (!firstAvailable) return
-    setItems((current) => [...current, { equipmentId: firstAvailable.equipmentId, quantity: 1 }])
-  }
-
-  function updateItem(index: number, field: keyof DraftLine, value: string) {
-    setItems((current) => current.map((item, itemIndex) => {
-      if (itemIndex !== index) return item
-      return field === 'quantity'
-        ? { ...item, quantity: Number(value) }
-        : { ...item, equipmentId: value }
-    }))
-  }
 
   async function submit() {
     if (!eventId || !hasDetails || !itemsAreValid || activeRequest) return
@@ -207,7 +156,7 @@ export function EquipmentRequestPage() {
         items,
         ...(shortfall ? { shortfallOutcomeId: shortfall.outcomeId } : {}),
       })
-      setRequests((current) => [...current, created])
+      live.setData(current => [current?.[0] ?? event!, [...(current?.[1] ?? requests), created]])
       setSuccess(shortfall
         ? 'Additional request for the shortfall submitted to Technical Support for review.'
         : forChange ? 'Additional request submitted to Technical Support for review.'
@@ -222,8 +171,9 @@ export function EquipmentRequestPage() {
   // EC-NEW3: pre-fills the form with the active request's own items so the
   // coordinator edits from what is there now, rather than starting blank.
   function startRevise(request: EquipmentRequestDetails) {
-    setTechnicalRequirement(request.technicalRequirement ?? '')
-    setItems(request.lines.map((line) => ({ equipmentId: line.equipmentId, quantity: line.quantity })))
+    setTechnicalRequirement(equipmentDraftFrom(request.technicalRequirement, catalogue).notes)
+    setItems(event?.equipmentItems?.length ? event.equipmentItems
+      : request.lines.map((line) => ({ equipmentId: line.equipmentId, quantity: line.quantity })))
     setError(null)
     setSuccess(null)
     setRevising(true)
@@ -237,7 +187,7 @@ export function EquipmentRequestPage() {
     try {
       const updated = await apiClient.patch<EquipmentRequestDetails>(
         `/events/${eventId}/equipment-request/${request.requestId}/still-suitable`, { note: suitableNote.trim() })
-      setRequests((current) => current.map((r) => r.requestId === updated.requestId ? updated : r))
+      live.setData(current => [current?.[0] ?? event!, (current?.[1] ?? requests).map((r) => r.requestId === updated.requestId ? updated : r)])
       setSuitableNote(null)
     } catch (err) {
       setError(err instanceof ApiClientError ? err.message : 'Could not update the equipment request.')
@@ -261,12 +211,12 @@ export function EquipmentRequestPage() {
         technicalRequirement: technicalRequirement.trim(),
         items,
       })
-      setRequests((current) => [
-        ...current.map((request) => request.requestId === activeRequest.requestId
+      live.setData(current => [current?.[0] ?? event!, [
+        ...(current?.[1] ?? requests).map((request) => ['processing', 'approved', 'attention'].includes(request.status)
           ? { ...request, status: 'superseded' as const }
           : request),
         revised,
-      ])
+      ]])
       setRevising(false)
       setSuccess('Equipment request revised. Technical Support will review the new request, '
         + 'and the event’s previous reservations were released.')
@@ -283,7 +233,8 @@ export function EquipmentRequestPage() {
   if (!event) return <p role="alert">Event not found.</p>
 
   return (
-    <section className="page page--compact">
+    <section className="page page--compact equipment-request-page">
+      <ChangeRequestPanel eventId={eventId} />
       <PageHeader
         title="Request equipment"
         description={`For ${event.eventName}`}
@@ -296,6 +247,13 @@ export function EquipmentRequestPage() {
 
       {error ? <p role="alert">{error}</p> : null}
       {success ? <Notice>{success}</Notice> : null}
+      {live.error && <p role="alert">Could not refresh equipment requests. {live.error}</p>}
+      {activeRequest && !revising && (event.equipmentItems?.length ?? 0) > 0 && <Card className="equipment-request__requirements">
+        <h2>Approved equipment requirements</h2>
+        <ul>{event.equipmentItems!.map(item => <li key={item.equipmentId}>
+          {item.quantity} × {catalogue.find(entry => entry.equipmentId === item.equipmentId)?.equipmentName ?? item.equipmentId}
+        </li>)}</ul>
+      </Card>}
       {shortfallId && !shortfall ? (
         <Notice tone="info">This shortfall can no longer take an additional request.</Notice>
       ) : null}
@@ -328,6 +286,10 @@ export function EquipmentRequestPage() {
             new request, and the event&rsquo;s current equipment reservations will be released.
           </p>
           {itemFields}
+          <Button variant="secondary" onClick={() => {
+            setItems(event.equipmentItems ?? [])
+            setTechnicalRequirement(equipmentDraftFrom(event.equipmentRequirements, catalogue).notes)
+          }}>Use approved equipment requirements</Button>
           <Button onClick={() => void reviseRequest()} disabled={!hasDetails || !itemsAreValid || submitting}>
             {submitting ? 'Revising…' : 'Submit revision'}
           </Button>
@@ -338,8 +300,9 @@ export function EquipmentRequestPage() {
       ) : activeRequest ? (
         <Card className="equipment-request__existing">
           <h2>Request already submitted</h2>
-          <p>
-            Status: <strong>{activeRequest.status === 'processing' ? 'Awaiting Technical Support review'
+          <p className="equipment-request__status">
+            Status: <strong className={`dash-badge dash-badge--${activeRequest.status === 'approved' ? 'success' : 'warning'}`}>
+              {activeRequest.status === 'processing' ? 'Awaiting Technical Support review'
               : activeRequest.status === 'attention' ? 'Needs attention' : 'Approved'}</strong>
           </p>
           {activeRequest.status === 'attention' ? (
@@ -352,13 +315,7 @@ export function EquipmentRequestPage() {
             </Notice>
           ) : null}
           {activeRequest.technicalRequirement ? <p>{activeRequest.technicalRequirement}</p> : null}
-          {activeRequest.lines.length ? (
-            <ul>
-              {activeRequest.lines.map((line) => (
-                <li key={line.equipmentId}>{line.quantity} × {line.equipmentName}</li>
-              ))}
-            </ul>
-          ) : null}
+          <EquipmentSummary items={activeRequest.lines} />
           {!additional ? (
             <Button type="button" variant="secondary" onClick={() => startRevise(activeRequest)}>
               Revise request

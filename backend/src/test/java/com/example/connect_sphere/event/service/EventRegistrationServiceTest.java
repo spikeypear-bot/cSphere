@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -30,12 +31,13 @@ import com.example.connect_sphere.event.repository.EventRepository;
  */
 @Tag("unit")
 @Tag("EO10")
+@Tag("AT01")
 class EventRegistrationServiceTest {
 
     private static final String ACME = "Acme Pte Ltd";
     private final EventRepository events = mock(EventRepository.class);
     private final EventRegistrationRepository regs = mock(EventRegistrationRepository.class);
-    private final EventRegistrationService service = new EventRegistrationService(events, regs);
+    private final EventRegistrationService service = new EventRegistrationService(events, regs, Clock.systemUTC());
     private final UUID id = UUID.randomUUID();
     private Event event;
 
@@ -47,6 +49,7 @@ class EventRegistrationServiceTest {
         event.setOrganisation(ACME);
         event.setRegistrationNeeds(true);
         event.setRegistrationCapacity(2);
+        event.setStatus(EventStatus.confirmed);
         // forOrganiser (EO10) reads with findById; updateCapacity (EO11) takes the row lock.
         when(events.findById(id)).thenReturn(Optional.of(event));
         when(events.findForUpdate(id)).thenReturn(Optional.of(event));
@@ -60,6 +63,21 @@ class EventRegistrationServiceTest {
         r.setRegisteredAt(OffsetDateTime.now());
         r.setStatus(status);
         return r;
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("AT01 (negative): an opening date in the past cannot open an unconfirmed event")
+    void initialPlanningAndReconfirmationPauseRegistration() {
+        event.setRegistrationOpensAt(OffsetDateTime.now().minusDays(1));
+        event.setStartDatetime(OffsetDateTime.now().plusDays(3));
+        when(regs.findByEventIdOrderByRegisteredAtAsc(id)).thenReturn(List.of());
+        for (var state : List.of(EventStatus.pending, EventStatus.awaiting_safety_review, EventStatus.safety_approved)) {
+            event.setStatus(state);
+            assertThat(service.forOrganiser(ACME, id).registrationState()).isEqualTo("not_yet_open");
+        }
+        event.setStatus(EventStatus.confirmed);
+        assertThat(service.forOrganiser(ACME, id).registrationState()).isEqualTo("open");
+        verify(events, never()).save(any());
     }
 
     // ---------------------------------------------------------------- EO10

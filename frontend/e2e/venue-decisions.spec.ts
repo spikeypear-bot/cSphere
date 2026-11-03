@@ -102,7 +102,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('100 ✗')
     await expect(coordinator.getByText('Capacity 100 is below the expected attendance of 150.').first()).toBeVisible()
     await expect(coordinator.getByText(`${small} cannot be booked yet`)).toBeVisible()
-    await expect(coordinator.getByRole('button', { name: `Request ${small}` })).toBeDisabled()
+    await expect(coordinator.getByRole('button', { name: 'Request venue', exact: true })).toBeDisabled()
   })
 
   await test.step('EC05 AC3, AC4, AC7: a suitable, free venue shows every requirement met, and can be requested', async () => {
@@ -112,7 +112,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('300 ✓')
     await expect(compare.getByRole('row', { name: /Availability/ })).toContainText('Available ✓')
     await expect(compare.getByRole('row', { name: /Required facilities/ })).toContainText('All provided ✓')
-    await coordinator.getByRole('button', { name: `Request ${hall}` }).click()
+    await coordinator.getByRole('button', { name: 'Request venue', exact: true }).click()
     await expect(coordinator.getByText(`Booking request for ${hall} sent to Venue Staff`)).toBeVisible()
   })
 
@@ -272,21 +272,20 @@ test('VS-C4 (conflict): a longer setup that would make two bookings overlap is r
     await expect(staff.getByRole('region', { name: 'Existing timing conflicts' })).toHaveCount(0)
   })
 
-  await test.step('VS-C4 AC2, AC4, AC6: a 90-minute setup on the afternoon booking is refused, naming the morning booking and its occupied period', async () => {
-    const refused = await request.put(`/api/venue-bookings/${second.bookingId}/timing`, { headers: await auth(request, 'vs1'),
-      data: { setupDurationMinutes: 90, turnaroundDurationMinutes: 0, timingNote: 'Stage build for the afternoon talk.',
-        previousSetupDurationMinutes: 0, previousTurnaroundDurationMinutes: 0 } })
-    expect(refused.ok()).toBeFalsy()
-    const body = await refused.json()
-    expect(body.message).toBe('These timings would introduce or extend a conflict. Reduce the occupied period or resolve the conflicting arrangements first.')
-    expect(body.conflicts).toEqual([expect.objectContaining({ bookingId: first.bookingId, eventName: morning,
-      effectiveStart: '2027-11-30T01:00:00Z', effectiveEnd: '2027-11-30T04:00:00Z' })])
+  await test.step('VS-C4 AC2, AC4, AC6: Venue Staff give the afternoon booking a 90-minute setup and are refused, naming the morning booking and its occupied period', async () => {
+    await staff.goto(`/venue-staff/bookings/${second.bookingId}`)
+    await staff.getByText('Edit booking timings', { exact: true }).click()
+    await staff.getByLabel('Setup (minutes)').fill('90')
+    await staff.getByLabel('Reason for booking timings').fill('Stage build for the afternoon talk.')
+    await staff.getByRole('button', { name: 'Save booking timings' }).click()
+    await expect(staff.getByText('These timings would introduce or extend a conflict. Reduce the occupied period or resolve the conflicting arrangements first.')).toBeVisible()
+    await expect(staff.getByRole('listitem').filter({ hasText: `${morning} — occupied` })).toContainText(/9(:00)?\s?am.*12(:00)?\s?pm/i)
   })
 
   await test.step('VS-C4 AC9, AC10: neither booking was changed', async () => {
     expect((await bookingsOf(request, first.eventId)).find((b) => b.bookingId === first.bookingId)!.status).toBe('approved')
     expect((await bookingsOf(request, second.eventId)).find((b) => b.bookingId === second.bookingId)!.status).toBe('approved')
-    await staff.reload()
+    await staff.goto(`/venue-staff/catalogue/${venueId}`)
     await expect(staff.getByRole('region', { name: 'Existing timing conflicts' })).toHaveCount(0)
   })
 })

@@ -3,6 +3,7 @@ package com.example.connect_sphere.notification.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -20,7 +21,7 @@ import com.example.connect_sphere.notification.repository.NotificationRepository
 @Tag("AT03")
 class RegistrationConfirmationNotificationTest {
     private final NotificationRepository repository = mock(NotificationRepository.class);
-    private final NotificationService service = new NotificationService(repository);
+    private final NotificationService service = new NotificationService(repository, Clock.systemUTC());
 
     @Test
     @DisplayName("AT03 (happy): registration identity controls the confirmation link independently of event snapshots")

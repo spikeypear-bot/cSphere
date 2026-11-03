@@ -31,7 +31,7 @@ import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepo
 @Tag("EC05")
 class VenueSearchServiceTest {
     private final VenueRepository venues = mock(VenueRepository.class);
-    private final com.example.connect_sphere.venueavailability.AvailabilityService availability = mock(com.example.connect_sphere.venueavailability.AvailabilityService.class);
+    private final com.example.connect_sphere.venueavailability.service.AvailabilityService availability = mock(com.example.connect_sphere.venueavailability.service.AvailabilityService.class);
     private final VenueMapper mapper = mock(VenueMapper.class);
     private final VenueSearchService service = new VenueSearchService(venues, availability, mapper);
 

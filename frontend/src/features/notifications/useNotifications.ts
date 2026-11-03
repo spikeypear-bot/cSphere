@@ -5,13 +5,13 @@ import type { NotificationDto } from '../../types/notification'
 import { NOTIFICATIONS_CHANGED_EVENT } from './notificationRefresh'
 
 const POLL_INTERVAL_MS = 30_000
-const ATTENDEE_POLL_INTERVAL_MS = 5_000
+const FAST_POLL_INTERVAL_MS = 5_000
 
 /**
  * EO09/EO19/EC-NEW4: owns fetching, polling and marking read for the
  * signed-in user's own notifications. Keeps EC-NEW4's visibility/focus refresh
- * and 30-second polling for staff. AT03 adds immediate refresh after a saved
- * registration and five-second attendee polling for delayed delivery.
+ * and 30-second polling for staff, with five-second polling for Safety Officers
+ * and attendees. AT03 adds immediate refresh after a saved registration.
  * Polling (not push) is a deliberate simplification: see docs/decision-log.md.
  */
 export function useNotifications() {
@@ -59,7 +59,7 @@ export function useNotifications() {
     poll()
     window.addEventListener(NOTIFICATIONS_CHANGED_EVENT, poll)
     // Also discover confirmations delivered later by the outbox or from another tab.
-    const timer = setInterval(poll, role === 'attendee' ? ATTENDEE_POLL_INTERVAL_MS : POLL_INTERVAL_MS)
+    const timer = setInterval(poll, role === 'attendee' || role === 'safety-officer' ? FAST_POLL_INTERVAL_MS : POLL_INTERVAL_MS)
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('focus', onVisible)
     return () => {

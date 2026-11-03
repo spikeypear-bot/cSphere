@@ -10,6 +10,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +34,7 @@ import com.example.connect_sphere.user.entity.UserRole;
 import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
-import com.example.connect_sphere.venueavailability.VenueArrangementChanged;
+import com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
 import com.example.connect_sphere.venuebooking.repository.VenueBookingRecordRepository;
@@ -53,7 +54,7 @@ class OrganiserVenueNoticesTest {
     private final VenueRepository venues = mock(VenueRepository.class);
     private final UserRepository users = mock(UserRepository.class);
     private final NotificationService notifications = mock(NotificationService.class);
-    private final OrganiserVenueNotices notices = new OrganiserVenueNotices(events, bookings, venues, users, notifications);
+    private final OrganiserVenueNotices notices = new OrganiserVenueNotices(events, bookings, venues, users, notifications, Clock.systemUTC());
 
     private final Event event = new Event();
     private final UUID organiser = UUID.randomUUID();

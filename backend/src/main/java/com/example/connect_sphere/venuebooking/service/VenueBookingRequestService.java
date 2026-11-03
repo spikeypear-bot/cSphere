@@ -1,5 +1,6 @@
 package com.example.connect_sphere.venuebooking.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -14,6 +15,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.common.status.JourneyStatus;
 import com.example.connect_sphere.event.entity.EventStatus;
@@ -56,7 +58,7 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
  */
 @Service
 public class VenueBookingRequestService {
-    private final com.example.connect_sphere.venueavailability.AvailabilityService availability;
+    private final com.example.connect_sphere.venueavailability.service.AvailabilityService availability;
 
     @Autowired(required = false)
     private com.example.connect_sphere.venuebooking.hold.VenueHoldService holdService;
@@ -87,6 +89,8 @@ public class VenueBookingRequestService {
     private final VenueOperatingHourRepository operatingHours;
     private final com.example.connect_sphere.event.service.EventLifecycleService lifecycle;
 
+    private final Clock clock;
+
     @Autowired
     public VenueBookingRequestService(
             EventRepository events,
@@ -99,8 +103,9 @@ public class VenueBookingRequestService {
             NotificationService notificationService,
             VenueOperationalIssueRepository operationalIssues,
             VenueOperatingHourRepository operatingHours,
-            com.example.connect_sphere.venueavailability.AvailabilityService availability,
-            com.example.connect_sphere.event.service.EventLifecycleService lifecycle) {
+            com.example.connect_sphere.venueavailability.service.AvailabilityService availability,
+            com.example.connect_sphere.event.service.EventLifecycleService lifecycle, Clock clock) {
+        this.clock = clock;
         this.lifecycle = lifecycle;
         this.availability = availability;
         this.events = events;
@@ -152,8 +157,8 @@ public class VenueBookingRequestService {
         final Event assessedEvent=event;
         OffsetDateTime start = requestedStart == null ? event.getStartDatetime() : requestedStart;
         OffsetDateTime end = requestedEnd == null ? event.getEndDatetime() : requestedEnd;
-        com.example.connect_sphere.venueavailability.EffectivePeriod.of(start, end,
-                new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0, 0));
+        com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start, end,
+                new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(0, 0));
         Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue = unavailableByVenue(start, end, setup, turnaround);
         Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue = hoursByVenue(start, end, setup, turnaround);
         return venues.findAll().stream()
@@ -235,9 +240,9 @@ public class VenueBookingRequestService {
             throw new InvalidVenueBookingException("Each venue must have an end date/time later than its start date/time.");
         }
         var defaults = availability.settings(venue.getVenueId());
-        var durations = new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(
-                com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(request.setupDurationMinutes(), defaults.setupMinutes()),
-                com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(request.turnaroundDurationMinutes(), defaults.turnaroundMinutes()));
+        var durations = new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(
+                com.example.connect_sphere.venueavailability.entity.EffectivePeriod.minutes(request.setupDurationMinutes(), defaults.setupMinutes()),
+                com.example.connect_sphere.venueavailability.entity.EffectivePeriod.minutes(request.turnaroundDurationMinutes(), defaults.turnaroundMinutes()));
         String timingNote = optionalText(request.timingNote(), "Timing reason");
         if (!durations.equals(defaults) && timingNote == null)
             throw new InvalidVenueBookingException("Explain why this booking needs different setup or turnaround durations.");
@@ -286,7 +291,7 @@ public class VenueBookingRequestService {
 
         VenueBookingRecord booking = new VenueBookingRecord();
         // The venue lock above makes these the same defaults used by the availability checks.
-        com.example.connect_sphere.venueavailability.EffectivePeriod.validate(durations);
+        com.example.connect_sphere.venueavailability.entity.EffectivePeriod.validate(durations);
         booking.setSetupDurationMinutes(durations.setupMinutes());
         booking.setTurnaroundDurationMinutes(durations.turnaroundMinutes());
         booking.setTimingNote(timingNote);
@@ -303,7 +308,7 @@ public class VenueBookingRequestService {
         booking.setBookingNotes(notes);
         booking.setSuitabilityNote(suitability.needsJustification() ? justification : null);
         booking.setSubmittedBy(coordinatorId);
-        booking.setSubmittedAt(OffsetDateTime.now());
+        booking.setSubmittedAt(OffsetDateTime.now(clock));
         VenueBookingRecord saved = bookings.save(booking);
         if(replacement) lifecycle.returnToPlanning(eventId,coordinatorId,"A replacement venue arrangement requires a new safety review.");
 
@@ -373,9 +378,9 @@ public class VenueBookingRequestService {
                 .anyMatch(b -> b.getStatus() == VenueBookingStatus.pending || b.getStatus() == VenueBookingStatus.approved || b.getStatus() == VenueBookingStatus.attention);
     }
 
-    private static com.example.connect_sphere.venueavailability.EffectivePeriod requestedPeriod(
+    private static com.example.connect_sphere.venueavailability.entity.EffectivePeriod requestedPeriod(
             Event event, Venue venue, SubmitVenueBookingRequest request) {
-        return com.example.connect_sphere.venueavailability.EffectivePeriod.of(
+        return com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(
                 request.startDatetime() == null ? event.getStartDatetime() : request.startDatetime(),
                 request.endDatetime() == null ? event.getEndDatetime() : request.endDatetime(),
                 requestedDurations(venue, request.setupDurationMinutes(), request.turnaroundDurationMinutes()));
@@ -413,7 +418,7 @@ public class VenueBookingRequestService {
             lifecycle.returnToPlanning(eventId, coordinatorId, "An approved venue booking was cancelled."
                     + (why == null ? "" : " " + why));
             if (arrangementEvents != null) {
-                arrangementEvents.publishEvent(new com.example.connect_sphere.venueavailability.VenueArrangementChanged(
+                arrangementEvents.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged(
                         eventId, List.of(bookingId), "A confirmed venue booking for your event was cancelled.", why));
             }
         }
@@ -460,7 +465,7 @@ public class VenueBookingRequestService {
     private VenueOptionDto option(Event event, Venue venue, List<VenueOptionDto.ConflictDto> conflicts,
             List<VenueOptionDto.UnavailablePeriodDto> unavailable,
             List<VenueOptionDto.UnavailablePeriodDto> hoursUnavailable,
-            OffsetDateTime start, OffsetDateTime end, com.example.connect_sphere.venueavailability.AvailabilityModels.Settings durations) {
+            OffsetDateTime start, OffsetDateTime end, com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings durations) {
         VenueSuitability suitability = VenueSuitability.of(event, venue);
         List<String> reasons = new ArrayList<>();
         var recorded = availability.unavailablePeriods(venue.getVenueId(), start, end, durations);
@@ -496,17 +501,17 @@ public class VenueBookingRequestService {
     }
 
     private List<VenueOptionDto.ConflictDto> conflicts(Event event, Venue venue, OffsetDateTime start, OffsetDateTime end,
-            com.example.connect_sphere.venueavailability.AvailabilityModels.Settings durations) {
+            com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings durations) {
         return availability.conflicts(venue.getVenueId(), event.getEventId(), start, end, durations)
                 .stream().map(c -> new VenueOptionDto.ConflictDto(VenueOptionDto.ConflictDto.ANOTHER_EVENT,
                         c.effectiveStart(), c.effectiveEnd())).toList();
     }
 
-    private static com.example.connect_sphere.venueavailability.AvailabilityModels.Settings requestedDurations(
+    private static com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings requestedDurations(
             Venue venue, java.math.BigDecimal setup, java.math.BigDecimal turnaround) {
-        return new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(
-                com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(setup, venue.getSetupMinutes()),
-                com.example.connect_sphere.venueavailability.EffectivePeriod.minutes(turnaround, venue.getTurnaroundMinutes()));
+        return new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(
+                com.example.connect_sphere.venueavailability.entity.EffectivePeriod.minutes(setup, venue.getSetupMinutes()),
+                com.example.connect_sphere.venueavailability.entity.EffectivePeriod.minutes(turnaround, venue.getTurnaroundMinutes()));
     }
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(OffsetDateTime start, OffsetDateTime end,
@@ -523,7 +528,7 @@ public class VenueBookingRequestService {
                         .toList()));
         if (operationalIssues == null) return unavailable;
         var occupiedPeriods = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
-                venue -> com.example.connect_sphere.venueavailability.EffectivePeriod.of(start,
+                venue -> com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start,
                         end, requestedDurations(venue, setup, turnaround))));
         operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(occupiedPeriods.keySet()))
                 .stream()
@@ -551,12 +556,12 @@ public class VenueBookingRequestService {
         var venueList = venues.findAll();
         List<UUID> ids = venueList.stream().map(Venue::getVenueId).toList();
         var periods = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
-                venue -> com.example.connect_sphere.venueavailability.EffectivePeriod.of(start,
+                venue -> com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start,
                         end, requestedDurations(venue, setup, turnaround))));
         Map<UUID, List<VenueOperatingHour>> grouped = operatingHours.findByVenueIdIn(ids).stream()
                 .collect(Collectors.groupingBy(VenueOperatingHour::getVenueId));
         return ids.stream().filter(id -> grouped.getOrDefault(id, List.of()).stream().noneMatch(hour ->
-                com.example.connect_sphere.venueavailability.OperatingHours.covers(hour.getDayOfWeek(), hour.getOpenTime(), hour.getCloseTime(), periods.get(id))))
+                com.example.connect_sphere.venueavailability.service.OperatingHours.covers(hour.getDayOfWeek(), hour.getOpenTime(), hour.getCloseTime(), periods.get(id))))
                 .collect(Collectors.toMap(id -> id, id -> List.of(new VenueOptionDto.UnavailablePeriodDto(
                         grouped.containsKey(id) ? "No operating hours cover the full occupied period, including setup and turnaround"
                                 : "No operating hours have been configured",
@@ -579,10 +584,10 @@ public class VenueBookingRequestService {
 
     /** Trimmed; blank becomes null; over the limit is refused. */
     private static final java.time.format.DateTimeFormatter SGT = java.time.format.DateTimeFormatter
-            .ofPattern("d MMM yyyy, hh:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
+            .ofPattern("d MMM yyyy, hh:mm a", java.util.Locale.ENGLISH).withZone(SingaporeTime.ZONE);
 
     /** "15 Feb 2027, 08:00 am – 15 Feb 2027, 06:00 pm (Singapore time): Carpet replacement", as the screens write times. */
-    private static String describe(com.example.connect_sphere.venueavailability.AvailabilityModels.Period period) {
+    private static String describe(com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Period period) {
         String when = sgt(period.startDateTime()) + " – " + sgt(period.endDateTime()) + " (Singapore time)";
         return period.reason() == null || period.reason().isBlank() ? when : when + ": " + period.reason();
     }

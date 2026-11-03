@@ -32,6 +32,10 @@ public interface EventRequestRepository extends JpaRepository<EventRequest, UUID
      * single result is safe. */
     Optional<EventRequest> findByEventId(UUID eventId);
 
+    /** Locate the row without caching its fields before waiting for its write lock. */
+    @Query("SELECT r.requestId FROM EventRequest r WHERE r.eventId = :eventId")
+    Optional<UUID> findRequestIdByEventId(@Param("eventId") UUID eventId);
+
     /** Every state change (submit, assign, clarify, resubmit, approve,
      * reject) loads the row with this. SELECT ... FOR UPDATE makes a second
      * concurrent action on the same request wait for the first to commit and

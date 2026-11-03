@@ -48,12 +48,12 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
     await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
     await coordinator.getByPlaceholder('Search by address or details').fill(venueName)
     await addVenueToRequest(coordinator, new RegExp(venueName))
-    await coordinator.getByRole('button', { name: `Request ${venueName}` }).click()
+    await coordinator.getByRole('button', { name: 'Request venue', exact: true }).click()
     await expect(coordinator.getByText(`Booking request for ${venueName} sent to Venue Staff`)).toBeVisible()
     await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
     await coordinator.getByPlaceholder('Search by address or details').fill(breakoutName)
     await addVenueToRequest(coordinator, new RegExp(breakoutName))
-    await coordinator.getByRole('button', { name: `Request ${breakoutName}` }).click()
+    await coordinator.getByRole('button', { name: 'Request venue', exact: true }).click()
     await expect(coordinator.getByText(`Booking request for ${breakoutName} sent to Venue Staff`)).toBeVisible()
   })
 
@@ -121,7 +121,7 @@ test('VS17 EC-C2 (happy): golden path confirms two independent rooms with every 
       await expect(officer.getByText(`${i + 1} of ${total} items complete`)).toBeVisible()
       if (i + 1 < total) await expect(officer.getByRole('button', { name: 'Approve', exact: true })).toBeDisabled()
     }
-    await officer.getByRole('button', { name: 'Approve' }).click()
+    await officer.getByRole('button', { name: 'Approve', exact: true }).click()
     await expect(officer.locator('.safety-decision').getByText('Approved', { exact: true })).toBeVisible()
   })
 

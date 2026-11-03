@@ -5,6 +5,18 @@ browser against the real backend and database. They are deliberately few:
 E2E tests are slow and the most prone to flakiness, so the unit and
 integration tests do the detailed checking (Week 9's test pyramid).
 
+Two Playwright projects (see `playwright.config.ts`); `npm run test:e2e` runs both:
+
+- **`e2e`**: journeys through the real UI, the real backend and a real database.
+- **`ui`**: tests tagged `{ tag: '@ui' }` that need a real browser (layout,
+  scrolling, gestures, the map) but check one screen, often against mocked API
+  responses: `booking-scroll`, `venue-map-layout`, `venue-map`, the first two
+  `coordinator-venue-map` tests and `attendee-badges`. Run one with
+  `npx playwright test --project=ui`.
+
+A check that needs no browser (the server refusing a request, a role getting
+403) belongs in a backend integration test, not here.
+
 `tentative-holds.spec.ts` covers VS-C3 create → calendar display → release →
 re-hold → conversion, retaining one booking and the event's Planning status.
 Run it alongside `golden-path.spec.ts` when changing hold/booking integration.

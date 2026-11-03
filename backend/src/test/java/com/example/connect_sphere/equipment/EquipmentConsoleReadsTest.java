@@ -7,6 +7,19 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import com.example.connect_sphere.equipment.dto.EquipmentCatalogueResponse;
+import com.example.connect_sphere.equipment.dto.EquipmentDetailResponse;
+import com.example.connect_sphere.equipment.dto.StatusPeriodResponse;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.entity.EquipmentStatus;
+import com.example.connect_sphere.equipment.entity.EquipmentStatusPeriod;
+import com.example.connect_sphere.equipment.entity.SerialisedEquipment;
+import com.example.connect_sphere.equipment.entity.SerialisedEquipmentId;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
+import com.example.connect_sphere.equipment.repository.EquipmentStatusPeriodRepository;
+import com.example.connect_sphere.equipment.repository.SerialisedEquipmentRepository;
+import com.example.connect_sphere.equipment.service.EquipmentAvailabilityService;
+import com.example.connect_sphere.equipment.service.EquipmentCatalogueService;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.ZoneOffset;
@@ -99,11 +112,11 @@ class EquipmentConsoleReadsTest {
                 unit(projectorsId, "PJ-1"), unit(projectorsId, "PJ-2"), unit(projectorsId, "PJ-3"));
         when(units.findByIdEquipmentIdOrderByIdSerialNumberAsc(projectorsId)).thenReturn(three);
         EquipmentStatusPeriod startsNow = new EquipmentStatusPeriod(projectorsId, "PJ-1", EquipmentStatus.UNAVAILABLE,
-                NOW, null);
+                NOW, null, Instant.now());
         EquipmentStatusPeriod endedNow = new EquipmentStatusPeriod(projectorsId, "PJ-2", EquipmentStatus.FAULTY,
-                FROM, NOW);
+                FROM, NOW, Instant.now());
         EquipmentStatusPeriod later = new EquipmentStatusPeriod(projectorsId, "PJ-2", EquipmentStatus.FAULTY,
-                NOW.plusSeconds(1), null);
+                NOW.plusSeconds(1), null, Instant.now());
         when(periods.findByEquipmentIdOrderByPeriodStartAsc(projectorsId))
                 .thenReturn(List.of(endedNow, startsNow, later));
 

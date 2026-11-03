@@ -12,7 +12,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.server.ResponseStatusException;
 
-import com.example.connect_sphere.equipment.EquipmentStatus;
+import com.example.connect_sphere.equipment.entity.EquipmentStatus;
 import com.example.connect_sphere.equipmentdamage.dto.ReportDamageRequest;
 import com.example.connect_sphere.equipmentdamage.entity.DamageBlockStatus;
 

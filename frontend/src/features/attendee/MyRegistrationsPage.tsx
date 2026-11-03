@@ -10,7 +10,7 @@ import './AttendeePages.css'
 
 export function MyRegistrationsPage() {
   const { data, error, retry } = useRegistrations<RegistrationDetails[]>('/attendee/registrations')
-  return <main className="page attendee-event-details">
+  return <main className="page attendee-overview attendee-event-details">
     <PageHeader eyebrow="Attendee" title="My Registrations" description="Your registrations and history, with the latest event status."
       actions={<Link className="button button--secondary" to="/attendee/browse">Browse events</Link>} />
     {error ? <Card className="attendee-state-card">

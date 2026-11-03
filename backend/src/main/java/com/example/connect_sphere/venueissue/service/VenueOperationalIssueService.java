@@ -25,7 +25,7 @@ import com.example.connect_sphere.venueissue.repository.VenueOperationalIssueRep
 @Service
 public class VenueOperationalIssueService {
     @org.springframework.beans.factory.annotation.Autowired
-    private com.example.connect_sphere.venueavailability.AvailabilityRepository availability;
+    private com.example.connect_sphere.venueavailability.repository.AvailabilityRepository availability;
     @org.springframework.beans.factory.annotation.Autowired
     private org.springframework.context.ApplicationEventPublisher publisher;
     private static final int MAX_DESCRIPTION_LENGTH = 2000;
@@ -63,13 +63,13 @@ public class VenueOperationalIssueService {
                 b.effectiveStart().isBefore(request.affectedUntil()) && b.effectiveEnd().isAfter(request.affectedFrom())).toList();
             // Same durable lifecycle handling as recorded unavailability; preserve all commitments.
             availability.notifyOperationalIssue(venueId,affected,request.description().strip());
-            if (!affected.isEmpty()) publisher.publishEvent(new com.example.connect_sphere.venueavailability.VenueBecameUnavailable(
+            if (!affected.isEmpty()) publisher.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueBecameUnavailable(
                 affected.stream().map(b -> b.eventId()).distinct().toList(),userId,"A venue operational issue requires review: "+request.description().strip()));
             // EO-C1: the organisers of affected events that have been confirmed.
             affected.stream().collect(java.util.stream.Collectors.groupingBy(b -> b.eventId(),
                     java.util.LinkedHashMap::new, java.util.stream.Collectors.mapping(b -> b.bookingId(),
                             java.util.stream.Collectors.toList())))
-                    .forEach((eventId, ids) -> publisher.publishEvent(new com.example.connect_sphere.venueavailability.VenueArrangementChanged(
+                    .forEach((eventId, ids) -> publisher.publishEvent(new com.example.connect_sphere.venueavailability.entity.VenueArrangementChanged(
                             eventId, ids, "Venue Staff reported an operational issue at a venue for your event.",
                             request.description().strip())));
         }

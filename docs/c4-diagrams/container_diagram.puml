@@ -5,17 +5,20 @@ LAYOUT_WITH_LEGEND()
 
 title Container diagram for ConnectSphere
 
-Person(user, "ConnectSphere User", "Event Organiser, Coordinator, Venue Staff, Technical Support, or Attendee")
+Person(user, "ConnectSphere User", "Event Organiser, Event Coordinator Lead, Event Coordinator, Venue Staff, Technical Support Staff, Safety Officer or Attendee")
+
+System_Ext(osm, "OpenStreetMap tile server", "Serves the map tiles behind the venue map")
 
 System_Boundary(connectSphere, "ConnectSphere") {
-    Container(spa, "Frontend App", "React, TypeScript, Vite", "Provides role-based user interfaces and consumes backend REST APIs")
+    Container(spa, "Frontend App", "React, TypeScript, Vite, Leaflet", "Role-based pages in the browser; keeps the JWT and calls the REST API")
 
-    Container(api, "Backend API", "Java, Spring Boot", "Provides event request and venue management services")
+    Container(api, "Backend API", "Java, Spring Boot, Spring Security", "REST API that checks JWTs and enforces role and data scoping; runs scheduled jobs for hold expiry and reminders, the notification outbox and the venue replan queue")
 
-    ContainerDb(db, "Database", "PostgreSQL", "Stores all event and venue data")
+    ContainerDb(db, "Database", "PostgreSQL, Flyway migrations", "Users, events, requests, venues, bookings, equipment, safety reviews, registrations and notifications")
 }
 
-Rel(user, spa, "Uses", "HTTP")
-Rel(spa, api, "Sends requests to", "HTTP")
-Rel(api, db, "Reads and writes data", "SQL")
+Rel(user, spa, "Uses", "HTTPS")
+Rel(spa, api, "Calls", "JSON/HTTPS, JWT bearer")
+Rel(spa, osm, "Loads map tiles from", "HTTPS")
+Rel(api, db, "Reads and writes", "JDBC/SQL")
 @enduml

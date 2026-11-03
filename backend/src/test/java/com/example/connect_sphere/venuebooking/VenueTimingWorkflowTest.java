@@ -3,6 +3,8 @@ package com.example.connect_sphere.venuebooking;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.example.connect_sphere.venueavailability.service.AvailabilityService;
+import com.example.connect_sphere.venueavailability.service.TimingConflictService;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.*;
@@ -20,8 +22,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.dto.*;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
-import com.example.connect_sphere.venueavailability.*;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.*;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.*;
 import com.example.connect_sphere.venuebooking.dto.*;
 import com.example.connect_sphere.venuebooking.service.*;
 

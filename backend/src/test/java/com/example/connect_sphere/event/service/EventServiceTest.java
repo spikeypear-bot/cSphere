@@ -10,6 +10,7 @@ import static org.mockito.Mockito.when;
 import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.verifyNoInteractions;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.Collection;
 import java.util.List;
@@ -65,7 +66,7 @@ class EventServiceTest {
     void setUp() {
         MockitoAnnotations.openMocks(this);
         service = new EventService(repository, eventRequestRepository, userRepository, notificationService,
-                new JourneyStatusResolver(repository), lifecycle);
+                new JourneyStatusResolver(repository, Clock.systemUTC()), lifecycle);
         when(repository.save(any())).thenAnswer(inv -> inv.getArgument(0));
     }
 

@@ -1,3 +1,4 @@
+// @stories EO10 EO11
 import { cleanup, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,7 +17,7 @@ const base = {
 }
 
 // EO10
-describe('OrganiserRegistrations (EO10)', () => {
+describe('EO10 EO11 OrganiserRegistrations', () => {
   beforeEach(() => vi.mocked(apiClient.get).mockReset())
   afterEach(cleanup)
 
@@ -78,4 +79,36 @@ describe('OrganiserRegistrations (EO10)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('existing capacity is unchanged')
     expect(screen.getByText('Places remaining').previousSibling).toHaveTextContent('4')
   })
+  it('EO10 (happy): shows ten attendees per page and allows forward and backward navigation', async () => {
+    vi.mocked(apiClient.get).mockResolvedValue({ ...base, attendees: Array.from({ length: 21 }, (_, index) => ({
+      ...base.attendees[0], registrationId: `r${index}`, name: `Attendee ${index + 1}`, reference: `REF-${index + 1}`,
+    })) })
+    render(<OrganiserRegistrations eventId="e1" />)
+    expect(await screen.findByText('Attendee 1')).toBeInTheDocument()
+    expect(screen.getAllByRole('row')).toHaveLength(11)
+    expect(screen.queryByText('Attendee 11')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Previous' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getByText('Attendee 11')).toBeInTheDocument()
+    expect(screen.queryByText('Attendee 1')).not.toBeInTheDocument()
+    expect(screen.getByText(/Showing 11–20 of 21 attendees/)).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Next' }))
+    expect(screen.getAllByRole('row')).toHaveLength(2)
+    expect(screen.getByText('Attendee 21')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Next' })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: 'Previous' }))
+    expect(screen.getByText('Attendee 11')).toBeInTheDocument()
+  })
+
+  it.each([0, 10])('EO10 (boundary): hides pagination for %s attendees', async (count) => {
+    vi.mocked(apiClient.get).mockResolvedValue({ ...base, attendees: Array.from({ length: count }, (_, index) => ({
+      ...base.attendees[0], registrationId: `r${index}`, name: `Attendee ${index + 1}`,
+    })) })
+    render(<OrganiserRegistrations eventId="e1" />)
+    await screen.findByRole('heading', { name: 'Registration information' })
+    expect(screen.queryByRole('navigation', { name: 'Registered attendees pages' })).not.toBeInTheDocument()
+    if (count) expect(screen.getAllByRole('row')).toHaveLength(11)
+    else expect(screen.getByText('No registrations yet.')).toBeInTheDocument()
+  })
+
 })

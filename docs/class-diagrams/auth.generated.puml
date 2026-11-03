@@ -37,11 +37,20 @@ class AuthenticationConfig {
 }
 
 
+class ClockConfig {
+	{method} +clock () : Clock
+}
+
+
 class JwtConfig {
 	{field} -key : SecretKey
 	{method} +jwtAuthenticationConverter () : JwtAuthenticationConverter
 	{method} +jwtDecoder () : JwtDecoder
 	{method} +jwtEncoder () : JwtEncoder
+}
+
+
+class SchedulingConfig {
 }
 
 
@@ -138,6 +147,7 @@ class InvalidRefreshTokenException {
 
 class RefreshTokenService {
 	{field} {static} -TOKEN_BYTES : int
+	{field} -clock : Clock
 	{field} {static} -log : Logger
 	{field} -random : SecureRandom
 	{field} -ttl : Duration
@@ -153,6 +163,7 @@ class RefreshTokenService.Rotation {
 
 
 class TokenService {
+	{field} -clock : Clock
 	{field} -encoder : JwtEncoder
 	{field} -issuer : String
 	{field} -ttl : Duration

@@ -60,6 +60,28 @@ describe('EquipmentRequestPage (EC07)', () => {
     window.localStorage.clear()
   })
 
+  it('EC07 (happy): starts with EO selections, reveals other equipment only on edit and submits separate notes', async () => {
+    seedSession('coordinator')
+    const calls = stubApi({ ...getBaseRoutes(),
+      [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, { ...event, equipmentItems: [{ equipmentId: 'mic-1', quantity: 2 }],
+        equipmentRequirements: 'Equipment items:\n2 × Wireless microphone\n\nAdditional notes:\nBring stands' }),
+      [`POST /api/events/${EVENT_ID}/equipment-request`]: () => jsonResponse(201, { requestId: 'new', eventId: EVENT_ID,
+        status: 'processing', technicalRequirement: 'Bring stands', lines: [] }),
+    })
+    renderPage()
+    const user = userEvent.setup()
+    expect(await screen.findByLabelText('Wireless microphone quantity')).toHaveValue(2)
+    expect(screen.queryByLabelText('Projector')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Technical requirements or notes')).toHaveValue('Bring stands')
+    await user.click(screen.getByRole('button', { name: 'Increase Wireless microphone quantity' }))
+    await user.click(screen.getByRole('button', { name: 'Edit equipment' }))
+    await user.click(screen.getByLabelText('Projector'))
+    await user.click(screen.getByRole('button', { name: 'Done' }))
+    await user.click(screen.getByRole('button', { name: 'Submit equipment request' }))
+    expect(calls.find(call => call.method === 'POST')?.body).toEqual({ technicalRequirement: 'Bring stands',
+      items: [{ equipmentId: 'mic-1', quantity: 3 }, { equipmentId: 'projector-1', quantity: 1 }] })
+  })
+
   it('submits an event equipment request with item quantities and shows it awaiting review', async () => {
     seedSession('coordinator')
     const calls = stubApi({
@@ -75,14 +97,14 @@ describe('EquipmentRequestPage (EC07)', () => {
     const user = userEvent.setup()
     renderPage()
 
-    await user.click(await screen.findByRole('button', { name: 'Add item' }))
-    await user.selectOptions(screen.getByLabelText('Equipment'), 'mic-1')
-    await user.clear(screen.getByLabelText('Quantity'))
-    await user.type(screen.getByLabelText('Quantity'), '2')
+    await user.click(await screen.findByRole('button', { name: 'Edit equipment' }))
+    await user.click(screen.getByLabelText('Wireless microphone'))
+    await user.clear(screen.getByLabelText('Wireless microphone quantity'))
+    await user.type(screen.getByLabelText('Wireless microphone quantity'), '2')
     await user.click(screen.getByRole('button', { name: 'Submit equipment request' }))
 
     expect(await screen.findByText('Awaiting Technical Support review')).toBeInTheDocument()
-    expect(screen.getByText('2 × Wireless microphone')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Requested equipment' })).toHaveTextContent(/Wireless microphone.*× 2/)
     expect(calls.find((call) => call.method === 'POST')?.body).toEqual({
       technicalRequirement: 'Microphones for speakers',
       items: [{ equipmentId: 'mic-1', quantity: 2 }],
@@ -135,13 +157,15 @@ describe('EquipmentRequestPage (EC07)', () => {
     expect(screen.getByDisplayValue('Two microphones')).toBeInTheDocument()
     await user.clear(screen.getByDisplayValue('Two microphones'))
     await user.type(screen.getByLabelText('Technical requirements or notes'), 'Fewer microphones, a projector now')
-    await user.selectOptions(screen.getByLabelText('Equipment'), 'projector-1')
-    await user.clear(screen.getByLabelText('Quantity'))
-    await user.type(screen.getByLabelText('Quantity'), '1')
+    await user.click(screen.getByRole('button', { name: 'Edit equipment' }))
+    await user.click(screen.getByLabelText('Wireless microphone'))
+    await user.click(screen.getByLabelText('Projector'))
+    await user.clear(screen.getByLabelText('Projector quantity'))
+    await user.type(screen.getByLabelText('Projector quantity'), '1')
     await user.click(screen.getByRole('button', { name: 'Submit revision' }))
 
     expect(await screen.findByText(/revised/i)).toBeInTheDocument()
-    expect(screen.getByText('1 × Projector')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Requested equipment' })).toHaveTextContent(/Projector.*× 1/)
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
       technicalRequirement: 'Fewer microphones, a projector now',
       items: [{ equipmentId: 'projector-1', quantity: 1 }],

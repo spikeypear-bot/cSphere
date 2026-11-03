@@ -1,5 +1,6 @@
 package com.example.connect_sphere.notification.service;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Set;
@@ -11,13 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.example.connect_sphere.common.time.SingaporeTime;
 import com.example.connect_sphere.notification.dto.NotificationDto;
 import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationChange;
 import com.example.connect_sphere.notification.entity.NotificationType;
 import com.example.connect_sphere.notification.repository.NotificationRepository;
-import com.example.connect_sphere.attendee.AttendeeRegistration;
-import com.example.connect_sphere.attendee.AttendeeRegistrationRepository;
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
 
 /** Database notices join the triggering transaction through a durable outbox.
  * Delivery retries after commit; transactional requirement and hold notices remain atomic. */
@@ -48,7 +50,10 @@ public class NotificationService {
             NotificationType.attendee_registration_withdrawn,
             NotificationType.equipment_request_attention);
 
-    public NotificationService(NotificationRepository repository) {
+    private final Clock clock;
+
+    public NotificationService(NotificationRepository repository, Clock clock) {
+        this.clock = clock;
         this.repository = repository;
     }
 
@@ -120,7 +125,7 @@ public class NotificationService {
      * the reader has seen); anything newer stays unread. Returns how many. */
     @Transactional
     public int markAllRead(UUID recipientUserId, OffsetDateTime upTo) {
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         return repository.markAllRead(recipientUserId, upTo == null || upTo.isAfter(now) ? now : upTo, now);
     }
 
@@ -139,7 +144,7 @@ public class NotificationService {
         notification.setEventName(eventName);
         notification.setNewStatus(newStatus);
         notification.setReason(reason);
-        notification.setOccurredAt(OffsetDateTime.now());
+        notification.setOccurredAt(OffsetDateTime.now(clock));
         saveBestEffort(notification);
     }
 
@@ -160,7 +165,7 @@ public class NotificationService {
         notification.setCoordinatorName(coordinatorName);
         notification.setCoordinatorEmail(coordinatorEmail);
         notification.setIsReassignment(isReassignment);
-        notification.setOccurredAt(OffsetDateTime.now());
+        notification.setOccurredAt(OffsetDateTime.now(clock));
         saveBestEffort(notification);
     }
 
@@ -256,6 +261,29 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** EC08/SO-C1: the event lock admits one notice set per genuine review transition. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createSafetyReviewRequestedNotifications(List<UUID> recipients, UUID eventId, String eventName) {
+        recipients.stream().distinct().forEach(recipient -> {
+            Notification notice = base(recipient, NotificationType.safety_review_requested, eventName);
+            notice.setEventId(eventId);
+            notice.setMessage("The coordinator submitted this event for its Operational Safety Check.");
+            saveBestEffort(notice);
+        });
+    }
+
+    /** EC08/SO-C1: officers are told why an event left their review queue. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createSafetyReviewWithdrawnNotifications(List<UUID> recipients, UUID eventId, String eventName, String reason) {
+        recipients.stream().distinct().forEach(recipient -> {
+            Notification notice = base(recipient, NotificationType.safety_review_withdrawn, eventName);
+            notice.setEventId(eventId);
+            notice.setReason(reason);
+            notice.setMessage("The coordinator withdrew this event from safety review. It is back in Planning.");
+            saveBestEffort(notice);
+        });
+    }
+
     /** EC08: the Safety Officer approved, so the coordinator can confirm the event. */
     @Transactional(propagation = Propagation.REQUIRED)
     public void createSafetyApprovedNotification(UUID coordinatorId, UUID eventId, String eventName) {
@@ -277,9 +305,6 @@ public class NotificationService {
         repository.saveAndFlush(notification);
     }
 
-    private static final java.time.format.DateTimeFormatter SINGAPORE_TIME = java.time.format.DateTimeFormatter
-            .ofPattern("d MMM yyyy, h:mm a", java.util.Locale.ENGLISH).withZone(java.time.ZoneId.of("Asia/Singapore"));
-
     /** EC-C3: remind the coordinator before a hold expires. Like the expiry notice it commits
      * with the hold's reminded mark, so a failed insert leaves the hold to be reminded again. */
     @Transactional(propagation = Propagation.MANDATORY)
@@ -289,7 +314,7 @@ public class NotificationService {
         notification.setEventId(eventId);
         notification.setVenueBookingId(bookingId);
         notification.setMessage("The tentative hold on " + venueName + " for \"" + eventName + "\" expires on "
-                + SINGAPORE_TIME.format(expiry) + " (Singapore time). Ask Venue Staff to confirm the booking before then,"
+                + SingaporeTime.DISPLAY.format(expiry) + " (Singapore time). Ask Venue Staff to confirm the booking before then,"
                 + " or look for an alternative venue.");
         repository.saveAndFlush(notification);
     }
@@ -531,7 +556,7 @@ public class NotificationService {
     /** VS17: database notification and review commit with approval, like hold expiry. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void createVenueRequirementChangedNotifications(List<UUID> recipients,
-            com.example.connect_sphere.changerequest.VenueRequirementReview review, String changes) {
+            com.example.connect_sphere.changerequest.entity.VenueRequirementReview review, String changes) {
         for (UUID recipient : recipients) {
             var notification = base(recipient, NotificationType.venue_requirement_changed, review.getEventName());
             notification.setRequirementReviewId(review.getReviewId());
@@ -541,9 +566,9 @@ public class NotificationService {
             notification.setCoordinatorEmail(review.getCoordinatorEmail());
             notification.setOccurredAt(review.getApprovedAt());
             notification.setMessage("Review required for " + review.getVenueAddress() + " (venue " + review.getVenueId()
-                    + ", booking " + review.getBookingId() + "). Approved at " + SINGAPORE_TIME.format(review.getApprovedAt())
-                    + " (Singapore time). " + changes + ". Reserved " + SINGAPORE_TIME.format(review.getReservedStart())
-                    + " to " + SINGAPORE_TIME.format(review.getReservedEnd()) + " (Singapore time), with "
+                    + ", booking " + review.getBookingId() + "). Approved at " + SingaporeTime.DISPLAY.format(review.getApprovedAt())
+                    + " (Singapore time). " + changes + ". Reserved " + SingaporeTime.DISPLAY.format(review.getReservedStart())
+                    + " to " + SingaporeTime.DISPLAY.format(review.getReservedEnd()) + " (Singapore time), with "
                     + review.getSetupDurationMinutes() + " minutes setup and " + review.getTurnaroundDurationMinutes()
                     + " minutes turnaround. Coordinator: " + review.getCoordinatorName() + " (" + review.getCoordinatorEmail()
                     + "). Review the venue requirements; reservations have not been moved.");
@@ -554,7 +579,7 @@ public class NotificationService {
     /** VS17: notify the current assigned coordinator in the outcome transaction. */
     @Transactional(propagation = Propagation.MANDATORY)
     public void createVenueRequirementReviewedNotification(UUID coordinator,
-            com.example.connect_sphere.changerequest.VenueRequirementReview review, String message) {
+            com.example.connect_sphere.changerequest.entity.VenueRequirementReview review, String message) {
         if (coordinator == null) return;
         var n=base(coordinator,NotificationType.venue_requirement_reviewed,review.getEventName());
         n.setEventId(review.getEventId()); n.setVenueBookingId(review.getBookingId());
@@ -579,13 +604,13 @@ public class NotificationService {
         }
     }
 
-    private static Notification base(UUID recipientUserId, NotificationType type, String eventName) {
+    private Notification base(UUID recipientUserId, NotificationType type, String eventName) {
         Notification notification = new Notification();
         notification.setNotificationId(UUID.randomUUID());
         notification.setRecipientUserId(recipientUserId);
         notification.setType(type);
         notification.setEventName(eventName);
-        notification.setOccurredAt(OffsetDateTime.now());
+        notification.setOccurredAt(OffsetDateTime.now(clock));
         return notification;
     }
 
@@ -640,7 +665,7 @@ public class NotificationService {
                 .filter(n -> n.getRecipientUserId().equals(recipientUserId))
                 .orElseThrow(() -> new NotificationNotFoundException(notificationId));
         if (notification.getReadAt() == null) {
-            notification.setReadAt(OffsetDateTime.now());
+            notification.setReadAt(OffsetDateTime.now(clock));
             repository.save(notification);
         }
         return toDto(notification);
@@ -675,6 +700,8 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
+            case safety_review_requested -> "/safety-officer/events/" + n.getEventId();
+            case safety_review_withdrawn -> "/safety-officer/reviews";
             case venue_booking_approved, venue_booking_rejected, venue_suitability_changed, venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested, equipment_damage_outcome ->
                     "/coordinator/events/" + n.getEventId();

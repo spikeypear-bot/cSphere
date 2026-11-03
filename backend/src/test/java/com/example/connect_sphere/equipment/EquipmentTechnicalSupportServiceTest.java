@@ -7,12 +7,25 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-import com.example.connect_sphere.equipmentrequest.EquipmentRequest;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLine;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineId;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestLineRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestRepository;
-import com.example.connect_sphere.equipmentrequest.EquipmentRequestStatus;
+import com.example.connect_sphere.equipment.dto.EquipmentReservationResponse;
+import com.example.connect_sphere.equipment.dto.ReserveEquipmentRequest;
+import com.example.connect_sphere.equipment.entity.Equipment;
+import com.example.connect_sphere.equipment.entity.EquipmentLog;
+import com.example.connect_sphere.equipment.entity.EquipmentStatus;
+import com.example.connect_sphere.equipment.entity.EquipmentStatusPeriod;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.repository.EquipmentRepository;
+import com.example.connect_sphere.equipment.repository.EquipmentStatusPeriodRepository;
+import com.example.connect_sphere.equipment.repository.SerialisedEquipmentRepository;
+import com.example.connect_sphere.equipment.service.EquipmentAvailabilityService;
+import com.example.connect_sphere.equipment.service.EquipmentReservationService;
+import com.example.connect_sphere.equipment.service.EquipmentStatusService;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequest;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLine;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestLineId;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestLineRepository;
+import com.example.connect_sphere.equipmentrequest.repository.EquipmentRequestRepository;
+import com.example.connect_sphere.equipmentrequest.entity.EquipmentRequestStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
 import java.time.Clock;
 import java.time.Instant;
@@ -103,7 +116,7 @@ class EquipmentTechnicalSupportServiceTest {
         Instant earlier = START.minusSeconds(3600);
         Instant later = END.plusSeconds(3600);
         EquipmentStatusPeriod existing = new EquipmentStatusPeriod(
-                EQUIPMENT_ID, "P-01", EquipmentStatus.FAULTY, earlier, later);
+                EQUIPMENT_ID, "P-01", EquipmentStatus.FAULTY, earlier, later, Instant.now());
         when(periodRepository.findOverlappingForUnit(EQUIPMENT_ID, "P-01", START, END))
                 .thenReturn(List.of(existing));
 

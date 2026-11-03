@@ -7,7 +7,6 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import com.example.connect_sphere.event.dto.RegistrationInfoDto;
 import com.example.connect_sphere.event.entity.Event;
@@ -23,13 +22,10 @@ public class EventRegistrationService {
     private final EventRepository events;
     private final EventRegistrationRepository registrations;
     private final Clock clock;
+    @org.springframework.beans.factory.annotation.Autowired
+    private com.example.connect_sphere.eventrequest.repository.EventRequestRepository eventRequests;
 
-    @Autowired
-    public EventRegistrationService(EventRepository events, EventRegistrationRepository registrations) {
-        this(events, registrations, Clock.systemUTC());
-    }
-
-    EventRegistrationService(EventRepository events, EventRegistrationRepository registrations, Clock clock) {
+    public EventRegistrationService(EventRepository events, EventRegistrationRepository registrations, Clock clock) {
         this.events = events;
         this.registrations = registrations;
         this.clock = clock;
@@ -38,6 +34,9 @@ public class EventRegistrationService {
     /** EO11: set the capacity. Owner only; must be a positive whole number not below the confirmed count. */
     @Transactional
     public RegistrationInfoDto updateCapacity(String organisation, UUID eventId, Object requested) {
+        // Match change approval's request -> event lock order.
+        var origin = eventRequests == null ? null : eventRequests.findRequestIdByEventId(eventId)
+                .flatMap(eventRequests::findForUpdate).orElse(null);
         Event event = events.findForUpdate(eventId)
                 .filter(e -> organisation != null && organisation.equals(e.getOrganisation()))
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -57,6 +56,10 @@ public class EventRegistrationService {
         }
         event.setRegistrationCapacity((int) capacity);
         events.save(event);
+        if (origin != null) {
+            origin.setRegistrationCapacity((int) capacity);
+            eventRequests.save(origin);
+        }
         return forOrganiser(organisation, eventId);
     }
 
@@ -101,6 +104,8 @@ public class EventRegistrationService {
         String state;
         if (event.getStatus() == EventStatus.cancelled || event.getStatus() == EventStatus.completed) {
             state = "closed";
+        } else if (event.getStatus() != EventStatus.confirmed) {
+            state = "not_yet_open";
         } else if (opens != null && now.isBefore(opens)) {
             state = "not_yet_open";
         } else if (closes != null && !now.isBefore(closes)) {

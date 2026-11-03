@@ -1,5 +1,6 @@
 package com.example.connect_sphere.user.service;
 
+import java.time.Clock;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -40,8 +41,11 @@ public class RefreshTokenService {
     private final RefreshTokenRepository repository;
     private final Duration ttl;
 
+    private final Clock clock;
+
     public RefreshTokenService(RefreshTokenRepository repository,
-            @Value("${security.jwt.refresh-token-ttl}") Duration ttl) {
+            @Value("${security.jwt.refresh-token-ttl}") Duration ttl, Clock clock) {
+        this.clock = clock;
         this.repository = repository;
         this.ttl = ttl;
     }
@@ -71,7 +75,7 @@ public class RefreshTokenService {
      */
     @Transactional(noRollbackFor = InvalidRefreshTokenException.class)
     public Rotation rotate(String presented) {
-        OffsetDateTime now = OffsetDateTime.now();
+        OffsetDateTime now = OffsetDateTime.now(clock);
         RefreshToken current = repository.findByTokenHash(hash(presented))
                 .orElseThrow(InvalidRefreshTokenException::new);
 
@@ -100,7 +104,7 @@ public class RefreshTokenService {
     @Transactional
     public void revokeSession(String presented) {
         repository.findByTokenHash(hash(presented))
-                .ifPresent(token -> repository.revokeFamily(token.getFamilyId(), OffsetDateTime.now()));
+                .ifPresent(token -> repository.revokeFamily(token.getFamilyId(), OffsetDateTime.now(clock)));
     }
 
     /**
@@ -117,7 +121,7 @@ public class RefreshTokenService {
         token.setUser(user);
         token.setTokenHash(hash(raw));
         token.setFamilyId(familyId);
-        token.setExpiresAt(OffsetDateTime.now().plus(ttl));
+        token.setExpiresAt(OffsetDateTime.now(clock).plus(ttl));
         // issued_at is left alone — the column's DEFAULT supplies it, see the entity.
         repository.save(token);
 

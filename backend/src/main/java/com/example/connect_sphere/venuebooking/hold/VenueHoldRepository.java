@@ -9,7 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
-import com.example.connect_sphere.venueavailability.AvailabilityModels.Booking;
+import com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking;
 
 @Repository
 public class VenueHoldRepository {

@@ -1,5 +1,6 @@
 package com.example.connect_sphere.user.service;
 
+import java.time.Clock;
 import java.time.Duration;
 import java.time.Instant;
 
@@ -24,9 +25,12 @@ public class TokenService {
     private final String issuer;
     private final Duration ttl;
 
+    private final Clock clock;
+
     public TokenService(JwtEncoder encoder,
             @Value("${security.jwt.issuer}") String issuer,
-            @Value("${security.jwt.access-token-ttl}") Duration ttl) {
+            @Value("${security.jwt.access-token-ttl}") Duration ttl, Clock clock) {
+        this.clock = clock;
         this.encoder = encoder;
         this.issuer = issuer;
         this.ttl = ttl;
@@ -48,7 +52,7 @@ public class TokenService {
      * identity every other table already references.
      */
     public String issueAccessToken(UserPrincipal principal) {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
 
         JwtClaimsSet claims = JwtClaimsSet.builder()
                 .issuer(issuer)

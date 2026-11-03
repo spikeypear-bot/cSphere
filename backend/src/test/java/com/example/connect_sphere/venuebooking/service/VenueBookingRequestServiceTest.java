@@ -8,6 +8,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -61,7 +62,7 @@ class VenueBookingRequestServiceTest {
     @Mock private VenueMapper venueMapper;
     @Mock private ActivityService activityService;
     @Mock private NotificationService notificationService;
-    @Mock private com.example.connect_sphere.venueavailability.AvailabilityService availability;
+    @Mock private com.example.connect_sphere.venueavailability.service.AvailabilityService availability;
     @Mock private VenueOperationalIssueRepository operationalIssues;
 
     private VenueBookingRequestService service;
@@ -75,10 +76,10 @@ class VenueBookingRequestServiceTest {
         MockitoAnnotations.openMocks(this);
         service = new VenueBookingRequestService(events, venues, bookings, eventRequests, users, venueMapper,
                 activityService, notificationService, operationalIssues, null, availability,
-                org.mockito.Mockito.mock(com.example.connect_sphere.event.service.EventLifecycleService.class));
+                org.mockito.Mockito.mock(com.example.connect_sphere.event.service.EventLifecycleService.class), Clock.systemUTC());
         org.springframework.test.util.ReflectionTestUtils.setField(service,"plan",org.mockito.Mockito.mock(BookingPlanService.class));
         when(bookings.save(any())).thenAnswer(inv -> inv.getArgument(0));
-        when(availability.settings(any())).thenReturn(new com.example.connect_sphere.venueavailability.AvailabilityModels.Settings(0, 0));
+        when(availability.settings(any())).thenReturn(new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings(0, 0));
         when(bookings.findApprovedOverlapping(any(), any(), any())).thenReturn(List.of());
         when(operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any())).thenReturn(List.of());
         when(users.findByRole(UserRole.vs)).thenReturn(List.of(user(VS_ONE), user(VS_TWO)));

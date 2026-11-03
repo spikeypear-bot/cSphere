@@ -5,7 +5,8 @@ import { ResourceView } from '../../components/ui/ResourceView'
 import { RowLink } from '../../components/ui/RowLink'
 import { apiClient } from '../../lib/apiClient'
 import { useSession } from '../../lib/sessionContext'
-import { useResource, type Resource } from '../../lib/useResource'
+import type { Resource } from '../../lib/useResource'
+import { useRefreshingResource } from '../../lib/useRefreshingResource'
 import { countOf, greetingFor } from '../../lib/greeting'
 import { formatEventTimeRange } from '../venueStaff/formatEventDateTime'
 import type { SafetyEventListItem } from './readinessTypes'
@@ -20,8 +21,8 @@ const isAwaiting = (event: SafetyEventListItem) => event.status === 'awaiting_sa
  * reviews section, from the same reads that page uses. */
 export function SafetyOfficerHomePage() {
   const { username } = useSession()
-  const planning = useResource(read('/safety/events/planning'), 'planning')
-  const confirmed = useResource(read('/safety/events/confirmed'), 'confirmed')
+  const planning = useRefreshingResource(read('/safety/events/planning'), 'planning')
+  const confirmed = useRefreshingResource(read('/safety/events/confirmed'), 'confirmed')
   const greeting = greetingFor()
 
   return (

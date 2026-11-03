@@ -31,3 +31,24 @@
 @media (max-width: 640px) {
   .lead-review__row { grid-template-columns: minmax(0, 1fr); gap: 0.2rem; }
 }
+
+.lead-review__panel #lead-coordinator {
+  width: 100%; max-width: 32rem; min-width: 0; box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hairline-strong); border-radius: var(--radius-sm);
+  background: var(--paper); color: var(--ink);
+}
+.lead-review__panel #lead-coordinator:focus-visible {
+  outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent);
+}
+
+.lead-review__panel #lead-coordinator {
+  appearance: none;
+  padding: .6rem 2.25rem .6rem .75rem;
+  background-color: var(--paper);
+  background-image: linear-gradient(45deg, transparent 50%, var(--ink-soft) 50%), linear-gradient(135deg, var(--ink-soft) 50%, transparent 50%);
+  background-position: calc(100% - 1.05rem) 50%, calc(100% - .75rem) 50%;
+  background-size: .3rem .3rem;
+  background-repeat: no-repeat;
+}
+@media (forced-colors: active) { .lead-review__panel #lead-coordinator { appearance: auto; background-image: none; } }

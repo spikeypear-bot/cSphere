@@ -228,11 +228,14 @@ export async function awaitingSafetyReviewByApi(request: APIRequestContext, even
 /** A date (YYYY-MM-DD) in 2028–2029 that differs from run to run, for test
  * data that shares finite stock such as seeded equipment, so reruns never
  * compete with the reservations an earlier run left behind. */
-const firstDay = Date.now() % 700
+// Parallel workers each count from their own half of the 700 days, so two
+// workers started in the same millisecond still never share a day.
+const half = (Number(process.env.TEST_PARALLEL_INDEX ?? 0) % 2) * 350
+const firstDay = Date.now() % 350
 let daysGiven = 0
 export function uniqueDay(): string {
   // Counting on from one start keeps the days in a run distinct; a fresh Date.now() per call could repeat one.
-  const day = new Date(Date.UTC(2028, 0, 1) + ((firstDay + daysGiven++) % 700) * 86_400_000)
+  const day = new Date(Date.UTC(2028, 0, 1) + (half + (firstDay + daysGiven++) % 350) * 86_400_000)
   return day.toISOString().slice(0, 10)
 }
 

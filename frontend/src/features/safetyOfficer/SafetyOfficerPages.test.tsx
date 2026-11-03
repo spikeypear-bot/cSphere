@@ -151,7 +151,7 @@ describe('Safety Officer event views (SO-C1–SO-C4)', () => {
 
     expect(await screen.findByText('1 Harbour Road')).toBeInTheDocument()
     expect(screen.getByText('Capacity')).toBeInTheDocument()
-    expect(screen.getByText('Microphone × 2')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Requested equipment' })).toHaveTextContent(/Microphone.*× 2/)
     const approve = await screen.findByRole('button', { name: 'Approve' })
     expect(approve).toBeDisabled()
 

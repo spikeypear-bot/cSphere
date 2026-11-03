@@ -101,6 +101,17 @@ class DomainClassDiagramTest {
     }
 
     @Test
+    @DisplayName("DEV15 AC1 (regression): every known domain value type stays on the domain diagram")
+    void keepsKnownDomainValueTypes() throws IOException {
+        String diagram = generateDomainDiagram();
+
+        // NOT_DOMAIN drops whole packages, so a value type moved into one would vanish silently.
+        for (String type : DOMAIN_VALUE_TYPES) {
+            assertThat(diagram).containsPattern("(?m)^class " + type + " ");
+        }
+    }
+
+    @Test
     @DisplayName("DEV15 AC2 (happy): relationships follow the schema's foreign keys, including the Week 7 concepts")
     void showsSchemaRelationships() throws IOException {
         String diagram = generateDomainDiagram();

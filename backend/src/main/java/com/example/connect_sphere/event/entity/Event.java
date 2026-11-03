@@ -99,6 +99,10 @@ public class Event {
     @Column(name = "equipment_requirements")
     private String equipmentRequirements;
 
+    @org.hibernate.annotations.JdbcTypeCode(org.hibernate.type.SqlTypes.JSON)
+    @Column(name = "equipment_items", columnDefinition = "jsonb")
+    private List<com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item> equipmentItems = new java.util.ArrayList<>();
+
     @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     private EventStatus status;
 

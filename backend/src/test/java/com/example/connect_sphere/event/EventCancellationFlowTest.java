@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.example.connect_sphere.equipment.EquipmentLogRepository;
+import com.example.connect_sphere.equipment.repository.EquipmentLogRepository;
 import com.example.connect_sphere.event.service.EventLifecycleService;
 import com.example.connect_sphere.event.service.EventLifecycleService.SafetyDecision;
 import com.example.connect_sphere.testsupport.FlowSupport;
@@ -56,10 +56,10 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc
 @Transactional
 class EventCancellationFlowTest {
-    @Autowired com.example.connect_sphere.safety.ReadinessService venueReadiness;
+    @Autowired com.example.connect_sphere.safety.service.ReadinessService venueReadiness;
     private void attestVenues(UUID eventId) {
         for(var item:venueReadiness.forSafetyOfficer(eventId).items())
-            venueReadiness.updateItem(flow.idOf("so1"),eventId,item.itemKey(),new com.example.connect_sphere.safety.UpdateReadinessItemRequest(true,"Verified"));
+            venueReadiness.updateItem(flow.idOf("so1"),eventId,item.itemKey(),new com.example.connect_sphere.safety.dto.UpdateReadinessItemRequest(true,"Verified"));
     }
 
     private static final String REASON_BODY = "{\"reason\":\"The client has called the event off.\"}";
