@@ -73,11 +73,11 @@ describe('EO03 — the change request form, field by field', () => {
     fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Everyone' } })
     fireEvent.change(screen.getByLabelText('Venue requirements'), { target: { value: 'Banquet' } })
     fireEvent.change(screen.getByLabelText('Additional equipment notes (optional)'), { target: { value: 'Two lecterns' } })
-    await user.click(screen.getByRole('button', { name: 'Wheelchair support' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Wheelchair support' }))
     expect(screen.getByRole('button', { name: 'No accessibility requirements needed' })).toHaveAttribute('aria-pressed', 'false')
-    await user.click(screen.getByLabelText('Stage'))
-    await user.click(screen.getByLabelText('Projection'))
-    await user.click(screen.getByLabelText('Stage'))
+    fireEvent.click(screen.getByLabelText('Stage'))
+    fireEvent.click(screen.getByLabelText('Projection'))
+    fireEvent.click(screen.getByLabelText('Stage'))
     expect(screen.getByRole('link', { name: 'Change requests for this event' })).toHaveAttribute('href', `/organiser/requests/${REQ}/changes`)
 
     const review = await toReview(user)
@@ -89,10 +89,10 @@ describe('EO03 — the change request form, field by field', () => {
     expect(row('Accessibility needs')).toHaveTextContent('Wheelchair support')
     expect(row('Required facilities')).toHaveTextContent('—Projection')
 
-    await user.click(screen.getByRole('button', { name: 'Back' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Back' }))
     expect(screen.getByLabelText('Purpose')).toHaveValue('Annual update')
     // Choosing "none" again replaces the real accommodation.
-    await user.click(screen.getByRole('button', { name: 'No accessibility requirements needed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'No accessibility requirements needed' }))
     expect(screen.getByRole('button', { name: 'Wheelchair support' })).toHaveAttribute('aria-pressed', 'false')
   })
 

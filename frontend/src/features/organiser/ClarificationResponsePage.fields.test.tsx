@@ -66,27 +66,25 @@ describe('EO26 — answering a clarification, every field and failure', () => {
 
   it('EO26 (happy): text, accessibility, facilities and registration can all be changed, and Save sends them', async () => {
     const calls = stubApi(routes({ [`PUT /api/event-requests/${ID}`]: () => jsonResponse(200, request) }))
-    const user = userEvent.setup()
     renderPage()
 
     const venue = await screen.findByLabelText('Venue requirements')
-    fireEvent.change(venue, { target: { value: '' } })
     fireEvent.change(venue, { target: { value: 'Two rooms' } })
-    await user.click(screen.getByRole('button', { name: 'Wheelchair support' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Wheelchair support' }))
     expect(screen.getByRole('button', { name: 'No accessibility requirements needed' })).toHaveAttribute('aria-pressed', 'false')
-    await user.click(screen.getByRole('button', { name: 'No accessibility requirements needed' }))
+    fireEvent.click(screen.getByRole('button', { name: 'No accessibility requirements needed' }))
     expect(screen.getByRole('button', { name: 'Wheelchair support' })).toHaveAttribute('aria-pressed', 'false')
-    await user.click(screen.getByRole('button', { name: 'Wheelchair support' }))
-    await user.click(screen.getByLabelText('Stage'))
-    await user.click(screen.getByLabelText('Projection'))
-    await user.click(screen.getByLabelText('Stage'))
+    fireEvent.click(screen.getByRole('button', { name: 'Wheelchair support' }))
+    fireEvent.click(screen.getByLabelText('Stage'))
+    fireEvent.click(screen.getByLabelText('Projection'))
+    fireEvent.click(screen.getByLabelText('Stage'))
 
     expect(screen.queryByLabelText('Registration capacity')).not.toBeInTheDocument()
-    await user.click(screen.getByLabelText('Attendees need to register'))
+    fireEvent.click(screen.getByLabelText('Attendees need to register'))
     fireEvent.change(screen.getByLabelText('Registration capacity'), { target: { value: '120' } })
     fireEvent.change(screen.getByLabelText('Registration opens'), { target: { value: '2027-03-01T09:00' } })
     fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID' } })
-    await user.click(screen.getByRole('button', { name: 'Save changes' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('Your request is still with you')
     expect(calls.find((c) => c.method === 'PUT')?.body).toMatchObject({
