@@ -97,6 +97,8 @@ EC page coverage remains diagnostic; the shared staff/map thresholds are unchang
 
 | Code | Why it is not covered |
 |---|---|
+| `VenueBookingRequestService`: `arrangementEvents == null`, `holds == null`, `operatingHours == null` | Optional collaborators that the running app always has; they are absent only in the plain unit tests, which build the service by hand. Integration tests cover the present side. |
+| `VenueBookingRequestService`: an operational issue with a start but no end, and `operatingHours() == null` from the venue mapper | The V15 check constraint stores an issue's period as both dates or neither, and the mapper always returns a list. |
 | Frontend files of types only (`types/*.ts`, `navTypes.ts`, `*.types.ts`, `readinessTypes.ts`) | TypeScript removes them at build time, so they hold no code to run (0 of 0 lines). They do not lower the totals; `coverage-summary.py` leaves them out of its table instead of listing them at 0%. |
 | `EventReadinessPanel.tsx`: the non-`ApiClientError` branch of `act()` | `apiClient` turns every failure, network included, into an `ApiClientError`, so this only guards against a programming error and no test can reach it. It is marked `/* v8 ignore … */` with the reason in the code. |
 | Production constructors and the after-commit hook in `EventLifecycleService` / `JourneyStatusResolver` | Not reached by unit tests (which pass a fixed clock and have no transaction), but executed by the integration tests. They are covered in the combined report CI publishes. |

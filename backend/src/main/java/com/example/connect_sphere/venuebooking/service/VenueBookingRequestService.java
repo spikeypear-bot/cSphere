@@ -203,24 +203,9 @@ public class VenueBookingRequestService {
         requireAssigned(coordinatorId, event);
         plan.actor(coordinatorId);
         boolean replacement = request != null && request.replacesBookingId() != null;
-        if (!event.getStatus().isPlanningEditable() && !(replacement && (event.getStatus() == EventStatus.confirmed || event.getStatus() == EventStatus.safety_approved || event.getStatus() == EventStatus.awaiting_safety_review))) {
-            throw new VenueBookingStateException("Venue booking requests can only be made while an event is in "
-                    + "Planning (this event is " + stageLabel(event.getStatus()) + ").");
-        }
+        requireOpenForRequests(event, replacement);
         List<VenueBookingRecord> active = bookings.findForEvent(eventId).stream().filter(b -> ACTIVE.contains(b.getStatus())).toList();
-        VenueBookingRecord original = null;
-        if (replacement) {
-            original = bookings.findById(request.replacesBookingId())
-                    .filter(b -> eventId.equals(b.getEventId()))
-                    .orElseThrow(() -> new VenueBookingStateException("Select an eligible booking to replace."));
-            plan.requireReplacementEligible(original.getBookingId(), null);
-            if (!isEligibleReplacementSource(original))
-                throw new VenueBookingStateException("This booking is not eligible for a replacement. Refresh this event.");
-            if (bookings.existsByReplacesBookingIdAndStatus(original.getBookingId(), VenueBookingStatus.pending))
-                throw new VenueBookingStateException("A replacement request for this booking is already pending.");
-            if (bookings.existsByReplacesBookingIdAndStatusIn(original.getBookingId(), List.of(VenueBookingStatus.approved,VenueBookingStatus.attention)))
-                throw new VenueBookingStateException("This booking already has an approved replacement.");
-        }
+        VenueBookingRecord original = replacement ? replacementSource(eventId, request.replacesBookingId()) : null;
         if (request == null || request.venueId() == null) {
             throw new InvalidVenueBookingException("Select a venue before submitting the booking request.");
         }
@@ -236,7 +221,7 @@ public class VenueBookingRequestService {
         String justification = optionalText(request.suitabilityNote(), "The justification");
         OffsetDateTime start = request.startDatetime() == null ? event.getStartDatetime() : request.startDatetime();
         OffsetDateTime end = request.endDatetime() == null ? event.getEndDatetime() : request.endDatetime();
-        if (start == null || end == null || !end.isAfter(start)) {
+        if (!end.isAfter(start)) {
             throw new InvalidVenueBookingException("Each venue must have an end date/time later than its start date/time.");
         }
         var defaults = availability.settings(venue.getVenueId());
@@ -250,6 +235,78 @@ public class VenueBookingRequestService {
         var requirements=request.requirements()!=null ? request.requirements() : original==null ? null : original.getRequirements();
         if(requirements!=null) requirements.validate();
         VenueSuitability suitability = VenueSuitability.of(requirements==null?event:requirements.apply(event), venue);
+        requireVenueFits(event, venue, suitability, start, end, durations, justification);
+
+        VenueBookingRecord booking = new VenueBookingRecord();
+        // The venue lock above makes these the same defaults used by the availability checks.
+        com.example.connect_sphere.venueavailability.entity.EffectivePeriod.validate(durations);
+        booking.setSetupDurationMinutes(durations.setupMinutes());
+        booking.setTurnaroundDurationMinutes(durations.turnaroundMinutes());
+        booking.setTimingNote(timingNote);
+        booking.setBookingId(UUID.randomUUID());
+        booking.setRequirements(requirements);
+        booking.setRequirementId(plan.requirement(eventId,originalBookingId));
+        if(original!=null && original.getRequirementId()==null) { original.setRequirementId(booking.getRequirementId()); bookings.save(original); }
+        booking.setVenueId(venue.getVenueId());
+        booking.setEventId(eventId);
+        booking.setStartDatetime(start);
+        booking.setEndDatetime(end);
+        booking.setReplacesBookingId(request.replacesBookingId());
+        booking.setStatus(VenueBookingStatus.pending);
+        booking.setBookingNotes(notes);
+        booking.setSuitabilityNote(suitability.needsJustification() ? justification : null);
+        booking.setSubmittedBy(coordinatorId);
+        booking.setSubmittedAt(OffsetDateTime.now(clock));
+        VenueBookingRecord saved = bookings.save(booking);
+        if(replacement) lifecycle.returnToPlanning(eventId,coordinatorId,"A replacement venue arrangement requires a new safety review.");
+
+        // The event's originating request carries the timeline; an event
+        // created outside the request flow simply has none to extend.
+        // EC-NEW5: a replacement, an additional venue (Major) or a first request.
+        ActivityType logged = replacement ? ActivityType.venue_booking_replaced
+                : (addsToExisting != null ? addsToExisting : hasActiveBooking(eventId, saved.getBookingId()))
+                        ? ActivityType.venue_added : ActivityType.venue_booking_requested;
+        eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
+                new ActivityService.Entry(origin.getRequestId(), eventId, logged,
+                        coordinatorId, requestedMessage(venue.getVenueAddress(), notes),
+                        null, null, VenueBookingStatus.pending.name())));
+
+        List<UUID> venueStaff = users.findByRole(UserRole.vs).stream().map(User::getUserId).toList();
+        if (!venueStaff.isEmpty()) {
+            notificationService.createVenueBookingRequestedNotifications(
+                    venueStaff, saved.getBookingId(), eventId, event.getEventName());
+        }
+        return toDto(saved);
+    }
+
+    /** A replacement may also be asked for once the event has gone for, or passed, its safety review. */
+    private static void requireOpenForRequests(Event event, boolean replacement) {
+        boolean openForReplacement = event.getStatus() == EventStatus.confirmed
+                || event.getStatus() == EventStatus.safety_approved || event.getStatus() == EventStatus.awaiting_safety_review;
+        if (!event.getStatus().isPlanningEditable() && !(replacement && openForReplacement)) {
+            throw new VenueBookingStateException("Venue booking requests can only be made while an event is in "
+                    + "Planning (this event is " + stageLabel(event.getStatus()) + ").");
+        }
+    }
+
+    /** The booking a replacement is for. Its requirement may have no other active booking
+     * (which also rules out a second pending or an approved replacement). */
+    private VenueBookingRecord replacementSource(UUID eventId, UUID bookingId) {
+        VenueBookingRecord original = bookings.findById(bookingId)
+                .filter(b -> eventId.equals(b.getEventId()))
+                .orElseThrow(() -> new VenueBookingStateException("Select an eligible booking to replace."));
+        plan.requireReplacementEligible(original.getBookingId(), null);
+        if (!isEligibleReplacementSource(original))
+            throw new VenueBookingStateException("This booking is not eligible for a replacement. Refresh this event.");
+        return original;
+    }
+
+    /** "Is this venue acceptable", most basic problem first: capacity, recorded
+     * unavailability, facilities, operating hours, operational issues, other
+     * bookings, then a missing accessibility justification. */
+    private void requireVenueFits(Event event, Venue venue, VenueSuitability suitability, OffsetDateTime start,
+            OffsetDateTime end, com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Settings durations,
+            String justification) {
         if (!suitability.capacityOk()) {
             throw new InvalidVenueBookingException("Expected attendance (" + suitability.expectedAttendance()
                     + ") exceeds this venue's capacity (" + suitability.capacity() + ").");
@@ -288,47 +345,6 @@ public class VenueBookingRequestService {
                     + suitability.missingAccessibilityLabels()
                     + ". Explain why it should still be considered, for Venue Staff to judge.");
         }
-
-        VenueBookingRecord booking = new VenueBookingRecord();
-        // The venue lock above makes these the same defaults used by the availability checks.
-        com.example.connect_sphere.venueavailability.entity.EffectivePeriod.validate(durations);
-        booking.setSetupDurationMinutes(durations.setupMinutes());
-        booking.setTurnaroundDurationMinutes(durations.turnaroundMinutes());
-        booking.setTimingNote(timingNote);
-        booking.setBookingId(UUID.randomUUID());
-        booking.setRequirements(requirements);
-        booking.setRequirementId(plan.requirement(eventId,originalBookingId));
-        if(original!=null && original.getRequirementId()==null) { original.setRequirementId(booking.getRequirementId()); bookings.save(original); }
-        booking.setVenueId(venue.getVenueId());
-        booking.setEventId(eventId);
-        booking.setStartDatetime(start);
-        booking.setEndDatetime(end);
-        booking.setReplacesBookingId(request.replacesBookingId());
-        booking.setStatus(VenueBookingStatus.pending);
-        booking.setBookingNotes(notes);
-        booking.setSuitabilityNote(suitability.needsJustification() ? justification : null);
-        booking.setSubmittedBy(coordinatorId);
-        booking.setSubmittedAt(OffsetDateTime.now(clock));
-        VenueBookingRecord saved = bookings.save(booking);
-        if(replacement) lifecycle.returnToPlanning(eventId,coordinatorId,"A replacement venue arrangement requires a new safety review.");
-
-        // The event's originating request carries the timeline; an event
-        // created outside the request flow simply has none to extend.
-        // EC-NEW5: a replacement, an additional venue (Major) or a first request.
-        ActivityType logged = request.replacesBookingId() != null ? ActivityType.venue_booking_replaced
-                : (addsToExisting != null ? addsToExisting : hasActiveBooking(eventId, saved.getBookingId()))
-                        ? ActivityType.venue_added : ActivityType.venue_booking_requested;
-        eventRequests.findByEventId(eventId).ifPresent(origin -> activityService.record(
-                new ActivityService.Entry(origin.getRequestId(), eventId, logged,
-                        coordinatorId, requestedMessage(venue.getVenueAddress(), notes),
-                        null, null, VenueBookingStatus.pending.name())));
-
-        List<UUID> venueStaff = users.findByRole(UserRole.vs).stream().map(User::getUserId).toList();
-        if (!venueStaff.isEmpty()) {
-            notificationService.createVenueBookingRequestedNotifications(
-                    venueStaff, saved.getBookingId(), eventId, event.getEventName());
-        }
-        return toDto(saved);
     }
 
     private boolean isEligibleReplacementSource(VenueBookingRecord booking) {
@@ -516,9 +532,6 @@ public class VenueBookingRequestService {
 
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailableByVenue(OffsetDateTime start, OffsetDateTime end,
             java.math.BigDecimal setup, java.math.BigDecimal turnaround) {
-        if (start == null || end == null) {
-            return Map.of();
-        }
         var venueList = venues.findAll();
         Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> unavailable = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
                 venue -> availability.unavailablePeriods(venue.getVenueId(), start, end,
@@ -526,14 +539,13 @@ public class VenueBookingRequestService {
                         .map(period -> new VenueOptionDto.UnavailablePeriodDto(
                                 period.reason(), period.startDateTime(), period.endDateTime()))
                         .toList()));
-        if (operationalIssues == null) return unavailable;
         var occupiedPeriods = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
                 venue -> com.example.connect_sphere.venueavailability.entity.EffectivePeriod.of(start,
                         end, requestedDurations(venue, setup, turnaround))));
         operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(occupiedPeriods.keySet()))
                 .stream()
+                // An issue without an affected period (V15 allows it) blocks nothing.
                 .filter(issue -> issue.getAffectedFrom() != null && issue.getAffectedUntil() != null
-                        && occupiedPeriods.containsKey(issue.getVenueId())
                         && issue.getAffectedFrom().isBefore(occupiedPeriods.get(issue.getVenueId()).end())
                         && issue.getAffectedUntil().isAfter(occupiedPeriods.get(issue.getVenueId()).start()))
                 .collect(Collectors.groupingBy(
@@ -552,7 +564,6 @@ public class VenueBookingRequestService {
     private Map<UUID, List<VenueOptionDto.UnavailablePeriodDto>> hoursByVenue(OffsetDateTime start, OffsetDateTime end,
             java.math.BigDecimal setup, java.math.BigDecimal turnaround) {
         if (operatingHours == null) return Map.of();
-        if (start == null || end == null) return Map.of();
         var venueList = venues.findAll();
         List<UUID> ids = venueList.stream().map(Venue::getVenueId).toList();
         var periods = venueList.stream().collect(Collectors.toMap(Venue::getVenueId,
@@ -598,8 +609,7 @@ public class VenueBookingRequestService {
 
     /** The status people see (EC-NEW2), not the stored code. */
     private static String stageLabel(EventStatus status) {
-        return status == EventStatus.pending ? JourneyStatus.PLANNING.label()
-                : JourneyStatus.valueOf(status.name().toUpperCase(java.util.Locale.ROOT)).label();
+        return JourneyStatus.valueOf(status.name().toUpperCase(java.util.Locale.ROOT)).label();
     }
 
     /**
@@ -629,30 +639,30 @@ public class VenueBookingRequestService {
     }
 
     private EventVenueBookingDto toDto(VenueBookingRecord b) {
-        Venue venue = venues.findById(b.getVenueId()).orElse(null);
-        var venueDetails = venue == null ? null : venueMapper.toDto(venue);
+        // venue_bookings.venue_id and event_id are NOT NULL foreign keys, so both always exist.
+        Venue venue = venues.findById(b.getVenueId()).orElseThrow(() -> new VenueNotFoundException(b.getVenueId()));
+        var venueDetails = venueMapper.toDto(venue);
         Venue alternativeVenue = b.getAlternativeVenueId() == null ? null
                 : venues.findById(b.getAlternativeVenueId()).orElse(null);
         String submittedBy = b.getSubmittedBy() == null ? null
                 : users.findById(b.getSubmittedBy()).map(User::getUsername).orElse(null);
-        Event event = events.findById(b.getEventId()).orElse(null);
+        Event event = events.findById(b.getEventId()).orElseThrow(() -> new EventNotFoundException(b.getEventId()));
+        // Rows from before V25 have no times of their own and use the event's.
+        OffsetDateTime start = b.getStartDatetime() == null ? event.getStartDatetime() : b.getStartDatetime();
+        OffsetDateTime end = b.getEndDatetime() == null ? event.getEndDatetime() : b.getEndDatetime();
+        boolean timingEditable = ACTIVE.contains(b.getStatus()) && event.getStatus() != EventStatus.completed
+                && event.getStatus() != EventStatus.cancelled;
         return new EventVenueBookingDto(b.getBookingId(), b.getStatus(), b.getVenueId(),
-                venue == null ? null : venue.getVenueAddress(), venue == null ? null : venue.getVenueCapacity(),
+                venue.getVenueAddress(), venue.getVenueCapacity(),
                 b.getBookingNotes(), b.getSuitabilityNote(), b.getRejectReason(), b.getSubmittedAt(), submittedBy,
                 b.getStatus() == VenueBookingStatus.attention || availability.affected(b.getBookingId()), b.getReplacesBookingId(),
                 b.getAlternativeVenueId(), alternativeVenue == null ? null : alternativeVenue.getVenueAddress(),
-                b.getAlternativeArrangement(),
-                b.getStartDatetime() == null && event != null ? event.getStartDatetime() : b.getStartDatetime(),
-                b.getEndDatetime() == null && event != null ? event.getEndDatetime() : b.getEndDatetime(),
-                event == null ? null : availability.timing(
-                        b.getVenueId(), b.getBookingId(),
-                        b.getStartDatetime() == null ? event.getStartDatetime() : b.getStartDatetime(),
-                        b.getEndDatetime() == null ? event.getEndDatetime() : b.getEndDatetime(),
-                        b.getSetupDurationMinutes(), b.getTurnaroundDurationMinutes(), b.getTimingNote(),
-                        ACTIVE.contains(b.getStatus()) && event.getStatus() != EventStatus.completed
-                        && event.getStatus() != EventStatus.cancelled), holds == null ? List.of() : holds.history(b.getBookingId()),
-                venueDetails == null ? "Operating hours not configured" : venueDetails.operatingInformation(),
-                venueDetails == null || venueDetails.operatingHours() == null ? List.of() : venueDetails.operatingHours(), b.getRequirements(), b.getRequirementId(),
+                b.getAlternativeArrangement(), start, end,
+                availability.timing(b.getVenueId(), b.getBookingId(), start, end,
+                        b.getSetupDurationMinutes(), b.getTurnaroundDurationMinutes(), b.getTimingNote(), timingEditable),
+                holds == null ? List.of() : holds.history(b.getBookingId()),
+                venueDetails.operatingInformation(),
+                venueDetails.operatingHours() == null ? List.of() : venueDetails.operatingHours(), b.getRequirements(), b.getRequirementId(),
                 plan.unresolved(b.getRequirementId()));
     }
 

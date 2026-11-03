@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**304 test files, 2494 tests, 82 stories traced, 0 files untraced, 0 tests whose name names no story.**
+**304 test files, 2519 tests, 82 stories traced, 0 files untraced, 0 tests whose name names no story.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -17,53 +17,53 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | AT08 | 2 | 2 | 3 | 4 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT09 | 1 | 2 | 3 | 1 | 33 | — | happy, negative, boundary, failure, cross-cutting |
 | AU02 |  |  |  | 1 | 3 | — | happy, negative |
-| AU04 | 7 | 10 | 6 | 4 | 193 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AU04 | 1 | 16 | 6 | 4 | 193 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AU06 |  | 1 |  | 1 | 3 | — | negative, cross-cutting |
 | DEV05 |  | 3 | 4 |  | 53 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | DEV15 | 1 | 2 |  |  | 7 | — | happy, negative |
 | DEV16 | 4 | 6 | 20 | 3 | 330 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC01 | 2 | 2 | 2 | 1 | 76 | AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC02 | 2 | 5 | 6 | 3 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC03 | 4 | 5 | 9 | 5 | 163 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC03 | 4 | 6 | 9 | 5 | 201 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 5 | 3 | 37 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
 | EC07 | 2 | 5 | 2 | 5 | 154 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC08 | 4 | 8 | 6 | 6 | 287 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC09 | 2 | 1 | 5 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC10 |  | 1 | 2 | 3 | 62 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C1 | 2 | 1 | 4 | 1 | 46 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C2 | 2 | 4 | 3 | 2 | 125 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC08 | 3 | 9 | 6 | 6 | 308 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC09 | 1 | 2 | 5 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC10 |  | 1 | 2 | 3 | 83 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C1 | 1 | 2 | 4 | 1 | 46 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C2 | 2 | 4 | 3 | 2 | 150 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C3 | 2 | 1 | 2 | 1 | 51 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C4 |  | 1 | 2 | 1 | 66 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9 | happy, negative, boundary, conflict, failure |
 | EC-NEW2 | 2 | 2 | 7 | 2 | 176 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW3 | 9 | 9 | 9 | 4 | 343 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 3 | 5 | 1 | 5 | 132 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW5 | 2 | 2 | 3 | 3 | 105 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C1 | 3 | 1 | 6 | 2 | 128 | AC2, AC4, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy, negative, boundary, conflict, cross-cutting |
-| ECL-C3 | 2 | 1 | 4 | 2 | 140 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C1 | 1 | 3 | 6 | 2 | 128 | AC2, AC4, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C2 | 1 | 3 | 1 | 1 | 57 | — | happy, negative, boundary, conflict, cross-cutting |
+| ECL-C3 | 1 | 2 | 4 | 2 | 140 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C4 |  | 1 | 1 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C5 | 2 | 3 | 3 | 2 | 139 | AC1, AC2, AC3, AC8, AC9, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C6 | 3 | 3 | 4 | 4 | 185 | AC3, AC7, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C5 | 1 | 4 | 3 | 2 | 139 | AC1, AC2, AC3, AC8, AC9, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C6 | 2 | 4 | 4 | 4 | 185 | AC3, AC7, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C7 | 2 | 4 | 3 | 2 | 185 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO01 | 2 | 1 | 5 | 5 | 105 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO02 | 3 | 2 | 5 | 5 | 127 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO01 | 1 | 2 | 5 | 5 | 105 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO02 | 2 | 3 | 5 | 5 | 127 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO03 | 3 | 4 | 3 | 5 | 118 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO04 | 2 | 3 | 5 | 3 | 134 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO07 | 4 | 5 | 3 | 2 | 184 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO09 | 4 | 3 | 2 | 1 | 117 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO10 | 1 | 2 | 1 | 1 | 35 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9 | happy, negative, boundary, conflict, cross-cutting |
 | EO11 | 1 |  | 1 | 1 | 28 | AC1, AC2, AC5, AC7 | happy, negative, boundary, conflict |
-| EO12 | 3 | 1 | 2 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC11, AC12, AC13, AC14, AC15, AC16 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO15 | 1 | 1 | 8 | 2 | 81 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO12 | 2 | 2 | 2 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC11, AC12, AC13, AC14, AC15, AC16 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO15 |  | 2 | 8 | 2 | 81 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO19 | 3 | 2 | 2 | 1 | 90 | AC1, AC3, AC4, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO26 | 3 | 3 | 5 | 1 | 116 | AC1, AC3, AC6, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO-C1 | 1 | 1 | 1 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, failure |
 | EO-C2 | 2 | 1 | 5 | 1 | 114 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C1 | 1 | 2 | 6 | 3 | 54 | AC1, AC2, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C2 |  | 5 |  | 1 | 101 | AC1, AC2, AC3, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C1 |  | 3 | 6 | 3 | 54 | AC1, AC2, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C2 |  | 5 |  | 1 | 122 | AC1, AC2, AC3, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C3 | 1 |  | 4 | 2 | 51 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C4 | 2 | 2 | 1 | 2 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C4 | 1 | 3 | 1 | 2 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C5 | 2 | 2 | 3 | 1 | 112 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C6 | 2 | 2 | 3 | 1 | 111 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
 | TS01 | 3 | 4 | 9 | 5 | 144 | AC1, AC2, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -75,18 +75,18 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | VS01 | 1 | 3 | 2 | 1 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS02 |  | 2 | 10 | 4 | 166 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS03 | 1 | 2 | 3 | 4 | 119 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS04 | 1 | 4 | 2 | 2 | 125 | AC3, AC4, AC5, AC6, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS04 | 1 | 4 | 2 | 2 | 146 | AC3, AC4, AC5, AC6, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS06A | 1 | 2 | 1 | 1 | 61 | AC1, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, failure, cross-cutting |
 | VS06B | 1 | 2 | 1 | 1 | 61 | — | happy, negative, boundary, failure, cross-cutting |
 | VS07 | 3 | 3 | 5 | 3 | 106 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS08 |  | 3 | 2 | 1 | 67 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS09 |  | 1 | 1 | 1 | 57 | AC3, AC4, AC5, AC6, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS13 | 2 | 2 | 2 |  | 50 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS13 | 2 | 3 | 2 |  | 84 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS15 |  |  | 5 | 2 | 43 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS16 |  | 1 | 3 | 2 | 72 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS17 | 13 | 20 | 23 | 8 | 724 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS17 | 13 | 20 | 23 | 8 | 749 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS18 |  | 1 | 4 | 1 | 47 | — | happy, negative, boundary, conflict, cross-cutting |
-| VS25 |  | 2 |  | 1 | 25 | AC1, AC5 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS25 | 1 | 2 |  | 1 | 59 | AC1, AC5 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C1 | 1 | 5 | 1 | 2 | 96 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C2 | 1 | 3 | 3 | 1 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C3 | 2 | 4 | 5 | 2 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -251,17 +251,17 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>AU04</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageRoleAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestScopingTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`
@@ -381,6 +381,7 @@ The file is traced, but this test's own name does not say which story it checks.
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/ConcurrentDecisionTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/components/OperatingHours.test.tsx`
@@ -440,7 +441,6 @@ The file is traced, but this test's own name does not say which story it checks.
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
@@ -448,6 +448,7 @@ The file is traced, but this test's own name does not say which story it checks.
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/SafetyReviewNoticeDeliveryTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
@@ -466,8 +467,8 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>EC09</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`
 - frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`
@@ -489,9 +490,9 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>EC-C1</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/EventReassignmentAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventReassignmentFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/controller/EventReassignmentAccessTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/EventReassignmentRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
@@ -618,10 +619,10 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>ECL-C1</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`
 - frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorLeadDashboard.test.tsx`
@@ -634,8 +635,8 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>ECL-C2</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`
 - frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`
@@ -644,8 +645,8 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>ECL-C3</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`
@@ -664,8 +665,8 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>ECL-C5</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/CoordinatorNotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
@@ -678,9 +679,9 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>ECL-C6</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/ConcurrentDecisionTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/CoordinatorNotificationFlowTest.java`
@@ -711,8 +712,8 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>EO01</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
 - frontend component/unit: `frontend/src/components/equipment/EquipmentPicker.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
@@ -728,9 +729,9 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>EO02</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestSubmissionRulesTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/RequestSubmissionRulesFlowTest.java`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestDateRules.test.tsx`
@@ -832,9 +833,9 @@ The file is traced, but this test's own name does not say which story it checks.
 <details><summary>EO12</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeRegistrationPeriodBoundaryTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/EventRegistrationPeriodAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationPeriodServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/controller/EventRegistrationPeriodAccessTest.java`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationPeriodAvailability.test.tsx`
 - frontend component/unit: `frontend/src/features/events/RegistrationPeriod.test.tsx`
 - e2e (browser): `frontend/e2e/registration-management.spec.ts`
@@ -842,7 +843,7 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>EO15</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
 - frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/components/ui/StatusTimeline.test.tsx`
@@ -907,9 +908,9 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>SO-C1</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/SafetyReviewNoticeDeliveryTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - frontend component/unit: `frontend/src/features/changeRequests/ReleaseOneSynchronization.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerNav.test.tsx`
@@ -944,10 +945,10 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>SO-C4</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
@@ -1224,6 +1225,7 @@ The file is traced, but this test's own name does not say which story it checks.
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueissue/service/CoordinatorVenueOperationalIssueServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/OperationalIssuesPage.test.tsx`
@@ -1331,6 +1333,7 @@ The file is traced, but this test's own name does not say which story it checks.
 </details>
 <details><summary>VS25</summary>
 
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/OrganiserVenueNoticeFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - e2e (browser): `frontend/e2e/venue-decisions.spec.ts`

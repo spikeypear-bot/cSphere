@@ -59,7 +59,8 @@ class VenueBookingWordingTest {
     @Mock private VenueBookingRecordRepository bookings;
     @Mock private EventRequestRepository eventRequests;
     @Mock private UserRepository users;
-    @Mock private VenueMapper venueMapper;
+    // The real mapper: with no hours service it reports "Operating hours not configured".
+    private final VenueMapper venueMapper = new com.example.connect_sphere.venue.mapper.VenueMapperImpl();
     @Mock private ActivityService activityService;
     @Mock private NotificationService notificationService;
     @Mock private AvailabilityService availability;
