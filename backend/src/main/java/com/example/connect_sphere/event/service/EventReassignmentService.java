@@ -91,7 +91,7 @@ public class EventReassignmentService {
     @Transactional(readOnly = true)
     public List<EventReassignmentRequestDto> latestForCoordinator(UUID coordinatorId, UUID eventId) {
         Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
-        boolean assigned = coordinatorId != null && coordinatorId.equals(event.getCoordinatorId());
+        boolean assigned = coordinatorId.equals(event.getCoordinatorId());
         Optional<EventReassignmentRequest> ownLatest =
                 requests.findFirstByEventIdAndRequesterUserIdOrderByRequestedAtDesc(eventId, coordinatorId);
         if (!assigned && ownLatest.isEmpty()) {
@@ -228,7 +228,7 @@ public class EventReassignmentService {
     }
 
     private static void requireAssigned(UUID coordinatorId, Event event) {
-        if (coordinatorId == null || !coordinatorId.equals(event.getCoordinatorId())) {
+        if (!coordinatorId.equals(event.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(event.getEventId());
         }
     }
