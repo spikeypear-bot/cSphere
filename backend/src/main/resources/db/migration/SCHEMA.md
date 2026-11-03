@@ -883,3 +883,29 @@ V68 drops `mock_references` and `mock` (V1). They backed a demo slice (the backe
 package: controller → service → repository → entity → DTO → mapper) that showed the MVC layering
 before real entities existed; the package was removed in the same change. V1 itself is unchanged,
 since applied migrations are never edited.
+
+## V69–V71 — Release 1 integration repairs
+
+V69 adds `equipment_items jsonb NOT NULL DEFAULT '[]'` to `event_requests` and
+`events`, with array shape checks. Items use EC07's existing catalogue ID and
+positive quantity model. These are approved requirements; EC equipment request
+lines and actual reservations remain separate and require their existing reviews.
+Change-request JSON snapshots include proposed structured items and the saved
+registration closing time. Legacy free text remains supported.
+
+V70 adds `notification_type.safety_review_requested` and extends the existing
+notification shape check with required `event_id` and `message`. Notices join the
+existing outbox transaction at the EC safety-review transition. See
+`docs/release1-integration-repairs.md` for validation and data-flow contracts.
+
+V71 backfills approved originating requests with the Event’s authoritative
+registration settings, repairing divergence left by older capacity/period
+endpoints. No attendee registration or reservation is changed.
+
+## V72 — Safety-review withdrawal notification
+
+Adds `notification_type.safety_review_withdrawn`, requiring `event_id`, `message`
+and `reason` while retaining prior notification shapes. EC withdrawal queues a
+notice to each Safety Officer in the same transaction as the return to Planning.
+Delivery uses the existing durable notification outbox. The notice links to the
+Safety reviews list because the event has left the waiting-for-review queue.

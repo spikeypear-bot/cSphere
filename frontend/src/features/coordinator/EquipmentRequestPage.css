@@ -11,3 +11,42 @@
 @media (max-width: 640px) {
   .equipment-request__line { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* EC07 / EC-NEW3: form controls and summaries follow the EO/VS surfaces. */
+.equipment-request-page { max-width: 64rem; width: 100%; margin-inline: auto; }
+.equipment-request-page .equipment-request__requirements,
+.equipment-request-page .equipment-request__existing,
+.equipment-request-page .equipment-request__previous { display: grid; gap: 0.85rem; padding: clamp(1rem, 2vw, 1.5rem); min-width: 0; }
+.equipment-request-page .equipment-request__requirements h2,
+.equipment-request-page .equipment-request__existing h2 { font-size: var(--section-heading-size); }
+.equipment-request-page .equipment-request__requirements ul,
+.equipment-request-page .equipment-request__existing > ul { margin: 0; padding-inline-start: 1.25rem; line-height: 1.7; }
+.equipment-request-page .equipment-request__form { padding: clamp(1rem, 2vw, 1.5rem); gap: 1rem; }
+.equipment-request-page .equipment-request__form > .button,
+.equipment-request-page .equipment-request__existing > .button { justify-self: start; }
+.equipment-request-page .equipment-request__items { display: grid; gap: 0.75rem; min-width: 0; }
+.equipment-request-page .equipment-request__items-header { flex-wrap: wrap; }
+.equipment-request-page .equipment-request__line {
+  grid-template-columns: minmax(0, 1fr) minmax(5rem, 8rem) auto;
+  margin: 0; padding: 1rem; border: 1px solid var(--hairline); border-radius: var(--radius-sm); background: var(--paper);
+}
+.equipment-request-page .equipment-request__line label { min-width: 0; }
+.equipment-request-page .equipment-request__line input,
+.equipment-request-page .equipment-request__line select,
+.equipment-request-page .equipment-request__field textarea {
+  width: 100%; box-sizing: border-box; padding: 0.6rem 0.7rem; color: var(--ink);
+  background: var(--paper); border: 1px solid var(--hairline-strong); border-radius: var(--radius-sm);
+}
+.equipment-request-page .equipment-request__line select { background: var(--panel); }
+.equipment-request-page .equipment-request__field textarea { resize: vertical; font-weight: 400; }
+.equipment-request-page :is(input, select, textarea):focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.equipment-request-page .equipment-request__status { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.equipment-request-page .equipment-request__status .dash-badge { white-space: normal; overflow-wrap: normal; }
+@media (max-width: 640px) {
+  .equipment-request-page .equipment-request__line { grid-template-columns: minmax(0, 1fr); }
+  .equipment-request-page .equipment-request__line > .button { justify-self: start; }
+}
+
+.equipment-request__form > .equipment-picker { width: 100%; box-sizing: border-box; }
+
+.equipment-request-page .equipment-selection-summary.equipment-list { padding: 0; }

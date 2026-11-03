@@ -36,6 +36,8 @@ export function RequestFacts({ request }: { request: EquipmentRequestSummary }) 
       <div><dt>Organisation</dt><dd>{request.organisationName ?? 'Not recorded'}</dd></div>
       <div><dt>Requested by</dt><dd>{requesterName(request.requestedBy)}</dd></div>
       <div><dt>Items</dt><dd>{summariseItems(request.items)}</dd></div>
+      <div><dt>Equipment types</dt><dd>{new Set((request.items ?? []).map(item => item.equipmentId)).size}</dd></div>
+      <div><dt>Total units requested</dt><dd>{(request.items ?? []).reduce((total, item) => total + item.quantity, 0)}</dd></div>
     </dl>
   )
 }

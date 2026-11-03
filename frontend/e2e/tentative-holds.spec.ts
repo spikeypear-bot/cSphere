@@ -22,7 +22,7 @@ test('VS-C3 (cross-cutting): Venue Staff hold, release and convert a coordinator
   await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
   await coordinator.getByPlaceholder('Search by address or details').fill(venueName)
   await addVenueToRequest(coordinator, new RegExp(venueName))
-  await coordinator.getByRole('button', { name: `Request ${venueName}` }).click()
+  await coordinator.getByRole('button', { name: 'Request venue', exact: true }).click()
   await expect(coordinator.getByText(`Booking request for ${venueName} sent to Venue Staff`)).toBeVisible()
   const token = await apiToken(request, 'ec1')
   const requested = await apiGet<{ bookingId: string; startDatetime: string; endDatetime: string }[]>(request, token, `/api/events/${eventId}/venue-bookings`)

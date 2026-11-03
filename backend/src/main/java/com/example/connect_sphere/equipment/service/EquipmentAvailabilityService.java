@@ -26,8 +26,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>For a period, per kind: reservations of events that are not cancelled
  * or completed (EO07, D28) and that overlap it; serialised units with a
- * Faulty or Unavailable block overlapping it (TS03), each counted once; and
- * units of a non-serialised kind reported damaged during it (TS09 AC5). Three
+ * Faulty/Unavailable block or open damage report overlapping it, each counted once; and
+ * units of a non-serialised kind reported damaged during it (TS09 AC5). Four
  * queries cover any number of kinds.
  *
  * <p>It also answers whether one serialised unit is free for a period
@@ -40,16 +40,12 @@ public class EquipmentAvailabilityService {
     /**
      * How much of one kind can still be reserved for a period.
      * {@code outOfActionQuantity} is the serialised units blocked Faulty or
-     * Unavailable (TS03) plus the units of a non-serialised kind reported
-     * damaged (TS09 AC5).
+     * Unavailable (TS03) or openly damaged, plus damaged non-serialised units (TS09).
+     * A serialised unit both reserved and out of action consumes stock only once.
      */
     public record Availability(int totalQuantity, int reservedQuantity, int outOfActionQuantity,
             int availableQuantity) {
 
-        /** The availability formula: total − reserved − out of action, never below zero. */
-        static Availability of(int total, int reserved, int outOfAction) {
-            return new Availability(total, reserved, outOfAction, Math.max(0, total - reserved - outOfAction));
-        }
     }
 
     /** D35: why a serialised unit cannot be used for a period. */
@@ -136,8 +132,12 @@ public class EquipmentAvailabilityService {
         kinds.forEach(kind -> ids.add(kind.getId()));
 
         Map<UUID, Integer> reserved = new HashMap<>();
+        Map<UUID, Set<String>> reservedUnits = new HashMap<>();
         for (EquipmentLog log : logs.findOverlappingForEquipments(ids, start, end)) {
             reserved.merge(log.getEquipmentId(), log.getQuantity(), Integer::sum);
+            if (log.getSerialNumber() != null) {
+                reservedUnits.computeIfAbsent(log.getEquipmentId(), id -> new HashSet<>()).add(log.getSerialNumber());
+            }
         }
         Map<UUID, Set<String>> blockedUnits = new HashMap<>();
         for (EquipmentStatusPeriod period : statusPeriods.findOverlapping(start, end)) {
@@ -145,6 +145,9 @@ public class EquipmentAvailabilityService {
                 blockedUnits.computeIfAbsent(period.getEquipmentId(), id -> new HashSet<>())
                         .add(period.getSerialNumber());
             }
+        }
+        for (Object[] row : equipment.openlyDamagedUnits(ids, start, end)) {
+            blockedUnits.computeIfAbsent((UUID) row[0], id -> new HashSet<>()).add((String) row[1]);
         }
         Map<UUID, Integer> damaged = new HashMap<>();
         for (Object[] row : equipment.damagedQuantities(ids, start, end)) {
@@ -155,7 +158,13 @@ public class EquipmentAvailabilityService {
             UUID id = kind.getId();
             int outOfAction = blockedUnits.getOrDefault(id, Set.of()).size()
                     + (Boolean.TRUE.equals(kind.getSerialised()) ? 0 : damaged.getOrDefault(id, 0));
-            result.put(id, Availability.of(kind.getQuantity(), reserved.getOrDefault(id, 0), outOfAction));
+            int held = reserved.getOrDefault(id, 0);
+            // A damaged reserved unit belongs to both displayed counts, but consumes stock only once.
+            int overlap = Boolean.TRUE.equals(kind.getSerialised())
+                    ? (int) reservedUnits.getOrDefault(id, Set.of()).stream()
+                            .filter(blockedUnits.getOrDefault(id, Set.of())::contains).count() : 0;
+            result.put(id, new Availability(kind.getQuantity(), held, outOfAction,
+                    Math.max(0, kind.getQuantity() - held - outOfAction + overlap)));
         }
         return result;
     }

@@ -7,3 +7,18 @@
 .operational-issue p {
   margin: 0;
 }
+
+.operational-issues-page > .plain-list {
+  list-style: none; padding: 0; margin: 0; display: grid; gap: 1rem;
+}
+.operational-issues-page .operational-issue { padding: clamp(1rem, 2vw, 1.5rem); min-width: 0; }
+.operational-issues-page .operational-issue > h2 { font-size: var(--section-heading-size); }
+.operational-issues-page .operational-issue > p { line-height: 1.5; }
+.operational-issues-page .dash-facts {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr));
+  gap: 1rem; padding-block: 0.85rem; border-block: 1px solid var(--hairline); margin: 0;
+}
+.operational-issues-page .dash-facts dt { color: var(--ink-soft); font-size: 0.8rem; font-weight: 600; }
+.operational-issues-page .dash-facts dd { margin: 0.25rem 0 0; line-height: 1.5; }
+.operational-issues-page .dash-queue { margin-block: 0.75rem; }
+.operational-issues-page .dash-queue__row { background: var(--paper); border-radius: var(--radius-sm); }

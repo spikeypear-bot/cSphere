@@ -6,6 +6,8 @@ import { formatEventDateTime } from '../venueStaff/formatEventDateTime'
 import './OrganiserRegistrations.css'
 import type { EventStatus, RegistrationInfoDto, RegistrationState, RegistrationStatus } from '../../types/event'
 
+const ATTENDEES_PER_PAGE = 10
+
 const STATE_LABELS: Record<RegistrationState, string> = {
   not_required: 'Not required',
   not_yet_open: 'Not yet open',
@@ -34,6 +36,7 @@ export function OrganiserRegistrations({
   const [data, setData] = useState<RegistrationInfoDto | null>(null)
   const [failed, setFailed] = useState(false)
   const [attempt, setAttempt] = useState(0)
+  const [attendeePage, setAttendeePage] = useState({ eventId, page: 1 })
 
   // EO11: Registration capacity
   const [capacityInput, setCapacityInput] = useState('')
@@ -119,7 +122,10 @@ export function OrganiserRegistrations({
   }
   if (!data) return null
 
-  //const savedRegistration = data
+  const pageCount = Math.max(1, Math.ceil(data.attendees.length / ATTENDEES_PER_PAGE))
+  const currentPage = Math.min(attendeePage.eventId === eventId ? attendeePage.page : 1, pageCount)
+  const firstAttendee = (currentPage - 1) * ATTENDEES_PER_PAGE
+  const visibleAttendees = data.attendees.slice(firstAttendee, firstAttendee + ATTENDEES_PER_PAGE)
   const pct = data.capacity ? Math.min(100, Math.round((data.confirmedCount / data.capacity) * 100)) : 0
   const opensAtInput = periodDraft?.opensAt ?? toSingaporeInput(data.opensAt)
   const closesAtInput = periodDraft?.closesAt ?? toSingaporeInput(data.closesAt)
@@ -333,33 +339,44 @@ if (currentData.opensAt !== null) {
           {data.attendees.length === 0 ? (
             <p>{data.message ?? 'No registrations yet.'}</p>
           ) : (
-            <div className="registrations__scroll">
-              <table className="registrations__table">
-                <caption className="sr-only">Registered attendees</caption>
-                <thead>
-                  <tr>
-                    <th scope="col">Name</th>
-                    <th scope="col">Reference</th>
-                    <th scope="col">Registered</th>
-                    <th scope="col">Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {data.attendees.map((a) => (
-                    <tr key={a.registrationId}>
-                      <td>{a.name}</td>
-                      <td>{a.reference}</td>
-                      <td>{formatEventDateTime(a.registeredAt)}</td>
-                      <td>
-                        <span className={`registrations__pill registrations__pill--${a.status}`}>
-                          {STATUS_LABELS[a.status] ?? a.status}
-                        </span>
-                      </td>
+            <>
+              <div className="registrations__scroll">
+                <table className="registrations__table">
+                  <caption className="sr-only">Registered attendees</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col">Name</th>
+                      <th scope="col">Reference</th>
+                      <th scope="col">Registered</th>
+                      <th scope="col">Status</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  </thead>
+                  <tbody>
+                    {visibleAttendees.map((a) => (
+                      <tr key={a.registrationId}>
+                        <td>{a.name}</td>
+                        <td>{a.reference}</td>
+                        <td>{formatEventDateTime(a.registeredAt)}</td>
+                        <td>
+                          <span className={`registrations__pill registrations__pill--${a.status}`}>
+                            {STATUS_LABELS[a.status] ?? a.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              {pageCount > 1 && <nav className="registrations__pagination" aria-label="Registered attendees pages">
+                <p role="status">Showing {firstAttendee + 1}–{Math.min(firstAttendee + ATTENDEES_PER_PAGE, data.attendees.length)} of {data.attendees.length} attendees · Page {currentPage} of {pageCount}</p>
+                <div className="registrations__page-actions">
+                  <Button type="button" variant="secondary" disabled={currentPage === 1}
+                    onClick={() => setAttendeePage({ eventId, page: currentPage - 1 })}>Previous</Button>
+                  <Button type="button" variant="secondary" disabled={currentPage === pageCount}
+                    onClick={() => setAttendeePage({ eventId, page: currentPage + 1 })}>Next</Button>
+                </div>
+              </nav>}
+            </>
           )}
         </>
       )}

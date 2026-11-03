@@ -41,6 +41,9 @@ public class EventRegistrationPeriodService {
     @Transactional
     public RegistrationInfoDto update(String organisation, UUID organiserId, UUID eventId,
             RegistrationPeriodRequest request) {
+        var origin = eventRequests.findRequestIdByEventId(eventId)
+                .flatMap(eventRequests::findForUpdate)
+                .orElseThrow(() -> new EventNotFoundException(eventId));
         Event event = events.findForUpdate(eventId)
                 .filter(value -> organisation != null && organisation.equals(value.getOrganisation()))
                 .orElseThrow(() -> new EventNotFoundException(eventId));
@@ -81,8 +84,6 @@ public class EventRegistrationPeriodService {
             throw invalid("The registration opening date and time cannot be in the past.");
         }
 
-        var origin = eventRequests.findByEventId(eventId)
-                .orElseThrow(() -> new IllegalStateException("The event's originating request was not found."));
         Map<String, Object> values = new LinkedHashMap<>();
         values.put("registrationOpensAt", opensAt.toString());
         values.put("registrationClosesAt", closesAt.toString());
@@ -90,6 +91,9 @@ public class EventRegistrationPeriodService {
         event.setRegistrationOpensAt(opensAt);
         event.setRegistrationClosesAt(closesAt);
         events.save(event);
+        origin.setRegistrationOpensAt(opensAt);
+        origin.setRegistrationClosesAt(closesAt);
+        eventRequests.save(origin);
         activity.record(new ActivityService.Entry(origin.getRequestId(), eventId,
                 ActivityType.registration_period_updated, organiserId, "Registration period updated.",
                 null, null, null, null, values));

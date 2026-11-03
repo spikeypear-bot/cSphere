@@ -27,14 +27,14 @@ test('EC07 TS01 TS02 TS06 (happy): the coordinator requests screens; Technical S
   const coordinator = await signedIn(browser, 'ec1')
   await test.step('EC07 AC2, AC5 (boundary): a quantity of 0 cannot be submitted', async () => {
     await coordinator.goto(`/coordinator/events/${eventId}/equipment-request`)
-    await coordinator.getByRole('button', { name: 'Add item' }).click()
-    await coordinator.getByRole('combobox', { name: /^Equipment/ }).selectOption({ label: 'Projection Screen (6 in catalogue)' })
-    await coordinator.getByLabel('Quantity').fill('0')
+    await coordinator.getByRole('button', { name: 'Edit equipment' }).click()
+    await coordinator.getByLabel('Projection Screen', { exact: true }).check()
+    await coordinator.getByRole('spinbutton', { name: 'Projection Screen quantity', exact: true }).fill('0')
     await expect(coordinator.getByRole('button', { name: 'Submit equipment request' })).toBeDisabled()
   })
 
   await test.step('EC07 AC3, AC7, AC8: two screens with a note are submitted for Technical Support to review', async () => {
-    await coordinator.getByLabel('Quantity').fill('2')
+    await coordinator.getByRole('spinbutton', { name: 'Projection Screen quantity', exact: true }).fill('2')
     await coordinator.getByLabel('Technical requirements or notes').fill('Two screens either side of the stage.')
     await coordinator.getByRole('button', { name: 'Submit equipment request' }).click()
     await expect(coordinator.getByText('Equipment request submitted to Technical Support for review.')).toBeVisible()

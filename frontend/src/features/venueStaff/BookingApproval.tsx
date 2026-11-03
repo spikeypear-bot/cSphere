@@ -194,14 +194,14 @@ export function BookingApproval({ booking, onApproved, onUnavailable, conflicts,
     {confirming && booking.status === 'pending' && !booking.holds?.some(h => h.status === 'active') && <BookingDecisionPanel aria-labelledby="approve-booking-heading">
       <h3 id="approve-booking-heading">Confirm booking approval</h3>
       <p>Approve this request and commit the venue to this event?</p>
-      <dl>
-        <dt>Event</dt><dd>{booking.event.eventName}</dd>
-        <dt>Venue</dt><dd>{booking.venue.venueAddress}</dd>
-        <dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd>
-        <dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd>
+      <dl className="venue-card-preview__information booking-approval__summary">
+        <div><dt>Event</dt><dd>{booking.event.eventName}</dd></div>
+        <div><dt>Venue</dt><dd>{booking.venue.venueAddress}</dd></div>
+        <div><dt>Starts (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.startDatetime ?? booking.event.startDatetime)}</dd></div>
+        <div><dt>Ends (Singapore time, UTC+08:00)</dt><dd>{formatEventDateTime(booking.timing?.endDatetime ?? booking.event.endDatetime)}</dd></div>
         {booking.timing && <>
-          <dt>Setup / Turnaround</dt><dd>{booking.timing.setupDurationMinutes} / {booking.timing.turnaroundDurationMinutes} minutes</dd>
-          <dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd>
+          <div><dt>Setup / Turnaround</dt><dd>{booking.timing.setupDurationMinutes} / {booking.timing.turnaroundDurationMinutes} minutes</dd></div>
+          <div><dt>Venue Occupied (SGT)</dt><dd>{formatEventTimeRange(booking.timing.effectiveStart, booking.timing.effectiveEnd)}</dd></div>
         </>}
       </dl>
       <div className="booking-approval__actions">

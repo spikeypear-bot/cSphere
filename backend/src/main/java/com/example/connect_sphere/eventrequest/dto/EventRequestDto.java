@@ -40,7 +40,21 @@ public record EventRequestDto(
         String rejectionReason,
         String createdByName,
         /** EC-NEW2: the one status every screen shows. */
-        StatusView journeyStatus) {
+        StatusView journeyStatus,
+        List<com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item> equipmentItems) {
+
+    public EventRequestDto(UUID requestId, Character requestType, UUID eventId, String eventName,
+            String purpose, String description, OffsetDateTime startDatetime, OffsetDateTime endDatetime,
+            Integer expectedAttendance, String venueRequirements, String equipmentRequirements,
+            List<AccessibilityFeature> accessibilityNeeds, List<String> requiredFacilities, Boolean registrationNeeds,
+            Integer registrationCapacity, OffsetDateTime registrationOpensAt, OffsetDateTime registrationClosesAt,
+            String attendeeInstructions, EventRequestStatus status, OffsetDateTime createdAt, OffsetDateTime updatedAt,
+            String organisation, UUID coordinatorId, String rejectionReason, String createdByName, StatusView journeyStatus) {
+        this(requestId, requestType, eventId, eventName, purpose, description, startDatetime, endDatetime,
+                expectedAttendance, venueRequirements, equipmentRequirements, accessibilityNeeds, requiredFacilities,
+                registrationNeeds, registrationCapacity, registrationOpensAt, registrationClosesAt, attendeeInstructions,
+                status, createdAt, updatedAt, organisation, coordinatorId, rejectionReason, createdByName, journeyStatus, List.of());
+    }
 
     /** Without the journey status (EC-NEW2), for callers built before it; the
      * mapper always fills it in for real responses. */

@@ -121,6 +121,12 @@ public class EquipmentRequestDecisionService {
                     "This event has been cancelled or has finished, so its equipment request can no longer be reviewed.");
         }
         if (requestedStatus == EquipmentRequestStatus.approved) {
+            var held = reservations.findByEventId(event.getEventId());
+            if (!EquipmentRequirementCoverage.covered(event, id -> EquipmentAvailabilityService.heldThroughout(
+                    held, id, event.getStartDatetime().toInstant(), event.getEndDatetime().toInstant()))) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "The approved equipment requirements are not fully reserved. The coordinator must revise the request if its items no longer match.");
+            }
             requireAllItemsReserved(request, event.getStartDatetime().toInstant(),
                     event.getEndDatetime().toInstant());
         }

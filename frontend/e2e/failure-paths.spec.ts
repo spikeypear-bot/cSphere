@@ -53,7 +53,7 @@ test('SO-C6 EC08 (happy): the Safety Officer asks for changes to named checklist
   await coordinator.goto(`/coordinator/events/${eventId}/venue-booking`)
   await coordinator.getByPlaceholder('Search by address or details').fill(venueName)
   await addVenueToRequest(coordinator, new RegExp(venueName))
-  await coordinator.getByRole('button', { name: `Request ${venueName}` }).click()
+  await coordinator.getByRole('button', { name: 'Request venue', exact: true }).click()
   // Wait for each save to land before the next role acts (Week 9: wait for a
   // condition). Without these, 1 run in 6 opened the coordinator's page
   // before Venue Staff's approval was saved, so the event was not yet ready.

@@ -10,8 +10,10 @@ import { useFulfilment } from '../reservations/useFulfilment'
 import { reportPath, TS } from '../shared/faultyEquipment'
 import { describeWhen, requesterName } from '../shared/format'
 import { ResourceView } from '../../../components/ui/ResourceView'
-import { useResource } from '../../../lib/useResource'
+import { useRefreshingResource } from '../../../lib/useRefreshingResource'
 import { RequestBadges } from './RequestFacts'
+import { EquipmentSummary } from '../../../components/equipment/EquipmentPicker'
+import { equipmentDraftFrom } from '../../../lib/equipmentRequirements'
 import '../technicalSupport.css'
 import '../reservations/fulfilment.css'
 
@@ -21,7 +23,7 @@ export function EquipmentRequestDetailPage() {
   const { requestId = '' } = useParams<{ requestId: string }>()
   // There is no single-request read: the "all" list is the same shape and
   // already scoped to Technical Support (D32).
-  const requests = useResource(() => fetchEquipmentRequests('all'), requestId)
+  const requests = useRefreshingResource(() => fetchEquipmentRequests('all'), requestId)
   const [decided, setDecided] = useState<{ requestId: string; status: EquipmentRequestStatus; reason: string | null } | null>(null)
 
   return (
@@ -32,13 +34,16 @@ export function EquipmentRequestDetailPage() {
       {(list) => {
         const found = list.find((r) => r.requestId === requestId)!
         const mine = decided?.requestId === requestId ? decided : null
-        const request = mine ? { ...found, status: mine.status } : found
+        const request = found
         return (
           <RequestWorkspace
             key={request.requestId}
             request={request}
             rejectReason={mine?.reason ?? null}
-            onDecided={(status, reason) => setDecided({ requestId, status, reason })}
+            onDecided={(status, reason) => {
+              requests.setData(current => (current ?? list).map(item => item.requestId === requestId ? { ...item, status } : item))
+              setDecided({ requestId, status, reason })
+            }}
           />
         )
       }}
@@ -60,6 +65,8 @@ function RequestWorkspace({ request, rejectReason, onDecided }: {
   const periodValid = period.start !== '' && period.end !== '' && period.end > period.start
   const fulfilment = useFulfilment(request, period, periodValid, reloadKey)
   const data = fulfilment.data
+  const requestedItems = request.items?.length ? request.items : data?.lines ?? []
+  const technicalNote = equipmentDraftFrom(request.technicalRequirement, requestedItems).notes
   const rows = useMemo(() => (data && periodValid ? buildRows({
     lines: data.lines,
     availability: data.availability,
@@ -93,8 +100,9 @@ function RequestWorkspace({ request, rejectReason, onDecided }: {
             <Link to={reportPath(request.shortfallReportId)}>Open the damage report this request replaces</Link>
           </p>
         ) : null}
-        {request.technicalRequirement ? (
-          <p className="request-head__note"><span>Technical note</span>{request.technicalRequirement}</p>
+        <EquipmentSummary items={requestedItems} />
+        {technicalNote ? (
+          <p className="request-head__note"><span>Technical note</span>{technicalNote}</p>
         ) : null}
       </header>
 

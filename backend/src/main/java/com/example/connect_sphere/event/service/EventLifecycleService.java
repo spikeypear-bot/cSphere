@@ -254,6 +254,10 @@ public class EventLifecycleService {
         event.setSafetyFeedback(null);
         events.save(event);
         record(event, ActivityType.sent_for_safety_review, coordinatorId, null, from);
+        notifications.createSafetyReviewRequestedNotifications(
+                users.findByRole(com.example.connect_sphere.user.entity.UserRole.safety_officer).stream()
+                        .map(com.example.connect_sphere.user.entity.User::getUserId).toList(),
+                eventId, event.getEventName());
         return readinessOf(event);
     }
 
@@ -268,6 +272,10 @@ public class EventLifecycleService {
         event.setStatus(EventStatus.pending);
         events.save(event);
         record(event, ActivityType.safety_review_withdrawn, coordinatorId, why, JourneyStatus.AWAITING_SAFETY_REVIEW);
+        notifications.createSafetyReviewWithdrawnNotifications(
+                users.findByRole(com.example.connect_sphere.user.entity.UserRole.safety_officer).stream()
+                        .map(com.example.connect_sphere.user.entity.User::getUserId).toList(),
+                eventId, event.getEventName(), why);
         return readinessOf(event);
     }
 

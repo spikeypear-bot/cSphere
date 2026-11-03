@@ -436,7 +436,7 @@ export function VenueBookingRequestPage() {
                   {submitError ? <p role="alert" className="error-text">{submitError}</p> : null}
                   <Button className="venue-request__submit-button" disabled={!canSubmit || submitting} onClick={() => void submit()}>
                     {submitting ? 'Submitting…' : selected.length === 1
-                      ? `${replacing ? 'Request replacement' : 'Request'} ${selected[0].venue.venueAddress}`
+                      ? replacing ? `Request replacement ${selected[0].venue.venueAddress}` : 'Request venue'
                       : `Request ${selected.length} venues`}
                   </Button>
                 </Card>
@@ -475,11 +475,14 @@ export function VenueBookingRequestPage() {
                       .map(replacement => BOOKING_STATUS_LABELS[replacement.status]).join(', ')}</p>
                   )}
                   {(b.status === 'approved' || b.status === 'attention' || b.status === 'rejected' || b.requiresAlternative) &&
-                    <Link to={`/coordinator/events/${eventId}/venue-booking?replacesBookingId=${b.bookingId}`}>Replace or reschedule this booking</Link>}
-                  {b.requirementOutstanding && (b.status === 'rejected' || b.status === 'cancelled') && <div>
+                    <Link className="venue-request__replacement-link" to={`/coordinator/events/${eventId}/venue-booking?replacesBookingId=${b.bookingId}`}>Replace or reschedule this booking</Link>}
+                  {b.requirementOutstanding && (b.status === 'rejected' || b.status === 'cancelled') && <div className="venue-request__withdrawal">
                     <p>This venue requirement still blocks event readiness.</p>
-                    <label>Reason this venue is no longer required<input value={withdrawReasons[b.bookingId] ?? ''}
-                      onChange={e => setWithdrawReasons(current => ({...current,[b.bookingId]:e.target.value}))} /></label>
+                    <div className="field">
+                      <label htmlFor={`withdraw-reason-${b.bookingId}`}>Reason this venue is no longer required</label>
+                      <input id={`withdraw-reason-${b.bookingId}`} value={withdrawReasons[b.bookingId] ?? ''}
+                        onChange={e => setWithdrawReasons(current => ({...current,[b.bookingId]:e.target.value}))} />
+                    </div>
                     <Button disabled={!withdrawReasons[b.bookingId]?.trim() || submitting} onClick={async () => {
                       setSubmitting(true);setSubmitError(null)
                       try {
@@ -617,9 +620,11 @@ function VenueOptionCard({ option, attendance, selected, requestedStatus, onOpen
       disabled={disabled} onClick={onOpen}>
       <span className="venue-option__head">
         <span className="venue-option__name">{venue.venueAddress}</span>
-        <span className="venue-option__verdict">{VERDICT_LABELS[option.verdict]}</span>
-        {selected ? <span className="dash-badge dash-badge--success">Added</span> : null}
-        {requestedStatus !== undefined ? <span className="dash-badge dash-badge--neutral">Already requested</span> : null}
+        <span className="venue-option__statuses">
+          <span className="venue-option__verdict">{VERDICT_LABELS[option.verdict]}</span>
+          {selected ? <span className="dash-badge dash-badge--success">Added</span> : null}
+          {requestedStatus !== undefined ? <span className="dash-badge dash-badge--neutral">Already requested</span> : null}
+        </span>
       </span>
       <span className="venue-option__capacity">
         <span className="venue-option__bar" aria-hidden="true"><span style={{ width: `${fill}%` }} /></span>

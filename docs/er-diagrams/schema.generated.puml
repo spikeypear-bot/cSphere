@@ -225,6 +225,7 @@ entity event_requests {
 	registration_opens_at : timestamp with time zone
 	attendee_instructions : text
 	registration_closes_at : timestamp with time zone
+	* equipment_items : jsonb
 }
 
 entity event_safety_reviews {
@@ -266,6 +267,7 @@ entity events {
 	attendee_instructions : text
 	registration_closes_at : timestamp with time zone
 	confirmed_venues : text
+	* equipment_items : jsonb
 }
 
 entity notification_outbox {
@@ -608,6 +610,7 @@ enum notification_type {
 	attendee_event_cancelled
 	equipment_request_submitted
 	equipment_change_review
+	safety_review_requested
 }
 
 enum user_role {

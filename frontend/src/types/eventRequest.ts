@@ -66,6 +66,7 @@ export interface EventRequestDto {
   endDatetime: string | null
   expectedAttendance: number | null
   venueRequirements: string | null
+  equipmentItems?: { equipmentId: string; quantity: number }[]
   equipmentRequirements: string | null
   accessibilityNeeds: AccessibilityFeature[]
   requiredFacilities?: Facility[]
@@ -103,6 +104,7 @@ export interface SaveEventRequestRequest {
   endDatetime?: string | null
   expectedAttendance?: number | null
   venueRequirements?: string | null
+  equipmentItems?: { equipmentId: string; quantity: number }[]
   equipmentRequirements?: string | null
   accessibilityNeeds?: AccessibilityFeature[]
   requiredFacilities?: Facility[]

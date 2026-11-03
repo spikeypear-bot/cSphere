@@ -1,6 +1,6 @@
 import { BookingAssessment } from '../venueStaff/BookingAssessment'
-import { useLiveRefresh } from '../../lib/useLiveRefresh'
-import { useEffect, useState } from 'react'
+import { useRefreshingResource } from '../../lib/useRefreshingResource'
+import { useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { Card } from '../../components/ui/Card'
 import { Button } from '../../components/ui/Button'
@@ -37,15 +37,10 @@ import { EquipmentDamagePanel } from './EquipmentDamagePanel'
  * gets the confirmed arrangements (EO04).
  */
 export function EventDetailsPage() {
-  const liveRevision = useLiveRefresh()
   const { eventId } = useParams<{ eventId: string }>()
   const { role } = useSession()
   const location = useLocation()
-  const flash = location.state as { justApproved?: boolean; bookingRequested?: string } | null
-  const [event, setEvent] = useState<EventDto | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  // ECL-C7: a coordinator opening an event that is not (or no longer) theirs.
-  const [notAssigned, setNotAssigned] = useState(false)
+  const flash = location.state as { justApproved?: boolean; bookingRequested?: string; changeApproved?: boolean } | null
   const readinessState = useSafetyData<ReadinessDto>(
     eventId && role === 'coordinator' ? `/events/${eventId}/readiness` : null,
   )
@@ -56,25 +51,11 @@ export function EventDetailsPage() {
   // Only external booking changes reset the panel; its own actions retain feedback.
   const [bookingReloadToken, setBookingReloadToken] = useState(0)
 
-  useEffect(() => {
-    if (!eventId) return
-    let cancelled = false
-    apiClient
-      .get<EventDto>(`/events/${eventId}`)
-      .then((result) => {
-        if (cancelled) return
-        setEvent(result)
-        setError(null)
-      })
-      .catch((err: unknown) => {
-        if (cancelled) return
-        if (role === 'coordinator' && isNotAssigned(err)) setNotAssigned(true)
-        setError(err instanceof ApiClientError ? err.message : 'Could not load this event.')
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [eventId, reloadToken, role, liveRevision])
+  const resource = useRefreshingResource(() => apiClient.get<EventDto>('/events/' + eventId, { cache: 'no-store' }),
+    eventId ? eventId + ':' + role : null, true, reloadToken)
+  const event = resource.data
+  const error = resource.error
+  const notAssigned = role === 'coordinator' && isNotAssigned(resource.cause)
 
   if (notAssigned) return <NotAssignedNotice what="event" />
   if (error && !event) return <p role="alert">{error}</p>
@@ -106,6 +87,9 @@ export function EventDetailsPage() {
           </>
         )}
       />
+
+      {flash?.changeApproved ? <Notice>Change approved and applied. The organiser has been told.</Notice> : null}
+      <ChangeRequestPanel eventId={event.eventId} journeyCode={journey?.code} />
 
       {journey ? (
         <div className="event-details__journey">
@@ -153,7 +137,6 @@ export function EventDetailsPage() {
         </dl>
       </Card>
 
-      <ChangeRequestPanel eventId={event.eventId} journeyCode={journey?.code} />
 
       {flash?.justApproved ? (
         <Notice>Request approved. The event is now in Planning and the organiser has been notified.</Notice>
@@ -211,30 +194,12 @@ export function EventDetailsPage() {
 /** Loads one side panel's data independently of the event itself, so a
  * failure here never hides the event details. */
 function useSideData<T>(path: string, isValid: (value: unknown) => boolean, reloadKey = 0) {
-  const liveRevision = useLiveRefresh()
-  const [data, setData] = useState<T | null>(null)
-  const [failed, setFailed] = useState(false)
-  useEffect(() => {
-    let cancelled = false
-    apiClient.get<unknown>(path)
-      .then((value) => {
-        if (cancelled) return
-        // A retry that succeeds clears an earlier failure (EC-NEW5 Try again).
-        if (isValid(value)) {
-          setData(value as T)
-          setFailed(false)
-        } else setFailed(true)
-      })
-      .catch(() => {
-        if (!cancelled) setFailed(true)
-      })
-    return () => {
-      cancelled = true
-    }
-    // isValid is a stable module-level check at every call site.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [path, reloadKey, liveRevision])
-  return { data, failed }
+  const resource = useRefreshingResource(async () => {
+    const value = await apiClient.get<unknown>(path)
+    if (!isValid(value)) throw new Error('Invalid response.')
+    return value as T
+  }, path, true, reloadKey)
+  return { data: resource.data, failed: Boolean(resource.error) }
 }
 
 /** EC07/EC-NEW3: the way to the equipment request page; names a request an approved change flagged (D37). */

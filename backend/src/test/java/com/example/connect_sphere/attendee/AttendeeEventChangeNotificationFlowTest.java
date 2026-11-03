@@ -36,6 +36,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 @AutoConfigureMockMvc
 @Tag("integration")
 @Tag("AT09")
+@Tag("EO03")
 @Transactional
 class AttendeeEventChangeNotificationFlowTest {
     private static final String ORIGINAL_START = "2027-03-10T09:00:00+08:00";
@@ -218,14 +219,11 @@ class AttendeeEventChangeNotificationFlowTest {
     }
 
     private UUID event(String name) throws Exception {
-        UUID eventId = flow.approvedEvent("eo1", "ec1", FlowSupport.requestBody(name, 150, "none"));
+        UUID eventId = flow.approvedEvent("eo1", "ec1", details(name, "09:00", "12:00", 150, "Theatre seating", null));
         entityManager.flush();
         entityManager.clear();
         jdbc.update("""
-                UPDATE events SET status = 'confirmed', confirmed_at = now(), first_confirmed_at = now(),
-                    registration_needs = true, registration_capacity = 5,
-                    registration_opens_at = now() - interval '1 day',
-                    registration_closes_at = start_datetime
+                UPDATE events SET status = 'confirmed', confirmed_at = now(), first_confirmed_at = now()
                 WHERE event_id = ?
                 """, eventId);
         entityManager.clear();
@@ -262,7 +260,7 @@ class AttendeeEventChangeNotificationFlowTest {
         String response = mvc.perform(post("/api/change-requests").with(flow.as("eo1"))
                         .contentType(org.springframework.http.MediaType.APPLICATION_JSON)
                         .content("{\"requestId\":\"" + requestId + "\",\"reason\":\"Plans changed\","
-                                + "\"details\":" + details + "}"))
+                                + "\"capacityConfirmed\":true,\"details\":" + details + "}"))
                 .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
         return UUID.fromString(flow.read(response).get("changeRequestId").asString());
     }
@@ -288,7 +286,9 @@ class AttendeeEventChangeNotificationFlowTest {
                 {"eventName":"%s","purpose":"Quarterly update","description":"All hands",
                  "startDatetime":"2027-03-10T%s:00+08:00","endDatetime":"2027-03-10T%s:00+08:00",
                  "expectedAttendance":%d,"venueRequirements":"%s",
-                 "accessibilityNeeds":["none"],"requiredFacilities":[],"registrationNeeds":false%s}
+                 "accessibilityNeeds":["none"],"requiredFacilities":[],"registrationNeeds":true,
+                 "registrationCapacity":5,"registrationOpensAt":"2026-01-01T09:00:00+08:00",
+                 "registrationClosesAt":"2027-03-09T09:00:00+08:00"%s}
                 """.formatted(name, start, end, attendance, venue, joining);
     }
 

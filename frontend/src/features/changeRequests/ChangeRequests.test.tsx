@@ -12,6 +12,7 @@ import { ChangeRequestReviewPage } from './ChangeRequestReviewPage'
 import { ChangeRequestPanel } from './ChangeRequestPanel'
 import { MyRequestsPage } from '../organiser/MyRequestsPage'
 import { AssignedEventsPage } from '../coordinator/AssignedEventsPage'
+import { EventDetailsPage } from '../events/EventDetailsPage'
 
 const REQ = 'req-1'
 const EVENT = 'event-1'
@@ -62,6 +63,7 @@ function renderAt(path: string) {
           <Route path="/:console/change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
           <Route path="/coordinator-lead/change-requests/:changeRequestId" element={<ChangeRequestReviewPage />} />
           <Route path="/change-requests/:requestId" element={<ChangeRequestRedirect />} />
+          <Route path="/coordinator/events/:eventId" element={<EventDetailsPage />} />
           <Route path="/panel" element={<ChangeRequestPanel eventId={EVENT} journeyCode="PLANNING" />} />
           <Route path="/panel-finished" element={<ChangeRequestPanel eventId={EVENT} journeyCode="COMPLETED" />} />
         </Routes>
@@ -94,7 +96,7 @@ describe('EO03 — the organiser requests a change', () => {
     expect(screen.getByLabelText('Start date & time')).toHaveValue('2027-03-10T09:00')
     expect(screen.getByLabelText('Expected attendance')).toHaveValue(150)
     expect(screen.getAllByText('Singapore time (GMT+8)')).toHaveLength(2)
-    for (const label of ['Purpose', 'Description', 'End date & time', 'Venue requirements', 'Equipment requirements',
+    for (const label of ['Purpose', 'Description', 'End date & time', 'Venue requirements', 'Additional equipment notes (optional)',
       'Attendees need to register']) {
       expect(screen.getByLabelText(label)).toBeInTheDocument()
     }
@@ -102,6 +104,40 @@ describe('EO03 — the organiser requests a change', () => {
     expect(screen.getByRole('group', { name: 'Required facilities' })).toBeInTheDocument()
     // EO03 AC10: no way to change the organisation, coordinator, status or bookings here.
     expect(screen.queryByLabelText(/organisation|coordinator|status|venue booking/i)).not.toBeInTheDocument()
+  })
+
+  it.each([false, true])('EO03 (happy): retains selected equipment quantities and expands the catalogue below (legacy=%s)', async (legacy) => {
+    seedSession('organiser')
+    const equipment = [{ equipmentId: 'mixer', equipmentName: 'Audio Mixer' }, { equipmentId: 'mic', equipmentName: 'Microphone' }]
+    stubApi(formRoutes({
+      [`GET /api/event-requests/${REQ}`]: () => jsonResponse(200, { ...request(),
+        equipmentItems: legacy ? [] : [{ equipmentId: 'mixer', quantity: 2 }],
+        equipmentRequirements: 'Equipment items:\n2 × Audio Mixer\n\nAdditional notes:\nBring cables' }),
+      'GET /api/equipment/catalogue': () => jsonResponse(200, equipment),
+    }))
+    renderAt(`/organiser/requests/${REQ}/change`)
+    const quantity = await screen.findByRole('spinbutton', { name: 'Audio Mixer quantity' })
+    expect(quantity).toHaveValue(2)
+    expect(screen.getByLabelText('Additional equipment notes (optional)')).toHaveValue('Bring cables')
+    expect(screen.queryByRole('textbox', { name: 'Equipment requirements' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('spinbutton', { name: 'Microphone quantity' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Review the change' })).toBeDisabled()
+    fireEvent.click(screen.getByText('Add or remove equipment'))
+    expect(screen.getByRole('button', { name: 'Add or remove equipment' })).toHaveAttribute('aria-expanded', 'true')
+    expect(screen.getAllByRole('spinbutton', { name: 'Audio Mixer quantity' })).toHaveLength(1)
+    expect(screen.getByRole('spinbutton', { name: 'Microphone quantity' })).toHaveValue(0)
+    expect(screen.getByRole('button', { name: 'Decrease Microphone quantity' })).toBeDisabled()
+    fireEvent.click(screen.getByRole('button', { name: 'Increase Microphone quantity' }))
+    expect(screen.getByRole('spinbutton', { name: 'Audio Mixer quantity' })).toHaveValue(2)
+    expect(screen.getByRole('spinbutton', { name: 'Microphone quantity' })).toHaveValue(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Decrease Microphone quantity' }))
+    expect(screen.getByRole('spinbutton', { name: 'Microphone quantity' })).toHaveValue(0)
+    fireEvent.click(screen.getByRole('button', { name: 'Add or remove equipment' }))
+    expect(screen.getByRole('button', { name: 'Add or remove equipment' })).toHaveAttribute('aria-expanded', 'false')
+    expect(screen.queryByRole('spinbutton', { name: 'Microphone quantity' })).not.toBeInTheDocument()
+    expect(screen.getByRole('spinbutton', { name: 'Audio Mixer quantity' })).toHaveValue(2)
+    expect(screen.getByLabelText('Additional equipment notes (optional)')).toHaveValue('Bring cables')
+    expect(screen.getByRole('button', { name: 'Review the change' })).toBeDisabled()
   })
 
   it('EO03 AC20 (boundary): with nothing changed, Review stays disabled and says why', async () => {
@@ -372,6 +408,14 @@ describe('EC-NEW3 — the coordinator reviews and decides', () => {
     const calls = stubApi(reviewRoutes(view({ canDecide: true, impact: [capacity, replan, fits] }), {
       [`POST /api/change-requests/${CR}/approve`]: () => jsonResponse(200, view({ status: 'approved', decidedByName: 'ec1',
         decidedAt: '2026-10-22T02:00:00Z', followUps: [capacity, replan] })),
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, { ...request(), eventId: EVENT, status: 'pending',
+        expectedAttendance: 200, coordinatorName: 'ec1', coordinatorEmail: null }),
+      [`GET /api/change-requests?eventId=${EVENT}`]: () => jsonResponse(200, [view({ status: 'approved',
+        decidedAt: '2026-10-22T02:00:00Z', followUps: [capacity, replan] })]),
+      [`GET /api/events/${EVENT}/lifecycle`]: () => jsonResponse(200, { journeyStatus: journey('PLANNING'), items: [], blockers: [] }),
+      [`GET /api/events/${EVENT}/readiness`]: () => jsonResponse(200, { approvalStatus: 'not_reviewed', items: [], completedItems: 0, totalItems: 0 }),
+      ...Object.fromEntries(['venue-bookings', 'equipment-requests', 'equipment-damage', 'cancellation-requests', 'venue-assessments', 'timeline']
+        .map(path => [`GET /api/events/${EVENT}/${path}`, () => jsonResponse(200, [])])),
     }))
     const user = userEvent.setup()
     renderAt(`/coordinator/change-requests/${CR}`)
@@ -388,7 +432,9 @@ describe('EC-NEW3 — the coordinator reviews and decides', () => {
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ acknowledged: ['venue:b1:capacity', 'safety:replan'] })
     expect(await screen.findByText(/Change approved and applied/)).toBeInTheDocument()
     // EC-NEW3 AC33: what is still to follow up.
-    expect(screen.getByText('Still to follow up')).toBeInTheDocument()
+    expect(await screen.findByText('Still to follow up')).toBeInTheDocument()
+    expect(screen.getByText('Expected attendance').nextElementSibling).toHaveTextContent('200')
+    expect(calls.some(call => call.url === `/api/events/${EVENT}`)).toBe(true)
   })
 
   it('EC-NEW3 AC7, AC29 (conflict): if the impact changed meanwhile, the latest is shown, the ticks are cleared and it says why', async () => {

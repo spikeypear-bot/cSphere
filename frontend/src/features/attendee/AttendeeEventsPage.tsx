@@ -21,7 +21,7 @@ export interface AttendeeEventListItem extends Omit<AttendeeStatusInput, 'eventS
 export function AttendeeEventsPage() {
   const { data: events, error, retry } = useAttendeeResource<AttendeeEventListItem[]>('/attendee/events')
 
-  return <main className="page attendee-events">
+  return <main className="page attendee-overview attendee-events">
     <PageHeader eyebrow="Attendee" title="Browse events" description="Open an event to see its latest attendee-facing details." />
     {error ? <div className="attendee-state-card">
       <Notice tone="danger">Events could not be loaded. Check your connection and try again.</Notice>

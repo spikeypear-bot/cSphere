@@ -74,4 +74,20 @@ class ChangeFieldsTest {
         assertThat(back.requiredFacilities()).isEqualTo(ORIGINAL.requiredFacilities());
         assertThat(back.expectedAttendance()).isEqualTo(150);
     }
+
+    @Test
+    @DisplayName("EO03 EC-NEW3 (boundary): equipment snapshots compare identities and quantities independently of JSON key order")
+    void equipmentJsonKeyOrderIsNotAChange() {
+        var before = ChangeFields.valuesOf(ORIGINAL);
+        var after = new java.util.LinkedHashMap<>(before);
+        var first = new java.util.LinkedHashMap<String,Object>();
+        first.put("equipmentId", "equipment-one"); first.put("quantity", 3);
+        var second = new java.util.LinkedHashMap<String,Object>();
+        second.put("quantity", 3L); second.put("equipmentId", "equipment-one");
+        before.put("equipmentItems", List.of(first)); after.put("equipmentItems", List.of(second));
+        assertThat(ChangeFields.changes(before, after)).isEmpty();
+        second.put("quantity", 4);
+        assertThat(ChangeFields.changes(before, after)).singleElement()
+                .satisfies(change -> assertThat(change.field()).isEqualTo("equipmentItems"));
+    }
 }

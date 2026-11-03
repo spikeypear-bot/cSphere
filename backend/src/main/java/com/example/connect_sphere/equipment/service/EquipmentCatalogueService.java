@@ -77,6 +77,10 @@ public class EquipmentCatalogueService {
         Equipment kind = equipment.findById(equipmentId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Equipment not found"));
         Instant now = Instant.now(clock);
+        Map<String, EquipmentStatus> damaged = new java.util.HashMap<>();
+        for (Object[] row : equipment.openlyDamagedUnits(List.of(equipmentId), now, now.plusNanos(1))) {
+            damaged.put((String) row[1], row[2] == null ? EquipmentStatus.FAULTY : EquipmentStatus.valueOf(row[2].toString()));
+        }
         Map<String, List<EquipmentStatusPeriod>> periodsBySerial = statusPeriods
                 .findByEquipmentIdOrderByPeriodStartAsc(equipmentId).stream()
                 .collect(Collectors.groupingBy(EquipmentStatusPeriod::getSerialNumber));
@@ -90,7 +94,7 @@ public class EquipmentCatalogueService {
                                     && (p.getPeriodEnd() == null || p.getPeriodEnd().isAfter(now)))
                             .map(EquipmentStatusPeriod::getStatus)
                             .findFirst()
-                            .orElse(EquipmentStatus.AVAILABLE);
+                            .orElse(damaged.getOrDefault(serial, EquipmentStatus.AVAILABLE));
                     return new EquipmentDetailResponse.Unit(serial, current,
                             periods.stream().map(StatusPeriodResponse::from).toList());
                 })

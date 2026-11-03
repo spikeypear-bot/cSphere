@@ -1,12 +1,15 @@
-/* Card spacing (the card had no inner padding, so content touched the border) */
+/* Scoped registration panel styling follows the shared paper/ink palette. */
 .registrations {
   padding: 1.5rem;
+  min-width: 0;
+  color: var(--ink);
 }
 
 /* Header */
 .registrations__head {
   display: flex;
   justify-content: space-between;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 1rem;
 }
@@ -17,7 +20,7 @@
   margin: 0.25rem 0 0;
 }
 
-/* Badge + pills (dark-theme friendly: translucent backgrounds, bright text) */
+/* Status colours adapt to the active theme. */
 .registrations__badge,
 .registrations__pill {
   display: inline-block;
@@ -26,29 +29,29 @@
   font-size: 0.8rem;
   font-weight: 600;
   white-space: nowrap;
-  background: rgba(156, 163, 175, 0.18);
-  color: #d1d5db;
+  background: var(--paper);
+  color: var(--ink-soft);
 }
 .registrations__badge--open,
 .registrations__pill--confirmed {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  background: var(--success-soft);
+  color: var(--success);
 }
 .registrations__badge--full,
 .registrations__pill--event_cancelled {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 .registrations__badge--not_yet_open,
 .registrations__pill--withdrawn {
-  background: rgba(251, 191, 36, 0.15);
-  color: #fbbf24;
+  background: var(--warning-soft);
+  color: var(--warning);
 }
 
 /* Stat tiles */
 .registrations__stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
   margin: 1.25rem 0 1rem;
 }
@@ -58,12 +61,12 @@
   align-items: flex-start;
   gap: 0.15rem;
   padding: 1rem 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--paper);
 }
 .registrations__stats strong {
-  font-size: 1.9rem;
+  font-size: 1.75rem;
   font-weight: 700;
   line-height: 1.1;
   color: inherit;
@@ -72,37 +75,37 @@
   font-size: 0.75rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--ink-soft);
 }
 
 /* Progress bar (sits under the stat tiles; amber from 90%, red at 100%) */
 .registrations__bar {
   height: 0.5rem;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--hairline);
   overflow: hidden;
   margin: 0 0 1.25rem;
 }
 .registrations__bar div {
   height: 100%;
-  background: #4ade80;
+  background: var(--success);
   border-radius: 999px;
   transition: width 0.3s ease;
 }
 .registrations__bar--near div {
-  background: #fbbf24;
+  background: var(--warning);
 }
 .registrations__bar--full div {
-  background: #f87171;
+  background: var(--danger);
 }
 
 /* Capacity form */
 .registrations__capacity {
   margin: 0 0 1.25rem;
   padding: 1rem 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.75rem;
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
+  background: var(--paper);
 }
 .registrations__capacity label {
   display: block;
@@ -118,61 +121,64 @@
 .registrations__control input {
   flex: 1 1 10rem;
   max-width: 14rem;
-  padding: 0.55rem 0.8rem;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.04);
+  min-width: 0;
+  box-sizing: border-box;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
   color: inherit;
   font: inherit;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 .registrations__control input::placeholder {
-  color: rgba(255, 255, 255, 0.4);
+  color: var(--ink-faint);
 }
 .registrations__control input:hover {
-  border-color: rgba(255, 255, 255, 0.35);
+  border-color: var(--accent);
 }
 .registrations__control input:focus-visible {
   outline: none;
-  border-color: #60a5fa;
-  box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.3);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-soft);
 }
 .registrations__control input[aria-invalid='true'] {
-  border-color: #f87171;
-  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.2);
+  border-color: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
 }
 .registrations__hint {
   margin: 0.5rem 0 0;
   font-size: 0.8rem;
-  color: rgba(255, 255, 255, 0.55);
+  color: var(--ink-soft);
 }
 
 /* Error / success message (hidden while empty) */
 .registrations__msg {
   margin: 0.75rem 0 0;
   padding: 0.6rem 0.9rem;
-  border-radius: 0.5rem;
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
 }
 .registrations__msg:empty {
   display: none;
 }
 .registrations__msg--error {
-  background: rgba(248, 113, 113, 0.15);
-  color: #f87171;
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 .registrations__msg--success {
-  background: rgba(74, 222, 128, 0.15);
-  color: #4ade80;
+  background: var(--success-soft);
+  color: var(--success);
 }
 
 .registrations__period {
   display: grid;
   gap: 0.75rem;
   margin: 1.25rem 0;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.75rem;
+  padding: 1rem 1.25rem;
+  background: var(--paper);
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
 }
 .registrations__period h3,
 .registrations__period p {
@@ -183,16 +189,32 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
 }
+.registrations__period .field {
+  min-width: 0;
+}
 .registrations__period input {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  font: inherit;
+}
+.registrations__period input:disabled {
+  color: var(--ink-soft);
+  opacity: 0.7;
+}
+.registrations__period > .button {
+  justify-self: start;
+}
+.registrations__period > [role='status'] {
+  color: var(--success);
 }
 
 /* Attendee table */
 .registrations__scroll {
   overflow-x: auto;
   margin-top: 1.25rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 0.75rem;
+  border: 1px solid var(--hairline);
+  border-radius: var(--radius-md);
 }
 .registrations__table {
   width: 100%;
@@ -210,7 +232,7 @@
   padding: 0.85rem 1rem;
   font-size: 1rem;
   font-weight: 600;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--hairline);
 }
 .registrations__table th {
   text-align: left;
@@ -218,22 +240,35 @@
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: rgba(255, 255, 255, 0.55);
-  background: rgba(255, 255, 255, 0.03);
+  color: var(--ink-soft);
+  background: var(--paper);
 }
 .registrations__table th,
 .registrations__table td {
   padding: 0.75rem 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--hairline);
 }
 .registrations__table tbody tr:last-child td {
   border-bottom: none;
 }
 .registrations__table tbody tr:hover {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--paper);
 }
 /* Small screens: stack the stat tiles and period fields */
 @media (max-width: 600px) {
+  .registrations {
+    padding: 1rem;
+  }
+
+  .registrations__capacity,
+  .registrations__period {
+    padding: 1rem;
+  }
+
+  .registrations__control input {
+    max-width: none;
+  }
+
   .registrations__stats {
     grid-template-columns: 1fr;
   }
@@ -242,3 +277,13 @@
     grid-template-columns: 1fr;
   }
 }
+.registrations__pagination {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: center;
+  gap: .75rem 1rem;
+  margin-top: 1rem;
+}
+.registrations__pagination p { margin: 0; color: var(--ink-soft); font-size: .85rem; }
+.registrations__page-actions { display: flex; flex-wrap: wrap; gap: .5rem; }

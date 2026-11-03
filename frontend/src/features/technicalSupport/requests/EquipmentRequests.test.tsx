@@ -54,7 +54,7 @@ describe('TS09 equipment requests list and request page', () => {
 
   it('TS09 (happy): lists requests awaiting review by default with event, dates, organisation, requester, items and a shortfall badge', async () => {
     const calls = stubApi({
-      'GET /api/equipment-requests?status=processing': () => jsonResponse(200, [
+      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [
         request('r1', { isShortfallRequest: true }),
         request('r2', { requestedBy: null, organisationName: 'Globex Holdings', items: [] }),
       ]),
@@ -62,7 +62,7 @@ describe('TS09 equipment requests list and request page', () => {
     renderAt('/technical-support/requests')
 
     const rows = within(await screen.findByRole('list', { name: 'Equipment requests' })).getAllByRole('listitem')
-    expect(screen.getByLabelText('Status')).toHaveValue('processing')
+    expect(screen.getByRole('button', { name: /^Awaiting review/ })).toHaveAttribute('aria-pressed', 'true')
     expect(within(rows[0]).getByRole('link', { name: 'Gala r1' })).toHaveAttribute('href', '/technical-support/requests/r1')
     expect(rows[0]).toHaveTextContent('Shortfall')
     expect(rows[0]).toHaveTextContent('Awaiting review')
@@ -75,13 +75,11 @@ describe('TS09 equipment requests list and request page', () => {
     expect(rows[1]).toHaveTextContent('OrganisationGlobex Holdings')
     // No submission time is recorded, so nothing claims one.
     expect(screen.queryByText(/Submitted/)).not.toBeInTheDocument()
-    expect(calls.map((call) => call.url)).toEqual(['/api/equipment-requests?status=processing'])
+    expect(calls.map((call) => call.url)).toEqual(['/api/equipment-requests?status=all'])
   })
 
-  it('TS09 (happy): the status filter reloads the list from the server and is kept in the URL', async () => {
+  it('TS09 (happy): the status filter uses the loaded list and is kept in the URL', async () => {
     const calls = stubApi({
-      'GET /api/equipment-requests?status=processing': () => jsonResponse(200, [request('r1')]),
-      'GET /api/equipment-requests?status=approved': () => jsonResponse(200, [request('r2', { status: 'approved' })]),
       'GET /api/equipment-requests?status=all': () => jsonResponse(200, [
         request('r1'), request('r2', { status: 'approved' }), request('r3', { status: 'rejected' }),
       ]),
@@ -90,45 +88,42 @@ describe('TS09 equipment requests list and request page', () => {
     renderAt('/technical-support/requests')
 
     expect(await screen.findByRole('link', { name: 'Gala r1' })).toBeInTheDocument()
-    await user.selectOptions(screen.getByLabelText('Status'), 'approved')
+    await user.click(screen.getByRole('button', { name: 'Approved 1' }))
     expect(await screen.findByRole('link', { name: 'Gala r2' })).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Gala r1' })).not.toBeInTheDocument()
     expect(screen.getByLabelText('location')).toHaveTextContent('/technical-support/requests?status=approved')
 
-    await user.selectOptions(screen.getByLabelText('Status'), 'all')
+    await user.click(screen.getByRole('button', { name: 'All 3' }))
     expect(await screen.findByRole('link', { name: 'Gala r3' })).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Equipment requests' })).getAllByRole('listitem')).toHaveLength(3)
     expect(screen.getByText('Rejected', { selector: '.dash-badge' })).toBeInTheDocument()
     expect(calls.map((call) => call.url)).toEqual([
-      '/api/equipment-requests?status=processing',
-      '/api/equipment-requests?status=approved',
       '/api/equipment-requests?status=all',
     ])
   })
 
   it('TS09 (boundary): a status in the link opens that filter, and an unknown one falls back to awaiting review', async () => {
     const calls = stubApi({
-      'GET /api/equipment-requests?status=rejected': () => jsonResponse(200, []),
-      'GET /api/equipment-requests?status=processing': () => jsonResponse(200, []),
+      'GET /api/equipment-requests?status=all': () => jsonResponse(200, []),
     })
     const first = renderAt('/technical-support/requests?status=rejected')
     expect(await screen.findByText('No equipment requests match this status.')).toBeInTheDocument()
-    expect(screen.getByLabelText('Status')).toHaveValue('rejected')
+    expect(screen.getByRole('button', { name: 'Rejected 0' })).toHaveAttribute('aria-pressed', 'true')
     first.unmount()
 
     renderAt('/technical-support/requests?status=bogus')
     expect(await screen.findByText('No equipment requests are awaiting review.')).toBeInTheDocument()
-    expect(screen.getByLabelText('Status')).toHaveValue('processing')
+    expect(screen.getByRole('button', { name: /^Awaiting review/ })).toHaveAttribute('aria-pressed', 'true')
     expect(calls.map((call) => call.url)).toEqual([
-      '/api/equipment-requests?status=rejected',
-      '/api/equipment-requests?status=processing',
+      '/api/equipment-requests?status=all',
+      '/api/equipment-requests?status=all',
     ])
   })
 
   it('TS09 (failure): a list that cannot load says so and Try again reloads it', async () => {
     let tries = 0
     stubApi({
-      'GET /api/equipment-requests?status=processing': () => (++tries === 1
+      'GET /api/equipment-requests?status=all': () => (++tries === 1
         ? jsonResponse(500, { message: 'Server unavailable' })
         : jsonResponse(200, [request('r1')])),
     })
@@ -311,7 +306,7 @@ describe('TS09 equipment requests list and request page', () => {
   })
 
   it('TS09 (cross-cutting): each request is one clickable card named after its event, its facts read as the description', async () => {
-    stubApi({ 'GET /api/equipment-requests?status=processing': () => jsonResponse(200, [request('r1', { isShortfallRequest: true })]) })
+    stubApi({ 'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request('r1', { isShortfallRequest: true })]) })
     renderAt('/technical-support/requests')
 
     const row = within(await screen.findByRole('list', { name: 'Equipment requests' })).getAllByRole('listitem')[0]

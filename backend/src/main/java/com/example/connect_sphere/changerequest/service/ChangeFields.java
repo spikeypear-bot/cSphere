@@ -30,7 +30,7 @@ final class ChangeFields {
     /** Week 4's important fields plus accessibility: a change to any of these
      * may invalidate venue, equipment or safety arrangements (EC08 re-planning). */
     static final Set<String> AFFECTS_ARRANGEMENTS = Set.of("startDatetime", "endDatetime", "expectedAttendance",
-            "venueRequirements", "equipmentRequirements", "accessibilityNeeds", "requiredFacilities");
+            "venueRequirements", "equipmentRequirements", "equipmentItems", "accessibilityNeeds", "requiredFacilities");
 
     private static final DateTimeFormatter SINGAPORE = SingaporeTime.DISPLAY;
 
@@ -47,11 +47,13 @@ final class ChangeFields {
         labels.put("expectedAttendance", "Expected attendance");
         labels.put("venueRequirements", "Venue requirements");
         labels.put("equipmentRequirements", "Equipment requirements");
+        labels.put("equipmentItems", "Equipment items and quantities");
         labels.put("accessibilityNeeds", "Accessibility needs");
         labels.put("requiredFacilities", "Required facilities");
         labels.put("registrationNeeds", "Registration");
         labels.put("registrationCapacity", "Registration capacity");
         labels.put("registrationOpensAt", "Registration opens");
+        labels.put("registrationClosesAt", "Registration closes");
         labels.put("attendeeInstructions", "Attendee instructions");
         return labels;
     }
@@ -68,6 +70,9 @@ final class ChangeFields {
         v.put("expectedAttendance", d.expectedAttendance());
         v.put("venueRequirements", text(d.venueRequirements()));
         v.put("equipmentRequirements", text(d.equipmentRequirements()));
+        v.put("equipmentItems", d.equipmentItems() == null ? List.of() : d.equipmentItems().stream()
+                .sorted(java.util.Comparator.comparing(i -> i.equipmentId().toString()))
+                .map(i -> Map.<String,Object>of("equipmentId", i.equipmentId().toString(), "quantity", i.quantity())).toList());
         v.put("accessibilityNeeds", d.accessibilityNeeds() == null ? List.of()
                 : d.accessibilityNeeds().stream().map(Enum::name).toList());
         v.put("requiredFacilities", d.requiredFacilities() == null ? List.of()
@@ -75,6 +80,8 @@ final class ChangeFields {
         v.put("registrationNeeds", d.registrationNeeds());
         v.put("registrationCapacity", d.registrationCapacity());
         v.put("registrationOpensAt", d.registrationOpensAt() == null ? null : d.registrationOpensAt().toString());
+        v.put("registrationClosesAt", d.registrationClosesAt() == null
+                ? (Boolean.TRUE.equals(d.registrationNeeds()) && d.startDatetime() != null ? d.startDatetime().toString() : null) : d.registrationClosesAt().toString());
         v.put("attendeeInstructions", text(d.attendeeInstructions()));
         return v;
     }
@@ -90,8 +97,8 @@ final class ChangeFields {
                 names(v.get("requiredFacilities")).stream().map(Facility::valueOf).toList(),
                 (Boolean) v.get("registrationNeeds"),
                 v.get("registrationCapacity") == null ? null : ((Number) v.get("registrationCapacity")).intValue(),
-                time(v.get("registrationOpensAt")), time(v.get("startDatetime")),
-                (String) v.get("attendeeInstructions"));
+                time(v.get("registrationOpensAt")), time(v.get("registrationClosesAt")),
+                (String) v.get("attendeeInstructions"), items(v.get("equipmentItems")));
     }
 
     /** The fields whose meaning differs, in the form's order. */
@@ -124,7 +131,7 @@ final class ChangeFields {
                 || value instanceof Collection<?> c && c.isEmpty()) {
             return "—";
         }
-        if (field.endsWith("Datetime") || field.equals("registrationOpensAt")) {
+        if (field.endsWith("Datetime") || (field.equals("registrationOpensAt") || field.equals("registrationClosesAt"))) {
             return SINGAPORE.format(OffsetDateTime.parse((String) value));
         }
         if (field.equals("accessibilityNeeds")) {
@@ -137,6 +144,15 @@ final class ChangeFields {
             return b ? "Yes" : "No";
         }
         return value.toString();
+    }
+
+    private static List<com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item> items(Object value) {
+        if (!(value instanceof Collection<?> list)) return List.of();
+        return list.stream().map(item -> {
+            Map<?,?> row = (Map<?,?>) item;
+            return new com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item(
+                    java.util.UUID.fromString(row.get("equipmentId").toString()), ((Number) row.get("quantity")).intValue());
+        }).toList();
     }
 
     private static String text(String s) {

@@ -42,6 +42,7 @@ function fieldsFrom(request: EventRequestDto): Fields {
     expectedAttendance: request.expectedAttendance,
     venueRequirements: request.venueRequirements,
     equipmentRequirements: request.equipmentRequirements,
+    equipmentItems: request.equipmentItems ?? [],
     accessibilityNeeds: request.accessibilityNeeds,
     requiredFacilities: request.requiredFacilities ?? [],
     registrationNeeds: request.registrationNeeds,

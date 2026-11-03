@@ -1,6 +1,7 @@
 package com.example.connect_sphere.equipment;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -41,6 +42,7 @@ import jakarta.persistence.EntityManager;
 @Tag("TS02")
 @Tag("TS06")
 @Tag("TS09")
+@Tag("TS03")
 @SpringBootTest
 @AutoConfigureMockMvc
 @Transactional
@@ -427,6 +429,16 @@ class EquipmentBatchReservationFlowTest {
         UUID mixers = units("D35 Mixer", "MX-1", "MX-2", "MX-3");
         damage(mixers, "MX-1", "2027-03-01T00:00:00Z", "2027-04-01T00:00:00Z", "OPEN");
         requested(eventId, Map.of(mixers, 2));
+
+        mvc.perform(get("/api/equipment/catalogue").with(flow.as("ts1"))
+                        .param("from", START).param("to", END))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.equipmentId == '" + mixers + "')].outOfActionQuantity").value(1))
+                .andExpect(jsonPath("$[?(@.equipmentId == '" + mixers + "')].availableQuantity").value(2));
+        mvc.perform(get("/api/equipment/units").with(flow.as("ts1"))
+                        .param("start", START).param("end", END))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.equipmentId == '" + mixers + "' && @.serialNumber == 'MX-1')].status").value("Faulty"));
 
         batch("ts1", eventId, line(mixers, 2, null))
                 .andExpect(status().isCreated())

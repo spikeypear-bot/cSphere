@@ -15,7 +15,7 @@ import com.example.connect_sphere.eventrequest.dto.SaveEventRequestRequest;
 @Tag("EO03")
 class RegistrationChangeFieldsTest {
     @Test
-    @DisplayName("AT01 EO03 (cross-cutting): storing proposed changes preserves registration settings and derives closing from start")
+    @DisplayName("AT01 EO03 (cross-cutting): storing proposed changes preserves the configured registration period")
     void preservesRegistrationSettings() {
         OffsetDateTime start = OffsetDateTime.parse("2027-03-10T09:00:00+08:00");
         OffsetDateTime opens = start.minusDays(30);
@@ -27,7 +27,7 @@ class RegistrationChangeFieldsTest {
         assertThat(restored.registrationCapacity()).isEqualTo(10);
         assertThat(restored.registrationOpensAt()).isEqualTo(opens);
         assertThat(restored.attendeeInstructions()).isEqualTo("Bring your ticket");
-        assertThat(restored.registrationClosesAt()).isEqualTo(start);
+        assertThat(restored.registrationClosesAt()).isEqualTo(start.minusDays(1));
         var changed = new java.util.LinkedHashMap<>(saved);
         changed.put("registrationCapacity", 12);
         assertThat(ChangeFields.changes(saved, changed)).singleElement()

@@ -100,7 +100,7 @@ public class AttendeeEventDetailsService {
                 event.getAttendeeInstructions(), myRegistration == null ? null : myRegistration.getRegistrationReference(),
                 myRegistration == null ? null : myRegistration.getRegisteredAt(), attendeeVenues,
                 myRegistration == null ? null : myRegistration.getRegistrationId(),
-                history == null ? null : history.getStatus());
+                history == null ? null : history.getStatus(), event.getExpectedAttendance());
     }
 
     private Integer remainingPlaces(Event event) {

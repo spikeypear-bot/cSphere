@@ -162,6 +162,6 @@ public class EventService {
                 statuses.forEvent(event),
                 event.getSafetyFeedback(),
                 event.getSafetyApprovedAt(),
-                event.getConfirmedAt());
+                event.getConfirmedAt(), event.getEquipmentItems());
     }
 }

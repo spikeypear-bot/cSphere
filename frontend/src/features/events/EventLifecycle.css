@@ -56,7 +56,24 @@
 .readiness__error ul { margin: 0.3rem 0 0; padding-inline-start: 1.1rem; }
 .readiness__actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 .readiness__actions:empty { display: none; }
-.readiness__withdraw { display: grid; gap: 0.4rem; }
+.readiness__withdraw { display: grid; gap: 0.65rem; min-width: 0; padding-top: 1rem; border-top: 1px solid var(--hairline); }
+.readiness__withdraw > label { font-size: 0.85rem; font-weight: 500; color: var(--ink-soft); }
+.readiness__withdraw > textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 7rem;
+  padding: 0.75rem;
+  border: 1px solid var(--hairline-strong);
+  border-radius: var(--radius-sm);
+  background: var(--paper);
+  color: var(--ink);
+  font: 400 0.95rem/1.5 var(--sans);
+  resize: vertical;
+}
+.readiness__withdraw > textarea::placeholder { color: var(--ink-faint); opacity: 1; }
+.readiness__withdraw > textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; border-color: var(--accent); }
+.readiness__withdraw > .readiness__actions { margin-top: 0.35rem; gap: 0.75rem; }
 
 /* EO04 organiser arrangements */
 .arrangements { padding: 1.25rem 1.5rem; display: grid; gap: 1.1rem; }

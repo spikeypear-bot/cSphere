@@ -261,6 +261,29 @@ public class NotificationService {
         saveBestEffort(notification);
     }
 
+    /** EC08/SO-C1: the event lock admits one notice set per genuine review transition. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createSafetyReviewRequestedNotifications(List<UUID> recipients, UUID eventId, String eventName) {
+        recipients.stream().distinct().forEach(recipient -> {
+            Notification notice = base(recipient, NotificationType.safety_review_requested, eventName);
+            notice.setEventId(eventId);
+            notice.setMessage("The coordinator submitted this event for its Operational Safety Check.");
+            saveBestEffort(notice);
+        });
+    }
+
+    /** EC08/SO-C1: officers are told why an event left their review queue. */
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void createSafetyReviewWithdrawnNotifications(List<UUID> recipients, UUID eventId, String eventName, String reason) {
+        recipients.stream().distinct().forEach(recipient -> {
+            Notification notice = base(recipient, NotificationType.safety_review_withdrawn, eventName);
+            notice.setEventId(eventId);
+            notice.setReason(reason);
+            notice.setMessage("The coordinator withdrew this event from safety review. It is back in Planning.");
+            saveBestEffort(notice);
+        });
+    }
+
     /** EC08: the Safety Officer approved, so the coordinator can confirm the event. */
     @Transactional(propagation = Propagation.REQUIRED)
     public void createSafetyApprovedNotification(UUID coordinatorId, UUID eventId, String eventName) {
@@ -677,6 +700,8 @@ public class NotificationService {
      * organiser links exactly as before. */
     private static String linkPathFor(Notification n) {
         return switch (n.getType()) {
+            case safety_review_requested -> "/safety-officer/events/" + n.getEventId();
+            case safety_review_withdrawn -> "/safety-officer/reviews";
             case venue_booking_approved, venue_booking_rejected, venue_suitability_changed, venue_requirement_reviewed, venue_hold_expired, venue_hold_expiring, venue_unavailable, venue_timing_changed, venue_timing_conflict -> "/coordinator/events/" + n.getEventId() + "/venue-booking";
             case event_returned_to_planning, event_safety_approved, event_cancellation_requested, equipment_damage_outcome ->
                     "/coordinator/events/" + n.getEventId();

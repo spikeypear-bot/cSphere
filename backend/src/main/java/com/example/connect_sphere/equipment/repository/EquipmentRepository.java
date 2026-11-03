@@ -43,6 +43,15 @@ public interface EquipmentRepository extends JpaRepository<Equipment, UUID> {
     List<String> openlyDamagedSerials(@Param("equipmentId") UUID equipmentId,
             @Param("start") Instant start, @Param("end") Instant end);
 
+    /** Inventory uses the same open-damage exclusion as unit allocation, batched by kind. */
+    @Query(nativeQuery = true, value = """
+            select distinct equipment_id, serial_number, block_status from equipment_damage_reports
+            where equipment_id in (:equipmentIds) and serial_number is not null and status = 'OPEN'
+              and period_start < :end and (period_end is null or period_end > :start)
+            """)
+    List<Object[]> openlyDamagedUnits(@Param("equipmentIds") Collection<UUID> equipmentIds,
+            @Param("start") Instant start, @Param("end") Instant end);
+
     /** D35: whether this unit has an open TS09 damage report overlapping the period. */
     @Query(nativeQuery = true, value = """
             select exists (select 1 from equipment_damage_reports
