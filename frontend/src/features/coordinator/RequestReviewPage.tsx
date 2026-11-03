@@ -102,9 +102,8 @@ export function RequestReviewPage() {
       .catch((err: unknown) => {
         if (cancelled) return
         if (isNotAssigned(err)) setNotAssigned(true)
-        setLoadError(err instanceof ApiClientError
-          ? err.isForbidden ? 'This request is not assigned to you, so you cannot review it.' : err.message
-          : 'Could not load this request.')
+        // A 403 already shows NotAssignedNotice above, so only the message is needed here.
+        setLoadError(err instanceof ApiClientError ? err.message : 'Could not load this request.')
       })
     return () => {
       cancelled = true
@@ -366,8 +365,9 @@ export function RequestReviewPage() {
                       {
                         message: outgoing,
                         flaggedFields: flags,
+                        // Sending is disabled until every flagged field has a question (messageValid).
                         fieldQuestions: flags.length > 0
-                          ? Object.fromEntries(flags.map((f) => [f, (questions[f] ?? '').trim()])) : null,
+                          ? Object.fromEntries(flags.map((f) => [f, questions[f].trim()])) : null,
                       }),
                     `Clarification sent. ${request.organisation}'s organisers have been notified.`)}>
                     {busy ? 'Sending…' : 'Send clarification request'}

@@ -290,3 +290,117 @@ describe('composeClarification', () => {
       .toBe('End date & time: 5pm?\n\nPurpose: Why?')
   })
 })
+
+describe('EC02 EC01 RequestReviewPage: incomplete details, failures and finished requests', () => {
+  beforeEach(() => seedSession('coordinator', 'coordinator-1'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EC02 (failure): a failed load shows the server reason with a way back to the queue', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(500, { message: 'Review service is down' }) })
+    renderPage()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Review service is down')
+    expect(screen.getByRole('link', { name: 'Back to review queue' })).toHaveAttribute('href', '/coordinator/review-queue')
+  })
+
+  it('EC02 (boundary): details the organiser left out read "Not provided", and an unnamed request is titled as such', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({ eventName: '', startDatetime: null, expectedAttendance: null,
+      accessibilityNeeds: [], registrationNeeds: null }, { timeline: [] })) })
+    renderPage()
+
+    expect(await screen.findByRole('heading', { name: 'Untitled request' })).toBeInTheDocument()
+    const row = (label: string) => screen.getByText(label, { selector: 'dt' }).closest('.request-review__row')
+    for (const label of ['Start date & time', 'Expected attendance', 'Registration']) {
+      expect(row(label)).toHaveTextContent('Not provided')
+    }
+    expect(screen.getByText('No changes recorded yet.')).toBeInTheDocument()
+  })
+
+  it('EC02 (happy): a request needing registration says so, and its journey progress is shown', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({ registrationNeeds: true, journeyStatus: {
+      code: 'UNDER_REVIEW', label: 'Under review', explanation: '', nextActor: null, stage: 'REQUEST', isFinal: false, datePassed: false } })) })
+    renderPage()
+
+    expect(await screen.findByText('Registration needed')).toBeInTheDocument()
+    expect(screen.getByRole('list', { name: 'Progress: Under review' })).toBeInTheDocument()
+  })
+
+  it('EC01 (negative): an unrecognised missing field and an older invalid schedule are both explained and pre-flagged', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({}, { missingFields: ['budget'], scheduleValid: false })) })
+    renderPage()
+
+    expect(await screen.findByText('budget is missing')).toBeInTheDocument()
+    expect(screen.getByText('The end date & time is before the start')).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Ask the organiser about these' }))
+    expect(screen.getByRole('list', { name: 'Flagged fields' })).toHaveTextContent(/budget.*Start date & time.*End date & time/)
+    expect(screen.getByLabelText('What do you need to know more from the organiser about the budget?')).toBeInTheDocument()
+  })
+
+  it('EO-C2 (conflict): asking about a schedule problem flags exactly the field it concerns', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({}, {
+      scheduleValid: false, scheduleProblems: { startDatetime: 'The start date & time must be in the future.' } })) })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Ask the organiser about these' }))
+    expect(screen.getByRole('list', { name: 'Flagged fields' })).toHaveTextContent('Start date & time')
+    expect(screen.getByRole('list', { name: 'Flagged fields' })).not.toHaveTextContent('End date & time')
+  })
+
+  it('EC02 (happy): a reply that changed nothing says the organiser answered in their reply', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({}, { timeline: [
+      { activityId: 'a2', type: 'clarification_requested', actorName: 'ec1', actorRole: 'ec', message: 'Is 150 final?',
+        flaggedFields: [], fromStatus: 'pending', toStatus: 'clarification_required', occurredAt: '2026-09-21T01:00:00Z',
+        fieldValues: { expectedAttendance: 150 } },
+      { activityId: 'a3', type: 'clarification_responded', actorName: 'eo1', actorRole: 'eo', message: 'Yes, 150 is final',
+        flaggedFields: [], fromStatus: 'clarification_required', toStatus: 'pending', occurredAt: '2026-09-22T01:00:00Z',
+        fieldValues: { expectedAttendance: 150 } },
+    ] })) })
+    renderPage()
+
+    expect(await screen.findByText('No details were changed. The organiser answered in their reply.')).toBeInTheDocument()
+  })
+
+  it('EC02 (failure): a refused approval shows the reason and reloads the request', async () => {
+    let reads = 0
+    stubApi({
+      [REVIEW_URL]: () => jsonResponse(200, ++reads === 1 ? review() : review({ purpose: null }, { missingFields: ['purpose'] })),
+      [`POST /api/event-requests/${ID}/approve`]: () => jsonResponse(409, { message: 'The request changed.' }),
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Approve' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Approve and start planning' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The request changed.')
+    expect(await screen.findByText('Purpose is missing')).toBeInTheDocument()
+    expect(screen.queryByText('Event page')).not.toBeInTheDocument()
+  })
+
+  it('EC02 (failure): a rejection refused for missing details reloads the request so the gap is shown', async () => {
+    let reads = 0
+    stubApi({
+      [REVIEW_URL]: () => jsonResponse(200, ++reads === 1 ? review() : review({ purpose: null }, { missingFields: ['purpose'] })),
+      [`POST /api/event-requests/${ID}/reject`]: () => jsonResponse(422, { message: 'Details are missing.', missingFields: ['purpose'] }),
+    })
+    renderPage()
+
+    await userEvent.click(await screen.findByRole('button', { name: 'Reject' }))
+    await userEvent.type(screen.getByLabelText('Reason for rejection (shown to the organiser)'), 'No budget')
+    await userEvent.click(screen.getByRole('button', { name: 'Confirm rejection' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Details are missing.')
+    expect(await screen.findByText('Purpose is missing')).toBeInTheDocument()
+  })
+
+  it('EC02 (happy): an approved request links to its event and offers no decision', async () => {
+    stubApi({ [REVIEW_URL]: () => jsonResponse(200, review({ status: 'approved', eventId: 'ev-9' })) })
+    renderPage()
+
+    expect(await screen.findByRole('link', { name: 'Open event' })).toHaveAttribute('href', '/coordinator/events/ev-9')
+    expect(screen.queryByRole('heading', { name: 'Decision' })).not.toBeInTheDocument()
+  })
+})
