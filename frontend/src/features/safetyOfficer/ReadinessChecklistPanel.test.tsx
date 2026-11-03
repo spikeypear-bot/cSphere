@@ -1,6 +1,6 @@
 // @stories SO-C3
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen } from '@testing-library/react'
+import { act, cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ReadinessChecklistPanel } from './ReadinessChecklistPanel'
 import type { ReadinessDto } from './readinessTypes'
@@ -67,5 +67,42 @@ describe('SO-C3 optional readiness notes', () => {
     await user.click(screen.getByRole('checkbox', { name: 'Venue ready' }))
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onSave).toHaveBeenCalledWith(readiness.items[0], true, 'Ready')
+  })
+
+  it('SO-C3 (happy): a note saved elsewhere replaces the shown one when nothing was typed here', async () => {
+    const rendered = render(<ReadinessChecklistPanel readiness={readiness} editable savingItem={null} onSave={vi.fn()} />)
+    rendered.rerender(<ReadinessChecklistPanel readiness={{ ...readiness, items: [{ ...readiness.items[0], note: 'From so2' }] }}
+      editable savingItem={null} onSave={vi.fn()} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Show notes for Venue ready' }))
+    expect(screen.getByRole('textbox')).toHaveValue('From so2')
+  })
+
+  it('SO-C3 (happy): a keyboard user who types a note, moves to the checkbox and on without ticking it still saves the note', async () => {
+    const onSave = vi.fn().mockResolvedValue(undefined)
+    render(<ReadinessChecklistPanel readiness={readiness} editable savingItem={null} onSave={onSave} />)
+    const user = userEvent.setup()
+    await user.click(screen.getByRole('button', { name: 'Show notes for Venue ready' }))
+    await user.type(screen.getByRole('textbox'), 'Exit clear')
+    act(() => screen.getByRole('checkbox').focus())
+    expect(onSave).not.toHaveBeenCalled()
+    await user.tab()
+    expect(onSave).toHaveBeenCalledWith(readiness.items[0], false, 'Exit clear')
+  })
+
+  it('SO-C3 (boundary): leaving the checkbox with nothing changed saves nothing', async () => {
+    const onSave = vi.fn()
+    render(<ReadinessChecklistPanel readiness={readiness} editable savingItem={null} onSave={onSave} />)
+    act(() => screen.getByRole('checkbox').focus())
+    await userEvent.tab()
+    expect(onSave).not.toHaveBeenCalled()
+  })
+
+  it('SO-C3 (boundary): a read-only unchecked item with no note shows no notes control, and its audit trail has no times when none were recorded', () => {
+    render(<ReadinessChecklistPanel editable={false} savingItem={null} onSave={vi.fn()} readiness={{ ...readiness, items: [
+      { ...readiness.items[0], checkedBy: 'so1', checkedAt: null, updatedBy: 'so2', updatedAt: null },
+    ] }} />)
+    expect(screen.queryByRole('button', { name: /notes for/ })).not.toBeInTheDocument()
+    expect(screen.getByText('Last checked by so1')).toBeInTheDocument()
+    expect(screen.getByText('Last updated by so2')).toBeInTheDocument()
   })
 })
