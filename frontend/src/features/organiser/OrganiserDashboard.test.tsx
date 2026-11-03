@@ -128,4 +128,28 @@ describe('EO15 organiser dashboard', () => {
     expect(await within(await findPanel('Upcoming events')).findByRole('link', { name: 'Expo' })).toBeInTheDocument()
     expect(within(panel('Upcoming events')).queryByRole('link', { name: 'Past Fair' })).not.toBeInTheDocument()
   })
+
+  it('EO15 (boundary): an event with no name, status or dates still shows; one item to do reads in the singular; no name means a plain greeting', async () => {
+    window.localStorage.setItem('connectsphere.auth', JSON.stringify({
+      accessToken: 'access-1', refreshToken: 'refresh-1', role: 'organiser', organisation: 'Acme Pte Ltd',
+    }))
+    const bare = request(7, { eventName: null, status: 'approved', eventId: 'event-7', startDatetime: null, endDatetime: null })
+    routes({ [REQUESTS]: () => jsonResponse(200, [planned, bare, draft]) })
+    renderDashboard()
+
+    const events = await findPanel('Upcoming events')
+    const links = await within(events).findAllByRole('link', { name: /Untitled event|Expo/ })
+    // Without a start date it sorts first, with no time shown.
+    expect(links.map((link) => link.getAttribute('href'))).toEqual(['/organiser/events/event-7', '/organiser/events/event-3'])
+    expect(links[0]).not.toHaveTextContent('2027')
+    expect(await screen.findByText('1 request needs your action · 1 change waiting')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Good \w+$/)
+  })
+
+  it('EO15 (failure): when nothing can be loaded the summary says so instead of counting', async () => {
+    routes({ [REQUESTS]: () => jsonResponse(500, {}), [CHANGES]: () => jsonResponse(500, {}) })
+    renderDashboard()
+
+    expect(await screen.findByText('Some of what needs your attention could not be loaded.')).toBeInTheDocument()
+  })
 })
