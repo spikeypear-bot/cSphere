@@ -64,8 +64,8 @@ function AttendeeEventDetails({ eventId }: { eventId: string }) {
   // After a successful registration, bring the confirmation into view and announce it.
   useEffect(() => {
     if (!justRegistered || !registration?.registrationId) return
-    const node = confirmationRef.current
-    if (!node) return
+    // The ref'd confirmation renders whenever registration.registrationId is set, and effects run after commit.
+    const node = confirmationRef.current!
     node.scrollIntoView?.({ behavior: 'smooth', block: 'center' })
     node.focus?.({ preventScroll: true })
   }, [justRegistered, registration?.registrationId])
@@ -210,7 +210,8 @@ function registrationAvailabilityNotice(event: AttendeeEventDetails, failed: boo
   if (failed || event.registrationRequired !== true) return null
   switch (label) {
     case 'Full': return { tone: 'danger', text: 'Registration is full. This event is full. No places are available.' }
-    case 'Not Yet Open': return { tone: 'info', text: `Registration has not opened yet${event.registrationOpensAt ? ` and opens ${dateTime(event.registrationOpensAt)}` : ''}.` }
+    // registrationBadge only says 'Not Yet Open' after parsing registrationOpensAt as a valid date.
+    case 'Not Yet Open': return { tone: 'info', text: `Registration has not opened yet and opens ${dateTime(event.registrationOpensAt!)}.` }
     case 'Registration Closed': return { tone: 'info', text: 'Registration has closed.' }
     case 'Registration Paused': return { tone: 'info', text: 'Registration is paused while the event is re-confirmed.' }
     case 'Registration Unavailable': return event.status === 'cancelled' ? null

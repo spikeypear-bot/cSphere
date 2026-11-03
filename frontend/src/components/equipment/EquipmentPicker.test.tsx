@@ -46,6 +46,34 @@ describe('EO01 EC07 TS01 SO-C3 shared equipment presentation', () => {
     expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
   })
 
+  it('EO01 (happy): searching narrows the catalogue but keeps what is already selected, and says when nothing matches', async () => {
+    const user = userEvent.setup()
+    const first = render(<EquipmentPicker catalogue={catalogue} selected={{ mixer: '2' }} onToggle={vi.fn()} onQuantityChange={vi.fn()} />)
+    await user.type(screen.getByRole('searchbox', { name: 'Search equipment' }), 'micro')
+    expect(screen.getByLabelText('Microphone')).toBeInTheDocument()
+    expect(screen.getByLabelText('Audio mixer')).toBeChecked()
+    first.unmount()
+
+    render(<EquipmentPicker catalogue={catalogue} selected={{}} onToggle={vi.fn()} onQuantityChange={vi.fn()} />)
+    await user.type(screen.getByRole('searchbox', { name: 'Search equipment' }), '  drone ')
+    expect(screen.getByText('No equipment matches “drone”.')).toBeInTheDocument()
+  })
+
+  it('EO01 (boundary): decreasing lowers the quantity by one, and an unreadable quantity falls back to 1', async () => {
+    const changed = vi.fn()
+    const user = userEvent.setup()
+    render(<EquipmentPicker catalogue={catalogue} selected={{ mixer: '3', mic: 'x' }} onToggle={vi.fn()} onQuantityChange={changed} />)
+    await user.click(screen.getByRole('button', { name: 'Decrease Audio mixer quantity' }))
+    await user.click(screen.getByRole('button', { name: 'Decrease Microphone quantity' }))
+    expect(changed.mock.calls).toEqual([['mixer', '2'], ['mic', '1']])
+  })
+
+  it('EC07 (happy): a choices-only picker is titled All equipment and offers no quantities', () => {
+    render(<EquipmentPicker choicesOnly catalogue={catalogue} selected={{ mixer: '1' }} onToggle={vi.fn()} onQuantityChange={vi.fn()} />)
+    expect(screen.getByRole('group', { name: 'All equipment' })).toBeInTheDocument()
+    expect(screen.queryByRole('spinbutton')).not.toBeInTheDocument()
+  })
+
   it('EO01 (cross-cutting): legacy text and separate notes round-trip without losing selected quantities', () => {
     const text = equipmentRequirementsFrom({ mixer: '3' }, 'Bring cables', catalogue)
     expect(equipmentDraftFrom(text, catalogue)).toEqual({ selected: { mixer: '3' }, notes: 'Bring cables' })

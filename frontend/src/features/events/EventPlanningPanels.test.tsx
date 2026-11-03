@@ -20,11 +20,11 @@ const event = {
 const history = [{ activityId: 'a1', type: 'approved', actorName: 'ec1', actorRole: 'ec', message: null,
   flaggedFields: [], fromStatus: 'pending', toStatus: 'approved', occurredAt: '2026-09-22T01:00:00Z' }]
 
-function renderEvent(base: string) {
+function renderEvent(base: string, state?: unknown) {
   const previousFetch = globalThis.fetch
   vi.stubGlobal('fetch', (input: RequestInfo | URL, init?: RequestInit) => String(input).endsWith('/venue-assessments') ? Promise.resolve(jsonResponse(200, [])) : previousFetch(input, init))
   return render(
-    <MemoryRouter initialEntries={[`${base}/events/${EVENT}`]}>
+    <MemoryRouter initialEntries={[{ pathname: `${base}/events/${EVENT}`, state }]}>
       <SessionProvider>
         <Routes><Route path={`${base}/events/:eventId`} element={<EventDetailsPage />} /></Routes>
       </SessionProvider>
@@ -232,6 +232,114 @@ describe('Cancelling a pending venue booking request (EC03)', () => {
       'href', `/coordinator/events/${EVENT}/venue-booking?replacesBookingId=b1`,
     )
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ reason: 'Wrong venue' })
+  })
+})
+
+describe('EC02 EC03 EventDetailsPage venue card details', () => {
+  const booking = { venueId: 'v1', venueCapacity: 160, bookingNotes: null, suitabilityNote: null, rejectReason: null,
+    submittedAt: null, submittedBy: 'ec1', replacesBookingId: null }
+
+  it('EC02 (happy): after approving, the coordinator is told the event is in Planning and the organiser was notified', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator', { justApproved: true })
+    expect(await screen.findByText('Request approved. The event is now in Planning and the organiser has been notified.'))
+      .toBeInTheDocument()
+  })
+
+  it('EC03 (happy): after requesting a venue, the coordinator is told which venue went to Venue Staff', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator', { bookingRequested: 'Main Hall' })
+    expect(await screen.findByText('Booking request for Main Hall sent to Venue Staff for review.')).toBeInTheDocument()
+  })
+
+  it("EC03 (happy): a refused request shows Venue Staff's suggested venue and arrangement, and released bookings are listed", async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { ...booking, bookingId: 'b1', status: 'rejected', venueAddress: 'Old Hall', rejectReason: 'Too small',
+          alternativeVenueAddress: 'Bay Room', alternativeArrangement: 'Split into two sessions' },
+        { ...booking, bookingId: 'b2', status: 'changed', venueAddress: 'Released Room' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    const earlier = await screen.findByRole('list', { name: 'Earlier venue requests' })
+    expect(earlier).toHaveTextContent('Reason: Too small')
+    expect(earlier).toHaveTextContent('Suggested venue: Bay Room')
+    expect(earlier).toHaveTextContent('Alternative arrangement: Split into two sessions')
+    expect(screen.getByRole('heading', { name: 'Released bookings' })).toBeInTheDocument()
+    expect(screen.getByText('Released Room: Changed')).toBeInTheDocument()
+    expect(screen.getByText('No active venue bookings.')).toBeInTheDocument()
+  })
+
+  it('EC03 (negative): outside Planning and Confirmed, an earlier request cannot be rebooked and no new venue is offered', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, { ...event, status: 'safety_review' }),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { ...booking, bookingId: 'b1', status: 'cancelled', venueAddress: 'Old Hall' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    expect(await screen.findByRole('list', { name: 'Earlier venue requests' })).toHaveTextContent('Old Hall')
+    expect(screen.queryByRole('link', { name: 'Rebook this venue' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('link', { name: 'Request a venue' })).not.toBeInTheDocument()
+  })
+
+  it('EC03 (boundary): a request shows only the times it has: a window alone, or a submission time alone', async () => {
+    seedSession('coordinator')
+    stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { ...booking, bookingId: 'b1', status: 'pending', venueAddress: 'Window Hall',
+          startDatetime: '2027-03-10T01:00:00Z', endDatetime: '2027-03-10T04:00:00Z' },
+        { ...booking, bookingId: 'b2', status: 'approved', venueAddress: 'Submitted Hall', submittedAt: '2026-10-17T04:42:37Z' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    renderEvent('/coordinator')
+
+    const items = within(await screen.findByRole('list', { name: 'Venue bookings' })).getAllByRole('listitem')
+    const windowed = items.find((item) => item.textContent?.includes('Window Hall')) as HTMLElement
+    const submitted = items.find((item) => item.textContent?.includes('Submitted Hall')) as HTMLElement
+    expect(windowed).toHaveTextContent(new Date('2027-03-10T01:00:00Z').toLocaleString())
+    expect(windowed).not.toHaveTextContent('Requested')
+    expect(submitted).toHaveTextContent(`Requested ${new Date('2026-10-17T04:42:37Z').toLocaleString()}`)
+    expect(submitted).not.toHaveTextContent('–')
+  })
+
+  it('EC03 (happy): Keep request closes the cancellation without sending anything', async () => {
+    seedSession('coordinator')
+    const calls = stubApi({
+      [`GET /api/events/${EVENT}`]: () => jsonResponse(200, event),
+      [`GET /api/events/${EVENT}/venue-bookings`]: () => jsonResponse(200, [
+        { ...booking, bookingId: 'b1', status: 'pending', venueAddress: 'Main Hall' },
+      ]),
+      [`GET /api/events/${EVENT}/timeline`]: () => jsonResponse(200, []),
+    })
+    const user = userEvent.setup()
+    renderEvent('/coordinator')
+    await user.click(await screen.findByRole('button', { name: 'Cancel this request' }))
+    await user.type(screen.getByLabelText('Reason for Venue Staff (optional)'), 'Changed my mind')
+    await user.click(screen.getByRole('button', { name: 'Keep request' }))
+
+    expect(screen.queryByLabelText('Reason for Venue Staff (optional)')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Cancel this request' })).toBeInTheDocument()
+    expect(calls.some((c) => c.method === 'POST')).toBe(false)
+    await user.click(screen.getByRole('button', { name: 'Cancel this request' }))
+    expect(screen.getByLabelText('Reason for Venue Staff (optional)')).toHaveValue('')
   })
 })
 

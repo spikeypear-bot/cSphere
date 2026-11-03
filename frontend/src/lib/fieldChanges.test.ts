@@ -30,4 +30,9 @@ describe('changedFields', () => {
   it('EO26 (boundary): a blank value is shown as a dash', () => {
     expect(formatFieldValue('purpose', null)).toBe('—')
   })
+
+  it('EO26 (boundary): a list shows its features by name, an unknown one as given, and an empty list as a dash', () => {
+    expect(changedFields({ accessibilityNeeds: [] }, { accessibilityNeeds: ['elevators', 'sign_language'] }))
+      .toEqual([expect.objectContaining({ before: '—', after: 'Elevators, sign_language' })])
+  })
 })

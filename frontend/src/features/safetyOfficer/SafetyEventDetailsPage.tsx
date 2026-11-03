@@ -52,7 +52,6 @@ export function SafetyEventDetailsPage() {
   const readiness = readinessState.data
 
   async function saveItem(item: ReadinessItem, checked: boolean, note: string) {
-    if (!eventId) return
     setSavingItem(item.itemKey)
     setActionError(null)
     try {
@@ -68,7 +67,6 @@ export function SafetyEventDetailsPage() {
   }
 
   async function review(decision: 'approve' | 'request_changes' | 'reject') {
-    if (!eventId) return
     setReviewing(true)
     setActionError(null)
     try {

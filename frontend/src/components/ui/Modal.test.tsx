@@ -1,4 +1,5 @@
 // @stories EC04 EC03  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
+import { StrictMode } from 'react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
@@ -46,5 +47,10 @@ describe('EC04 shared modal', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Add to request' }))
     expect(onClose).toHaveBeenCalledTimes(1)
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  it('EC04 (boundary): opening twice in a row (React strict mode) leaves one open dialog, not an error', () => {
+    render(<StrictMode><Modal title="Marina Bay Hall" onClose={() => {}}><p>400 people</p></Modal></StrictMode>)
+    expect((screen.getByRole('dialog', { name: 'Marina Bay Hall' }) as HTMLDialogElement).open).toBe(true)
   })
 })

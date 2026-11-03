@@ -1,6 +1,6 @@
 // @stories VS17 EC08 EO04 SO-C3 SO-C5 SO-C6 EC03 EC-NEW3 EC-C1  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { render, screen, cleanup, within } from '@testing-library/react'
+import { render, screen, cleanup, within, fireEvent, waitFor } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { EventDetailsPage } from './EventDetailsPage'
@@ -251,5 +251,56 @@ describe('EventDetailsPage — shared event view and SO-C3 readiness view', () =
     renderPage('/organiser')
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Event not found: event-1')
+  })
+
+  it('EC08 (happy): the requested equipment is listed with the event details', async () => {
+    seedSession('organiser')
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, { ...pendingEvent(), equipmentRequirements: 'Two wireless microphones' })))
+    renderPage('/organiser')
+    expect(await screen.findByText('Equipment requirements')).toBeInTheDocument()
+    expect(screen.getByText('Two wireless microphones')).toBeInTheDocument()
+  })
+
+  it('EC08 (boundary): a status this page has no label for is still shown, by its name', async () => {
+    seedSession('organiser')
+    vi.stubGlobal('fetch', vi.fn(async () => jsonResponse(200, confirmedEvent('archived'))))
+    renderPage('/organiser')
+    expect(await screen.findByText('archived')).toHaveClass('status-badge--approved')
+  })
+
+  it('EC08 (failure): when a refresh fails the last loaded details stay on screen with an error', async () => {
+    seedSession('organiser')
+    let fail = false
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => String(input) === `/api/events/${EVENT_ID}` && fail
+      ? jsonResponse(500, { message: 'Server unavailable' }) : jsonResponse(200, pendingEvent())))
+    renderPage('/organiser')
+    await screen.findByRole('heading', { name: 'Q1 Town Hall' })
+    fail = true
+    fireEvent.focus(window)
+    expect(await screen.findByText('Could not refresh event details. Server unavailable')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Q1 Town Hall' })).toBeInTheDocument()
+  })
+
+  it('SO-C3 (boundary): the coordinator sees a loading message until the readiness checklist arrives', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => {
+      const url = String(input)
+      if (url.endsWith('/readiness')) return new Promise<Response>(() => {})
+      return Promise.resolve(jsonResponse(200, url.endsWith('/timeline') ? [] : pendingEvent()))
+    }))
+    renderPage('/coordinator')
+    expect(await screen.findByText('Loading readiness checklist…')).toBeInTheDocument()
+  })
+
+  it('SO-C3 (boundary): an empty readiness answer shows neither a checklist nor a loading message', async () => {
+    seedSession('coordinator')
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL) => {
+      const url = String(input)
+      return jsonResponse(200, url.endsWith('/readiness') ? null : url.endsWith('/timeline') ? [] : pendingEvent())
+    }))
+    renderPage('/coordinator')
+    expect(await screen.findByRole('heading', { name: 'Change log' })).toBeInTheDocument()
+    await waitFor(() => expect(screen.queryByText('Loading readiness checklist…')).not.toBeInTheDocument())
+    expect(screen.queryByRole('heading', { name: "Safety Officer's review" })).not.toBeInTheDocument()
   })
 })

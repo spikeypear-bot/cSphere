@@ -200,4 +200,93 @@ describe('TS09 faulty equipment and the report-a-problem form', () => {
       .toHaveAttribute('href', '/technical-support/faulty/reports/rep-1')
     expect(within(report).getByText('Closed')).toHaveClass('dash-badge--neutral')
   })
+
+  it('TS09 TS03 (happy): a block with no end date says the unit is out until further notice', async () => {
+    const calls = stubApi({
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR]),
+      'GET /api/equipment/eq-proj': () => jsonResponse(200, PROJECTOR_DETAIL),
+      [PERIODS_URL]: () => jsonResponse(204, null),
+      [BLOCKS]: () => jsonResponse(200, []),
+      [REPORTS]: () => jsonResponse(200, []),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/new')
+
+    await fillSerialised(user)
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
+
+    expect(await screen.findByText('Projector PJ-2 marked Faulty until further notice.')).toBeInTheDocument()
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ status: 'Faulty', start: iso('2027-04-01T09:00'), end: null })
+  })
+
+  it('TS09 (failure): a catalogue that cannot load says why, or that it could not load, and Try again loads it', async () => {
+    let attempts = 0
+    stubApi({
+      'GET /api/equipment/catalogue': () => {
+        attempts += 1
+        if (attempts === 1) return jsonResponse(500, { message: 'Server unavailable' })
+        if (attempts === 2) return ({ ok: true, status: 200, text: async () => 'not json' }) as Response
+        return jsonResponse(200, [PROJECTOR])
+      },
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/new')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The equipment catalogue could not be loaded. Server unavailable')
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByText(/Could not load the equipment catalogue\./)).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByLabelText('Equipment')).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('TS09 (failure): units that cannot load say so, and Try again lists them', async () => {
+    let attempts = 0
+    stubApi({
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR]),
+      'GET /api/equipment/eq-proj': () => (++attempts === 1 ? jsonResponse(500, {}) : jsonResponse(200, PROJECTOR_DETAIL)),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/new')
+
+    await user.selectOptions(await screen.findByLabelText('Equipment'), 'eq-proj')
+    expect(await screen.findByRole('alert')).toHaveTextContent('The units could not be loaded.')
+    expect(screen.getByLabelText('Unit')).toBeDisabled()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('option', { name: 'PJ-2 (Available)' })).toBeInTheDocument()
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('TS09 (negative): a description over 2000 characters is refused before anything is sent', async () => {
+    const calls = stubApi({
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR]),
+      'GET /api/equipment/eq-proj': () => jsonResponse(200, PROJECTOR_DETAIL),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/new')
+
+    await fillSerialised(user)
+    // The box stops typing at 2000; this is what a bypassed limit would send.
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'x'.repeat(2001) } })
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
+
+    expect(screen.getByText('Keep the description to 2000 characters.')).toBeInTheDocument()
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+  })
+
+  it('TS09 TS03 (failure): a refusal with no reason says the problem could not be saved', async () => {
+    stubApi({
+      'GET /api/equipment/catalogue': () => jsonResponse(200, [PROJECTOR]),
+      'GET /api/equipment/eq-proj': () => jsonResponse(200, PROJECTOR_DETAIL),
+      [PERIODS_URL]: () => jsonResponse(500, { message: '' }),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/faulty/new')
+
+    await fillSerialised(user)
+    await user.click(screen.getByRole('button', { name: 'Report problem' }))
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('The problem could not be saved. Nothing was changed.')
+    expect(screen.getByRole('heading', { name: 'Report a problem' })).toBeInTheDocument()
+  })
 })

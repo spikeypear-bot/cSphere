@@ -93,4 +93,22 @@ describe('SO-C1 safety officer dashboard', () => {
     expect(within(panel('Confirmed')).getByRole('button', { name: 'Try again' })).toBeInTheDocument()
     expect(await within(panel('Awaiting your review')).findByRole('link', { name: 'Sent Gala' })).toBeInTheDocument()
   })
+
+  it('SO-C1 (failure): when the planning list fails the summary says the review count could not be loaded', async () => {
+    routes({ [PLANNING]: () => jsonResponse(500, { message: 'Server error' }) })
+    renderDashboard()
+
+    expect(await within(await findPanel('Awaiting your review')).findByRole('alert')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 }).parentElement)
+      .toHaveTextContent('Events awaiting your review could not be loaded.')
+  })
+
+  it('SO-C1 (boundary): an event with no venue yet says so, and an account with no username is greeted plainly', async () => {
+    window.localStorage.setItem('connectsphere.auth', JSON.stringify({ accessToken: 'a', refreshToken: 'r', role: 'safety-officer' }))
+    routes({ [PLANNING]: () => jsonResponse(200, [{ ...awaiting(1), venueAddress: null }]) })
+    renderDashboard()
+
+    expect(await within(await findPanel('Awaiting your review')).findByText('Venue not finalised')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(/^Good \w+$/)
+  })
 })

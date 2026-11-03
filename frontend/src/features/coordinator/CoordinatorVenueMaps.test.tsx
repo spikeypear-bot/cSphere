@@ -13,7 +13,10 @@ import { VenueSearchPage } from './VenueSearchPage'
 
 // The page tests exercise the real filters/selection/request code; renderer and
 // real Leaflet marker grouping are covered separately by map unit/browser tests.
-vi.mock('../venueMap/VenueMap', () => ({ default: ({ venues, selectedId, selectedIds, onSelect, onToggleVenue }: VenueMapProps) =>
+// The fake replaces VenueMapPanel, not the lazily loaded VenueMap: React.lazy + Suspense
+// made the map appear only after an async import and Suspense's reveal throttle, which
+// under CPU load fell outside findByRole's window. Now it renders with the page's data.
+vi.mock('../venueMap/VenueMapPanel', () => ({ VenueMapPanel: ({ venues, selectedId, selectedIds, onSelect, onToggleVenue }: VenueMapProps) =>
   <section role="region" aria-label="Interactive venue map" data-focus={selectedId}>
     {venues.filter(hasCoordinates).map(venue => <div key={venue.venueId}>
       <button onClick={() => onSelect(venue.venueId)}>Location {venue.venueId}</button>

@@ -131,3 +131,52 @@ describe('ActivityTimeline (V14 details)', () => {
     expect(changes[0]).toHaveTextContent('Expected attendance: 150 → 120')
   })
 })
+
+describe('EC-NEW5 ActivityTimeline — entries this build has no wording for, and edge entries', () => {
+  afterEach(cleanup)
+
+  const entry = (over: Partial<ActivityDto>): ActivityDto => ({ activityId: null, type: 'submitted', actorName: 'ec1',
+    actorRole: 'ec', message: null, flaggedFields: [], fromStatus: null, toStatus: null, occurredAt: '2026-09-20T01:00:00Z', ...over })
+  const rows = () => within(screen.getByRole('list', { name: 'Request timeline' })).getAllByRole('listitem')
+    .filter((li) => li.classList.contains('activity-timeline__entry'))
+
+  it('EC-NEW5 (boundary): an unknown role, action, status, field or checklist item is shown as recorded rather than hidden', () => {
+    render(<ActivityTimeline entries={[
+      entry({ activityId: 'u1', type: 'future_action' as ActivityDto['type'], actorRole: 'auditor', fromStatus: 'rejected', toStatus: 'archived' }),
+      entry({ activityId: 'u2', type: 'clarification_requested', fieldQuestions: { budgetCode: 'Which code?' } }),
+      entry({ activityId: 'u3', type: 'safety_rejected', flaggedFields: ['retired_item'] }),
+      entry({ activityId: 'u4', type: 'rejected', flaggedFields: ['budgetCode'] }),
+    ]} />)
+    const [unknown, question, safety, flagged] = rows()
+    expect(unknown).toHaveTextContent('ec1 (auditor) future_action')
+    expect(unknown).toHaveTextContent(/Rejected\s*→\s*archived/)
+    expect(within(question).getByRole('definition')).toHaveTextContent('Which code?')
+    expect(within(question).getByRole('term')).toHaveTextContent('budgetCode')
+    expect(within(safety).getByRole('list', { name: 'Checklist items concerned' })).toHaveTextContent('retired_item')
+    expect(within(flagged).getByRole('list', { name: 'Fields that need attention' })).toHaveTextContent('budgetCode')
+  })
+
+  it('EC-NEW5 (happy): a venue booking entry moves through booking statuses, not request statuses', () => {
+    render(<ActivityTimeline entries={[entry({ type: 'venue_booking_approved', fromStatus: 'pending', toStatus: 'confirmed' })]} />)
+    expect(rows()[0]).toHaveTextContent(/Pending venue review\s*→\s*Confirmed/)
+  })
+
+  it('EC-NEW5 (boundary): a response with no earlier clarification on record lists no changes', () => {
+    render(<ActivityTimeline entries={[entry({ activityId: 's1', type: 'submitted', fieldValues: { expectedAttendance: 150 } }),
+      entry({ activityId: 'c1', type: 'clarification_responded', actorRole: 'eo', fieldValues: { expectedAttendance: 120 } })]} />)
+    expect(screen.queryByRole('list', { name: 'What changed' })).not.toBeInTheDocument()
+  })
+
+  it('EC-NEW5 (happy): an updated registration period lists the valid new dates only, and nothing when none were captured', () => {
+    render(<ActivityTimeline entries={[
+      entry({ activityId: 'r1', type: 'registration_period_updated',
+        fieldValues: { registrationOpensAt: '2027-03-01T01:00:00Z', registrationClosesAt: 'not a date' } }),
+      entry({ activityId: 'r2', type: 'registration_period_updated' }),
+    ]} />)
+    const [withDates, without] = rows()
+    const period = within(withDates).getByLabelText('Updated registration period')
+    expect(within(period).getAllByRole('term').map((t) => t.textContent)).toEqual(['Registration opens'])
+    expect(period).toHaveTextContent('1 Mar 2027')
+    expect(within(without).queryByLabelText('Updated registration period')).not.toBeInTheDocument()
+  })
+})

@@ -1,6 +1,6 @@
 // @stories DEV05  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiClient, ApiClientError, UNAUTHORISED_EVENT } from './apiClient'
+import { apiClient, ApiClientError, login, logout, UNAUTHORISED_EVENT } from './apiClient'
 import { AUTH_STORAGE_KEY } from './authTokens'
 
 function signedIn(accessToken = 'access-1', refreshToken = 'refresh-1') {
@@ -183,5 +183,78 @@ describe('apiClient', () => {
     const error = await apiClient.get('/event-requests').catch((err: unknown) => err)
     expect(error).toBeInstanceOf(ApiClientError)
     expect((error as ApiClientError).status).toBe(0)
+  })
+})
+
+describe('DEV05 apiClient — error details, login, logout and renewal edges', () => {
+  beforeEach(() => window.localStorage.clear())
+  afterEach(() => vi.unstubAllGlobals())
+
+  it('DEV05 (negative): field errors keep only the messages the server gave as text', async () => {
+    mockFetchSequence({ status: 422, jsonBody: { message: 'Invalid', fieldErrors: { name: 'Too long', size: 3 } } })
+    await expect(apiClient.post('/x')).rejects.toMatchObject({ fieldErrors: { name: 'Too long' } })
+    mockFetchSequence({ status: 422, jsonBody: { message: 'Invalid', fieldErrors: { size: 3 } } })
+    await expect(apiClient.post('/x')).rejects.toMatchObject({ fieldErrors: null })
+  })
+
+  it('DEV05 (negative): a 403 with no message says the account may not do that', async () => {
+    signedIn()
+    mockFetchSequence({ status: 403 })
+    await expect(apiClient.get('/venues')).rejects.toMatchObject({ status: 403, message: 'You do not have permission to do that.' })
+  })
+
+  it('DEV05 (happy): login stores the session it returns', async () => {
+    mockFetchSequence({ jsonBody: RENEWED })
+    await expect(login('eo1', 'pw')).resolves.toMatchObject({ accessToken: 'access-2', role: 'organiser' })
+    expect(JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY) ?? '{}')).toMatchObject({ accessToken: 'access-2' })
+  })
+
+  it('DEV05 (negative): login for a role this app does not know is refused and stores nothing', async () => {
+    mockFetchSequence({ jsonBody: { ...RENEWED, role: 'auditor' } })
+    await expect(login('x', 'pw')).rejects.toMatchObject({ message: 'This account has a role this app does not recognise.' })
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (failure): login while the server is unreachable says so', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(login('eo1', 'pw')).rejects.toMatchObject({ status: 0, message: 'Could not reach ConnectSphere. Check your connection and try again.' })
+  })
+
+  it('DEV05 (happy): logout revokes the refresh token on the server and forgets the session here', async () => {
+    signedIn()
+    const fetchSpy = mockFetchSequence({ status: 204 })
+    await logout()
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ body: JSON.stringify({ refreshToken: 'refresh-1' }) }))
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (failure): logout still ends the session here when the server cannot be reached', async () => {
+    signedIn()
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
+    await expect(logout()).resolves.toBeUndefined()
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (boundary): logout with no stored session calls nothing', async () => {
+    const fetchSpy = vi.fn()
+    vi.stubGlobal('fetch', fetchSpy)
+    await logout()
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it('DEV05 (boundary): with no refresh token stored, an expired session ends without trying to renew', async () => {
+    signedIn('access-1', '')
+    const fetchSpy = mockFetchSequence({ status: 401 })
+    await expect(apiClient.get('/x')).rejects.toMatchObject({ status: 401, message: 'Your session has expired. Please log in again.' })
+    expect(fetchSpy).toHaveBeenCalledTimes(1)
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (negative): a renewal that comes back with an unknown role is not stored and the session ends', async () => {
+    signedIn()
+    const fetchSpy = mockFetchSequence({ status: 401 }, { jsonBody: { ...RENEWED, role: 'auditor' } }, { status: 401 })
+    await expect(apiClient.get('/x')).rejects.toMatchObject({ status: 401 })
+    expect(fetchSpy).toHaveBeenCalledTimes(2)
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
   })
 })

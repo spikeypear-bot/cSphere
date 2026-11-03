@@ -52,8 +52,9 @@ export function EquipmentDamagePanel({ eventId, readOnly }: { eventId: string; r
   }
   if (!items || items.length === 0) return null
 
+  // Only the rendered (non-empty) list can resolve an item, so the list is never null here.
   const replace = (updated: EventEquipmentDamage) =>
-    setItems((current) => (current ?? []).map((item) => (item.outcomeId === updated.outcomeId ? updated : item)))
+    setItems((current) => current!.map((item) => (item.outcomeId === updated.outcomeId ? updated : item)))
 
   return (
     <Card className="event-details__venue" role="region" aria-labelledby="equipment-damage-heading">

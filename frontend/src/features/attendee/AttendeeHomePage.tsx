@@ -68,7 +68,8 @@ export function AttendeeHomePage() {
                 {openNow(list).slice(0, TOP).map((e) => (
                   <li key={e.eventId}>
                     <RowLink to={`/attendee/events/${encodeURIComponent(e.eventId)}`} className="dash-queue__row" title={e.eventName}
-                      aside={`${countOf(e.availablePlaces ?? 0, 'place')} left`}>
+                      // openNow keeps only 'Open for Registration', which registrationBadge gives only with availablePlaces set.
+                      aside={`${countOf(e.availablePlaces!, 'place')} left`}>
                       <p className="dash-queue__when">{formatEventTimeRange(e.startDatetime, e.endDatetime)}</p>
                     </RowLink>
                   </li>
