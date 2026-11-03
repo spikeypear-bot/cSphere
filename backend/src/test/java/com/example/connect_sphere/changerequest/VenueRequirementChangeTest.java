@@ -121,6 +121,47 @@ class VenueRequirementChangeTest {
         assertThat(b.getStartDatetime()).isEqualTo(start); assertThat(b.getEndDatetime()).isEqualTo(start.plusHours(3));
         verify(bookings).save(b); assertThat(b.getStatus()).isEqualTo(VenueBookingStatus.approved);
     }
+    @Test @DisplayName("VS17 (boundary): a legacy reservation missing only its start, or only its end, keeps the old event time for the missing one")
+    void legacyHalfWindows() {
+        var noStart = booking(VenueBookingStatus.approved); noStart.setStartDatetime(null);
+        var noEnd = booking(VenueBookingStatus.attention); noEnd.setEndDatetime(null);
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(noStart, noEnd));
+        change.setOriginalValues(Map.of("endDatetime", start.plusHours(3).toString()));
+        change.setProposedValues(Map.of("endDatetime", start.plusHours(4).toString()));
+        service.approved(change, event, start.minusHours(1), start.plusHours(3));
+        assertThat(noStart.getStartDatetime()).isEqualTo(start.minusHours(1));
+        assertThat(noStart.getEndDatetime()).isEqualTo(start.plusHours(2));
+        assertThat(noEnd.getStartDatetime()).isEqualTo(start);
+        assertThat(noEnd.getEndDatetime()).isEqualTo(start.plusHours(3));
+        verify(bookings).save(noStart); verify(bookings).save(noEnd);
+        verify(reviews, times(2)).saveAndFlush(any());
+    }
+    @Test @DisplayName("VS17 (boundary): without a date change a legacy reservation is left as it is and its review shows the event's window; an event without a coordinator names none")
+    void legacyWithoutADateChange() {
+        event.setCoordinatorId(null);
+        var b = booking(VenueBookingStatus.approved); b.setStartDatetime(null); b.setEndDatetime(null);
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(b));
+        service.approved(change, event, start, start.plusHours(3));
+        var captured = ArgumentCaptor.forClass(VenueRequirementReview.class);
+        verify(reviews).saveAndFlush(captured.capture());
+        assertThat(captured.getValue().getReservedStart()).isEqualTo(start);
+        assertThat(captured.getValue().getReservedEnd()).isEqualTo(start.plusHours(3));
+        assertThat(captured.getValue().getCoordinatorName()).isNull();
+        assertThat(captured.getValue().getCoordinatorEmail()).isNull();
+        assertThat(b.getStartDatetime()).isNull();
+        verify(bookings, never()).save(any());
+    }
+    @Test @DisplayName("VS17 (boundary): a booking's own requirements replace only the event values it sets")
+    void bookingOverridesOnlyWhatItSets() {
+        var b = booking(VenueBookingStatus.pending);
+        b.setRequirements(new com.example.connect_sphere.venuebooking.dto.BookingRequirements(null, null, null, "Banquet rounds"));
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(b));
+        service.approved(change, event, start, start.plusHours(3));
+        var captured = ArgumentCaptor.forClass(VenueRequirementReview.class);
+        verify(reviews).saveAndFlush(captured.capture());
+        assertThat(captured.getValue().getNewRequirements()).containsEntry("expectedAttendance", 200)
+                .containsEntry("venueRequirements", "Banquet rounds");
+    }
     @Test @DisplayName("VS17 (failure): a notification persistence failure propagates to roll back approval")
     void notificationFailureIsNotSwallowed() {
         var pending = booking(VenueBookingStatus.pending);
