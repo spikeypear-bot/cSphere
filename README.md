@@ -4,18 +4,60 @@ Read **`AI_Context.md`** at the repository root before making any change with an
 
 ## SetUp
 
-1) Ensure Docker desktop is on.
+### Prerequisites
 
-### Frontend (React.ts)
-from root:
-2) npm run install:frontend / npm run ci:frontend
-3) npm run dev
+- Docker (Docker Desktop on Windows/macOS) — running
+- Node.js 24 (the version CI uses)
+- No local JDK needed — the backend builds and runs in Docker
 
-### Backend/DB
-from root:
-4) docker compose up --build -d (To build the springboot image and up the containers)
-note: building of springboot app may take quite long during the first build, subsequently it takes 30s
-5) docker compose down -d (To down containers)
+### 1. Backend + database
+
+From the repo root:
+
+```
+docker compose up --build -d
+```
+
+This starts PostgreSQL (`localhost:5432`, db `csphere`, user `postgres` / `root`) and the
+Spring Boot API (`http://localhost:8080`). Flyway applies migrations on startup.
+The first build takes a while (Maven downloads); later builds take ~30s.
+Check it's up: `docker compose ps` should show `csphere-backend` as healthy.
+
+Rebuild with `--build` whenever backend source changes — a running container does not pick up edits.
+
+### 2. Frontend (React + TypeScript, Vite)
+
+From the repo root:
+
+```
+npm run ci:frontend    # or npm run install:frontend
+npm run dev
+```
+
+Open `http://localhost:5173`. Vite proxies `/api` to `http://localhost:8080`
+(override with `API_PROXY_TARGET`).
+
+### 3. Log in
+
+The `dev` profile seeds these accounts on every boot, all with password **`123456`**:
+
+| Role | Usernames |
+|---|---|
+| Event Coordinator | `ec1`–`ec5` |
+| Event Coordinator Lead | `ecl1` |
+| Event Organiser | `eo1`–`eo5` |
+| Venue Staff | `vs1`–`vs5` |
+| Attendee | `att1`–`att5` |
+| Technical Support | `ts1`–`ts5` |
+
+### Stopping / resetting
+
+```
+docker compose down       # stop containers, keep data
+docker compose down -v    # stop and wipe the database (fresh migrations next start)
+```
+
+Use `down -v` if Flyway reports a checksum/version mismatch after pulling migration changes.
 
 ### Database (PostgreSQL, paired with Springboot's Flyway migration)
 
@@ -153,7 +195,7 @@ xdg-open frontend/coverage/index.html
 ### Frontend
 1) Ensure the app is created in routers when going throught the different views
 2) Shared UI primitives live in `frontend/src/components/ui/`; per-role screens live under `frontend/src/features/<role>/`
-3) There is no real login yet — see `docs/decision-log.md` D6a: the main page is a "Login as [Role]" selector (`frontend/src/lib/session.tsx`)
+3) Login is JWT-based (`POST /api/auth/login`); the login page lives in `frontend/src/features/auth/`
 ### Backend
 1)  Addition of dependencies for the project through pom.xml, configs are in applications .properties for the backend
 2) Unit tests to be created for each features/functions when the time is right
