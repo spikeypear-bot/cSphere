@@ -77,7 +77,8 @@ public class BookingAssessmentService {
         if (!active(b,e)) return;
         var failed=impact.assessBooking(e,b).stream().filter(c -> "attention".equals(c.status())).map(ChangeRequestDto.ImpactItem::detail).toList();
         String reason=String.join(" ",failed);
-        if (layoutChanged && e.getVenueRequirements()!=null && !e.getVenueRequirements().isBlank())
+        // events.venue_requirements is NOT NULL and only ever copied from submitted (non-blank) details.
+        if (layoutChanged)
             reason += " Supported layouts changed. Staff must reassess the written venue requirements.";
         if (reason.isBlank()) {
             if(b.getStatus()==VenueBookingStatus.approved)
@@ -86,7 +87,8 @@ public class BookingAssessmentService {
         } // Recovery requires an explicit staff decision.
         var history=history(b.getBookingId());
         if (b.getStatus()!=VenueBookingStatus.approved && b.getStatus()!=VenueBookingStatus.attention) return;
-        if (b.getStatus()==VenueBookingStatus.attention && !history.isEmpty() && history.getFirst().reason().equals(reason)
+        // An attention booking always has the assessment that set it (recorded below, in the same transaction).
+        if (b.getStatus()==VenueBookingStatus.attention && history.getFirst().reason().equals(reason)
                 && Boolean.TRUE.equals(jdbc.queryForObject("SELECT venue_snapshot = ?::jsonb FROM venue_booking_assessments WHERE assessment_id=?",Boolean.class,venueSnapshot(b.getVenueId()),history.getFirst().assessmentId()))) return;
         b.setStatus(VenueBookingStatus.attention); bookings.saveAndFlush(b);
         record(b,e,actor,"attention",source,reason,previousVenue);
@@ -114,7 +116,8 @@ public class BookingAssessmentService {
         if (bookings.existsByReplacesBookingIdAndStatusIn(bookingId,List.of(VenueBookingStatus.pending,VenueBookingStatus.approved,VenueBookingStatus.attention)))
             throw new VenueBookingStateException("Resolve the replacement request before restoring this booking approval.");
         var h=history(bookingId);
-        if (h.isEmpty() || !h.getFirst().assessmentId().equals(expectedAssessmentId))
+        // An attention booking always has the assessment that set it (reassess records it in the same transaction).
+        if (!h.getFirst().assessmentId().equals(expectedAssessmentId))
             throw new VenueBookingStateException("The booking assessment changed. Refresh before reassessing.");
         if (note==null || note.isBlank() || note.strip().length()>2000)
             throw new InvalidVenueBookingException("Explain the reassessment in 1 to 2000 characters.");

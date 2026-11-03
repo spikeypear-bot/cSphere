@@ -183,6 +183,71 @@ class BookingAssessmentFlowTest {
   assertThat(statusOf(booking)).isEqualTo("approved"); assertThat(notifications()).isZero();
  }
 
+ @Autowired com.example.connect_sphere.event.repository.EventRepository eventRows;
+ com.example.connect_sphere.event.entity.Event eventRow() { em.flush(); em.clear(); return eventRows.findById(event).orElseThrow(); }
+
+ @Test @Transactional @DisplayName("VS17 (conflict): a booking that arrived for an event the venue edit had not locked stops the edit, and nothing is reassessed")
+ void unlockedNewBookingStopsTheEdit() throws Exception {
+  fixture();
+  assertThatThrownBy(() -> assessments.venueChanged(venue,null,false,null,Set.of()))
+   .isInstanceOf(com.example.connect_sphere.venuebooking.service.VenueBookingStateException.class)
+   .hasMessage("A new booking arrived while editing this venue. Retry saving the venue details.");
+  assertThat(statusOf(booking)).isEqualTo("approved"); assertThat(assessments.view(booking).history()).isEmpty();
+ }
+ @Test @Transactional @DisplayName("VS17 (boundary): a pending booking that no longer fits stays pending for its normal decision, with no assessment or alert")
+ void pendingBookingIsNotInvalidated() throws Exception {
+  fixture(); jdbc.update("UPDATE venue_bookings SET status='pending' WHERE booking_id=?",booking); em.clear();
+  capacity(80);
+  assertThat(statusOf(booking)).isEqualTo("pending"); assertThat(assessments.view(booking).history()).isEmpty(); assertThat(notifications()).isZero();
+ }
+ @Test @Transactional @DisplayName("VS17 (boundary): reassessing with the same failure and venue adds nothing; a different failure is recorded again")
+ void sameFailureIsRecordedOnce() throws Exception {
+  fixture(); capacity(80);
+  assessments.requirementsChanged(eventRow(),null);
+  assertThat(assessments.view(booking).history()).hasSize(1); assertThat(notifications()).isEqualTo(1);
+  jdbc.update("UPDATE events SET expected_attendance=150 WHERE event_id=?",event);
+  assessments.requirementsChanged(eventRow(),null);
+  assertThat(assessments.view(booking).history()).hasSize(2); assertThat(notifications()).isEqualTo(2);
+  assertThat(assessments.view(booking).history().getFirst().reason()).contains("150");
+  // The same failure after a venue edit is recorded again, with the edited venue.
+  mvc.perform(put("/api/venues/"+venue).with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content("{\"venueFacilities\":[\"projection\"]}"))
+   .andExpect(status().isOk()); em.flush(); em.clear();
+  assertThat(assessments.view(booking).history()).hasSize(3);
+ }
+ @Test @Transactional @DisplayName("VS17 (happy): the assigned coordinator sees each booking that needs reassessment or has been reassessed, and no other")
+ void coordinatorSeesReassessedBookings() throws Exception {
+  fixture(); capacity(80);
+  mvc.perform(get("/api/events/"+event+"/venue-assessments").with(flow.as("ec1"))).andExpect(status().isOk())
+   .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].bookingId").value(booking.toString()))
+   .andExpect(jsonPath("$[0].status").value("attention")).andExpect(jsonPath("$[0].canReassess").value(true));
+  mvc.perform(get("/api/venue-bookings/"+booking+"/assessment").with(flow.as("vs1"))).andExpect(status().isOk())
+   .andExpect(jsonPath("$.bookingId").value(booking.toString())).andExpect(jsonPath("$.history.length()").value(1));
+  capacity(200); UUID revision=assessments.view(booking).history().getFirst().assessmentId();
+  mvc.perform(post("/api/venue-bookings/"+booking+"/reassess").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(restore("Checked",revision))).andExpect(status().isOk());
+  mvc.perform(get("/api/events/"+event+"/venue-assessments").with(flow.as("ec1"))).andExpect(status().isOk())
+   .andExpect(jsonPath("$.length()").value(1)).andExpect(jsonPath("$[0].status").value("approved"))
+   .andExpect(jsonPath("$[0].history.length()").value(2));
+ }
+ @Test @Transactional @DisplayName("VS17 (negative): approval cannot be restored without a 1 to 2000 character note, while a replacement is open, or once the event is over or cancelled; nothing changes")
+ void restoreNeedsAnOpenBookingAndANote() throws Exception {
+  fixture(); capacity(80); capacity(200); UUID revision=assessments.view(booking).history().getFirst().assessmentId();
+  for (String body:List.of("{\"assessmentId\":\""+revision+"\"}",restore("x".repeat(2001),revision)))
+   mvc.perform(post("/api/venue-bookings/"+booking+"/reassess").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(body))
+    .andExpect(status().isUnprocessableEntity()).andExpect(jsonPath("$.message").value("Explain the reassessment in 1 to 2000 characters."));
+  UUID replacement=UUID.randomUUID();
+  jdbc.update("INSERT INTO venue_bookings(booking_id,venue_id,event_id,status,start_datetime,end_datetime,replaces_booking_id) VALUES (?,?,?,'pending','2027-03-10 09:00+08','2027-03-10 12:00+08',?)",replacement,venue,event,booking);
+  mvc.perform(post("/api/venue-bookings/"+booking+"/reassess").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(restore("Checked",revision)))
+   .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("Resolve the replacement request before restoring this booking approval."));
+  jdbc.update("DELETE FROM venue_bookings WHERE booking_id=?",replacement);
+  for (String change:List.of("status='cancelled'","status='completed'","start_datetime=now()-interval '2 hours', end_datetime=now()-interval '1 hour'")) {
+   jdbc.update("UPDATE events SET status='pending',start_datetime='2027-03-10 09:00+08',end_datetime='2027-03-10 12:00+08' WHERE event_id=?",event);
+   jdbc.update("UPDATE events SET "+change+" WHERE event_id=?",event); em.clear();
+   mvc.perform(post("/api/venue-bookings/"+booking+"/reassess").with(flow.as("vs1")).contentType(MediaType.APPLICATION_JSON).content(restore("Checked",revision)))
+    .andExpect(status().isConflict()).andExpect(jsonPath("$.message").value("This booking no longer requires reassessment. Refresh its details."));
+  }
+  assertThat(statusOf(booking)).isEqualTo("attention"); assertThat(assessments.view(booking).history()).hasSize(1);
+ }
+
  private tools.jackson.databind.JsonNode jsonGet(String path,String actor) throws Exception {
   return flow.read(mvc.perform(get(path).with(flow.as(actor))).andExpect(status().isOk()).andReturn().getResponse().getContentAsString());
  }
