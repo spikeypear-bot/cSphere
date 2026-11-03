@@ -35,6 +35,10 @@ public class EquipmentRequest {
     @Column(name = "attention_reason")
     private String attentionReason;
 
+    /** EC-NEW3 (D40, V73): replaces the event's held requests once Technical Support approve it. */
+    @Column(nullable = false)
+    private boolean revision;
+
     protected EquipmentRequest() {}
 
     public EquipmentRequest(UUID id, UUID eventId, EquipmentRequestStatus status, String technicalRequirement) {
@@ -50,6 +54,12 @@ public class EquipmentRequest {
     public String getTechnicalRequirement() { return technicalRequirement; }
     public String getRejectReason() { return rejectReason; }
     public String getAttentionReason() { return attentionReason; }
+    public boolean isRevision() { return revision; }
+
+    /** EC-NEW3 (D40): this request replaces the event's held ones once approved. */
+    public void markRevision() {
+        this.revision = true;
+    }
 
     public void decide(EquipmentRequestStatus status, String rejectReason) {
         this.status = status;

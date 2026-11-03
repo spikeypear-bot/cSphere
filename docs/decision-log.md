@@ -170,6 +170,7 @@ Format: one entry per decision. Status is either **Decided** (VERIFIED — actua
   | Other `GET /api/equipment/**` | `hasAnyRole('TECHNICIAN','EC')` | Technical Support check availability (TS01); Coordinators request equipment (EC07) and need to see it. |
   | `POST`, `DELETE /api/equipment/**` (incl. `POST /api/equipment/reservations/batch`) | `hasRole('TECHNICIAN')` | Reserving and releasing units is TS02. D33's batch falls under the same rule; no new matcher. |
   | `PATCH /api/events/{eventId}/equipment-request/{requestId}/still-suitable` | `hasRole('EC')`, plus assignment (D25) | EC-NEW3 (D37). Clears an equipment request's `attention` with a note; items and reservations untouched. |
+  | `GET /api/events/{eventId}/equipment-availability` | `hasRole('EC')`, plus assignment (D25) | EC07 (D40). Free stock of each catalogue kind at the event's time, the event's own reservations counted as free. Read-only. |
   | `PATCH /api/equipment-requests/{id}/status` | `hasRole('TECHNICIAN')` | TS06 decision; approval additionally requires sufficient reservations covering the full event period. |
   | `GET /api/equipment-requests?status=…`, `GET /api/equipment-requests/processing`, `GET /api/equipment-requests/{id}/lines` | `hasRole('TECHNICIAN')` | TS01's queue; D32 adds the by-status form of the same list. Without the matcher the new path would fall to `anyRequest().authenticated()`. |
   | `/api/equipment-damage-reports/**` (incl. `?equipmentId=`) | `hasRole('TECHNICIAN')` | TS09 (D31); D32 adds the `equipmentId` filter. |
@@ -1136,3 +1137,64 @@ V71 aligns legacy originating requests with the Event's authoritative registrati
 settings; historical change proposals and attendee registrations are retained.
 See [repair contract and verification](release1-integration-repairs.md). The live
 backlog remains inaccessible here and requires the team’s normal synchronisation.
+
+### D40 — EC-NEW3: a revision keeps the old equipment request and its reservations until Technical Support approve it
+
+3 November 2026, branch `feat/ec-new3-change-request-journeys`, specified by the user.
+
+**Problem.** D36 released every reservation and superseded the approved request the
+moment the coordinator revised it. If Technical Support then could not provide the
+new picture, the event had lost equipment it used to have. The venue side already
+works the way the user wants (multiple venue bookings, 26 October): a replacement
+or reschedule keeps the original booking until Venue Staff approve it, a rejection
+leaves the original, and approval marks it `changed`.
+
+**Decision (user, 3 November 2026).** Equipment now matches venue:
+- **Revising an approved (or `attention`) request** creates a new processing request
+  marked `revision` (V73). The approved request keeps its status and reservations.
+  A request still awaiting review is superseded at once, as before; with no held
+  request, reservations are released at once, as before.
+- **Technical Support approve the revision:** the requests it replaces are
+  superseded, and the event keeps only the reservations the revision needs ("keep
+  what fits"): those covering the event's time, up to each kind's new quantity.
+  Units at the old time, kinds no longer asked for and units over the new quantity
+  are released. More of a kind means Technical Support reserve only the extra.
+- **Technical Support reject the revision:** only what they reserved for it is
+  released. The old request (usually `attention` after a time change) and its
+  reservations stay, readiness shows it outstanding, and the event stays in Planning.
+  The same holds for any rejected request, and for a pending revision the
+  coordinator replaces with another.
+- **Kept means kept, not unchanged (user, 3 November 2026).** After a time change the
+  original venue booking stays `attention` (VS17's re-check) while its reschedule
+  waits for Venue Staff, and after they reject it, just as the old equipment request
+  stays `attention`. The flag tells the coordinator it no longer fits the new time.
+- **Every reservation names its request** (`equipment_logs.request_id`, V74), so
+  the two sets can be told apart. Older rows have none and count as the approved
+  request's. After approval, the reservations kept are re-tagged to the revision.
+- **Booking a revision at a shifted time.** The event's old reservations that only
+  partly overlap the new window (the ones approval will release) do not count as
+  taken when Technical Support reserve for the revision, in the reserve check and
+  in the request's availability figure. Another event's reservations always count.
+- While a revision is pending, the reservation cap (D33) counts only reservations
+  covering the requested window and nothing owed to the replaced requests (TS09).
+- **Free stock before deciding.** The change impact now also compares an organiser's
+  proposed equipment quantities with free stock at the event's (new) time
+  (`equipment:items:<id>`, attention when short). The coordinator's equipment form
+  shows free stock per kind (`GET /api/events/{id}/equipment-availability`,
+  assignment-scoped, D20) and will not send more than is free.
+
+Technical Support's request screen counts the same way: for a revision
+(`revision` on their request list), the event's own units at its old time show as
+free in the serialised unit picker (`fulfilment.ts`).
+
+**Limit.** "Keep what fits" still decides by window and quantity, since rows
+before V74 have no request.
+
+**Evidence:** `EquipmentRequestFlowTest` (keep until decided, extra only,
+release what is not needed, time change, rejection, unreserved approval refused,
+free stock), `EquipmentRequestServiceTest`, `EquipmentRequestDecisionServiceTest`,
+`ChangeImpactServiceTest`, `ReleaseOneIntegrationRepairTest` (updated to the new
+rule), `EquipmentRequestPage.test.tsx`, and the browser journeys in
+`change-request-journeys.spec.ts`.
+
+**Migrations:** V73 (`equipment_requests.revision`), V74 (`equipment_logs.request_id`).

@@ -350,6 +350,7 @@ A request for equipment attached to an event. Header row; the items are in
 | `technical_requirement` | `TEXT` | no | | Free-text technical needs |
 | `reject_reason` | `TEXT` | yes | | Populated only when `status = 'rejected'` |
 | `attention_reason` | `TEXT` | yes | | V53: why an approved change flagged it; populated only when `status = 'attention'` |
+| `revision` | `BOOLEAN` | no | `false` | V73 (D40): a coordinator's revision; approving it supersedes the event's other held requests and releases reservations it no longer needs |
 
 **V52 (EC-NEW3, D36):** `superseded` marks a request a coordinator's revision
 replaced. Reachable only from `processing`/`approved`, through
@@ -390,6 +391,7 @@ from; `equipment_requests` records intent, this records reality.
 | `loaned_from` | `TIMESTAMPTZ` | no | | Start of the loan window — may precede the event for setup |
 | `loaned_until` | `TIMESTAMPTZ` | no | | End of the loan window — may follow the event for teardown |
 | `spare` | `BOOLEAN` | no | | V40. `true` for an extra unit held beyond the requested quantity; default `false` |
+| `request_id` | `UUID` | yes | FK → `equipment_requests` | V74 (D40): the request it was reserved for; null before V74 (the event's approved request) |
 
 **Foreign keys:** `(equipment_id, serial_number)` is a *composite* FK to `serialised_equipments`,
 so a log row cannot cite a serial belonging to a different equipment kind. Because

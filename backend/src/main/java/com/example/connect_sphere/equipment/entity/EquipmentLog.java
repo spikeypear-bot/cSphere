@@ -41,6 +41,10 @@ public class EquipmentLog {
     @Column(nullable = false)
     private boolean spare;
 
+    /** V74 (D40): the request this was reserved for; null before V74. */
+    @Column(name = "request_id")
+    private UUID requestId;
+
     protected EquipmentLog() {}
 
     public EquipmentLog(UUID eventId, UUID equipmentId, int quantity,
@@ -68,6 +72,12 @@ public class EquipmentLog {
     public Instant getLoanedFrom() { return loanedFrom; }
     public Instant getLoanedUntil() { return loanedUntil; }
     public boolean isSpare() { return spare; }
+    public UUID getRequestId() { return requestId; }
+
+    /** D40: the request this reservation is held for. */
+    public void forRequest(UUID requestId) {
+        this.requestId = requestId;
+    }
 
     /** TS09 AC10: the same reservation, now held by another unit of the kind. */
     public void replaceUnit(String replacementSerialNumber) {

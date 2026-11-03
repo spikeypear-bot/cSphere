@@ -44,6 +44,9 @@ public interface EquipmentLogRepository extends JpaRepository<EquipmentLog, UUID
             @Param("start") Instant start,
             @Param("end") Instant end);
 
+    /** D40: the reservations made for one request. */
+    List<EquipmentLog> findByRequestId(UUID requestId);
+
     // Is this specific serial number already reserved during the period? (EO07:
     // not by a cancelled or completed event, as above.)
     @Query(nativeQuery = true, value = """

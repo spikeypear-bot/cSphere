@@ -44,6 +44,7 @@ main ACs plus a negative, boundary or conflict case. Run `python
 | `oversight.spec.ts` | SO-C1, SO-C2, SO-C5, EC-C1, ECL-C4 |
 | `venue-decisions.spec.ts` | EC04, EC05, VS04, VS09, EC10, VS25, EC-C4, EC-C3, VS-C4 |
 | `equipment.spec.ts` | EC07, TS01, TS02, TS06, TS03, TS09 |
+| `change-request-journeys.spec.ts` | EO03, EC-NEW3, EC07, EC10, TS02, TS06, VS03, VS04 (D40: old arrangements kept until the new ones are accepted) |
 | `registration-management.spec.ts` | EO10, EO11, EO12, AT07 |
 | `access-messages.spec.ts` | AU06 |
 | `attendee-event-changes.spec.ts` | AT09 (with EO03, EO07) |

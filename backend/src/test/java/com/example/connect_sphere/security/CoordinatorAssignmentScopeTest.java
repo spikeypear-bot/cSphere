@@ -140,6 +140,8 @@ class CoordinatorAssignmentScopeTest {
                 // EC-NEW3 (D37): clearing an equipment request's 'attention'
                 patch(event + "/equipment-request/" + UUID.randomUUID() + "/still-suitable")
                         .contentType(MediaType.APPLICATION_JSON).content("{\"note\":\"Not mine\"}"),
+                // EC07 (D40): free stock at the event's time
+                get(event + "/equipment-availability"),
                 // Safety review and confirmation (EC08), readiness (SO-C3 shared view)
                 get(event + "/lifecycle"),
                 get(event + "/readiness"),

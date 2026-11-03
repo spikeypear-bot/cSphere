@@ -91,10 +91,18 @@ public class EquipmentAvailabilityService {
      * report (TS09); otherwise the first reason it is not, in that order.
      */
     public Optional<UnitConflict> unitConflict(UUID equipmentId, String serialNumber, Instant start, Instant end) {
+        return unitConflict(equipmentId, serialNumber, start, end, Set.of());
+    }
+
+    /** {@link #unitConflict} leaving out the reservations {@code ignoring} (D40: an event's
+     * old reservations, which a revision being booked will give up). */
+    public Optional<UnitConflict> unitConflict(UUID equipmentId, String serialNumber, Instant start, Instant end,
+            Set<UUID> ignoring) {
         if (!statusPeriods.findOverlappingForUnit(equipmentId, serialNumber, start, end).isEmpty()) {
             return Optional.of(UnitConflict.BLOCKED);
         }
-        if (!logs.findOverlappingForUnit(equipmentId, serialNumber, start, end).isEmpty()) {
+        if (logs.findOverlappingForUnit(equipmentId, serialNumber, start, end).stream()
+                .anyMatch(log -> !ignoring.contains(log.getId()))) {
             return Optional.of(UnitConflict.RESERVED);
         }
         if (equipment.unitOpenlyDamaged(equipmentId, serialNumber, start, end)) {
@@ -106,10 +114,16 @@ public class EquipmentAvailabilityService {
     /** D35: the serial numbers of one kind's units that {@link #unitConflict}
      * would refuse for [start, end), in three queries for the whole kind. */
     public Set<String> unitsNotFree(UUID equipmentId, Instant start, Instant end) {
+        return unitsNotFree(equipmentId, start, end, Set.of());
+    }
+
+    /** {@link #unitsNotFree} leaving out the reservations {@code ignoring} (D40). */
+    public Set<String> unitsNotFree(UUID equipmentId, Instant start, Instant end, Set<UUID> ignoring) {
         Set<String> taken = new HashSet<>();
         statusPeriods.findOverlappingForEquipment(equipmentId, start, end)
                 .forEach(period -> taken.add(period.getSerialNumber()));
         logs.findOverlappingForEquipment(equipmentId, start, end).stream()
+                .filter(log -> !ignoring.contains(log.getId()))
                 .map(EquipmentLog::getSerialNumber)
                 .filter(serial -> serial != null)
                 .forEach(taken::add);

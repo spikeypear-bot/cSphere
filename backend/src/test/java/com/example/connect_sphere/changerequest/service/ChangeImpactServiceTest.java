@@ -218,6 +218,28 @@ class ChangeImpactServiceTest {
     }
 
     @Test
+    @DisplayName("EC-NEW3 (D40) (negative): asking for more of an item than is free at the event's time needs attention; exactly enough is fine")
+    void proposedEquipmentQuantitiesAgainstFreeStock() {
+        UUID projector = UUID.randomUUID();
+        UUID mic = UUID.randomUUID();
+        var proposed = new SaveEventRequestRequest("Town Hall", "Update", null, START, END, 150, "Theatre", null,
+                List.of(), List.of(), false, null, null, null, null,
+                List.of(new com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item(projector, 5),
+                        new com.example.connect_sphere.equipmentrequest.dto.SubmitEquipmentRequest.Item(mic, 4)));
+        when(equipment.needsAt(event.getEventId(), java.util.Map.of(projector, 5, mic, 4), START.toInstant(), END.toInstant()))
+                .thenReturn(List.of(new EquipmentReservationService.NeedAt(projector, "Projector", 5, 3),
+                        new EquipmentReservationService.NeedAt(mic, "Wireless mic", 4, 4)));
+
+        List<ImpactItem> items = service.assess(event, proposed, Set.of("equipmentItems"));
+
+        assertThat(attention(items)).containsExactlyInAnyOrder("equipment:items:" + projector, "equipment:requirements");
+        assertThat(items).filteredOn(i -> i.key().equals("equipment:items:" + projector)).singleElement()
+                .satisfies(i -> assertThat(i.detail()).startsWith("Only 3 of the 5 asked for is free"));
+        assertThat(items).filteredOn(i -> i.key().equals("equipment:items:" + mic)).singleElement()
+                .satisfies(i -> assertThat(i.status()).isEqualTo(ChangeImpactService.OK));
+    }
+
+    @Test
     @DisplayName("EC-NEW3 (D37) (boundary): equipment availability is not checked when the times do not change")
     void equipmentAvailabilityIsNotCheckedWithoutATimeChange() {
         service.assess(event, proposal(START, END, 150, List.of(), "6 mics"), Set.of("equipmentRequirements"));

@@ -29,7 +29,9 @@ public record EquipmentRequestResponse(
         UUID shortfallReportId,
         List<Item> items,
         /** The event's journey status (as {@code JourneyStatus}, D22). */
-        String eventStatus) {
+        String eventStatus,
+        /** EC-NEW3 (D40): replaces the event's approved request once approved. */
+        boolean revision) {
 
     public record Person(UUID userId, String name) {
     }

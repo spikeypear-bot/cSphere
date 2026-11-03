@@ -272,6 +272,23 @@ public class ChangeImpactService {
                                         + period(start, end) + ". Technical Support may not be able to move it."));
             }
         }
+        if (changedFields.contains("equipmentItems") && proposed.equipmentItems() != null) {
+            // D40: the proposed quantities against free stock at the event's (new) time.
+            Instant start = proposed.startDatetime().toInstant();
+            Instant end = proposed.endDatetime().toInstant();
+            java.util.Map<java.util.UUID, Integer> asked = new java.util.LinkedHashMap<>();
+            proposed.equipmentItems().forEach(item -> asked.merge(item.equipmentId(), item.quantity(), Integer::sum));
+            for (EquipmentReservationService.NeedAt need : equipment.needsAt(event.getEventId(), asked, start, end)) {
+                boolean enough = need.free() >= need.needed();
+                items.add(new ImpactItem("equipment:items:" + need.equipmentId(), "equipment",
+                        enough ? OK : ATTENTION,
+                        enough ? need.needed() + " " + need.equipmentName() + " can be had"
+                                : "Not enough " + need.equipmentName() + " for the requested quantity",
+                        enough ? need.free() + " free " + period(start, end) + "."
+                                : "Only " + need.free() + " of the " + need.needed() + " asked for is free "
+                                        + period(start, end) + "."));
+            }
+        }
         if ((changedFields.contains("equipmentRequirements") || changedFields.contains("equipmentItems"))) {
             items.add(new ImpactItem("equipment:requirements", "equipment", ATTENTION, "Equipment requirements change",
                     "Update the event's equipment request to match."));

@@ -188,7 +188,8 @@ test('EC-NEW3 AC32, AC33 (happy): a change to the equipment requirements flags t
 
   await test.step('EC-NEW3 (D37): the coordinator explains why it still suits; it is Approved again with its items and reservations', async () => {
     await coordinator.getByRole('link', { name: 'Resolve equipment request' }).click()
-    await expect(coordinator.getByText('Needs attention', { exact: true })).toBeVisible()
+    // The request's status badge, not the change's follow-up list, which uses the same words.
+    await expect(coordinator.getByRole('strong').filter({ hasText: /^Needs attention$/ })).toBeVisible()
     await coordinator.getByRole('button', { name: 'Mark still suitable' }).click()
     const confirm = coordinator.getByRole('button', { name: 'Confirm still suitable' })
     await expect(confirm).toBeDisabled()

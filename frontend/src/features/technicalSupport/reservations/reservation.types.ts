@@ -34,6 +34,8 @@ export interface EquipmentRequestSummary {
   shortfallReportId?: string | null
   items?: RequestLine[]
   eventStatus?: string
+  /** EC-NEW3 (D40): replaces the event's approved request once approved. */
+  revision?: boolean
 }
 
 export interface EquipmentRequestDecision {

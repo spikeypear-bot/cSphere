@@ -130,7 +130,7 @@ public class EquipmentRequestQueueService {
                 r.getTechnicalRequirement(), r.getStatus().name(),
                 event != null ? event.getOrganisation() : null, requestedBy,
                 shortfallRequests.contains(r.getId()), shortfallReports.get(r.getId()), items.getOrDefault(r.getId(), List.of()),
-                event != null ? statuses.journeyOf(event).name() : null);
+                event != null ? statuses.journeyOf(event).name() : null, r.isRevision());
     }
 
     private static Set<EquipmentRequestStatus> statusesFor(String status) {

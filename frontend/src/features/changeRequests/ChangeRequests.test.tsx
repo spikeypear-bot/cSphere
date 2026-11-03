@@ -430,9 +430,10 @@ describe('EC-NEW3 — the coordinator reviews and decides', () => {
     await user.click(approve)
 
     expect(calls.find((c) => c.method === 'POST')?.body).toEqual({ acknowledged: ['venue:b1:capacity', 'safety:replan'] })
-    expect(await screen.findByText(/Change approved and applied/)).toBeInTheDocument()
-    // EC-NEW3 AC33: what is still to follow up.
-    expect(await screen.findByText('Still to follow up')).toBeInTheDocument()
+    // EC-NEW3 AC33: what is still to follow up. Wait for the event page's region: the review
+    // page shows the same texts for a moment before it navigates away.
+    expect(await screen.findByRole('region', { name: 'Still to follow up' })).toBeInTheDocument()
+    expect(screen.getByText(/Change approved and applied/)).toBeInTheDocument()
     expect(screen.getByText('Expected attendance').nextElementSibling).toHaveTextContent('200')
     expect(calls.some(call => call.url === `/api/events/${EVENT}`)).toBe(true)
   })
