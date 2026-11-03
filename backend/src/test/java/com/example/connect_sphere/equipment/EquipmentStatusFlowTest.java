@@ -338,4 +338,59 @@ class EquipmentStatusFlowTest {
 
         assertThat(blocksFor("MX-1")).isZero();
     }
+
+    @Test
+    @DisplayName("TS03 (negative): a change with no status or no start is refused and nothing is saved")
+    void aChangeNeedsAStatusAndAStart() throws Exception {
+        mark("ts1", "MX-1", "{\"start\":\"" + START + "\",\"end\":\"" + END + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("status is required"));
+        mark("ts1", "MX-1", "{\"status\":\"Faulty\",\"end\":\"" + END + "\"}")
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("start is required, and end must be after start"));
+
+        assertThat(blocksFor("MX-1")).isZero();
+    }
+
+    @Test
+    @DisplayName("TS03 (boundary): marking a unit Available part-way through a block with no end keeps it before, and again with no end after")
+    void availableInsideAnOpenEndedBlockSplitsIt() throws Exception {
+        marked("MX-1", "Faulty", START, null);
+
+        marked("MX-1", "Available", END, LATER);
+
+        periods("MX-1")
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("Faulty"))
+                .andExpect(jsonPath("$[0].start").value(START))
+                .andExpect(jsonPath("$[0].end").value(END))
+                .andExpect(jsonPath("$[1].status").value("Faulty"))
+                .andExpect(jsonPath("$[1].start").value(LATER))
+                .andExpect(jsonPath("$[1].end").isEmpty());
+        units("ts1", END, LATER).andExpect(jsonPath(statusOf("MX-1"), contains("Available")));
+    }
+
+    @Test
+    @DisplayName("TS03 (boundary): a new block with no end replaces the rest of an earlier block from its start")
+    void anOpenEndedBlockReplacesTheRestOfAnEarlierOne() throws Exception {
+        marked("MX-1", "Unavailable", START, LATER);
+
+        marked("MX-1", "Faulty", END, null);
+
+        periods("MX-1")
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].status").value("Unavailable"))
+                .andExpect(jsonPath("$[0].end").value(END))
+                .andExpect(jsonPath("$[1].status").value("Faulty"))
+                .andExpect(jsonPath("$[1].start").value(END))
+                .andExpect(jsonPath("$[1].end").isEmpty());
+    }
+
+    @Test
+    @DisplayName("TS03 (boundary): viewing units for a period that does not move forward is refused")
+    void unitsNeedAPeriodThatMovesForward() throws Exception {
+        units("ts1", START, START)
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("end must be after start"));
+    }
 }

@@ -468,6 +468,32 @@ class TechnicalSupportConsoleFlowTest {
     }
 
     @Test
+    @DisplayName("TS09 (happy): a unit with an open damage report shows it now, as the block asked for or as Faulty when none was; a block whose end is still to come shows too")
+    void openDamageShowsAsTheUnitsStatusNow() throws Exception {
+        UUID projectors = projectors("PJ-1", "PJ-2", "PJ-3", "PJ-4");
+        String openReport = """
+                INSERT INTO equipment_damage_reports (report_id, equipment_id, serial_number, quantity, description,
+                    period_start, block_status, status, reported_by, reported_at)
+                VALUES (?, ?, ?, 1, 'Cracked', '2020-01-01T00:00:00Z', ?, 'OPEN', ?, now())
+                """;
+        jdbc.update(openReport, UUID.randomUUID(), projectors, "PJ-1", "UNAVAILABLE", flow.idOf("ts1"));
+        // A report from before V39 asked for no block.
+        jdbc.update(openReport, UUID.randomUUID(), projectors, "PJ-2", null, flow.idOf("ts1"));
+        block(projectors, "PJ-3", "Faulty", "2020-01-01T00:00:00Z", "2099-01-01T00:00:00Z")
+                .andExpect(status().isNoContent());
+        sync();
+
+        JsonNode detail = getJson("/api/equipment/" + projectors, "ts1").get("units");
+        assertThat(values(List.of(detail.get(0), detail.get(1), detail.get(2), detail.get(3)), "status"))
+                .containsExactly("Unavailable", "Faulty", "Faulty", "Available");
+        Instant now = Instant.now();
+        JsonNode listed = getJson("/api/equipment/units", "ts1", "start", now.toString(),
+                "end", now.plusSeconds(3600).toString());
+        assertThat(values(only(listed, "equipmentId", projectors), "status"))
+                .containsExactly("Unavailable", "Faulty", "Faulty", "Available");
+    }
+
+    @Test
     @DisplayName("TS09 (negative): an unknown kind is 404; a kind not tracked by serial number has no units")
     void equipmentDetailEdges() throws Exception {
         mvc.perform(get("/api/equipment/" + UUID.randomUUID()).with(flow.as("ts1")))

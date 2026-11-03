@@ -153,4 +153,14 @@ class EquipmentTechnicalSupportServiceTest {
                 .isInstanceOf(ResponseStatusException.class)
                 .hasMessageContaining("already committed");
     }
+
+    @Test
+    @DisplayName("TS03 (boundary): with no serialised units there is nothing to list and no damage is looked up")
+    void noUnitsListsNothing() {
+        when(periodRepository.findOverlapping(START, END)).thenReturn(List.of());
+        when(unitRepository.findAll()).thenReturn(List.of());
+
+        assertThat(statusService.listUnits(START, END)).isEmpty();
+        verify(equipmentRepository, org.mockito.Mockito.never()).openlyDamagedUnits(any(), any(), any());
+    }
 }
