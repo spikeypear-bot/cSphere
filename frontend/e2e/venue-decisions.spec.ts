@@ -102,7 +102,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('100 ✗')
     await expect(coordinator.getByText('Capacity 100 is below the expected attendance of 150.').first()).toBeVisible()
     await expect(coordinator.getByText(`${small} cannot be booked yet`)).toBeVisible()
-    await expect(coordinator.getByRole('button', { name: `Request ${small}` })).toBeDisabled()
+    await expect(coordinator.getByRole('button', { name: 'Request venue', exact: true })).toBeDisabled()
   })
 
   await test.step('EC05 AC3, AC4, AC7: a suitable, free venue shows every requirement met, and can be requested', async () => {
@@ -112,7 +112,7 @@ test('EC05 VS04 VS09 EC10 VS25 (happy): compare, book, be rejected with an alter
     await expect(compare.getByRole('row', { name: /Capacity/ })).toContainText('300 ✓')
     await expect(compare.getByRole('row', { name: /Availability/ })).toContainText('Available ✓')
     await expect(compare.getByRole('row', { name: /Required facilities/ })).toContainText('All provided ✓')
-    await coordinator.getByRole('button', { name: `Request ${hall}` }).click()
+    await coordinator.getByRole('button', { name: 'Request venue', exact: true }).click()
     await expect(coordinator.getByText(`Booking request for ${hall} sent to Venue Staff`)).toBeVisible()
   })
 

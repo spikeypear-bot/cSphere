@@ -19,7 +19,7 @@ test('EO03 EC-NEW3 EC07 TS01 (happy): EC discovers an EO equipment proposal and 
   await technician.goto('/technical-support/requests')
   await expect(technician.getByRole('listitem').filter({ hasText: name })).toContainText('2 × Projection Screen')
   await organiser.goto(`/organiser/events/${eventId}/change`)
-  await organiser.getByLabel('Projection Screen', { exact: true }).check()
+  await organiser.getByRole('button', { name: 'Add or remove equipment' }).click()
   await organiser.getByRole('spinbutton', { name: 'Projection Screen quantity', exact: true }).fill('3')
   await organiser.getByRole('button', { name: 'Review the change' }).click()
   await expect(organiser.getByRole('table')).toContainText('3 × Projection Screen')

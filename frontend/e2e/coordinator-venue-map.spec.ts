@@ -138,7 +138,7 @@ test('DEV16 EC03 AU04 (happy): an assigned coordinator requests a persisted mapp
   const map = page.getByRole('region', { name: 'Interactive venue map' })
   await expect(map.locator('.venue-map-marker--selected')).toHaveCount(1)
   await expect(map.getByRole('checkbox', { name: chosen.venue.venueName!, exact: true })).toBeChecked()
-  await page.getByRole('button', { name: `Request ${chosen.venue.venueAddress}`, exact: true }).click()
+  await page.getByRole('button', { name: 'Request venue', exact: true }).click()
   await expect(page).toHaveURL(new RegExp(`/coordinator/events/${eventId}$`))
   const saved = await apiGet<{ venueId: string; status: string }[]>(request, ecToken, `/api/events/${eventId}/venue-bookings`)
   expect(saved).toHaveLength(2)
