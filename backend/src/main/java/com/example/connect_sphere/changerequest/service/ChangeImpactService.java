@@ -67,6 +67,7 @@ public class ChangeImpactService {
         this.equipment = equipment;
     }
 
+    /** {@code proposed} comes from ChangeFields.detailsOf, so its lists are never null. */
     @Transactional(readOnly = true)
     public List<ImpactItem> assess(Event event, SaveEventRequestRequest proposed, Set<String> changedFields) {
         List<ImpactItem> items = new ArrayList<>();
@@ -164,10 +165,7 @@ public class ChangeImpactService {
 
     private void venueImpact(Event event, Event after, VenueBookingRecord booking, boolean timesChanged,
             List<ImpactItem> items, boolean excludeEvent) {
-        Venue venue = venues.findById(booking.getVenueId()).orElse(null);
-        if (venue == null) {
-            return;
-        }
+        Venue venue = venues.findById(booking.getVenueId()).orElseThrow(); // NOT NULL foreign key
         String name = venue.getVenueAddress()
                 + (booking.getStatus() == VenueBookingStatus.pending ? " (requested, not yet approved)" : "");
         String key = "venue:" + booking.getBookingId() + ":";
@@ -272,7 +270,7 @@ public class ChangeImpactService {
                                         + period(start, end) + ". Technical Support may not be able to move it."));
             }
         }
-        if (changedFields.contains("equipmentItems") && proposed.equipmentItems() != null) {
+        if (changedFields.contains("equipmentItems")) {
             // D40: the proposed quantities against free stock at the event's (new) time.
             Instant start = proposed.startDatetime().toInstant();
             Instant end = proposed.endDatetime().toInstant();
@@ -315,10 +313,8 @@ public class ChangeImpactService {
         after.setStartDatetime(p.startDatetime());
         after.setEndDatetime(p.endDatetime());
         after.setExpectedAttendance(p.expectedAttendance());
-        after.setAccessibilityNeeds(p.accessibilityNeeds() == null ? List.of()
-                : p.accessibilityNeeds().stream().map(Enum::name).toList());
-        after.setRequiredFacilities(p.requiredFacilities() == null ? List.of()
-                : p.requiredFacilities().stream().map(Enum::name).toList());
+        after.setAccessibilityNeeds(p.accessibilityNeeds().stream().map(Enum::name).toList());
+        after.setRequiredFacilities(p.requiredFacilities().stream().map(Enum::name).toList());
         return after;
     }
 
@@ -327,8 +323,7 @@ public class ChangeImpactService {
     }
 
     private static String period(java.time.Instant start, java.time.Instant end) {
-        return start == null || end == null ? "at no recorded time" : SINGAPORE.format(start) + " – " + SINGAPORE.format(end)
-                + " (Singapore time)";
+        return SINGAPORE.format(start) + " – " + SINGAPORE.format(end) + " (Singapore time)";
     }
 
     static List<String> attentionKeys(List<ImpactItem> items) {

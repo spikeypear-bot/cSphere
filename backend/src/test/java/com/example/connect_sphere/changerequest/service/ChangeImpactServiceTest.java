@@ -263,6 +263,100 @@ class ChangeImpactServiceTest {
     }
 
     @Test
+    @DisplayName("EC-NEW3 (boundary): a hold that starts after the new start needs attention; an ended hold is not checked")
+    void holdsStartingLateOrEnded() {
+        VenueBookingRecord hall = booked("Hall", 300, List.of(), START, END);
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(hall));
+        VenueHold active = new VenueHold(UUID.randomUUID(), hall.getBookingId(), hall.getVenueId(), event.getEventId(), "Town Hall",
+                START, END, END.plusDays(3), null, "active", UUID.randomUUID(), START.minusDays(1), null, START.minusDays(1));
+        VenueHold ended = new VenueHold(UUID.randomUUID(), hall.getBookingId(), hall.getVenueId(), event.getEventId(), "Town Hall",
+                START, START.plusMinutes(5), END.plusDays(3), null, "released", UUID.randomUUID(), START.minusDays(1), START, START);
+        when(holds.history(hall.getBookingId())).thenReturn(List.of(active, ended));
+
+        List<String> earlier = attention(service.assess(event, proposal(START.minusMinutes(1), END, 150, List.of(), null),
+                Set.of("startDatetime")));
+
+        assertThat(earlier).contains("venue:" + hall.getBookingId() + ":hold");
+        when(holds.history(hall.getBookingId())).thenReturn(List.of(ended));
+        assertThat(attention(service.assess(event, proposal(START, END, 160, List.of(), null), Set.of("expectedAttendance"))))
+                .isEmpty();
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (negative): an operational issue at the venue then needs attention, in the impact and in the staff check list")
+    void anOperationalIssueNeedsAttention() {
+        VenueBookingRecord hall = booked("Hall", 300, List.of(), START, END);
+        venues.findById(hall.getVenueId()).orElseThrow().setSupportedLayouts(List.of("theatre"));
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(hall));
+        when(availability.hasOperationalIssue(any(), any(), any(), any())).thenReturn(true);
+        event.setAccessibilityNeeds(List.of());
+        event.setRequiredFacilities(List.of());
+
+        List<String> keys = attention(service.assess(event, proposal(START, END, 160, List.of(), null), Set.of("expectedAttendance")));
+        List<ImpactItem> checks = service.assessBooking(event, hall);
+        var summary = service.bookingSummary(event, hall, checks);
+
+        assertThat(keys).containsExactly("venue:" + hall.getBookingId() + ":issue");
+        assertThat(summary.checks()).filteredOn(i -> i.key().equals("issue")).singleElement()
+                .satisfies(i -> assertThat(i.status()).isEqualTo(ChangeImpactService.ATTENTION));
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (boundary): a booking reserved from before the event's current start is flagged in the staff check list; a legacy booking without its own times uses the event's")
+    void reservedTimesOutsideTheSchedule() {
+        VenueBookingRecord early = booked("Hall", 300, List.of(), START.minusHours(1), END);
+        VenueBookingRecord legacy = booked("Annex", 300, List.of(), null, null);
+        for (VenueBookingRecord b : List.of(early, legacy)) {
+            venues.findById(b.getVenueId()).orElseThrow().setSupportedLayouts(List.of("theatre"));
+        }
+        event.setAccessibilityNeeds(List.of());
+        event.setRequiredFacilities(List.of());
+
+        var earlySummary = service.bookingSummary(event, early, service.assessBooking(event, early));
+        List<ImpactItem> legacyChecks = service.assessBooking(event, legacy);
+        var legacySummary = service.bookingSummary(event, legacy, legacyChecks);
+
+        assertThat(earlySummary.checks()).filteredOn(i -> i.key().equals("schedule")).singleElement()
+                .satisfies(i -> assertThat(i.status()).isEqualTo(ChangeImpactService.ATTENTION));
+        assertThat(legacyChecks).noneMatch(i -> i.key().endsWith(":schedule"));
+        assertThat(legacySummary.checks()).noneMatch(i -> i.key().equals("schedule"));
+        assertThat(legacySummary.occupiedStart().toInstant()).isEqualTo(START.toInstant());
+    }
+
+    private com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking conflict(UUID eventId, String status) {
+        return new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Booking(UUID.randomUUID(), eventId,
+                UUID.randomUUID(), "Other", status, START, END, START, END, UUID.randomUUID(), "Hall", START, END);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (conflict): another event's tentative hold on the venue shows as a conflicting hold in the staff check list; the event's own bookings never clash with it")
+    void holdsAndOwnBookingsInTheChecks() {
+        VenueBookingRecord hall = booked("Hall", 300, List.of(), START, END);
+        venues.findById(hall.getVenueId()).orElseThrow().setSupportedLayouts(List.of("theatre"));
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(hall));
+        event.setAccessibilityNeeds(List.of());
+        event.setRequiredFacilities(List.of());
+        when(availability.conflictsForBooking(any(), any(), any(), any(), any()))
+                .thenReturn(List.of(conflict(event.getEventId(), "approved")));
+
+        assertThat(attention(service.assess(event, proposal(START, END, 160, List.of(), null), Set.of("expectedAttendance"))))
+                .isEmpty();
+
+        when(availability.conflictsForBooking(any(), any(), any(), any(), any()))
+                .thenReturn(List.of(conflict(UUID.randomUUID(), "hold")));
+        var summary = service.bookingSummary(event, hall, List.of());
+        assertThat(summary.checks()).filteredOn(i -> i.key().equals("hold")).singleElement().satisfies(i -> {
+            assertThat(i.status()).isEqualTo(ChangeImpactService.ATTENTION);
+            assertThat(i.detail()).startsWith("Conflicting hold: ");
+        });
+        when(availability.conflictsForBooking(any(), any(), any(), any(), any())).thenReturn(List.of());
+        var uncovered = new ImpactItem("venue:" + hall.getBookingId() + ":hold", "venue", ChangeImpactService.ATTENTION,
+                "Hall's tentative hold no longer covers it", "The hold reserves less than the event needs.");
+        assertThat(service.bookingSummary(event, hall, List.of(uncovered)).checks()).filteredOn(i -> i.key().equals("hold"))
+                .singleElement().satisfies(i -> assertThat(i.detail()).isEqualTo("The hold reserves less than the event needs."));
+    }
+
+    @Test
     @DisplayName("EC-NEW3 AC7 (happy): a venue that still fits says so, so the coordinator sees what was checked")
     void aFittingVenueSaysSo() {
         VenueBookingRecord hall = booked("Hall", 300, List.of(), START, END);
