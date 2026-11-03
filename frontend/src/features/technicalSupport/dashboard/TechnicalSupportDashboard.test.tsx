@@ -252,4 +252,17 @@ describe('TS09 Technical Support front page', () => {
     expect(await within(panel('Equipment today')).findByText(/units available/)).toHaveTextContent('3 of 6 units available')
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
+
+  it('TS09 (boundary): an open report for a single unit says 1 unit', async () => {
+    stubApi({
+      [REQUESTS]: () => jsonResponse(200, []),
+      [PERIODS]: () => jsonResponse(200, []),
+      [REPORTS]: () => jsonResponse(200, [{ ...report('rep-1', '2027-03-09T00:00:00Z'), quantity: 1 }]),
+      [CATALOGUE]: () => jsonResponse(200, []),
+    })
+    renderDashboard()
+
+    const [row] = await rowsOf('Faulty equipment')
+    expect(row).toHaveTextContent('1 unit · Until Sat 20 Mar')
+  })
 })
