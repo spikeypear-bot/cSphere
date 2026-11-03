@@ -28,11 +28,9 @@ public class AvailabilityService {
     @org.springframework.beans.factory.annotation.Autowired
     private com.example.connect_sphere.venuebooking.hold.VenueHoldRepository holds;
     private List<Booking> blocking(UUID venueId) {
-        return holds == null ? repository.bookings(venueId).stream().filter(b -> (b.status().equals("approved") || b.status().equals("attention"))).toList()
-                : repository.blocking(venueId, holds.now());
+        return repository.blocking(venueId, holds.now());
     }
     private List<com.example.connect_sphere.venuebooking.hold.VenueHold> scheduleHolds(UUID venueId, OffsetDateTime start, OffsetDateTime end) {
-        if (holds == null) return List.of();
         return repository.bookings(venueId).stream().flatMap(b -> holds.history(b.bookingId()).stream())
             .filter(h -> h.status().equals("active"))
             .filter(h -> start == null || overlaps(h.reservedStart(), h.reservedEnd(), start, end)).toList();
