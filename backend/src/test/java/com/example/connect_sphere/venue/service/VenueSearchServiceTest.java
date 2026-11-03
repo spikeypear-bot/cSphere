@@ -121,4 +121,28 @@ class VenueSearchServiceTest {
                 List.of(VenueLayout.theatre), venue.getOperatingInformation(), null, List.of(),
                 venue.getVenueFacilities().stream().map(Facility::valueOf).toList());
     }
+
+    @Test
+    @DisplayName("EC04 (negative): a venue with a recorded unavailable period or an operational issue in the requested time is not offered")
+    void unavailableAndIssueVenuesAreNotOffered() {
+        Venue free = venue(100), unavailable = venue(100), withIssue = venue(100);
+        when(venues.findAll(any(Sort.class))).thenReturn(List.of(free, unavailable, withIssue));
+        when(availability.unavailable(eq(unavailable.getVenueId()), any(), any())).thenReturn(true);
+        when(availability.hasOperationalIssue(eq(withIssue.getVenueId()), any(), any(), any())).thenReturn(true);
+        when(mapper.toDto(free)).thenReturn(dto(free));
+
+        assertThat(service.search("2027-03-10T09:00:00+08:00", "2027-03-10T12:00:00+08:00", null, List.of()))
+                .extracting(VenueDto::venueId).containsExactly(free.getVenueId());
+    }
+
+    @Test
+    @DisplayName("EC04 (boundary): a blank capacity and no facility list filter nothing")
+    void blankCapacityAndNoFacilitiesFilterNothing() {
+        Venue small = venue(1);
+        when(venues.findAll(any(Sort.class))).thenReturn(List.of(small));
+        when(mapper.toDto(small)).thenReturn(dto(small));
+
+        assertThat(service.search("2027-03-10T09:00:00+08:00", "2027-03-10T12:00:00+08:00", " ", null))
+                .extracting(VenueDto::venueId).containsExactly(small.getVenueId());
+    }
 }
