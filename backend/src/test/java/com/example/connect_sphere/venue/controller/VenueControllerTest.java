@@ -217,6 +217,21 @@ class VenueControllerTest {
     }
 
     @Test
+    @DisplayName("VS07 (negative): a null additional or operating information in an update is refused naming the field, and the venue is unchanged")
+    void nullTextFieldsNameTheField() throws Exception {
+        String location = updateFixture();
+        String before = mvc.perform(get(location)).andReturn().getResponse().getContentAsString();
+        mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content("{\"additionalInformation\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("additionalInformation must be text; use an empty string to clear it, not null"));
+        mvc.perform(put(location).contentType(MediaType.APPLICATION_JSON).content("{\"operatingInformation\":null}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("operatingInformation must be text; update operatingHours to change the schedule"));
+        entityManager.flush(); entityManager.clear();
+        assertThat(mvc.perform(get(location)).andReturn().getResponse().getContentAsString()).isEqualTo(before);
+    }
+
+    @Test
     @DisplayName("VS07 (negative): updating a venue that does not exist returns not found")
     void updateMissingVenueReturns404() throws Exception {
         mvc.perform(put("/api/venues/" + UUID.randomUUID()).contentType(MediaType.APPLICATION_JSON)
