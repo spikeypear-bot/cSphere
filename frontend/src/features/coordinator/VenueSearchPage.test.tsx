@@ -23,6 +23,14 @@ const match: VenueDto = {
   additionalInformation: null,
 }
 
+const accessibleVenue: VenueDto = {
+  ...match,
+  venueId: 'venue-2',
+  venueAddress: '2 Garden Road',
+  supportedLayouts: ['boardroom'],
+  venueAccessibilities: ['accessible_parking'],
+}
+
 function searchUrl(capacity = '50') {
   const params = new URLSearchParams({
     startDatetime: new Date(start).toISOString(),
@@ -95,6 +103,27 @@ describe('EC04 VenueSearchPage', () => {
     await user.click(screen.getByRole('button', { name: 'Search venues' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('No matching venues found.')
+  })
+
+  it('EC04 (happy): filters available venues by selected layout and accessibility', async () => {
+    stubApi({ [`GET ${searchUrl()}`]: () => jsonResponse(200, [match, accessibleVenue]) })
+    const user = userEvent.setup()
+    renderPage()
+    enterPeriod()
+    fireEvent.change(screen.getByLabelText('Required capacity'), { target: { value: '50' } })
+    await user.click(screen.getByLabelText('Stage'))
+    await user.click(screen.getByLabelText('Projection'))
+    await user.click(screen.getByRole('button', { name: 'Search venues' }))
+
+    expect(await screen.findByRole('button', { name: '1 Harbour Road' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Supported layout'), 'boardroom')
+    expect(screen.queryByRole('button', { name: '1 Harbour Road' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Accessibility provision'), 'accessible_parking')
+    expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
   })
 
   it('rejects invalid event times without requesting or showing stale results', async () => {
