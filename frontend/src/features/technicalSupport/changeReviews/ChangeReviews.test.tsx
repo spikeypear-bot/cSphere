@@ -1,6 +1,6 @@
 // @stories TS11 TS09
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../../lib/session'
@@ -336,5 +336,90 @@ describe('TS11 Technical Support equipment notices and change reviews', () => {
 
     expect(await screen.findByText('Still suitable')).toBeInTheDocument()
     expect(screen.queryByRole('link', { name: 'Submit an additional request' })).not.toBeInTheDocument()
+  })
+
+  it('TS11 AC10 (boundary): requirements and items that changed are compared, a missing value reads as None, and an unnamed item shows its id', async () => {
+    stubApi({ 'GET /api/equipment-change-reviews/review-1': () => jsonResponse(200, {
+      ...OPEN_REVIEW,
+      coordinatorName: null,
+      previous: { ...OPEN_REVIEW.updated, equipmentRequirements: null, equipmentItems: [] },
+      updated: { ...OPEN_REVIEW.updated, equipmentRequirements: 'Two mics',
+        equipmentItems: [{ equipmentId: 'eq-mic', equipmentName: 'Mic', quantity: 2 }, { equipmentId: 'eq-cable', quantity: 1 }] },
+      requirementsChanged: true,
+      reservations: [],
+    }) })
+    renderAt('/technical-support/change-reviews/review-1')
+
+    const table = await screen.findByRole('table')
+    expect(within(table).queryByRole('rowheader', { name: 'Start' })).toBeNull()
+    expect(within(table).getByRole('row', { name: 'Equipment requirements None Two mics' })).toBeInTheDocument()
+    expect(within(table).getByRole('row', { name: 'Equipment items and quantities None 2 × Mic, 1 × eq-cable' })).toBeInTheDocument()
+    expect(screen.getByText('The equipment requirements changed. Check the request still matches them.')).toBeInTheDocument()
+    expect(screen.getByText('This event has no equipment reservations.')).toBeInTheDocument()
+    expect(screen.getByText('Not assigned')).toBeInTheDocument()
+  })
+
+  it('TS11 AC11 (negative): recording without an outcome, or with an overlong note, is refused before anything is sent', async () => {
+    const calls = stubApi({ 'GET /api/equipment-change-reviews/review-1': () => jsonResponse(200, OPEN_REVIEW) })
+    const user = userEvent.setup()
+    renderAt('/technical-support/change-reviews/review-1')
+
+    await user.click(await screen.findByRole('button', { name: 'Record review' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('Choose a review outcome.')
+
+    await user.click(screen.getByLabelText('Still suitable'))
+    // The box stops typing at 2000; this is what a bypassed limit would send.
+    fireEvent.change(screen.getByLabelText('Note for the coordinator'), { target: { value: 'x'.repeat(2001) } })
+    await user.click(screen.getByRole('button', { name: 'Record review' }))
+    expect(screen.getByRole('alert')).toHaveTextContent('The note can be at most 2000 characters.')
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(0)
+  })
+
+  it('TS11 AC11 (failure): a refused outcome shows the server’s reason, and an unreadable answer a retry message; the form stays', async () => {
+    let attempts = 0
+    const calls = stubApi({
+      'GET /api/equipment-change-reviews/review-1': () => jsonResponse(200, OPEN_REVIEW),
+      'POST /api/equipment-change-reviews/review-1/outcome': () => (++attempts === 1
+        ? jsonResponse(409, { message: 'This change was already reviewed.' })
+        : ({ ok: true, status: 200, text: async () => 'not json' }) as Response),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/change-reviews/review-1')
+
+    await user.click(await screen.findByLabelText('Still suitable'))
+    await user.click(screen.getByRole('button', { name: 'Record review' }))
+    expect(await screen.findByText('This change was already reviewed.')).toBeInTheDocument()
+    // A blank note is sent as no note.
+    expect(calls.find((call) => call.method === 'POST')?.body).toEqual({ outcome: 'still_suitable', note: null })
+
+    await user.click(screen.getByRole('button', { name: 'Record review' }))
+    expect(await screen.findByText('Could not save the review. Please try again.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Record review' })).toBeEnabled()
+  })
+
+  it('TS11 AC14 (boundary): a change closed without a recorded outcome reads as still suitable, with no reviewer or note', async () => {
+    stubApi({ 'GET /api/equipment-change-reviews/review-1': () => jsonResponse(200, {
+      ...OPEN_REVIEW, needsReview: false, outcome: null,
+    }) })
+    renderAt('/technical-support/change-reviews/review-1')
+
+    expect(await screen.findByText('Still suitable.')).toBeInTheDocument()
+    expect(screen.queryByText(/reviewed by/)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Record review' })).toBeNull()
+  })
+
+  it('TS11 AC14 (boundary): a queue entry reviewed by an unnamed person shows only when', async () => {
+    stubApi({
+      'GET /api/equipment-change-reviews': () => jsonResponse(200, [
+        { reviewId: 'review-2', eventId: 'event-2', eventName: 'Fair', changedAt: OPEN_REVIEW.changedAt,
+          needsReview: false, affectedCount: 0, requirementsChanged: true, outcome: 'still_suitable', outcomeNote: null,
+          reviewedByName: null, reviewedAt: OPEN_REVIEW.changedAt },
+      ]),
+    })
+    renderAt('/technical-support/change-reviews')
+
+    const row = (await screen.findByText('Fair')).closest('a')!
+    expect(row).toHaveTextContent(/Reviewed \S/)
+    expect(row).not.toHaveTextContent(' by ')
   })
 })
