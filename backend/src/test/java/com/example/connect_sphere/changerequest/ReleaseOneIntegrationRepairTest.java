@@ -115,6 +115,23 @@ class ReleaseOneIntegrationRepairTest {
         assertThat(jdbc.queryForObject("SELECT status::text FROM event_change_requests WHERE change_request_id=?", String.class, UUID.fromString(change))).isEqualTo("pending");
     }
 
+    @Test @DisplayName("EO03 EC-NEW3 (negative): registration cannot be turned off while confirmed registrations exist, and nothing is saved")
+    void registrationStaysOnWhileRegistered() throws Exception {
+        UUID event = flow.approvedEvent("eo1", "ec1", details(200, 200));
+        UUID request = requestId(event);
+        for (int i = 0; i < 2; i++) jdbc.update("""
+            INSERT INTO event_registrations(registration_id,event_id,attendee_name,reference,registered_at,status)
+            VALUES (?,?,'Registered attendee',?,now(),'confirmed')
+            """, UUID.randomUUID(), event, "R-" + UUID.randomUUID());
+        mvc.perform(post("/api/change-requests").with(flow.as("eo1")).contentType(MediaType.APPLICATION_JSON)
+                .content(proposal(request, FlowSupport.requestBody("Repair workshop", 200, "none"), false)))
+                .andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors.registrationCapacity").value("Capacity cannot be lower than the 2 active "
+                        + "confirmed registration(s), and registration cannot be disabled while they exist."));
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM event_change_requests WHERE request_id=?", Integer.class, request)).isZero();
+        assertThat(jdbc.queryForObject("SELECT registration_needs FROM events WHERE event_id=?", Boolean.class, event)).isTrue();
+    }
+
     @Test @DisplayName("EO03 EC-NEW3 AT02 (happy): explicitly reducing attendance and capacity to 150 preserves registrations and leaves 148 places")
     void approvedCapacityReductionPreservesRegistrations() throws Exception {
         UUID event = flow.approvedEvent("eo1", "ec1", details(200, 200));

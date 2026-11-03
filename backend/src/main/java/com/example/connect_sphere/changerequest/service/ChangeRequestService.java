@@ -19,8 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.example.connect_sphere.activity.entity.ActivityType;
 import com.example.connect_sphere.activity.service.ActivityService;
@@ -195,8 +193,8 @@ public class ChangeRequestService {
                     "registrationCapacity", "Confirm the registration capacity for the changed expected attendance, or provide a new capacity."));
         }
         long count = event == null || registrations == null ? 0 : registrations.countByEventIdAndStatus(event.getEventId(), "confirmed");
-        if (count > 0 && (!Boolean.TRUE.equals(proposed.registrationNeeds()) || proposed.registrationCapacity() == null
-                || proposed.registrationCapacity() < count)) {
+        // requireValidDetails has already refused a needed registration without a capacity.
+        if (count > 0 && (!Boolean.TRUE.equals(proposed.registrationNeeds()) || proposed.registrationCapacity() < count)) {
             throw new com.example.connect_sphere.eventrequest.service.InvalidEventRequestScheduleException(Map.of(
                     "registrationCapacity", "Capacity cannot be lower than the " + count + " active confirmed registration(s), and registration cannot be disabled while they exist."));
         }
@@ -275,9 +273,8 @@ public class ChangeRequestService {
         OffsetDateTime oldStart = event == null ? null : event.getStartDatetime();
         OffsetDateTime oldEnd = event == null ? null : event.getEndDatetime();
         OffsetDateTime decidedAt = now();
-        boolean eventWasUpcoming = event != null && event.getStartDatetime() != null
-                && event.getStartDatetime().isAfter(decidedAt)
-                && event.getStatus() != EventStatus.cancelled && event.getStatus() != EventStatus.completed;
+        // notDecidable has refused a cancelled or completed event (an event exists only for an approved request).
+        boolean eventWasUpcoming = event != null && event.getStartDatetime().isAfter(decidedAt);
         requestRules.applyApprovedDetails(origin, event, proposed);
         change.setStatus(ChangeRequestStatus.approved);
         change.setDecidedBy(coordinator.userId());
@@ -383,10 +380,7 @@ public class ChangeRequestService {
     public List<View> pending(Caller caller) {
         List<View> views = new ArrayList<>();
         for (ChangeRequest change : changeRequests.findByStatusOrderByRequestedAtAsc(ChangeRequestStatus.pending)) {
-            EventRequest origin = requests.findById(change.getRequestId()).orElse(null);
-            if (origin == null) {
-                continue;
-            }
+            EventRequest origin = requests.findById(change.getRequestId()).orElseThrow(); // NOT NULL foreign key
             Event event = eventOf(origin);
             if (mayView(caller, origin, event)) {
                 views.add(view(change, caller, origin, event));
@@ -523,7 +517,7 @@ public class ChangeRequestService {
         return list.stream().map(row -> {
             var item = (Map<?,?>) row;
             String id = item.get("equipmentId").toString();
-            String name = equipmentCatalogue == null ? id : equipmentCatalogue.findById(UUID.fromString(id))
+            String name = equipmentCatalogue.findById(UUID.fromString(id))
                     .map(com.example.connect_sphere.equipment.entity.Equipment::getName).orElse("Unavailable equipment (" + id + ")");
             return Map.of("equipmentId", id, "equipmentName", name, "quantity", item.get("quantity"));
         }).toList();
@@ -582,18 +576,5 @@ public class ChangeRequestService {
             }
         });
         return kept;
-    }
-
-    private static void afterCommit(Runnable action) {
-        if (TransactionSynchronizationManager.isSynchronizationActive()) {
-            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-                @Override
-                public void afterCommit() {
-                    action.run();
-                }
-            });
-        } else {
-            action.run();
-        }
     }
 }

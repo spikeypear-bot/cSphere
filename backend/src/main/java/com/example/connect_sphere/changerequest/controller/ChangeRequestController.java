@@ -39,7 +39,7 @@ public class ChangeRequestController {
 
     @PostMapping
     public ResponseEntity<View> create(@AuthenticationPrincipal Jwt jwt, @RequestBody ChangeRequestDto.Create body) {
-        if (body == null || body.requestId() == null) {
+        if (body.requestId() == null) { // the body itself is required: Spring answers 400 without one
             throw new ChangeRequestException.NotFound(null);
         }
         return ResponseEntity.status(HttpStatus.CREATED)
