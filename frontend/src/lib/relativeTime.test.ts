@@ -18,6 +18,10 @@ describe('formatRelativeTime', () => {
     expect(formatRelativeTime('2026-09-19T10:00:00Z', NOW)).toBe('2 hours ago')
   })
 
+  it('EO15 (boundary): exactly one hour is singular', () => {
+    expect(formatRelativeTime('2026-09-19T11:00:00Z', NOW)).toBe('1 hour ago')
+  })
+
   it('reports whole days once past 24 hours', () => {
     expect(formatRelativeTime('2026-09-17T12:00:00Z', NOW)).toBe('2 days ago')
   })

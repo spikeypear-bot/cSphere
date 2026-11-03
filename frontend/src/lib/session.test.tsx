@@ -109,4 +109,28 @@ describe('SessionProvider', () => {
     )
     expect(screen.getByText('role: none')).toBeInTheDocument()
   })
+
+  it('AU04 (happy): logging out signs the person out here and revokes the session on the server', async () => {
+    window.localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify({ accessToken: 'access-1', refreshToken: 'refresh-1', username: 'vs1', role: 'venue-staff' }))
+    const fetchSpy = vi.fn().mockResolvedValue({ ok: true, status: 204, text: async () => '' } as Response)
+    vi.stubGlobal('fetch', fetchSpy)
+    function LogoutProbe() {
+      const { role, logout } = useSession()
+      return <button type="button" onClick={() => void logout()}>log out ({role ?? 'none'})</button>
+    }
+    const user = userEvent.setup()
+    render(<SessionProvider><LogoutProbe /></SessionProvider>)
+
+    await user.click(screen.getByRole('button', { name: 'log out (venue-staff)' }))
+
+    expect(await screen.findByRole('button', { name: 'log out (none)' })).toBeInTheDocument()
+    expect(fetchSpy).toHaveBeenCalledWith('/api/auth/logout', expect.objectContaining({ method: 'POST' }))
+    expect(window.localStorage.getItem(AUTH_STORAGE_KEY)).toBeNull()
+  })
+
+  it('DEV05 (negative): using the session outside a SessionProvider is a programming error that says so', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(() => render(<Probe />)).toThrow('useSession must be used within a SessionProvider')
+    vi.restoreAllMocks()
+  })
 })
