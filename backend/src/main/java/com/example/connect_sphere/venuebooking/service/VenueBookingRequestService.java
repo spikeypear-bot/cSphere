@@ -296,7 +296,7 @@ public class VenueBookingRequestService {
                 .filter(b -> eventId.equals(b.getEventId()))
                 .orElseThrow(() -> new VenueBookingStateException("Select an eligible booking to replace."));
         plan.requireReplacementEligible(original.getBookingId(), null);
-        if (!isEligibleReplacementSource(original))
+        if (!ReplacementSource.eligible(original, availability))
             throw new VenueBookingStateException("This booking is not eligible for a replacement. Refresh this event.");
         return original;
     }
@@ -347,12 +347,6 @@ public class VenueBookingRequestService {
         }
     }
 
-    private boolean isEligibleReplacementSource(VenueBookingRecord booking) {
-        if (booking.getStatus() == VenueBookingStatus.rejected || booking.getStatus() == VenueBookingStatus.cancelled) {
-            return true;
-        }
-        return booking.getStatus() == VenueBookingStatus.approved || booking.getStatus() == VenueBookingStatus.attention || ACTIVE.contains(booking.getStatus()) && availability.affected(booking.getBookingId());
-    }
 
     @Transactional
     public List<EventVenueBookingDto> submitBatch(UUID coordinatorId, UUID eventId, SubmitVenueBookingRequest.Batch batch) {

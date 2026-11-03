@@ -313,4 +313,25 @@ class VenueHoldFlowTest {
             .contentType("application/json").content("{\"expiresAt\":\"2027-03-01T01:00:00Z\"}"))
             .andExpect(status().isCreated()).andExpect(jsonPath("$.status").value("active"));
     }
+    @Test @DisplayName("VS-C3 (negative): a hold is not converted once the event has left Planning; the booking stays pending and the hold active")
+    void conversionNeedsPlanning(){
+        UUID b=booking(venue());var hold=holds.create(b,expiry,actor);
+        jdbc.update("UPDATE events SET status='awaiting_safety_review' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",b);
+        assertThatThrownBy(()->bookings.approve(b,hold.holdId())).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("Hold conversion requires an event in Planning.");
+        assertThat(statusOf(b)).isEqualTo("pending");assertThat(holds.history(b).getFirst().status()).isEqualTo("active");
+    }
+    @Test @DisplayName("VS-C3 (conflict): a hold is not converted when the booking now starts earlier or ends later than the period it reserved")
+    void conversionNeedsTheReservedEnd(){
+        UUID b=booking(venue());var hold=holds.create(b,expiry,actor);
+        jdbc.update("UPDATE venue_bookings SET end_datetime=end_datetime + interval '1 hour' WHERE booking_id=?",b);
+        assertThatThrownBy(()->bookings.approve(b,hold.holdId())).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("The booking period changed since this hold was placed. Release it and review the arrangement.");
+        assertThat(statusOf(b)).isEqualTo("pending");
+        UUID earlier=booking(venue());var held=holds.create(earlier,expiry,actor);
+        jdbc.update("UPDATE venue_bookings SET start_datetime=start_datetime - interval '1 hour' WHERE booking_id=?",earlier);
+        assertThatThrownBy(()->bookings.approve(earlier,held.holdId())).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("The booking period changed since this hold was placed. Release it and review the arrangement.");
+        assertThat(statusOf(earlier)).isEqualTo("pending");
+    }
 }

@@ -426,4 +426,87 @@ class VenueTimingWorkflowTest {
             assertThat(conflicts.list(v)).isEmpty();
         }
     }
+    @Test
+    @DisplayName("VS-C2 (conflict): an edit based on an out-of-date turnaround is refused and nothing changes")
+    void staleTurnaroundIsRefused() {
+        UUID b = booking(venue(10, 10), "approved", "10:00", "12:00", 10, 10);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(20, 10, 10, 99)))
+                .isInstanceOf(VenueBookingStateException.class)
+                .hasMessage("Booking timings changed. Refresh the booking before saving again.");
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (negative): new timings need a reason; a blank one is refused and nothing changes")
+    void timingsNeedAReason() {
+        UUID b = booking(venue(10, 10), "approved", "10:00", "12:00", 10, 10);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, new UpdateBookingTimingRequest(BigDecimal.valueOf(20),
+                BigDecimal.TEN, "   ", 10, 10)))
+                .isInstanceOf(InvalidVenueBookingException.class).hasMessage("Explain the reason for these booking timings.");
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (boundary): timings that only shrink are saved even while the booking still conflicts with another")
+    void shrinkingIsAllowedDespiteAConflict() {
+        UUID venue = venue(0, 0);
+        UUID b = booking(venue, "approved", "10:00", "12:00", 0, 60);
+        booking(venue, "approved", "12:30", "14:00", 0, 0);
+        var saved = bookings.updateTiming(b, staff, edit(0, 45, 0, 60));
+        assertThat(saved.timing().turnaroundDurationMinutes()).isEqualTo(45);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(0, 50, 0, 45)))
+                .isInstanceOf(VenueBookingConflictException.class);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (happy): saving the same durations with a new reason records the new reason")
+    void aNewReasonAloneIsSaved() {
+        UUID b = booking(venue(10, 10), "approved", "10:00", "12:00", 10, 10);
+        bookings.updateTiming(b, staff, edit(10, 10, 10, 10));
+        assertThat(jdbc.queryForObject("SELECT timing_note FROM venue_bookings WHERE booking_id=?", String.class, b))
+                .isEqualTo("Adjusted crew access");
+    }
+
+    @Test
+    @DisplayName("VS-C2 (boundary): Venue Staff see a rejected booking, or one of a completed or cancelled event, with its timing no longer editable")
+    void closedBookingsShowReadOnlyTiming() {
+        UUID venue = venue(0, 0);
+        assertThat(bookings.get(booking(venue, "approved", "10:00", "12:00", 0, 0)).timing().editable()).isTrue();
+        assertThat(bookings.get(booking(venue, "rejected", "13:00", "14:00", 0, 0)).timing().editable()).isFalse();
+        for (String closed : List.of("completed", "cancelled")) {
+            UUID b = booking(venue, "approved", "15:00", "16:00", 0, 0);
+            jdbc.update("UPDATE events SET status=?::event_status WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)", closed, b);
+            assertThat(bookings.get(b).timing().editable()).isFalse();
+        }
+    }
+    @Test
+    @DisplayName("VS-C2 (negative): a rejected booking's timings cannot be edited, and nothing changes")
+    void inactiveBookingTimingsAreFixed() {
+        UUID b = booking(venue(10, 10), "rejected", "10:00", "12:00", 10, 10);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(20, 10, 10, 10)))
+                .isInstanceOf(VenueBookingStateException.class).hasMessage("Only active pending or approved booking timings can be edited.");
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+
+    @Test
+    @DisplayName("VS-C2 (conflict): a setup that would reach into a recorded unavailable period is refused, and nothing changes")
+    void extendingIntoUnavailabilityIsRefused() {
+        UUID venue = venue(0, 0);
+        UUID b = booking(venue, "approved", "10:00", "12:00", 0, 0);
+        jdbc.update("INSERT INTO venue_unavailability(unavailability_id,venue_id,start_datetime,end_datetime,reason,created_by) VALUES (?,?,?,?,?,?)",
+                UUID.randomUUID(), venue, at("09:00"), at("09:30"), "Floor polishing", staff);
+        String before = snapshot(b);
+        assertThatThrownBy(() -> bookings.updateTiming(b, staff, edit(45, 0, 0, 0)))
+                .isInstanceOf(VenueBookingConflictException.class);
+        assertThat(snapshot(b)).isEqualTo(before);
+    }
+    @Test
+    @DisplayName("VS-C2 (happy): a flagged booking's timings can still be edited while it waits for a decision")
+    void flaggedBookingTimingsCanBeEdited() {
+        UUID b = booking(venue(10, 10), "attention", "10:00", "12:00", 10, 10);
+        assertThat(bookings.updateTiming(b, staff, edit(5, 10, 10, 10)).timing().setupDurationMinutes()).isEqualTo(5);
+    }
 }

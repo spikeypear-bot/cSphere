@@ -26,6 +26,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.example.connect_sphere.venue.dto.CreateVenueDto;
 import com.example.connect_sphere.venue.entity.VenueLayout;
 import com.example.connect_sphere.venue.service.VenueService;
+import com.example.connect_sphere.venuebooking.dto.VenueBookingDto;
 import com.example.connect_sphere.venuebooking.service.VenueBookingService;
 import com.example.connect_sphere.venuebooking.service.VenueBookingStateException;
 
@@ -87,6 +88,7 @@ class VenueBookingApprovalTest {
             jdbc.update("DELETE FROM events WHERE event_id=?", id);
         }
         for (UUID id : venueIds) {
+            jdbc.update("DELETE FROM venue_operational_issues WHERE venue_id=?", id);
             jdbc.update("DELETE FROM venue_operating_hours WHERE venue_id=?", id);
             jdbc.update("DELETE FROM venues WHERE venue_id=?", id);
         }
@@ -433,5 +435,22 @@ class VenueBookingApprovalTest {
         assertThat(statusOf(a)).isEqualTo("approved");assertThat(snapshot(a)).isEqualTo(approved);
         assertThat(statusOf(unrelated)).isEqualTo("pending");assertThat(snapshot(unrelated)).isEqualTo(other);
 
+    }
+    @Test
+    @DisplayName("VS02 (happy): a flagged booking waits in Venue Staff's queue beside pending ones marked as needing an alternative, as is a pending one an operational issue now overlaps")
+    void flaggedBookingsWaitInTheQueue() {
+        UUID venue = venue();
+        UUID pending = booking(venue, "pending"), flagged = booking(venue, "attention", "2027-04-02T09:00:00+08:00", "2027-04-02T12:00:00+08:00");
+        var queue = bookings.listPending();
+        assertThat(queue).extracting(VenueBookingDto::bookingId).contains(pending, flagged);
+        assertThat(queue).filteredOn(b -> b.bookingId().equals(flagged)).singleElement()
+                .extracting(VenueBookingDto::requiresAlternative).isEqualTo(true);
+        assertThat(queue).filteredOn(b -> b.bookingId().equals(pending)).singleElement()
+                .extracting(VenueBookingDto::requiresAlternative).isEqualTo(false);
+        jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,affected_from,affected_until,created_by) "
+                + "VALUES (?,?,'Ceiling repair','2027-04-01T10:00:00+08:00','2027-04-01T11:00:00+08:00',(SELECT user_id FROM users WHERE username='vs1'))",
+                UUID.randomUUID(), venue);
+        assertThat(bookings.listPending()).filteredOn(b -> b.bookingId().equals(pending)).singleElement()
+                .extracting(VenueBookingDto::requiresAlternative).isEqualTo(true);
     }
 }

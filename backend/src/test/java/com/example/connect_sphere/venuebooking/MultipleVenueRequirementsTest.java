@@ -28,7 +28,7 @@ import com.example.connect_sphere.venuebooking.service.*;
 import com.example.connect_sphere.event.service.EventLifecycleService;
 
 @SpringBootTest @AutoConfigureMockMvc @Transactional
-@Tag("integration") @Tag("EC03") @Tag("VS13") @Tag("VS17") @Tag("EC-C2") @Tag("EC08") @Tag("EC10") @Tag("SO-C2") @Tag("VS04") @Tag("VS25")
+@Tag("integration") @Tag("EC03") @Tag("VS03") @Tag("VS13") @Tag("VS17") @Tag("EC-C2") @Tag("EC08") @Tag("EC10") @Tag("SO-C2") @Tag("VS04") @Tag("VS25")
 class MultipleVenueRequirementsTest {
     @Autowired JdbcTemplate jdbc;
     @Autowired jakarta.persistence.EntityManager entityManager;
@@ -362,13 +362,15 @@ class MultipleVenueRequirementsTest {
                 .hasMessage("This booking is not eligible for a replacement. Refresh this event.");
         }
     }
-    @Test @DisplayName("EC10 VS13 (happy): a pending booking that an operational issue now overlaps can be replaced")
+    @Test @DisplayName("EC10 VS13 VS03 (happy): a pending booking that an operational issue now overlaps can be replaced, and approving the replacement supersedes it")
     void affectedPendingBookingCanBeReplaced() {
         UUID e=event(),v=venue(100);var old=requests.submit(ec,e,request(v,null,75,10,12));entityManager.flush();
         jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,affected_from,affected_until,created_by) VALUES (?,?,?,?,?,?)",
             UUID.randomUUID(),v,"Ceiling repair",at(10),at(11),vs);
         var next=requests.submit(ec,e,request(venue(100),old.bookingId(),75,10,12));entityManager.flush();
         assertThat(bookingState(next.bookingId())).isEqualTo("pending");assertThat(next.replacesBookingId()).isEqualTo(old.bookingId());
+        bookings.approve(next.bookingId());entityManager.flush();
+        assertThat(bookingState(next.bookingId())).isEqualTo("approved");assertThat(bookingState(old.bookingId())).isEqualTo("changed");
     }
     @Test @DisplayName("EC-C2 (boundary): a completed or cancelled event still lists its bookings, with their timing no longer editable")
     void closedEventBookingsAreReadOnly() {
@@ -395,5 +397,42 @@ class MultipleVenueRequirementsTest {
             .andExpect(jsonPath("$[?(@.venue.venueId == '"+quiet+"')].verdict").value("suitable"))
             .andExpect(jsonPath("$[?(@.venue.venueId == '"+blocked+"')].verdict").value("blocked"))
             .andExpect(jsonPath("$[?(@.venue.venueId == '"+blocked+"')].reasons[*]").value(org.hamcrest.Matchers.hasItem("Venue unavailable: Ceiling repair.")));
+    }
+    @Test @DisplayName("VS03 EC10 (conflict): once the issue that blocked a pending booking is resolved, its replacement can no longer be approved, and both stay pending")
+    void replacementOfARecoveredBookingIsNotApproved() {
+        UUID e=event(),v=venue(100);var old=requests.submit(ec,e,request(v,null,75,10,12));entityManager.flush();
+        UUID issue=UUID.randomUUID();
+        jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,affected_from,affected_until,created_by) VALUES (?,?,?,?,?,?)",
+            issue,v,"Ceiling repair",at(10),at(11),vs);
+        var next=requests.submit(ec,e,request(venue(100),old.bookingId(),75,10,12));entityManager.flush();
+        jdbc.update("DELETE FROM venue_operational_issues WHERE issue_id=?",issue);
+        assertThatThrownBy(() -> bookings.approve(next.bookingId())).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("The original booking no longer requires replacement. Refresh this event.");
+        assertThat(bookingState(next.bookingId())).isEqualTo("pending");assertThat(bookingState(old.bookingId())).isEqualTo("pending");
+    }
+    @Test @DisplayName("VS03 (negative): a booking is not approved once the event has grown past the venue's capacity, and stays pending")
+    void approvalRechecksCapacity() {
+        UUID e=event(),v=venue(350);
+        var b=requests.submit(ec,e,new SubmitVenueBookingRequest(v,null,null,null,at(10),at(12),BigDecimal.ZERO,BigDecimal.ZERO,null,null));
+        entityManager.flush();jdbc.update("UPDATE events SET expected_attendance=400 WHERE event_id=?",e);entityManager.clear();
+        assertThatThrownBy(() -> bookings.approve(b.bookingId())).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("The venue no longer meets the approved event requirements. Review current suitability.");
+        assertThat(bookingState(b.bookingId())).isEqualTo("pending");
+    }
+    @Test @DisplayName("VS03 EC10 (happy): approving the replacement of a flagged booking supersedes it")
+    void approvingAFlaggedBookingsReplacementSupersedesIt() {
+        UUID e=event();var old=requests.submit(ec,e,request(venue(100),null,75,10,12));bookings.approve(old.bookingId());entityManager.flush();
+        jdbc.update("UPDATE venue_bookings SET status='attention' WHERE booking_id=?",old.bookingId());entityManager.clear();
+        var next=requests.submit(ec,e,request(venue(100),old.bookingId(),75,10,12));bookings.approve(next.bookingId());entityManager.flush();
+        assertThat(bookingState(old.bookingId())).isEqualTo("changed");assertThat(bookingState(next.bookingId())).isEqualTo("approved");
+    }
+    @Test @DisplayName("VS03 (negative): a booking is not approved once the event needs a facility the venue lacks, and stays pending")
+    void approvalRechecksFacilities() {
+        UUID e=event(),v=venue(350);
+        var b=requests.submit(ec,e,new SubmitVenueBookingRequest(v,null,null,null,at(10),at(12),BigDecimal.ZERO,BigDecimal.ZERO,null,null));
+        entityManager.flush();jdbc.update("UPDATE events SET required_facilities='{stage}' WHERE event_id=?",e);entityManager.clear();
+        assertThatThrownBy(() -> bookings.approve(b.bookingId())).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("The venue no longer meets the approved event requirements. Review current suitability.");
+        assertThat(bookingState(b.bookingId())).isEqualTo("pending");
     }
 }
