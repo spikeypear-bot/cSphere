@@ -45,6 +45,7 @@ class EquipmentRequestDecisionServiceTest {
     private EquipmentRequestLineRepository lines;
     private EventRepository events;
     private EquipmentLogRepository reservations;
+    private com.example.connect_sphere.equipment.service.EquipmentReservationService releaser;
     private EquipmentRequestDecisionService service;
     private EquipmentRequest request;
 
@@ -54,7 +55,8 @@ class EquipmentRequestDecisionServiceTest {
         lines = mock(EquipmentRequestLineRepository.class);
         events = mock(EventRepository.class);
         reservations = mock(EquipmentLogRepository.class);
-        service = new EquipmentRequestDecisionService(requests, lines, events, reservations);
+        releaser = mock(com.example.connect_sphere.equipment.service.EquipmentReservationService.class);
+        service = new EquipmentRequestDecisionService(requests, lines, events, reservations, releaser);
 
         request = new EquipmentRequest(
                 REQUEST_ID, EVENT_ID, EquipmentRequestStatus.processing, "Stage setup");
@@ -108,6 +110,52 @@ class EquipmentRequestDecisionServiceTest {
         verify(reservations).findByEventId(EVENT_ID);
         verify(reservations, never()).save(org.mockito.ArgumentMatchers.any());
         verify(events, never()).save(org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): approving a revision supersedes the approved request and keeps only what the revision needs")
+    void approvingARevisionReplacesTheApprovedRequest() {
+        request.markRevision();
+        EquipmentRequest replaced = new EquipmentRequest(UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.attention, "Old");
+        EquipmentRequest rejectedEarlier = new EquipmentRequest(UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.rejected, "Older");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(replaced, rejectedEarlier, request));
+        events.findById(EVENT_ID).orElseThrow().setEventId(EVENT_ID);
+        when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(reservation(2, EVENT_START, EVENT_END)));
+
+        service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus("approved", null));
+
+        assertThat(request.getStatus()).isEqualTo(EquipmentRequestStatus.approved);
+        assertThat(replaced.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
+        assertThat(rejectedEarlier.getStatus()).isEqualTo(EquipmentRequestStatus.rejected);
+        verify(releaser).keepOnly(EVENT_ID, REQUEST_ID, java.util.Map.of(EQUIPMENT_ID, 2), EVENT_START, EVENT_END);
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (negative): rejecting a revision gives back only its own reservations and leaves the approved request alone")
+    void rejectingARevisionReleasesNothing() {
+        request.markRevision();
+        EquipmentRequest approved = new EquipmentRequest(UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Old");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(approved, request));
+
+        service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus("rejected", "Not enough stock"));
+
+        assertThat(request.getStatus()).isEqualTo(EquipmentRequestStatus.rejected);
+        assertThat(approved.getStatus()).isEqualTo(EquipmentRequestStatus.approved);
+        verify(releaser).releaseForRequest(REQUEST_ID);
+        verify(releaser, never()).keepOnly(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
+    }
+
+    @Test
+    @org.junit.jupiter.api.DisplayName("TS06 (happy): approving a request that is not a revision replaces nothing")
+    void approvingANonRevisionReplacesNothing() {
+        when(reservations.findByEventId(EVENT_ID)).thenReturn(List.of(reservation(2, EVENT_START, EVENT_END)));
+
+        service.updateStatus(REQUEST_ID, new UpdateEquipmentRequestStatus("approved", null));
+
+        verify(requests, never()).findByEventIdForUpdate(org.mockito.ArgumentMatchers.any());
+        verify(releaser, never()).keepOnly(org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(),
+                org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any(), org.mockito.ArgumentMatchers.any());
     }
 
     @Test

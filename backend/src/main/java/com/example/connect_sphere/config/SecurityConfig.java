@@ -206,6 +206,8 @@ public class SecurityConfig {
 						.requestMatchers(HttpMethod.GET, "/api/events/*/equipment-requests")
 						.hasAnyRole("EC", "SAFETY_OFFICER", "ECL")
 						.requestMatchers(HttpMethod.POST, "/api/events/*/equipment-request").hasRole("EC")
+						// EC07 (D40): free stock at the event's time; assignment-scoped in the service.
+						.requestMatchers(HttpMethod.GET, "/api/events/*/equipment-availability").hasRole("EC")
 						// EC-NEW3: the coordinator revises the complete equipment request.
 						.requestMatchers(HttpMethod.PATCH, "/api/events/*/equipment-request").hasRole("EC")
 						.requestMatchers(HttpMethod.PATCH, "/api/events/*/equipment-request/*/still-suitable")

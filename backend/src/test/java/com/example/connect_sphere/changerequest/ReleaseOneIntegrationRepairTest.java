@@ -168,18 +168,21 @@ class ReleaseOneIntegrationRepairTest {
         mvc.perform(get("/api/equipment-requests/" + revised + "/lines").with(flow.as("ts1")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$[0].equipmentName").value("Repair projector"))
                 .andExpect(jsonPath("$[0].quantity").value(3));
-        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs WHERE event_id=?", Integer.class, event)).isZero();
+        // D40: the approved request keeps its 2 reserved until Technical Support approve the revision.
+        assertThat(jdbc.queryForObject("SELECT sum(quantity) FROM equipment_logs WHERE event_id=?", Integer.class, event)).isEqualTo(2);
         mvc.perform(patch("/api/equipment-requests/" + revised + "/status").with(flow.as("ts1"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"approved\"}")).andExpect(status().isConflict());
         mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"eventId\":\"" + event + "\",\"equipmentId\":\"" + equipment
-                        + "\",\"quantity\":3,\"start\":\"2027-03-10T01:00:00Z\",\"end\":\"2027-03-10T04:00:00Z\"}"))
+                        + "\",\"quantity\":1,\"start\":\"2027-03-10T01:00:00Z\",\"end\":\"2027-03-10T04:00:00Z\"}"))
                 .andExpect(status().isCreated());
         sync();
         mvc.perform(patch("/api/equipment-requests/" + revised + "/status").with(flow.as("ts1"))
                 .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"approved\"}"))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.status").value("approved"));
+        sync();
         assertThat(jdbc.queryForObject("SELECT sum(quantity) FROM equipment_logs WHERE event_id=?", Integer.class, event)).isEqualTo(3);
+        assertThat(jdbc.queryForObject("SELECT status::text FROM equipment_requests WHERE request_id=?", String.class, UUID.fromString(old))).isEqualTo("superseded");
     }
 
     @Test @DisplayName("EO03 (negative): invalid catalogue IDs, duplicate types and nonpositive quantities save no proposal")

@@ -50,6 +50,7 @@ function getBaseRoutes() {
     [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, event),
     'GET /api/equipment/catalogue': () => jsonResponse(200, catalogue),
     [`GET /api/events/${EVENT_ID}/equipment-requests`]: () => jsonResponse(200, []),
+    [`GET /api/events/${EVENT_ID}/equipment-availability`]: () => jsonResponse(200, []),
   }
 }
 
@@ -130,7 +131,7 @@ describe('EquipmentRequestPage (EC07)', () => {
     expect(screen.queryByRole('button', { name: 'Submit equipment request' })).not.toBeInTheDocument()
   })
 
-  it('EC-NEW3: revises the active request, releasing reservations and superseding the old one', async () => {
+  it('EC-NEW3 (happy): revises the active request; the approved one stays until Technical Support approve the revision', async () => {
     seedSession('coordinator')
     const calls = stubApi({
       ...getBaseRoutes(),
@@ -148,6 +149,7 @@ describe('EquipmentRequestPage (EC07)', () => {
         status: 'processing',
         technicalRequirement: (body as { technicalRequirement: string }).technicalRequirement,
         lines: [{ equipmentId: 'projector-1', equipmentName: 'Projector', quantity: 1 }],
+        revision: true,
       }),
     })
     const user = userEvent.setup()
@@ -164,12 +166,52 @@ describe('EquipmentRequestPage (EC07)', () => {
     await user.type(screen.getByLabelText('Projector quantity'), '1')
     await user.click(screen.getByRole('button', { name: 'Submit revision' }))
 
-    expect(await screen.findByText(/revised/i)).toBeInTheDocument()
-    expect(screen.getByRole('list', { name: 'Requested equipment' })).toHaveTextContent(/Projector.*× 1/)
+    expect(await screen.findByText(/the current request and its reservations stay until they approve it/)).toBeInTheDocument()
+    const [revision, kept] = screen.getAllByRole('list', { name: 'Requested equipment' })
+    expect(revision).toHaveTextContent(/Projector.*× 1/)
+    expect(kept).toHaveTextContent(/Wireless microphone.*× 2/)
+    expect(screen.getByText(/replaces the approved request once Technical Support approve it/)).toBeInTheDocument()
     expect(calls.find((call) => call.method === 'PATCH')?.body).toEqual({
       technicalRequirement: 'Fewer microphones, a projector now',
       items: [{ equipmentId: 'projector-1', quantity: 1 }],
     })
+  })
+
+  it('EC07 (negative): more than are free at the event\'s time cannot be sent until the quantity is lowered', async () => {
+    seedSession('coordinator')
+    const calls = stubApi({ ...getBaseRoutes(),
+      [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, { ...event, equipmentItems: [{ equipmentId: 'mic-1', quantity: 4 }] }),
+      [`GET /api/events/${EVENT_ID}/equipment-availability`]: () => jsonResponse(200, [{ equipmentId: 'mic-1', free: 3 }]),
+      [`POST /api/events/${EVENT_ID}/equipment-request`]: (body) => jsonResponse(201, { requestId: 'new', eventId: EVENT_ID,
+        status: 'processing', technicalRequirement: '', lines: [{ equipmentId: 'mic-1', equipmentName: 'Wireless microphone',
+          quantity: (body as { items: { quantity: number }[] }).items[0].quantity }] }),
+    })
+    renderPage()
+    const user = userEvent.setup()
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Wireless microphone: 4 selected, only 3 free')
+    expect(screen.getByRole('button', { name: 'Submit equipment request' })).toBeDisabled()
+    await user.clear(screen.getByLabelText('Wireless microphone quantity'))
+    await user.type(screen.getByLabelText('Wireless microphone quantity'), '3')
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Submit equipment request' }))
+
+    expect(await screen.findByText('Equipment request submitted to Technical Support for review.')).toBeInTheDocument()
+    expect(calls.filter((call) => call.method === 'POST')).toHaveLength(1)
+    expect(calls.find((call) => call.method === 'POST')?.body).toMatchObject({ items: [{ equipmentId: 'mic-1', quantity: 3 }] })
+  })
+
+  it('EC07 (boundary): exactly as many as are free can be sent', async () => {
+    seedSession('coordinator')
+    stubApi({ ...getBaseRoutes(),
+      [`GET /api/events/${EVENT_ID}`]: () => jsonResponse(200, { ...event, equipmentItems: [{ equipmentId: 'mic-1', quantity: 3 }] }),
+      [`GET /api/events/${EVENT_ID}/equipment-availability`]: () => jsonResponse(200, [{ equipmentId: 'mic-1', free: 3 }]),
+    })
+    renderPage()
+
+    expect(await screen.findByLabelText('Wireless microphone quantity')).toHaveValue(3)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Submit equipment request' })).toBeEnabled()
   })
 
   it('shows Technical Support rejection status and reason', async () => {

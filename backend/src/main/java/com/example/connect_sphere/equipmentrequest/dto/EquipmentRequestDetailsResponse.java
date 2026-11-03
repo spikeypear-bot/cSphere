@@ -12,7 +12,9 @@ public record EquipmentRequestDetailsResponse(
         String technicalRequirement,
         String rejectReason,
         String attentionReason,
-        List<EquipmentRequestLineResponse> lines) {
+        List<EquipmentRequestLineResponse> lines,
+        /** EC-NEW3 (D40): replaces the event's approved requests once Technical Support approve it. */
+        boolean revision) {
 
     public static EquipmentRequestDetailsResponse from(
             EquipmentRequest request, List<EquipmentRequestLine> lines) {
@@ -23,6 +25,7 @@ public record EquipmentRequestDetailsResponse(
                 request.getTechnicalRequirement(),
                 request.getRejectReason(),
                 request.getAttentionReason(),
-                lines.stream().map(EquipmentRequestLineResponse::from).toList());
+                lines.stream().map(EquipmentRequestLineResponse::from).toList(),
+                request.isRevision());
     }
 }

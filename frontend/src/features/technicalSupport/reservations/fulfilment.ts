@@ -39,7 +39,7 @@ const overlaps = (r: EquipmentReservation, from: number, to: number) =>
 /** Serial order as the server sorts it (Java's String order, by UTF-16 code unit). */
 const bySerial = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 
-export function buildRows({ lines, availability, eventReservations, units, kindReservations, eventId, eventStart, eventEnd, window }: {
+export function buildRows({ lines, availability, eventReservations, units, kindReservations, eventId, eventStart, eventEnd, window, revision = false }: {
   lines: RequestLine[]
   availability: EquipmentAvailability[]
   /** The event's own reservations (any window). */
@@ -53,9 +53,17 @@ export function buildRows({ lines, availability, eventReservations, units, kindR
   eventEnd: string
   /** ISO instants of the loan window. */
   window: { from: string; to: string }
+  /** EC-NEW3 (D40): the request is a revision, so the event's old units are being given up. */
+  revision?: boolean
 }): FulfilmentRow[] {
   const from = new Date(window.from).getTime()
   const to = new Date(window.to).getTime()
+  const eventFrom = new Date(eventStart).getTime()
+  const eventTo = new Date(eventEnd).getTime()
+  // D40: for a revision, this event's reservations that do not cover the event's time are the
+  // old ones approval releases, so their units count as free here, as the server counts them.
+  const givenUp = (r: EquipmentReservation) => revision && r.eventId === eventId
+    && (new Date(r.loanedFrom).getTime() > eventFrom || new Date(r.loanedUntil).getTime() < eventTo)
   return lines.map((line) => {
     const stock = availability.find((a) => a.equipmentId === line.equipmentId) ?? null
     const serialised = stock?.serialised ?? false
@@ -68,7 +76,7 @@ export function buildRows({ lines, availability, eventReservations, units, kindR
       const overlapping = [
         ...(kindReservations[line.equipmentId] ?? []),
         ...eventReservations.filter((r) => r.equipmentId === line.equipmentId),
-      ].filter((r) => r.serialNumber !== null && overlaps(r, from, to))
+      ].filter((r) => r.serialNumber !== null && overlaps(r, from, to) && !givenUp(r))
       // This event's own hold wins over another's (they cannot both hold it).
       overlapping.sort((a, b) => Number(a.eventId === eventId) - Number(b.eventId === eventId))
       overlapping.forEach((r) => holding.set(r.serialNumber!, r))

@@ -133,7 +133,9 @@ export async function leadAssigns(page: Page, requestId: string) {
  * event is genuinely Confirmed. Returns the event's id. */
 export async function confirmedEventByApi(request: APIRequestContext, eventName: string, venueId: string,
   startDatetime: string, endDatetime: string,
-  registrationSettings?: { registrationCapacity: number; registrationOpensAt: string }): Promise<string> {
+  registrationSettings?: { registrationCapacity: number; registrationOpensAt: string },
+  /** More arrangements made while the event is still in Planning, before the safety review. */
+  arrange?: (eventId: string) => Promise<void>): Promise<string> {
   const tokens = {
     eo: await apiToken(request, 'eo1'), ecl: await apiToken(request, 'ecl1'), ec: await apiToken(request, 'ec1'),
     vs: await apiToken(request, 'vs1'), so: await apiToken(request, 'so1'),
@@ -154,6 +156,7 @@ export async function confirmedEventByApi(request: APIRequestContext, eventName:
   const event = await call('post', `/api/event-requests/${draft.requestId}/approve`, tokens.ec)
   const booking = await call('post', `/api/events/${event.eventId}/venue-bookings`, tokens.ec, { venueId })
   await call('patch', `/api/venue-bookings/${booking.bookingId}/approve`, tokens.vs)
+  if (arrange) await arrange(event.eventId)
   await call('post', `/api/events/${event.eventId}/safety-review`, tokens.ec)
   const readiness = await apiGet<{ items: { itemKey: string }[] }>(request, tokens.so,
     `/api/safety/events/${event.eventId}/readiness`)

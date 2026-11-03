@@ -29,6 +29,7 @@ public class EquipmentRequestDecisionService {
     private final EquipmentRequestLineRepository lines;
     private final EventRepository events;
     private final EquipmentLogRepository reservations;
+    private final com.example.connect_sphere.equipment.service.EquipmentReservationService releaser;
 
     /** EC-NEW5: announces changes for the event change log (ChangeLogRecorder).
      * Setter-injected so this service does not depend on the log; absent in
@@ -59,11 +60,13 @@ public class EquipmentRequestDecisionService {
             EquipmentRequestRepository requests,
             EquipmentRequestLineRepository lines,
             EventRepository events,
-            EquipmentLogRepository reservations) {
+            EquipmentLogRepository reservations,
+            com.example.connect_sphere.equipment.service.EquipmentReservationService releaser) {
         this.requests = requests;
         this.lines = lines;
         this.events = events;
         this.reservations = reservations;
+        this.releaser = releaser;
     }
 
     @Transactional
@@ -132,6 +135,13 @@ public class EquipmentRequestDecisionService {
         }
 
         request.decide(requestedStatus, rejectReason);
+        if (requestedStatus == EquipmentRequestStatus.approved && request.isRevision()) {
+            replaceHeldRequests(request, event);
+        }
+        if (requestedStatus == EquipmentRequestStatus.rejected) {
+            // D40: anything already reserved for this request goes back; the event's other reservations stay.
+            releaser.releaseForRequest(requestId);
+        }
         if (requestedStatus == EquipmentRequestStatus.approved && shortfalls != null) {
             shortfalls.onRequestApproved(requestId);
         }
@@ -160,7 +170,8 @@ public class EquipmentRequestDecisionService {
             UUID equipmentId = line.getId().getEquipmentId();
             int reserved = EquipmentAvailabilityService.heldThroughout(eventReservations, equipmentId,
                     eventStart, eventEnd);
-            int owedElsewhere = shortfalls == null ? 0
+            // D40: a revision replaces the approved requests, so they are owed nothing.
+            int owedElsewhere = shortfalls == null || request.isRevision() ? 0
                     : shortfalls.need(request.getEventId(), equipmentId, null);
             int required = line.getQuantity() + owedElsewhere;
             if (reserved < required) {
@@ -171,6 +182,23 @@ public class EquipmentRequestDecisionService {
                                 + " are reserved for the full event period.");
             }
         }
+    }
+
+    /** EC-NEW3 (D40): the approved revision now stands for the event. The
+     * requests it replaces are superseded (kept for the audit trail) and the
+     * event keeps only the reservations the revision needs. Until now they
+     * held their reservations, so a rejected revision gives back only its own. */
+    private void replaceHeldRequests(EquipmentRequest revision, Event event) {
+        List<EquipmentRequest> replaced = requests.findByEventIdForUpdate(event.getEventId()).stream()
+                .filter(r -> !r.getId().equals(revision.getId()) && r.getStatus().heldByTechnicalSupport())
+                .toList();
+        replaced.forEach(EquipmentRequest::supersede);
+        requests.saveAll(replaced);
+        java.util.Map<UUID, Integer> needed = new java.util.HashMap<>();
+        lines.findByIdRequestId(revision.getId())
+                .forEach(line -> needed.merge(line.getId().getEquipmentId(), line.getQuantity(), Integer::sum));
+        releaser.keepOnly(event.getEventId(), revision.getId(), needed, event.getStartDatetime().toInstant(),
+                event.getEndDatetime().toInstant());
     }
 
     /** TS09: shortfalls and what approved requests are still owed. Setter-injected

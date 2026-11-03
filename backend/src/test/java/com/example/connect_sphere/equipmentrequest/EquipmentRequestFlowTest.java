@@ -427,7 +427,8 @@ class EquipmentRequestFlowTest {
 
     @Test
     @Tag("EC-NEW3")
-    void revisingAnApprovedRequestReleasesItsReservationsAndSupersedesIt() throws Exception {
+    @DisplayName("EC-NEW3 (happy): revising an approved request keeps it and its reservations until Technical Support decide")
+    void revisingAnApprovedRequestKeepsItsReservationsUntilTechnicalSupportDecide() throws Exception {
         UUID eventId = event();
         UUID projector = equipment("EC07 Projector");
         UUID requestId = submitted(eventId, body("Two screens on stage", item(projector, 2)));
@@ -438,10 +439,216 @@ class EquipmentRequestFlowTest {
         UUID microphone = equipment("EC07 Microphone");
         revise(eventId, "ec1", body("Fewer screens, more microphones now", item(microphone, 3)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.lines[0].quantity").value(3));
+                .andExpect(jsonPath("$.lines[0].quantity").value(3))
+                .andExpect(jsonPath("$.revision").value(true));
 
-        assertThat(reservationsFor(eventId)).isZero();
+        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        assertThat(statusOf(requestId)).isEqualTo("approved");
+    }
+
+    private UUID revised(UUID eventId, String body) throws Exception {
+        String response = revise(eventId, "ec1", body).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        sync();
+        return UUID.fromString(flow.read(response).get("requestId").asString());
+    }
+
+    private void reject(UUID requestId) throws Exception {
+        mvc.perform(patch("/api/equipment-requests/" + requestId + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"status\":\"rejected\",\"rejectReason\":\"Not enough stock\"}"))
+                .andExpect(status().isOk());
+        sync();
+    }
+
+    private int reservedQuantity(UUID eventId, UUID equipmentId) {
+        sync();
+        return jdbc.queryForObject("SELECT coalesce(sum(quantity), 0) FROM equipment_logs WHERE event_id = ? AND equipment_id = ?",
+                Integer.class, eventId, equipmentId);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): more of the same kind: Technical Support reserve only the extra, and approving keeps all of it")
+    void aRevisionForMoreNeedsOnlyTheExtraReserved() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+
+        UUID revision = revised(eventId, body("Three screens", item(projector, 3)));
+        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":2,".formatted(eventId, projector)
+                                + "\"start\":\"2027-03-10T01:00:00Z\",\"end\":\"2027-03-10T04:00:00Z\"}"))
+                .andExpect(status().isConflict());
+        reserve(eventId, projector, 1);
+        approve(revision);
+
         assertThat(statusOf(requestId)).isEqualTo("superseded");
+        assertThat(statusOf(revision)).isEqualTo("approved");
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(3);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): fewer of a kind and a kind no longer wanted: approving releases exactly what is not needed")
+    void approvingARevisionReleasesWhatItNoLongerNeeds() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID microphone = equipment("EC07 Microphone");
+        UUID requestId = submitted(eventId, body("Screens and mics", item(projector, 3), item(microphone, 2)));
+        reserve(eventId, projector, 3);
+        reserve(eventId, microphone, 2);
+        approve(requestId);
+
+        UUID revision = revised(eventId, body("One screen only", item(projector, 1)));
+        approve(revision);
+
+        assertThat(statusOf(requestId)).isEqualTo("superseded");
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(1);
+        assertThat(reservedQuantity(eventId, microphone)).isZero();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (happy): a new time: the old reservation is kept while the new one is made, and released on approval")
+    void aTimeChangeRevisionReleasesTheOldWindowOnlyOnApproval() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+        // The approved change moved the event an hour later: 02:00-05:00Z, overlapping the old loan.
+        jdbc.update("UPDATE events SET start_datetime = '2027-03-10T02:00:00Z', end_datetime = '2027-03-10T05:00:00Z' WHERE event_id = ?", eventId);
+        sync();
+
+        UUID revision = revised(eventId, body("Two screens, new time", item(projector, 2)));
+        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":2,".formatted(eventId, projector)
+                                + "\"start\":\"2027-03-10T02:00:00Z\",\"end\":\"2027-03-10T05:00:00Z\"}"))
+                .andExpect(status().isCreated());
+        assertThat(reservationsFor(eventId)).isEqualTo(2);
+        approve(revision);
+
+        assertThat(jdbc.queryForList("SELECT loaned_from FROM equipment_logs WHERE event_id = ?", java.sql.Timestamp.class, eventId))
+                .extracting(java.sql.Timestamp::toInstant).containsExactly(java.time.Instant.parse("2027-03-10T02:00:00Z"));
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(2);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (negative): Technical Support reject the revision; what they reserved for it goes back, the approved request and its reservations stay")
+    void rejectingARevisionChangesNothingElse() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+
+        UUID revision = revised(eventId, body("Five screens", item(projector, 5)));
+        reserve(eventId, projector, 3);
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(5);
+        reject(revision);
+
+        assertThat(statusOf(revision)).isEqualTo("rejected");
+        assertThat(statusOf(requestId)).isEqualTo("approved");
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs WHERE request_id = ?", Integer.class, revision))
+                .isZero();
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (boundary): all the stock is the event's at its old time; moved an hour later, the revision can still be booked, and approving gives the old units back")
+    void aSmallTimeShiftCanReuseTheUnitsTheEventGivesUp() throws Exception {
+        UUID eventId = event();
+        UUID projector = UUID.randomUUID();
+        jdbc.update("INSERT INTO equipments (equipment_id, equipment_name, equipment_qty, serialised, equipment_type) "
+                + "VALUES (?, 'EC07 Only two', 2, false, 'A')", projector);
+        UUID requestId = submitted(eventId, body("Both screens", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+        jdbc.update("UPDATE events SET start_datetime = '2027-03-10T02:00:00Z', end_datetime = '2027-03-10T05:00:00Z' WHERE event_id = ?", eventId);
+        sync();
+
+        UUID revision = revised(eventId, body("Both screens, an hour later", item(projector, 2)));
+        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":2,".formatted(eventId, projector)
+                                + "\"start\":\"2027-03-10T02:00:00Z\",\"end\":\"2027-03-10T05:00:00Z\"}"))
+                .andExpect(status().isCreated());
+        approve(revision);
+
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(2);
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM equipment_logs WHERE event_id = ? AND request_id = ?",
+                Integer.class, eventId, revision)).isEqualTo(1);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (conflict): another event's reservations are never treated as given up")
+    void anotherEventsReservationsStillCountWhenBookingARevision() throws Exception {
+        UUID eventId = event();
+        UUID projector = UUID.randomUUID();
+        jdbc.update("INSERT INTO equipments (equipment_id, equipment_name, equipment_qty, serialised, equipment_type) "
+                + "VALUES (?, 'EC07 Only two shared', 2, false, 'A')", projector);
+        UUID requestId = submitted(eventId, body("One screen", item(projector, 1)));
+        reserve(eventId, projector, 1);
+        approve(requestId);
+        UUID other = event();
+        UUID otherRequest = submitted(other, body("One screen", item(projector, 1)));
+        reserve(other, projector, 1);
+        approve(otherRequest);
+
+        revised(eventId, body("Two screens", item(projector, 2)));
+        mvc.perform(post("/api/equipment/reservations").with(flow.as("ts1")).contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"eventId\":\"%s\",\"equipmentId\":\"%s\",\"quantity\":1,".formatted(eventId, projector)
+                                + "\"start\":\"2027-03-10T01:00:00Z\",\"end\":\"2027-03-10T04:00:00Z\"}"))
+                .andExpect(status().isConflict());
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(1);
+        assertThat(reservedQuantity(other, projector)).isEqualTo(1);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @DisplayName("EC-NEW3 (failure): approving a revision that is not fully reserved is refused and nothing is released")
+    void anUnreservedRevisionCannotBeApprovedAndNothingIsReleased() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+
+        UUID revision = revised(eventId, body("Four screens", item(projector, 4)));
+        mvc.perform(patch("/api/equipment-requests/" + revision + "/status").with(flow.as("ts1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"status\":\"approved\"}"))
+                .andExpect(status().isConflict());
+
+        assertThat(statusOf(revision)).isEqualTo("processing");
+        assertThat(statusOf(requestId)).isEqualTo("approved");
+        assertThat(reservedQuantity(eventId, projector)).isEqualTo(2);
+    }
+
+    @Test
+    @Tag("EC07")
+    @DisplayName("EC07 (happy): the coordinator sees how many of each kind are free at the event's time, its own reservations included")
+    void theCoordinatorSeesFreeStockAtTheEventsTime() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        UUID requestId = submitted(eventId, body("Two screens", item(projector, 2)));
+        reserve(eventId, projector, 2);
+        approve(requestId);
+        UUID other = event();
+        UUID otherRequest = submitted(other, body("Three screens", item(projector, 3)));
+        reserve(other, projector, 3);
+        approve(otherRequest);
+
+        // 10 in stock, 3 held by another event at the same time; this event's own 2 count as free to it.
+        mvc.perform(get("/api/events/" + eventId + "/equipment-availability").with(flow.as("ec1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.equipmentId == '%s')].free".formatted(projector)).value(7));
+        mvc.perform(get("/api/events/" + eventId + "/equipment-availability").with(flow.as("ts1")))
+                .andExpect(status().isForbidden());
     }
 
     @Test

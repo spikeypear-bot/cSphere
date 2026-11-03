@@ -76,6 +76,18 @@ describe('TS02 request fulfilment rows (D33)', () => {
     expect(rowProblem(mic, { ...NO_CHOICE, now: 4, spare: 3 })).toBe('Only 6 can be reserved for this window.')
   })
 
+  it('EC-NEW3 (D40) (happy): for a revision, the event\'s own units at its old time count as free; at the event\'s time, or another event\'s, they do not', () => {
+    const oldTime = { loanedFrom: '2027-03-10T00:00:00Z', loanedUntil: '2027-03-10T03:00:00Z' }
+    const eventReservations = [held('proj', 1, { serialNumber: 'P-3', ...oldTime }), held('proj', 1, { serialNumber: 'P-4' })]
+    const [revision] = rows({ eventReservations, revision: true })
+    expect(revision.units.map((u) => [u.serialNumber, u.state.kind])).toEqual([
+      ['P-1', 'blocked'], ['P-10', 'free'], ['P-2', 'elsewhere'], ['P-3', 'free'], ['P-4', 'here'],
+    ])
+    const [first] = rows({ eventReservations })
+    expect(first.units.find((u) => u.serialNumber === 'P-3')?.state.kind).toBe('here')
+    expect(first.freeSerials).toEqual(['P-10'])
+  })
+
   it('TS02 (negative): chosen units must match the units asked for, and the extra ones are sent as spares', () => {
     const [projector] = rows()
     expect(rowProblem(projector, { now: 2, spare: 0, serials: ['P-4'] })).toBe('Choose 1 more unit.')

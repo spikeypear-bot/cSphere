@@ -104,7 +104,8 @@ class EquipmentRequestServiceTest {
 
     @Test
     @Tag("EC-NEW3")
-    void reviseReleasesReservationsSupersedesTheOldRequestAndCreatesANewOne() {
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): revising an approved request keeps it and its reservations; the revision waits for Technical Support")
+    void reviseKeepsAnApprovedRequestAndItsReservationsUntilTechnicalSupportDecide() {
         EquipmentRequest existing = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
         when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(existing));
@@ -114,16 +115,54 @@ class EquipmentRequestServiceTest {
                         List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 4))));
 
         assertThat(result.status()).isEqualTo("processing");
+        assertThat(result.revision()).isTrue();
         assertThat(result.lines()).containsExactly(
                 new EquipmentRequestLineResponse(EQUIPMENT_ID, "Wireless microphone", 4));
-        assertThat(existing.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
+        assertThat(existing.getStatus()).isEqualTo(EquipmentRequestStatus.approved);
+        verify(reservations, org.mockito.Mockito.never()).releaseAllForEvent(EVENT_ID);
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): revising a request still awaiting review replaces it at once and is not a revision of an approved one")
+    void revisingAProcessingRequestSupersedesItAndReleasesNow() {
+        EquipmentRequest pending = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.processing, "Two wireless microphones");
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(pending));
+
+        var result = service.revise(COORDINATOR_ID, EVENT_ID,
+                new SubmitEquipmentRequest("Four", List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 4))));
+
+        assertThat(result.revision()).isFalse();
+        assertThat(pending.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
         verify(reservations).releaseAllForEvent(EVENT_ID);
     }
 
     @Test
     @Tag("EC-NEW3")
-    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37) (happy): revising a request that needs attention supersedes it")
-    void revisingARequestThatNeedsAttentionSupersedesIt() {
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (happy): revising again replaces the pending revision but still keeps the approved request")
+    void revisingAgainReplacesOnlyThePendingRevision() {
+        EquipmentRequest approved = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two");
+        EquipmentRequest pending = new EquipmentRequest(
+                UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.processing, "Four");
+        pending.markRevision();
+        when(requests.findByEventIdForUpdate(EVENT_ID)).thenReturn(List.of(approved, pending));
+
+        var result = service.revise(COORDINATOR_ID, EVENT_ID,
+                new SubmitEquipmentRequest("Three", List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 3))));
+
+        assertThat(result.revision()).isTrue();
+        assertThat(pending.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
+        assertThat(approved.getStatus()).isEqualTo(EquipmentRequestStatus.approved);
+        verify(reservations, org.mockito.Mockito.never()).releaseAllForEvent(EVENT_ID);
+        verify(reservations).releaseForRequest(pending.getId());
+    }
+
+    @Test
+    @Tag("EC-NEW3")
+    @org.junit.jupiter.api.DisplayName("EC-NEW3 (D37, D40) (happy): revising a request that needs attention keeps it until Technical Support decide")
+    void revisingARequestThatNeedsAttentionKeepsItUntilTechnicalSupportDecide() {
         EquipmentRequest flagged = new EquipmentRequest(
                 UUID.randomUUID(), EVENT_ID, EquipmentRequestStatus.approved, "Two wireless microphones");
         flagged.flagAttention("The event's equipment requirements text changed.");
@@ -134,8 +173,8 @@ class EquipmentRequestServiceTest {
                         List.of(new SubmitEquipmentRequest.Item(EQUIPMENT_ID, 4))));
 
         assertThat(result.status()).isEqualTo("processing");
-        assertThat(flagged.getStatus()).isEqualTo(EquipmentRequestStatus.superseded);
-        verify(reservations).releaseAllForEvent(EVENT_ID);
+        assertThat(flagged.getStatus()).isEqualTo(EquipmentRequestStatus.attention);
+        verify(reservations, org.mockito.Mockito.never()).releaseAllForEvent(EVENT_ID);
     }
 
     @Test

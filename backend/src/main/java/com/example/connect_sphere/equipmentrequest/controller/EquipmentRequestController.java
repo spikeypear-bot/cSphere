@@ -79,6 +79,13 @@ public class EquipmentRequestController {
         return service.listForEvent(userIdOf(jwt), eventId);
     }
 
+    // EC07 (D40): free stock at the event's time, for the assigned coordinator.
+    @GetMapping("/events/{eventId}/equipment-availability")
+    public List<EquipmentRequestService.FreeAtEventTime> availability(
+            @AuthenticationPrincipal Jwt jwt, @PathVariable UUID eventId) {
+        return service.availabilityForEvent(userIdOf(jwt), eventId);
+    }
+
     @PostMapping("/events/{eventId}/equipment-request")
     public ResponseEntity<EquipmentRequestDetailsResponse> submit(
             @AuthenticationPrincipal Jwt jwt,
@@ -88,8 +95,8 @@ public class EquipmentRequestController {
                 .body(service.submit(userIdOf(jwt), eventId, request));
     }
 
-    // EC-NEW3: the coordinator replaces the complete equipment request,
-    // releasing reservations and superseding what it replaces.
+    // EC-NEW3: the coordinator replaces the complete equipment request; approved
+    // reservations stay until Technical Support approve the revision (D40).
     @PatchMapping("/events/{eventId}/equipment-request")
     public EquipmentRequestDetailsResponse revise(
             @AuthenticationPrincipal Jwt jwt,

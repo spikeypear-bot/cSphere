@@ -108,6 +108,22 @@ public class EquipmentRequestService {
                 .toList();
     }
 
+    /** EC07 (D40): one catalogue kind and how many the event could have at its time. */
+    public record FreeAtEventTime(UUID equipmentId, int free) {
+    }
+
+    /** EC07 (D40): free stock at the event's time for every kind, the event's own reservations
+     * counted as free, so the assigned coordinator can size a request or a revision. */
+    @Transactional(readOnly = true)
+    public List<FreeAtEventTime> availabilityForEvent(UUID coordinatorId, UUID eventId) {
+        Event event = events.findById(eventId).orElseThrow(() -> new EventNotFoundException(eventId));
+        requireAssigned(coordinatorId, event);
+        return reservations.freeForEvent(eventId, event.getStartDatetime().toInstant(),
+                        event.getEndDatetime().toInstant()).entrySet().stream()
+                .map(entry -> new FreeAtEventTime(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
     private boolean newestOutcomeNeedsCoordinator(UUID eventId) {
         return changeReviews != null && changeReviews.findByEventIdOrderByChangedAtDesc(eventId).stream().findFirst()
                 .filter(r -> r.getOutcome() == com.example.connect_sphere.equipmentreview.entity.ReviewOutcome.needs_coordinator_action)
@@ -168,14 +184,15 @@ public class EquipmentRequestService {
     }
 
     /**
-     * EC-NEW3 (D36, Approach 3 "supersede and rebuild"): the coordinator
-     * replaces the complete picture of what the event needs — in either
-     * direction — after judging, from an approved change, that the
-     * equipment requested no longer fits. Every reservation the event holds
-     * is released (a reservation names only its event, never a request) and
-     * every non-rejected request for the event is superseded, then one new
-     * processing request is created from {@code input}, exactly as
-     * {@link #submit} would create a first one.
+     * EC-NEW3 (D36, amended by D40): the coordinator replaces the complete
+     * picture of what the event needs — in either direction — after judging,
+     * from an approved change, that the equipment requested no longer fits.
+     * One new processing request is created from {@code input}, exactly as
+     * {@link #submit} would create a first one, and any request still awaiting
+     * review is superseded. An approved (or flagged) request and its
+     * reservations stay until Technical Support approve the revision
+     * ({@link EquipmentRequestDecisionService}); with none, every reservation
+     * is released now, as before.
      */
     @Transactional
     public EquipmentRequestDetailsResponse revise(
@@ -196,13 +213,29 @@ public class EquipmentRequestService {
         }
         ValidatedItems validated = validate(input);
 
-        reservations.releaseAllForEvent(eventId);
-        active.forEach(EquipmentRequest::supersede);
-        requests.saveAll(active);
+        // D40: approved requests keep their reservations until Technical Support
+        // approve the revision; only requests still awaiting review are replaced now.
+        boolean held = active.stream().anyMatch(request -> request.getStatus().heldByTechnicalSupport());
+        if (!held) {
+            reservations.releaseAllForEvent(eventId);
+        }
+        List<EquipmentRequest> pending = active.stream()
+                .filter(request -> request.getStatus() == EquipmentRequestStatus.processing)
+                .toList();
+        pending.forEach(EquipmentRequest::supersede);
+        requests.saveAll(pending);
+        if (held) {
+            // D40: a replaced pending revision gives back what was reserved for it.
+            pending.forEach(request -> reservations.releaseForRequest(request.getId()));
+        }
 
         UUID requestId = UUID.randomUUID();
-        EquipmentRequest saved = requests.save(new EquipmentRequest(
-                requestId, eventId, EquipmentRequestStatus.processing, validated.requirement()));
+        EquipmentRequest revision = new EquipmentRequest(
+                requestId, eventId, EquipmentRequestStatus.processing, validated.requirement());
+        if (held) {
+            revision.markRevision();
+        }
+        EquipmentRequest saved = requests.save(revision);
         for (SubmitEquipmentRequest.Item item : validated.items()) {
             lines.save(new EquipmentRequestLine(
                     new EquipmentRequestLineId(requestId, item.equipmentId()), item.quantity()));
@@ -215,6 +248,7 @@ public class EquipmentRequestService {
         announce(eventId, com.example.connect_sphere.activity.entity.ActivityType.equipment_revised, coordinatorId,
                 "Revised the equipment request: now " + units + (units == 1 ? " item" : " items")
                         + " of equipment, replacing the previous request"
+                        + (held ? " once Technical Support approve it" : "")
                         + (validated.requirement().isBlank() ? "" : ": " + validated.requirement()));
         return responseOf(saved, validated);
     }
@@ -316,7 +350,8 @@ public class EquipmentRequestService {
                 validated.items().stream().map(item -> new EquipmentRequestLineResponse(
                         item.equipmentId(),
                         validated.selectedEquipment().get(item.equipmentId()).getName(),
-                        item.quantity())).toList());
+                        item.quantity())).toList(),
+                saved.isRevision());
     }
 
     private record ValidatedItems(

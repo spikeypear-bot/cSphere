@@ -34,6 +34,7 @@ import jakarta.persistence.EntityManager;
 @AutoConfigureMockMvc
 @Transactional
 @Tag("TS06")
+@Tag("EC-NEW3")
 class EquipmentReservationFlowTest {
 
     private static final String START = "2027-03-10T01:00:00Z";
@@ -427,7 +428,8 @@ class EquipmentReservationFlowTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].status").value("rejected"))
                 .andExpect(jsonPath("$[0].rejectReason").value("No suitable units"));
-        assertThat(reservationsFor(eventId)).isEqualTo(1);
+        // EC-NEW3 (D40): a rejected request gives back what was reserved for it.
+        assertThat(reservationsFor(eventId)).isZero();
         assertThat(eventStatus(eventId)).isEqualTo("pending");
     }
 

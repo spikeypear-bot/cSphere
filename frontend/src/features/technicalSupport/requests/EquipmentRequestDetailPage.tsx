@@ -77,7 +77,8 @@ function RequestWorkspace({ request, rejectReason, onDecided }: {
     eventStart: request.eventStart,
     eventEnd: request.eventEnd,
     window: { from: toIso(period.start), to: toIso(period.end) },
-  }) : null), [data, periodValid, period, request.eventId, request.eventStart, request.eventEnd])
+    revision: request.revision ?? false,
+  }) : null), [data, periodValid, period, request.eventId, request.eventStart, request.eventEnd, request.revision])
   const reload = () => setReloadKey((n) => n + 1)
 
   return (
