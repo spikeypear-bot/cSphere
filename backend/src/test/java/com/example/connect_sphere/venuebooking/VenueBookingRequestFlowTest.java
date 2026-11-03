@@ -131,6 +131,32 @@ class VenueBookingRequestFlowTest {
         sync();
     }
 
+    private int activities(UUID eventId, String type) {
+        sync();
+        return jdbc.queryForObject("SELECT count(*) FROM event_request_activity a JOIN event_requests r ON r.request_id = a.request_id "
+                + "WHERE r.event_id = ? AND a.activity_type = ?", Integer.class, eventId, type);
+    }
+
+    @Test
+    @DisplayName("EC03 EC-C2 (happy): a venue added to an event that already has a pending or flagged booking is logged as an additional venue, singly or in a batch")
+    void aVenueAddedToAnExistingArrangementIsLoggedAsAdditional() throws Exception {
+        UUID batchEvent = event(150, "none");
+        submit(batchEvent, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());
+        mvc.perform(post("/api/events/" + batchEvent + "/venue-bookings/batch").with(flow.as("ec1"))
+                .contentType(MediaType.APPLICATION_JSON).content("{\"bookings\":[" + bookingFor(venue(200, List.of())) + "]}"))
+                .andExpect(status().isCreated());
+        assertThat(activities(batchEvent, "venue_booking_requested")).isEqualTo(1);
+        assertThat(activities(batchEvent, "venue_added")).isEqualTo(1);
+
+        UUID flaggedEvent = event(150, "none");
+        submit(flaggedEvent, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());
+        sync();
+        jdbc.update("UPDATE venue_bookings SET status = 'attention' WHERE event_id = ?", flaggedEvent);
+        sync();
+        submit(flaggedEvent, "ec1", bookingFor(venue(200, List.of()))).andExpect(status().isCreated());
+        assertThat(activities(flaggedEvent, "venue_added")).isEqualTo(1);
+    }
+
     @Test
     @DisplayName("EC03 (boundary): notes of exactly 2000 characters are saved in full and the timeline entry is shortened to fit")
     void maximumLengthNotesArePersistedWithoutOverflowingTheActivityTimeline() throws Exception {

@@ -544,8 +544,8 @@ public class VenueBookingRequestService {
                         end, requestedDurations(venue, setup, turnaround))));
         operationalIssues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.copyOf(occupiedPeriods.keySet()))
                 .stream()
-                // An issue without an affected period (V15 allows it) blocks nothing.
-                .filter(issue -> issue.getAffectedFrom() != null && issue.getAffectedUntil() != null
+                // An issue without an affected period blocks nothing; V15 stores both dates or neither.
+                .filter(issue -> issue.getAffectedFrom() != null
                         && issue.getAffectedFrom().isBefore(occupiedPeriods.get(issue.getVenueId()).end())
                         && issue.getAffectedUntil().isAfter(occupiedPeriods.get(issue.getVenueId()).start()))
                 .collect(Collectors.groupingBy(
@@ -600,7 +600,8 @@ public class VenueBookingRequestService {
     /** "15 Feb 2027, 08:00 am – 15 Feb 2027, 06:00 pm (Singapore time): Carpet replacement", as the screens write times. */
     private static String describe(com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Period period) {
         String when = sgt(period.startDateTime()) + " – " + sgt(period.endDateTime()) + " (Singapore time)";
-        return period.reason() == null || period.reason().isBlank() ? when : when + ": " + period.reason();
+        // venue_unavailability.reason is required and nonblank (V20).
+        return when + ": " + period.reason();
     }
 
     private static String sgt(OffsetDateTime time) {
@@ -662,7 +663,7 @@ public class VenueBookingRequestService {
                         b.getSetupDurationMinutes(), b.getTurnaroundDurationMinutes(), b.getTimingNote(), timingEditable),
                 holds == null ? List.of() : holds.history(b.getBookingId()),
                 venueDetails.operatingInformation(),
-                venueDetails.operatingHours() == null ? List.of() : venueDetails.operatingHours(), b.getRequirements(), b.getRequirementId(),
+                venueDetails.operatingHours(), b.getRequirements(), b.getRequirementId(),
                 plan.unresolved(b.getRequirementId()));
     }
 

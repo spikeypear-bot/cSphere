@@ -349,12 +349,37 @@ class MultipleVenueRequirementsTest {
             assertThat(jdbc.queryForObject("SELECT status::text FROM events WHERE event_id=?",String.class,e)).isEqualTo("pending");
         }
     }
-    @Test @DisplayName("VS25 EC10 (happy): cancelling an approved replacement withdraws the requirement it fulfilled")
+    @Test @DisplayName("VS25 EC10 (happy): cancelling an approved, or flagged, replacement withdraws the requirement it fulfilled, and the superseded original cannot be replaced again")
     void cancellingAnApprovedReplacementWithdrawsItsRequirement() {
-        UUID e=event();var old=requests.submit(ec,e,request(venue(100),null,75,10,12));bookings.approve(old.bookingId());
-        var next=requests.submit(ec,e,request(venue(100),old.bookingId(),75,11,13));bookings.approve(next.bookingId());
-        requests.cancel(ec,e,next.bookingId(),"Session removed");entityManager.flush();
-        assertThat(bookingState(next.bookingId())).isEqualTo("cancelled");assertThat(plan.required(next.requirementId())).isFalse();
+        for (String status : List.of("approved","attention")) {
+            UUID e=event();var old=requests.submit(ec,e,request(venue(100),null,75,10,12));bookings.approve(old.bookingId());
+            var next=requests.submit(ec,e,request(venue(100),old.bookingId(),75,11,13));bookings.approve(next.bookingId());
+            entityManager.flush();jdbc.update("UPDATE venue_bookings SET status=?::venue_booking_status WHERE booking_id=?",status,next.bookingId());entityManager.clear();
+            requests.cancel(ec,e,next.bookingId(),"Session removed");entityManager.flush();
+            assertThat(bookingState(next.bookingId())).isEqualTo("cancelled");assertThat(plan.required(next.requirementId())).isFalse();
+            // The original was superseded ("changed") when the replacement was approved; it cannot be replaced again.
+            assertThatThrownBy(() -> requests.submit(ec,e,request(venue(100),old.bookingId(),75,10,12))).isInstanceOf(VenueBookingStateException.class)
+                .hasMessage("This booking is not eligible for a replacement. Refresh this event.");
+        }
+    }
+    @Test @DisplayName("EC10 VS13 (happy): a pending booking that an operational issue now overlaps can be replaced")
+    void affectedPendingBookingCanBeReplaced() {
+        UUID e=event(),v=venue(100);var old=requests.submit(ec,e,request(v,null,75,10,12));entityManager.flush();
+        jdbc.update("INSERT INTO venue_operational_issues(issue_id,venue_id,description,affected_from,affected_until,created_by) VALUES (?,?,?,?,?,?)",
+            UUID.randomUUID(),v,"Ceiling repair",at(10),at(11),vs);
+        var next=requests.submit(ec,e,request(venue(100),old.bookingId(),75,10,12));entityManager.flush();
+        assertThat(bookingState(next.bookingId())).isEqualTo("pending");assertThat(next.replacesBookingId()).isEqualTo(old.bookingId());
+    }
+    @Test @DisplayName("EC-C2 (boundary): a completed or cancelled event still lists its bookings, with their timing no longer editable")
+    void closedEventBookingsAreReadOnly() {
+        for (String closed : List.of("completed","cancelled")) {
+            UUID e=event();var b=requests.submit(ec,e,request(venue(100),null,75,10,12));
+            assertThat(requests.bookingsForEvent(ec,e).get(0).timing().editable()).isTrue();
+            moveTo(e,closed);
+            var listed=requests.bookingsForEvent(ec,e);
+            assertThat(listed).extracting(EventVenueBookingDto::bookingId).containsExactly(b.bookingId());
+            assertThat(listed.get(0).timing().editable()).isFalse();
+        }
     }
     @Test @DisplayName("VS13 EC03 (boundary): only an operational issue that overlaps the event blocks a venue; one without dates, before or after does not")
     void onlyOverlappingIssuesBlockAVenue() throws Exception {
