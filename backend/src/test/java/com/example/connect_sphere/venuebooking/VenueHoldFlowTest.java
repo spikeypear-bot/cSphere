@@ -334,4 +334,79 @@ class VenueHoldFlowTest {
             .hasMessage("The booking period changed since this hold was placed. Release it and review the arrangement.");
         assertThat(statusOf(earlier)).isEqualTo("pending");
     }
+
+    int notices(UUID booking){return jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id=? AND type='venue_hold_expired'",Integer.class,booking);}
+
+    @Test @DisplayName("VS-C3 (negative): the hold history of a booking that does not exist is not found")
+    void historyOfAnUnknownBooking(){
+        UUID unknown=UUID.randomUUID();
+        assertThatThrownBy(()->holds.history(unknown)).isInstanceOf(VenueBookingNotFoundException.class);
+    }
+    @Test @DisplayName("VS-C3 (negative): a pending booking whose event has left Planning cannot be held, and no hold is saved")
+    void eventMustBeInPlanning(){
+        UUID b=booking(venue());
+        jdbc.update("UPDATE events SET status='awaiting_safety_review' WHERE event_id=(SELECT event_id FROM venue_bookings WHERE booking_id=?)",b);
+        assertThatThrownBy(()->holds.create(b,expiry,actor)).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("Holds require a pending booking for an event in Planning.");
+        assertThat(holds.history(b)).isEmpty();
+    }
+    @Test @DisplayName("VS-C3 (conflict): a second hold on a booking is refused while its first is active, and only the first is kept")
+    void oneActiveHoldPerBooking(){
+        UUID b=booking(venue());var first=holds.create(b,expiry,actor);
+        assertThatThrownBy(()->holds.create(b,expiry.plusHours(1),actor)).isInstanceOf(VenueBookingStateException.class)
+            .hasMessage("This booking already has an active tentative hold.");
+        assertThat(holds.history(b)).extracting(VenueHold::holdId).containsExactly(first.holdId());
+    }
+    @Test @DisplayName("VS-C3 (boundary): a legacy booking without its own times is held for its event's times, buffers included")
+    void legacyBookingUsesTheEventTimes(){
+        UUID v=venue(),b=booking(v);
+        jdbc.update("UPDATE venue_bookings SET start_datetime=NULL,end_datetime=NULL,setup_duration_minutes=30,turnaround_duration_minutes=15 WHERE booking_id=?",b);
+        var hold=holds.create(b,expiry,actor);
+        assertThat(hold.reservedStart().toInstant()).isEqualTo(OffsetDateTime.parse("2027-04-01T09:30:00+08:00").toInstant());
+        assertThat(hold.reservedEnd().toInstant()).isEqualTo(OffsetDateTime.parse("2027-04-01T12:15:00+08:00").toInstant());
+    }
+    @Test @DisplayName("VS-C3 (boundary): an elapsed hold not yet cleaned up is settled as expired when a new hold is made, and its coordinator is told once")
+    void elapsedHoldIsSettledBeforeANewOne(){
+        UUID b=booking(venue());var first=holds.create(b,expiry,actor);
+        clock.set(expiry.toInstant().plusSeconds(60));
+        var second=holds.create(b,expiry.plusHours(2),actor);
+        var history=holds.history(b);
+        assertThat(history).extracting(VenueHold::holdId).containsExactlyInAnyOrder(first.holdId(),second.holdId());
+        var settled=history.stream().filter(h->h.holdId().equals(first.holdId())).findFirst().orElseThrow();
+        assertThat(settled.status()).isEqualTo("expired");
+        assertThat(settled.endedAt().toInstant()).isEqualTo(expiry.toInstant());
+        assertThat(history.stream().filter(h->h.holdId().equals(second.holdId())).findFirst().orElseThrow().status()).isEqualTo("active");
+        assertThat(notices(b)).isEqualTo(1);
+        holds.endForBooking(b,actor);
+        assertThat(holds.history(b)).extracting(VenueHold::status).containsExactlyInAnyOrder("expired","released");
+        assertThat(notices(b)).isEqualTo(1);
+    }
+    @Test @DisplayName("VS-C3 (boundary): expiring a hold before its deadline changes nothing and tells no one")
+    void notExpiredBeforeTheDeadline(){
+        UUID b=booking(venue());var hold=holds.create(b,expiry,actor);
+        clock.set(expiry.toInstant().minusSeconds(1));
+        holds.expire(hold.holdId());
+        assertThat(holds.history(b).getFirst().status()).isEqualTo("active");
+        assertThat(holds.history(b).getFirst().endedAt()).isNull();
+        assertThat(notices(b)).isZero();
+    }
+    @Test @DisplayName("VS-C3 VS25 (boundary): ending a booking's holds leaves an already released hold as it was")
+    void endingLeavesReleasedHoldsAlone(){
+        UUID b=booking(venue());var hold=holds.create(b,expiry,actor);
+        holds.release(hold.holdId(),actor);
+        var released=holds.history(b).getFirst();
+        clock.set(Instant.parse("2027-03-01T00:10:00Z"));
+        holds.endForBooking(b,actor);
+        assertThat(holds.history(b)).singleElement().satisfies(h->{
+            assertThat(h.status()).isEqualTo("released");
+            assertThat(h.endedAt()).isEqualTo(released.endedAt());
+        });
+    }
+    @Test @DisplayName("VS-C3 VS-C4 schedule (boundary): a calendar range on another day shows no hold; the hold's own day shows it")
+    void scheduleRangeShowsOnlyOverlappingHolds(){
+        UUID v=venue(),b=booking(v);var hold=holds.create(b,expiry,actor);
+        assertThat(availability.schedule(v,OffsetDateTime.parse("2027-04-02T00:00:00+08:00"),OffsetDateTime.parse("2027-04-03T00:00:00+08:00")).holds()).isEmpty();
+        assertThat(availability.schedule(v,OffsetDateTime.parse("2027-04-01T00:00:00+08:00"),OffsetDateTime.parse("2027-04-02T00:00:00+08:00")).holds())
+            .extracting(VenueHold::holdId).containsExactly(hold.holdId());
+    }
 }

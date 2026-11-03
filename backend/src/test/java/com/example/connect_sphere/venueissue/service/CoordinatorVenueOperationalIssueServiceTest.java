@@ -100,4 +100,30 @@ class CoordinatorVenueOperationalIssueServiceTest {
         verify(issues, org.mockito.Mockito.never())
                 .findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(any());
     }
+
+    @Test
+    @DisplayName("VS13 (boundary): a legacy booking without its own times, or one starting after the issue ends, is not an overlapping event")
+    void untimedAndLaterBookingsDoNotOverlap() {
+        var from = OffsetDateTime.parse("2027-03-10T09:00:00+08:00");
+        var untimed = mock(VenueBookingRecordRepository.CoordinatorBooking.class);
+        when(untimed.getVenueId()).thenReturn(venueId);
+        var noEnd = mock(VenueBookingRecordRepository.CoordinatorBooking.class);
+        when(noEnd.getVenueId()).thenReturn(venueId);
+        when(noEnd.getStartDatetime()).thenReturn(from);
+        var later = mock(VenueBookingRecordRepository.CoordinatorBooking.class);
+        when(later.getVenueId()).thenReturn(venueId);
+        when(later.getStartDatetime()).thenReturn(from.plusHours(3));
+        when(later.getEndDatetime()).thenReturn(from.plusHours(4));
+        when(bookings.findApprovedForCoordinator(coordinatorId, VenueBookingStatus.approved))
+                .thenReturn(List.of(untimed, noEnd, later));
+        var venue = mock(Venue.class);
+        when(venue.getVenueId()).thenReturn(venueId);
+        when(venue.getVenueAddress()).thenReturn("1 Harbour Road");
+        when(venues.findAllById(any())).thenReturn(List.of(venue));
+        when(issues.findByVenueIdInOrderByAffectedFromAscCreatedAtDesc(List.of(venueId))).thenReturn(List.of(
+                new VenueOperationalIssue(venueId, "Power cut", from, from.plusHours(2), coordinatorId)));
+
+        assertThat(service.listForCoordinator(coordinatorId)).singleElement()
+                .satisfies(issue -> assertThat(issue.overlappingEvents()).isEmpty());
+    }
 }

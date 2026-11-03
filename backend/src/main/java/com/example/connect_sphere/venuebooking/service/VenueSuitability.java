@@ -33,14 +33,15 @@ public record VenueSuitability(
     }
 
     public static VenueSuitability of(Event event, Venue venue) {
-        List<String> required = event.getAccessibilityNeeds() == null ? List.of()
-                : event.getAccessibilityNeeds().stream().filter(need -> !"none".equals(need)).toList();
-        List<String> offered = venue.getVenueAccessibilities() == null ? List.of() : venue.getVenueAccessibilities();
-        List<String> requiredFacilities = event.getRequiredFacilities() == null ? List.of() : event.getRequiredFacilities();
-        List<String> offeredFacilities = venue.getVenueFacilities() == null ? List.of() : venue.getVenueFacilities();
+        // Event lists are never null: V2/V17 NOT NULL DEFAULT '{}', and proposals and per-room copies default to [].
+        List<String> required = event.getAccessibilityNeeds().stream().filter(need -> !"none".equals(need)).toList();
+        // Venues come from the database: V2 venue_accessibilities and venue_facilities NOT NULL, V6 venue_capacity NOT NULL.
+        List<String> offered = venue.getVenueAccessibilities();
+        List<String> requiredFacilities = event.getRequiredFacilities();
+        List<String> offeredFacilities = venue.getVenueFacilities();
         return new VenueSuitability(
                 event.getExpectedAttendance() == null ? 0 : event.getExpectedAttendance(),
-                venue.getVenueCapacity() == null ? 0 : venue.getVenueCapacity(),
+                venue.getVenueCapacity(),
                 required.stream().filter(need -> !offered.contains(need)).toList(),
                 requiredFacilities.stream().filter(facility -> !offeredFacilities.contains(facility)).toList());
     }

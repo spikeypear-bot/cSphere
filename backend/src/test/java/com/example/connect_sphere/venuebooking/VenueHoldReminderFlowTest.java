@@ -303,4 +303,13 @@ class VenueHoldReminderFlowTest {
         assertThat(reminders(b)).isEqualTo(1);
         assertThat(remindedAt(hold.holdId()).toInstant()).isEqualTo(T0);
     }
+
+    @Test @DisplayName("EC-C3 (negative): a hold on an event with no coordinator gets no reminder and stays unreminded")
+    void noCoordinatorNoReminder(){
+        UUID b=booking(venue());var hold=hold(b,Duration.ofHours(3));
+        jdbc.update("UPDATE events SET coordinator_id=NULL WHERE event_id=?",eventOf(b));
+        assertThat(holds.remind(hold.holdId())).isFalse();
+        assertThat(reminders(b)).isZero();
+        assertThat(remindedAt(hold.holdId())).isNull();
+    }
 }

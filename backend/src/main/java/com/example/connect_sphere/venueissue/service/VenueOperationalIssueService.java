@@ -118,7 +118,8 @@ public class VenueOperationalIssueService {
     private static List<OverlappingEventDto> overlappingEvents(
             VenueOperationalIssue issue,
             List<VenueBookingRecordRepository.CoordinatorBooking> managedBookings) {
-        if (issue.getAffectedFrom() == null || issue.getAffectedUntil() == null) {
+        // V15's CHECK stores both affected times or neither.
+        if (issue.getAffectedFrom() == null) {
             return List.of();
         }
         return managedBookings.stream()

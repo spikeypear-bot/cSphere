@@ -99,7 +99,6 @@ public class VenueSearchService {
     }
 
     private static boolean hasFacilities(Venue venue, List<String> requiredFacilities) {
-        List<String> offered = venue.getVenueFacilities() == null ? List.of() : venue.getVenueFacilities();
-        return offered.containsAll(requiredFacilities);
+        return venue.getVenueFacilities().containsAll(requiredFacilities); // V2: NOT NULL DEFAULT '{}'
     }
 }

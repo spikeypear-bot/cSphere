@@ -662,4 +662,56 @@ class VenueUnavailabilityTest {
             if (created) { assertThat(availability.affected(b)).isTrue(); assertThat(statusOf(b)).isEqualTo("pending"); }
         }
     }
+
+    @Test @DisplayName("VS01 (negative): releasing a period needs a reason of 1 to 2000 characters; a refused release leaves the period in force")
+    void releaseNeedsAReasonOfAtMost2000Characters() {
+        UUID v = venue();
+        Period maintenance = record(v, period("10:00", "11:00"));
+        for (Release invalid : java.util.Arrays.asList(null, new Release(null), new Release("  "), new Release("x".repeat(2001))))
+            assertThatThrownBy(() -> availability.release(v, maintenance.unavailabilityId(), actor, invalid))
+                    .isInstanceOf(InvalidVenueBookingException.class)
+                    .hasMessage("Explain the release in 1 to 2000 characters.");
+        assertThat(availability.list(v)).containsExactly(maintenance);
+        availability.release(v, maintenance.unavailabilityId(), actor, new Release("x".repeat(2000)));
+        assertThat(availability.list(v)).isEmpty();
+    }
+
+    @Test @DisplayName("VS01 (boundary): the calendar accepts a range of exactly 93 days and refuses one with only an end or one second longer")
+    void calendarRangeLimits() {
+        UUID v = venue();
+        OffsetDateTime start = OffsetDateTime.parse("2027-04-01T00:00:00+08:00"), end = start.plusDays(93);
+        assertThat(availability.schedule(v, start, end).bookings()).isEmpty();
+        for (OffsetDateTime[] range : new OffsetDateTime[][] {{null, end}, {start, end.plusSeconds(1)}})
+            assertThatThrownBy(() -> availability.schedule(v, range[0], range[1]))
+                    .isInstanceOf(InvalidVenueBookingException.class)
+                    .hasMessage("Provide both start and end, with a positive schedule range of at most 93 days.");
+    }
+
+    @Test @DisplayName("VS01 VS-C1 (negative): a period affecting bookings is not saved unless staff confirm every affected booking, and nothing changes")
+    void everyAffectedBookingMustBeConfirmed() {
+        UUID v = venue(), first = booking(v, "approved"), second = booking(v, "pending");
+        Request r = period("10:00", "11:00");
+        Preview p = availability.preview(v, r);
+        assertThat(p.affectedBookings()).extracting(Booking::bookingId).containsExactlyInAnyOrder(first, second);
+        for (List<UUID> acknowledged : java.util.Arrays.asList(null, List.of(first)))
+            assertThatThrownBy(() -> availability.create(v, actor,
+                    new Request(r.startDateTime(), r.endDateTime(), r.reason(), acknowledged, p.previewToken())))
+                    .isInstanceOf(VenueBookingStateException.class)
+                    .hasMessage("Affected bookings changed or need confirmation. Review the affected bookings again.");
+        assertThat(availability.list(v)).isEmpty();
+        assertThat(availability.affected(first)).isFalse();
+        assertThat(availability.affected(second)).isFalse();
+        assertThat(jdbc.queryForObject("SELECT count(*) FROM notifications WHERE venue_booking_id IN (?,?)", Integer.class, first, second)).isZero();
+    }
+
+    @Test @DisplayName("VS01 EC-C2 (boundary): a venue is unavailable only for times that overlap a recorded period, buffers included")
+    void unavailableOnlyWhenOverlapping() {
+        UUID v = venue();
+        record(v, period("10:00", "11:00"));
+        assertThat(availability.unavailable(v, period("10:30", "12:00").startDateTime(), period("10:30", "12:00").endDateTime())).isTrue();
+        availability.updateSettings(v, new Settings(0, 0));
+        assertThat(availability.unavailable(v, period("11:00", "12:00").startDateTime(), period("11:00", "12:00").endDateTime())).isFalse();
+        availability.updateSettings(v, new Settings(30, 0));
+        assertThat(availability.unavailable(v, period("11:00", "12:00").startDateTime(), period("11:00", "12:00").endDateTime())).isTrue();
+    }
 }
