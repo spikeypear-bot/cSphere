@@ -121,7 +121,7 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
     expect(fetch.mock.calls.some(([url]) => String(url).endsWith('/submit'))).toBe(false)
   })
 
-  it('lets the organiser move through every step without filling any field in', async () => {
+  it('EO01 (happy): keeps draft and exit actions available throughout the incomplete wizard', async () => {
     const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input)
       if (url === '/api/equipment/catalogue') return jsonResponse(200, [])
@@ -163,28 +163,40 @@ describe('EventRequestWizardPage — EO01 (save a draft) and EO02 (submit)', () 
 
     // Step 1 of 5: Basics — deliberately left blank.
     expect(screen.getByLabelText('Event name')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save as draft' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
     // Step 2: Schedule & attendance — also left blank.
     expect(await screen.findByLabelText('Expected attendance')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save as draft' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
     // Step 3: Venue & accessibility.
     expect(await screen.findByLabelText('Venue requirements')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save as draft' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
     // Step 4: Equipment & registration.
     expect(await screen.findByRole('group', { name: 'Equipment requirements' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save as draft' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
 
     // Step 5: Review — reaching it at all, with nothing filled in, is EO01's
     // "can save an event request as a draft while required fields are
     // incomplete" acceptance criterion.
     expect(await screen.findByRole('button', { name: /submit for review/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Save as draft' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Exit' })).toBeInTheDocument()
 
     // Every intermediate save was a draft save, never a rejection.
     const draftSaves = fetchMock.mock.calls.filter(([, init]) => init?.method === 'POST' || init?.method === 'PUT')
     expect(draftSaves.length).toBeGreaterThan(0)
+    await user.click(screen.getByRole('button', { name: 'Exit' }))
+    expect(await screen.findByText('Organiser home')).toBeInTheDocument()
   })
 
   it('shows exactly the missing fields the backend reports when submitting an incomplete request', async () => {

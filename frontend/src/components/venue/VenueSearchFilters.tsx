@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, SelectHTMLAttributes } from 'react'
 import { venueFacilities, venueFacilityLabels, type Facility } from '../../types/venue'
 import './VenueSearchFilters.css'
 
@@ -7,6 +7,13 @@ export function VenueSearchField({ label, className, ...input }: InputHTMLAttrib
   return <label className={`venue-search-field${className ? ` ${className}` : ''}`}>
     <span>{label}</span>
     <input {...input} />
+  </label>
+}
+
+export function VenueSearchSelect({ label, className, children, ...select }: SelectHTMLAttributes<HTMLSelectElement> & { label: string }) {
+  return <label className={`venue-search-field${className ? ` ${className}` : ''}`}>
+    <span>{label}</span>
+    <select {...select}>{children}</select>
   </label>
 }
 

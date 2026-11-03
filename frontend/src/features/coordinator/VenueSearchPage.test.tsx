@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { VenueDto } from '../../types/venue'
+import { VenueSearchSelect } from '../../components/venue/VenueSearchFilters'
 import { VenueSearchPage } from './VenueSearchPage'
 
 const start = '2027-03-10T09:00'
@@ -21,6 +22,14 @@ const match: VenueDto = {
   operatingInformation: 'Legacy text must never be advertised',
   operatingHours: [{dayOfWeek:3,openTime:'10:30',closeTime:'23:30'}],
   additionalInformation: null,
+}
+
+const accessibleVenue: VenueDto = {
+  ...match,
+  venueId: 'venue-2',
+  venueAddress: '2 Garden Road',
+  supportedLayouts: ['boardroom'],
+  venueAccessibilities: ['accessible_parking'],
 }
 
 function searchUrl(capacity = '50') {
@@ -95,6 +104,37 @@ describe('EC04 VenueSearchPage', () => {
     await user.click(screen.getByRole('button', { name: 'Search venues' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('No matching venues found.')
+  })
+
+  it('EC04 (happy): filters available venues by selected layout and accessibility', async () => {
+    stubApi({ [`GET ${searchUrl()}`]: () => jsonResponse(200, [match, accessibleVenue]) })
+    const user = userEvent.setup()
+    renderPage()
+    enterPeriod()
+    fireEvent.change(screen.getByLabelText('Required capacity'), { target: { value: '50' } })
+    await user.click(screen.getByLabelText('Stage'))
+    await user.click(screen.getByLabelText('Projection'))
+    await user.click(screen.getByRole('button', { name: 'Search venues' }))
+
+    expect(await screen.findByRole('button', { name: '1 Harbour Road' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Supported layout'), 'boardroom')
+    expect(screen.queryByRole('button', { name: '1 Harbour Road' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
+
+    await user.selectOptions(screen.getByLabelText('Accessibility provision'), 'accessible_parking')
+    expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
+  })
+
+  it('EC04 (happy): supports custom styling classes on venue dropdown filters', () => {
+    render(
+      <VenueSearchSelect label="Test filter" className="custom-filter" value="" onChange={() => {}}>
+        <option value="">Any</option>
+      </VenueSearchSelect>,
+    )
+
+    expect(screen.getByLabelText('Test filter').closest('label')).toHaveClass('venue-search-field', 'custom-filter')
   })
 
   it('rejects invalid event times without requesting or showing stale results', async () => {

@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -14,6 +15,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -25,8 +27,10 @@ import com.example.connect_sphere.activity.service.ActivityService;
 import com.example.connect_sphere.event.entity.Event;
 import com.example.connect_sphere.event.entity.EventStatus;
 import com.example.connect_sphere.event.repository.EventRepository;
+import com.example.connect_sphere.event.service.EventNotFoundException;
 import com.example.connect_sphere.eventrequest.entity.EventRequest;
 import com.example.connect_sphere.eventrequest.repository.EventRequestRepository;
+import com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException;
 import com.example.connect_sphere.notification.service.NotificationService;
 import com.example.connect_sphere.user.entity.User;
 import com.example.connect_sphere.user.entity.UserRole;
@@ -34,6 +38,7 @@ import com.example.connect_sphere.user.repository.UserRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.mapper.VenueMapper;
 import com.example.connect_sphere.venue.repository.VenueRepository;
+import com.example.connect_sphere.venue.service.VenueNotFoundException;
 import com.example.connect_sphere.venuebooking.dto.SubmitVenueBookingRequest;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingRecord;
 import com.example.connect_sphere.venuebooking.entity.VenueBookingStatus;
@@ -113,6 +118,233 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 AC1 (negative): refuses a venue request after the event leaves Planning")
+    void refusesSubmissionAfterEventLeavesPlanning() {
+        Event event = event(150, List.of("none"));
+        event.setStatus(EventStatus.confirmed);
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(UUID.randomUUID(), null, null)))
+                .isInstanceOf(VenueBookingStateException.class)
+                .hasMessageContaining("Confirmed");
+
+        verifySubmissionWasNotPersisted();
+        verify(venues, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC03 AC1 (negative): refuses a venue request for an unknown event")
+    void refusesSubmissionForUnknownEvent() {
+        UUID eventId = UUID.randomUUID();
+        when(events.findForUpdate(eventId)).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, eventId,
+                new SubmitVenueBookingRequest(UUID.randomUUID(), null, null)))
+                .isInstanceOf(EventNotFoundException.class);
+
+        verifySubmissionWasNotPersisted();
+        verify(bookings, never()).findForEvent(eventId);
+    }
+
+    @Test
+    @DisplayName("EC03 AC2 (negative): requires a venue selection before submission")
+    void refusesSubmissionWithoutVenueSelection() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(null, null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Select a venue");
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(), null))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Select a venue");
+
+        verifySubmissionWasNotPersisted();
+        verify(venues, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC03 AC5 (negative): refuses a venue whose capacity is below expected attendance")
+    void refusesVenueBelowExpectedAttendance() {
+        Event event = event(151, List.of("none"));
+        Venue venue = venue(150, List.of());
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Expected attendance (151) exceeds this venue's capacity (150)");
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 AC6 (negative): refuses a venue missing a required facility")
+    void refusesVenueMissingRequiredFacility() {
+        Event event = event(100, List.of("none"));
+        event.setRequiredFacilities(List.of("stage"));
+        Venue venue = venue(150, List.of());
+        venue.setVenueFacilities(List.of());
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Stage");
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 AC6 (negative): requires a justification for missing accessibility")
+    void requiresJustificationForMissingAccessibility() {
+        Event event = event(100, List.of("step_free_access"));
+        Venue venue = venue(150, List.of());
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Step-free access")
+                .hasMessageContaining("Explain why");
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 AC9 (negative): refuses a second active booking for the same event and venue")
+    void refusesDuplicateActiveBookingForEventAndVenue() {
+        Event event = event(150, List.of("none"));
+        Venue venue = venue(150, List.of());
+        VenueBookingRecord existing = new VenueBookingRecord();
+        existing.setBookingId(UUID.randomUUID());
+        existing.setEventId(event.getEventId());
+        existing.setVenueId(venue.getVenueId());
+        existing.setStatus(VenueBookingStatus.pending);
+        when(bookings.findForEvent(event.getEventId())).thenReturn(List.of(existing));
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("already been added to this event");
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 AC10 (negative): rejects booking notes longer than 2000 characters")
+    void rejectsBookingNotesOverTheLimit() {
+        Event event = event(150, List.of("none"));
+        Venue venue = venue(150, List.of());
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), "x".repeat(2001), null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("2000 characters");
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 AC10 (boundary): accepts booking notes at the 2000-character limit")
+    void acceptsBookingNotesAtTheLimit() {
+        Event event = event(150, List.of("none"));
+        Venue venue = venue(150, List.of());
+        String notes = "x".repeat(2000);
+
+        service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), notes, null));
+
+        ArgumentCaptor<VenueBookingRecord> booking = ArgumentCaptor.forClass(VenueBookingRecord.class);
+        verify(bookings).save(booking.capture());
+        assertThat(booking.getValue().getBookingNotes()).hasSize(2000);
+    }
+
+    @Test
+    @DisplayName("EC03 AC7 (conflict): refuses a venue with a recorded unavailable period")
+    void recordedUnavailablePeriodBlocksSubmission() {
+        Event event = event(150, List.of("none"));
+        Venue venue = venue(150, List.of());
+        var period = new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Period(
+                UUID.randomUUID(), venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime(),
+                "Emergency maintenance", OffsetDateTime.now());
+        when(availability.unavailablePeriods(eq(venue.getVenueId()), any(), any(), any()))
+                .thenReturn(List.of(period));
+
+        assertThatThrownBy(() -> service.submit(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Emergency maintenance");
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC03 AC16 (negative): refuses submission by a coordinator not assigned to the event")
+    void refusesSubmissionFromUnassignedCoordinator() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submit(UUID.randomUUID(), event.getEventId(),
+                new SubmitVenueBookingRequest(UUID.randomUUID(), null, null)))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+        assertThatThrownBy(() -> service.submit(null, event.getEventId(),
+                new SubmitVenueBookingRequest(UUID.randomUUID(), null, null)))
+                .isInstanceOf(NotAssignedCoordinatorException.class);
+
+        verify(bookings, never()).findForEvent(event.getEventId());
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
+    @DisplayName("EC-C2 AC8 (failure): rejects an empty venue batch without persisting anything")
+    void rejectsEmptyVenueBatch() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(), null))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Add at least one venue");
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(null)))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Add at least one venue");
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(List.of())))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Add at least one venue");
+
+        verifySubmissionWasNotPersisted();
+        verify(venues, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC-C2 AC8 (failure): rejects a batch containing a booking without a venue")
+    void rejectsVenueBatchWithMissingSelection() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(java.util.Collections.singletonList(null))))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Select a venue for every booking");
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(List.of(new SubmitVenueBookingRequest(null, null, null)))))
+                .isInstanceOf(InvalidVenueBookingException.class)
+                .hasMessageContaining("Select a venue for every booking");
+
+        verifySubmissionWasNotPersisted();
+        verify(venues, never()).findForUpdate(any());
+    }
+
+    @Test
+    @DisplayName("EC-C2 AC8 (failure): rejects an unknown venue without persisting the batch")
+    void rejectsVenueBatchWithUnknownVenue() {
+        Event event = event(150, List.of("none"));
+
+        assertThatThrownBy(() -> service.submitBatch(COORDINATOR, event.getEventId(),
+                new SubmitVenueBookingRequest.Batch(List.of(
+                        new SubmitVenueBookingRequest(UUID.randomUUID(), null, null)))))
+                .isInstanceOf(VenueNotFoundException.class);
+
+        verifySubmissionWasNotPersisted();
+    }
+
+    @Test
     void coordinatorBookingHistoryIncludesRejectedAlternativeSuggestions() {
         Event event = event(150, List.of("none"));
         Venue requestedVenue = venue(150, List.of());
@@ -178,6 +410,7 @@ class VenueBookingRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EC03 AC7 (conflict): refuses a venue during an overlapping operational issue")
     void operationalIssueOverlappingEventBlocksSubmission() {
         Event event = event(10, List.of());
         Venue venue = venue(50, List.of());
@@ -192,6 +425,7 @@ class VenueBookingRequestServiceTest {
                 new SubmitVenueBookingRequest(venue.getVenueId(), null, null)))
                 .isInstanceOf(InvalidVenueBookingException.class)
                 .hasMessageContaining("Emergency maintenance");
+        verifySubmissionWasNotPersisted();
     }
 
     private Event event(int attendance, List<String> accessibility) {
@@ -226,5 +460,12 @@ class VenueBookingRequestServiceTest {
         user.setUsername("vs");
         user.setRole(UserRole.vs);
         return user;
+    }
+
+    private void verifySubmissionWasNotPersisted() {
+        verify(bookings, never()).save(any());
+        verify(activityService, never()).record(any());
+        verify(notificationService, never()).createVenueBookingRequestedNotifications(
+                any(), any(), any(), any());
     }
 }

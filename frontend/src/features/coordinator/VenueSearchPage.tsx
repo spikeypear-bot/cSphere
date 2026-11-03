@@ -7,8 +7,12 @@ import { PageHeader } from '../../components/ui/PageHeader'
 import { RowLink } from '../../components/ui/RowLink'
 import { VenueDetails } from '../../components/venue/VenueDetails'
 import { apiClient, ApiClientError } from '../../lib/apiClient'
-import { venueFacilityLabels, type Facility, type VenueDto } from '../../types/venue'
-import { VenueFacilitiesFilter, VenueSearchField } from '../../components/venue/VenueSearchFilters'
+import {
+  venueAccessibilities, venueAccessibilityLabels, venueFacilityLabels, venueLayouts, venueLayoutLabels,
+  type Facility, type VenueDto, type VenueLayout,
+} from '../../types/venue'
+import type { AccessibilityFeature } from '../../types/eventRequest'
+import { VenueFacilitiesFilter, VenueSearchField, VenueSearchSelect } from '../../components/venue/VenueSearchFilters'
 import './VenueSearchPage.css'
 import { BookingTimingSummary } from '../../components/BookingTimingSummary'
 import { occupiedPeriod } from '../../lib/bookingTiming'
@@ -38,13 +42,19 @@ export function VenueSearchPage() {
   const [endDatetime, setEndDatetime] = useState('')
   const [capacity, setCapacity] = useState('')
   const [facilities, setFacilities] = useState<Facility[]>([])
+  const [layoutFilter, setLayoutFilter] = useState<VenueLayout | ''>('')
+  const [accessibilityFilter, setAccessibilityFilter] = useState<AccessibilityFeature | ''>('')
   const [venues, setVenues] = useState<VenueDto[] | null>(null)
   const [validationError, setValidationError] = useState<string | null>(null)
   const [searchError, setSearchError] = useState<string | null>(null)
   const [searching, setSearching] = useState(false)
   const [textQuery, setTextQuery] = useState('')
   const [mapFocusId, setMapFocusId] = useState<string>()
-  const visible = useMemo(() => (venues ?? []).filter(venue => venueMatchesSearch(venue, textQuery)), [venues, textQuery])
+  const visible = useMemo(() => (venues ?? []).filter(venue =>
+    venueMatchesSearch(venue, textQuery)
+    && (!layoutFilter || venue.supportedLayouts.includes(layoutFilter))
+    && (!accessibilityFilter || venue.venueAccessibilities.includes(accessibilityFilter)),
+  ), [venues, textQuery, layoutFilter, accessibilityFilter])
   // The venue whose details window is open; looked up live so a refresh shows in it.
   const [detailsId, setDetailsId] = useState<string | null>(null)
   const details = visible.find(venue => venue.venueId === detailsId) ?? null
@@ -71,6 +81,14 @@ export function VenueSearchPage() {
       ? [...current, facility]
       : current.filter(value => value !== facility))
     clearSearch()
+  }
+
+  function updateLayoutFilter(value: string) {
+    setLayoutFilter(venueLayouts.find(layout => layout === value) ?? '')
+  }
+
+  function updateAccessibilityFilter(value: string) {
+    setAccessibilityFilter(venueAccessibilities.find(feature => feature === value) ?? '')
   }
 
   async function search(event: FormEvent<HTMLFormElement>) {
@@ -150,6 +168,21 @@ export function VenueSearchPage() {
           />
 
           <VenueFacilitiesFilter selected={facilities} disabled={searching} onChange={updateFacilities} />
+
+          <div className="venue-search__filters" role="group" aria-label="Additional venue filters">
+            <VenueSearchSelect label="Supported layout" value={layoutFilter}
+              onChange={event => updateLayoutFilter(event.target.value)}>
+              <option value="">Any layout</option>
+              {venueLayouts.map(layout => <option key={layout} value={layout}>{venueLayoutLabels[layout]}</option>)}
+            </VenueSearchSelect>
+            <VenueSearchSelect label="Accessibility provision" value={accessibilityFilter}
+              onChange={event => updateAccessibilityFilter(event.target.value)}>
+              <option value="">Any accessibility provision</option>
+              {venueAccessibilities.map(feature => (
+                <option key={feature} value={feature}>{venueAccessibilityLabels[feature]}</option>
+              ))}
+            </VenueSearchSelect>
+          </div>
 
           <VenueSearchField label="Search by address or details" type="search" value={textQuery}
             placeholder="Venue name, address or details" onChange={event => setTextQuery(event.target.value)} />
