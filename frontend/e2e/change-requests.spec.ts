@@ -200,7 +200,7 @@ test('EC-NEW3 AC32, AC33 (happy): a change to the equipment requirements flags t
     expect(after.lines).toHaveLength(1)
     expect(await reservationWindows(request, eventId)).toEqual(before)
     await coordinator.goto(`/coordinator/events/${eventId}`)
-    await expect(coordinator.getByRole('heading', { name: 'Equipment' })).toBeVisible()
+    await expect(coordinator.getByRole('heading', { name: 'Equipment', level: 2 })).toBeVisible()
     await expect(coordinator.getByRole('link', { name: 'Resolve equipment request' })).toHaveCount(0)
     await expect(coordinator.getByText(/The equipment request needs attention/)).toHaveCount(0)
   })
