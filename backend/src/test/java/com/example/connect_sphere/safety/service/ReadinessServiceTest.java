@@ -327,4 +327,88 @@ class ReadinessServiceTest {
         service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("reject", " " + "x".repeat(2000) + " ", items));
         verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.REJECT, "x".repeat(2000), items);
     }
+
+    @Test
+    @DisplayName("SO-C3 (negative): an update with no body, or that does not say whether the item is ticked, is refused and nothing is saved")
+    void anUpdateMustSayWhetherTheItemIsTicked() {
+        for (UpdateReadinessItemRequest input : new UpdateReadinessItemRequest[] {
+                null, new UpdateReadinessItemRequest(null, "Checked")}) {
+            assertThatThrownBy(() -> service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking", input))
+                    .isInstanceOf(InvalidReadinessUpdateException.class)
+                    .hasMessage("Provide whether the readiness item is checked.");
+        }
+        verify(itemStates, never()).save(any());
+    }
+
+    @Test
+    @DisplayName("SO-C3 (boundary): a missing note is saved as empty; a note of 2,001 characters is refused and nothing is saved")
+    void theChecklistNoteIsOptionalAndAtMost2000Characters() {
+        assertThatThrownBy(() -> service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking",
+                new UpdateReadinessItemRequest(true, "x".repeat(2001))))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("Checklist notes must be 2000 characters or fewer.");
+        verify(itemStates, never()).save(any());
+
+        service.updateItem(SAFETY_OFFICER_ID, EVENT_ID, "venue_booking", new UpdateReadinessItemRequest(true, null));
+
+        ArgumentCaptor<ReadinessItemState> state = ArgumentCaptor.forClass(ReadinessItemState.class);
+        verify(itemStates).save(state.capture());
+        assertThat(state.getValue().getNote()).isEmpty();
+        assertThat(state.getValue().isChecked()).isTrue();
+    }
+
+    @Test
+    @DisplayName("SO-C3 (boundary): an item saved but never ticked names who last updated it and no one as having ticked it")
+    void anItemNeverTickedNamesNoChecker() {
+        com.example.connect_sphere.user.entity.User officer = new com.example.connect_sphere.user.entity.User();
+        officer.setUserId(SAFETY_OFFICER_ID);
+        officer.setUsername("so1");
+        when(users.findById(SAFETY_OFFICER_ID)).thenReturn(Optional.of(officer));
+        when(itemStates.findByEventId(EVENT_ID)).thenReturn(List.of(new ReadinessItemState(
+                EVENT_ID, "venue_booking", false, "Waiting for the floor plan", SAFETY_OFFICER_ID, OffsetDateTime.now())));
+
+        ReadinessItemDto item = service.forSafetyOfficer(EVENT_ID).items().get(0);
+
+        assertThat(item.checked()).isFalse();
+        assertThat(item.note()).isEqualTo("Waiting for the floor plan");
+        assertThat(item.checkedBy()).isNull();
+        assertThat(item.checkedAt()).isNull();
+        assertThat(item.updatedBy()).isEqualTo("so1");
+    }
+
+    @Test
+    @DisplayName("SO-C4 (negative): a decision with no body, no decision or an unknown decision is refused and nothing is decided")
+    void theDecisionMustBeOneOfTheThree() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        for (SafetyApprovalRequest input : new SafetyApprovalRequest[] {null, new SafetyApprovalRequest(null, "Ready")}) {
+            assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID, input))
+                    .isInstanceOf(InvalidReadinessUpdateException.class)
+                    .hasMessage("Choose approve, request changes or reject.");
+        }
+        assertThatThrownBy(() -> service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest("maybe", "Ready")))
+                .isInstanceOf(InvalidReadinessUpdateException.class)
+                .hasMessage("Decision must be approve, request_changes or reject.");
+
+        assertNothingDecided();
+    }
+
+    @Test
+    @DisplayName("SO-C4 (happy): an approval without a note is recorded with no note")
+    void anApprovalNeedsNoNote() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.awaiting_safety_review);
+        everyItemChecked();
+
+        service.review(SAFETY_OFFICER_ID, EVENT_ID, new SafetyApprovalRequest(" Approve ", null));
+
+        verify(lifecycle).recordSafetyDecision(SAFETY_OFFICER_ID, EVENT_ID, SafetyDecision.APPROVE, null, List.of());
+    }
+
+    @Test
+    @DisplayName("SO-C3 (negative): the checklist of a cancelled event reads as not found")
+    void aCancelledEventHasNoChecklist() {
+        event.setStatus(com.example.connect_sphere.event.entity.EventStatus.cancelled);
+
+        assertThatThrownBy(() -> service.forSafetyOfficer(EVENT_ID))
+                .isInstanceOf(com.example.connect_sphere.event.service.EventNotFoundException.class);
+    }
 }
