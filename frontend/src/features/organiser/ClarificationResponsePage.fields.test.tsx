@@ -70,8 +70,8 @@ describe('EO26 — answering a clarification, every field and failure', () => {
     renderPage()
 
     const venue = await screen.findByLabelText('Venue requirements')
-    await user.clear(venue)
-    await user.type(venue, 'Two rooms')
+    fireEvent.change(venue, { target: { value: '' } })
+    fireEvent.change(venue, { target: { value: 'Two rooms' } })
     await user.click(screen.getByRole('button', { name: 'Wheelchair support' }))
     expect(screen.getByRole('button', { name: 'No accessibility requirements needed' })).toHaveAttribute('aria-pressed', 'false')
     await user.click(screen.getByRole('button', { name: 'No accessibility requirements needed' }))
@@ -85,7 +85,7 @@ describe('EO26 — answering a clarification, every field and failure', () => {
     await user.click(screen.getByLabelText('Attendees need to register'))
     fireEvent.change(screen.getByLabelText('Registration capacity'), { target: { value: '120' } })
     fireEvent.change(screen.getByLabelText('Registration opens'), { target: { value: '2027-03-01T09:00' } })
-    await user.type(screen.getByLabelText('Attendee instructions'), 'Bring ID')
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID' } })
     await user.click(screen.getByRole('button', { name: 'Save changes' }))
 
     expect(await screen.findByRole('status')).toHaveTextContent('Your request is still with you')
@@ -95,7 +95,7 @@ describe('EO26 — answering a clarification, every field and failure', () => {
       attendeeInstructions: 'Bring ID',
     })
     // Editing again means it is no longer "saved".
-    await user.type(screen.getByLabelText('Attendee instructions'), '.')
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID.' } })
     expect(screen.queryByText(/Your request is still with you/)).not.toBeInTheDocument()
   })
 
@@ -129,7 +129,7 @@ describe('EO26 — answering a clarification, every field and failure', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Your changes could not be saved.')
     expect(screen.queryByText(/Your request is still with you/)).not.toBeInTheDocument()
 
-    await user.type(screen.getByLabelText(/Your reply to the coordinator/), 'Two rooms')
+    fireEvent.change(screen.getByLabelText(/Your reply to the coordinator/), { target: { value: 'Two rooms' } })
     await user.click(screen.getByRole('button', { name: 'Save and resubmit' }))
     expect(await screen.findByText('The request could not be resubmitted.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Save and resubmit' })).toBeEnabled()

@@ -88,9 +88,9 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
     const user = userEvent.setup()
     renderWizard()
 
-    await user.type(await screen.findByLabelText('Event name'), 'Alumni Night')
-    await user.type(screen.getByLabelText('Purpose'), 'Reconnect')
-    await user.type(screen.getByLabelText('Description'), 'Dinner')
+    fireEvent.change(await screen.findByLabelText('Event name'), { target: { value: 'Alumni Night' } })
+    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: 'Reconnect' } })
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: 'Dinner' } })
     await user.click(screen.getByLabelText('Stage'))
     await user.click(screen.getByLabelText('Projection'))
     await user.click(screen.getByLabelText('Stage'))
@@ -100,19 +100,19 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
     }))
 
     await next(user, 2)
-    await user.type(screen.getByLabelText('Venue requirements'), 'Banquet')
+    fireEvent.change(screen.getByLabelText('Venue requirements'), { target: { value: 'Banquet' } })
     await next(user)
     expect(lastSave(calls)).toMatchObject({ venueRequirements: 'Banquet' })
     await user.click(screen.getByRole('button', { name: 'Back' }))
-    await user.clear(await screen.findByLabelText('Venue requirements'))
+    fireEvent.change(await screen.findByLabelText('Venue requirements'), { target: { value: '' } })
     await user.click(screen.getByRole('button', { name: 'Back' }))
     await user.click(screen.getByRole('button', { name: 'Back' }))
     expect(lastSave(calls)).toMatchObject({ venueRequirements: null })
 
     // A field emptied again is saved as "not provided", not as an empty string.
-    await user.clear(screen.getByLabelText('Purpose'))
-    await user.clear(screen.getByLabelText('Description'))
-    await user.clear(screen.getByLabelText('Event name'))
+    fireEvent.change(screen.getByLabelText('Purpose'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Description'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: '' } })
     await user.click(screen.getByRole('button', { name: 'Exit' }))
     expect(await screen.findByText('Organiser home')).toBeInTheDocument()
     expect(lastSave(calls)).toMatchObject({ eventName: null, purpose: null, description: null })
@@ -132,7 +132,7 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
     expect(screen.getByRole('spinbutton', { name: 'Projector quantity' })).toHaveValue(3)
     expect(screen.getByLabelText('Microphone')).not.toBeChecked()
 
-    await user.type(screen.getByLabelText('Additional equipment notes'), 'Stage left')
+    fireEvent.change(screen.getByLabelText('Additional equipment notes'), { target: { value: 'Stage left' } })
     await user.click(screen.getByLabelText('Projector'))
     await next(user)
 
@@ -202,7 +202,7 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
     await next(user, 3)
     await user.click(await screen.findByLabelText('Microphone'))
     const quantity = screen.getByRole('spinbutton', { name: 'Microphone quantity' })
-    await user.clear(quantity)
+    fireEvent.change(quantity, { target: { value: '' } })
 
     expect(screen.getByText('Enter a whole quantity of at least 1 for each selected item.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Next' }))
@@ -233,9 +233,9 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
 
     fireEvent.change(screen.getByLabelText('Registration capacity'), { target: { value: '120' } })
     fireEvent.change(screen.getByLabelText('Registration opens'), { target: { value: '2026-11-10T09:00' } })
-    await user.type(screen.getByLabelText('Attendee instructions'), 'Bring ID')
-    await user.clear(screen.getByLabelText('Attendee instructions'))
-    await user.type(screen.getByLabelText('Attendee instructions'), 'Bring ID')
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID' } })
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID' } })
     await next(user)
     expect(lastSave(calls)).toMatchObject({
       registrationNeeds: true, registrationCapacity: 120, registrationOpensAt: '2026-11-10T01:00:00.000Z',
@@ -412,7 +412,7 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
     })
     const user = userEvent.setup()
     renderWizard('/organiser/requests/new')
-    await user.type(screen.getByLabelText('Event name'), 'Gala')
+    fireEvent.change(screen.getByLabelText('Event name'), { target: { value: 'Gala' } })
     await user.click(screen.getByRole('button', { name: 'Save as draft' }))
     await user.click(screen.getByRole('button', { name: 'Save as draft' }))
     answer(jsonResponse(201, {}))

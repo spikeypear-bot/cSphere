@@ -177,14 +177,14 @@ describe('EO03 — the change request form, field by field', () => {
     fireEvent.change(screen.getByLabelText('Registration capacity'), { target: { value: '120' } })
     fireEvent.change(screen.getByLabelText('Registration opens'), { target: { value: '2027-03-01T09:00' } })
     fireEvent.change(screen.getByLabelText('Registration closes'), { target: { value: '2027-03-09T18:00' } })
-    await user.type(screen.getByLabelText('Attendee instructions'), 'Bring ID')
-    await user.clear(screen.getByLabelText('Attendee instructions'))
-    await user.type(screen.getByLabelText('Attendee instructions'), 'Bring ID')
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID' } })
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: '' } })
+    fireEvent.change(screen.getByLabelText('Attendee instructions'), { target: { value: 'Bring ID' } })
 
     const review = await toReview(user)
     expect(within(review).getByRole('row', { name: /^Registration capacity/ })).toHaveTextContent('120')
     expect(within(review).getByRole('row', { name: /^Attendee instructions/ })).toHaveTextContent('Bring ID')
-    await user.type(screen.getByLabelText('Why is this change needed?'), 'Ticketed now')
+    fireEvent.change(screen.getByLabelText('Why is this change needed?'), { target: { value: 'Ticketed now' } })
     await user.click(screen.getByRole('button', { name: 'Send change request' }))
 
     expect(await screen.findByText('Change requests list')).toBeInTheDocument()
@@ -233,7 +233,7 @@ describe('EO03 — the change request form, field by field', () => {
     renderAt()
     fireEvent.change(await screen.findByLabelText('Event name'), { target: { value: 'Town Hall 2027' } })
     await toReview(user)
-    await user.type(screen.getByLabelText('Why is this change needed?'), 'Rename')
+    fireEvent.change(screen.getByLabelText('Why is this change needed?'), { target: { value: 'Rename' } })
     await user.click(screen.getByRole('button', { name: 'Send change request' }))
 
     expect(await screen.findByText('Venue requirements is required')).toBeInTheDocument()
@@ -254,7 +254,7 @@ describe('EO03 — the change request form, field by field', () => {
     renderAt()
     fireEvent.change(await screen.findByLabelText('Event name'), { target: { value: 'Town Hall 2027' } })
     await toReview(user)
-    await user.type(screen.getByLabelText('Why is this change needed?'), 'Rename')
+    fireEvent.change(screen.getByLabelText('Why is this change needed?'), { target: { value: 'Rename' } })
     await user.click(screen.getByRole('button', { name: 'Send change request' }))
 
     expect(await screen.findByRole('button', { name: 'Sending…' })).toBeDisabled()
@@ -271,7 +271,7 @@ describe('EO03 — the change request form, field by field', () => {
     renderAt()
     fireEvent.change(await screen.findByLabelText('Event name'), { target: { value: 'Town Hall 2027' } })
     await toReview(user)
-    await user.type(screen.getByLabelText('Why is this change needed?'), 'Rename')
+    fireEvent.change(screen.getByLabelText('Why is this change needed?'), { target: { value: 'Rename' } })
     await user.click(screen.getByRole('button', { name: 'Send change request' }))
 
     expect(await screen.findByText('Your change request could not be sent. Please try again.')).toBeInTheDocument()

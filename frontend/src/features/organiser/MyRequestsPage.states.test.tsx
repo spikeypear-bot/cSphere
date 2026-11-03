@@ -1,6 +1,6 @@
 // @stories EO15 EO07  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -147,7 +147,7 @@ describe('EO15 — the organiser\'s request list: failures, filters and unnamed 
     renderList()
 
     await user.click(await screen.findByRole('button', { name: 'Cancel request Untitled request' }))
-    await user.type(screen.getByLabelText('Reason for cancelling'), 'Budget cut')
+    fireEvent.change(screen.getByLabelText('Reason for cancelling'), { target: { value: 'Budget cut' } })
     await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
 
     expect(await screen.findByText('"Your request" has been cancelled.')).toBeInTheDocument()
@@ -163,7 +163,7 @@ describe('EO15 — the organiser\'s request list: failures, filters and unnamed 
     renderList()
 
     await user.click(await screen.findByRole('button', { name: 'Cancel request Event u' }))
-    await user.type(screen.getByLabelText('Reason for cancelling'), 'Budget cut')
+    fireEvent.change(screen.getByLabelText('Reason for cancelling'), { target: { value: 'Budget cut' } })
     await user.click(screen.getByRole('button', { name: 'Confirm cancellation' }))
 
     expect(await screen.findByRole('alert')).toHaveTextContent('The request could not be cancelled. Please try again.')
