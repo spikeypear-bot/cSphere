@@ -317,4 +317,56 @@ describe('TS09 equipment requests list and request page', () => {
     expect(links[0]).toHaveAccessibleDescription(/Requested by\s*ec1/)
     expect(within(links[0]).getByRole('heading', { level: 2, name: 'Gala r1' })).toBeInTheDocument()
   })
+
+  it('TS01 (failure): figures that cannot load say so, and Try again loads them', async () => {
+    let tries = 0
+    const routes = requestPageRoutes(request('r1'), {
+      requests: () => [request('r1')],
+      lines: () => [{ equipmentId: 'eq-mic', equipmentName: 'Microphone', quantity: 2 }],
+      reservations: () => [],
+      availability: () => [{ equipmentId: 'eq-mic', equipmentName: 'Microphone', serialised: false, totalQuantity: 4, availableQuantity: 4 }],
+    })
+    const availability = Object.keys(routes).find((key) => key.includes('/availability'))!
+    const ok = routes[availability]
+    routes[availability] = (body) => (++tries === 1 ? jsonResponse(500, { message: 'down' }) : ok(body))
+    stubApi(routes)
+    const user = userEvent.setup()
+    renderAt('/technical-support/requests/r1')
+
+    expect(await screen.findByText('The equipment figures could not be loaded.')).toBeInTheDocument()
+    await user.click(screen.getByRole('button', { name: 'Try again' }))
+    expect(await screen.findByRole('button', { name: 'Reserve all remaining (2 units)' })).toBeEnabled()
+    expect(screen.queryByText('The equipment figures could not be loaded.')).not.toBeInTheDocument()
+  })
+
+  it('TS06 (negative): starting a rejection and cancelling it sends nothing and offers Approve again', async () => {
+    const calls = stubApi(requestPageRoutes(request('r1'), {
+      requests: () => [request('r1')], lines: () => [], reservations: () => [], availability: () => [],
+    }))
+    const user = userEvent.setup()
+    renderAt('/technical-support/requests/r1')
+
+    await user.click(await screen.findByRole('button', { name: 'Reject…' }))
+    await user.type(screen.getByLabelText('Reason for rejection'), 'Not needed')
+    await user.click(screen.getByRole('button', { name: 'Cancel' }))
+
+    expect(screen.queryByLabelText('Reason for rejection')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Approve request' })).toBeInTheDocument()
+    expect(calls.filter((call) => call.method !== 'GET')).toHaveLength(0)
+  })
+
+  it('TS09 (boundary): a request with no item list counts no types or units, and Awaiting review clears the status from the link', async () => {
+    stubApi({
+      'GET /api/equipment-requests?status=all': () => jsonResponse(200, [request('r1', { status: 'approved', items: undefined })]),
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/requests?status=approved')
+
+    const row = within(await screen.findByRole('list', { name: 'Equipment requests' })).getByRole('listitem')
+    expect(row).toHaveTextContent('ItemsNo itemised equipment')
+    expect(row).toHaveTextContent('Equipment types0')
+    expect(row).toHaveTextContent('Total units requested0')
+    await user.click(screen.getByRole('button', { name: /^Awaiting review/ }))
+    expect(screen.getByLabelText('location')).toHaveTextContent(/^\/technical-support\/requests$/)
+  })
 })
