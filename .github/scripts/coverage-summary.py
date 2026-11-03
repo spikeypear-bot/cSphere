@@ -9,7 +9,7 @@ Usage:
   python .github/scripts/coverage-summary.py frontend frontend/coverage/coverage-summary.json
 
 Prints line/branch totals, the classes or files behind the focus stories, and
-the ten least-covered ones; appends the same to GITHUB_STEP_SUMMARY in CI.
+the ten with the most untested lines and branches; appends the same to GITHUB_STEP_SUMMARY in CI.
 Never fails the build: the gate is the tests, not a percentage.
 """
 import csv
@@ -34,7 +34,9 @@ def backend(path):
     rows = list(csv.DictReader(open(path, encoding='utf-8')))
     per_class = {}
     for r in rows:
-        name = r['CLASS'].split('.')[-1]
+        # An anonymous or nested class ("Foo.new Bar() {...}") counts towards its outer class;
+        # the package keeps same-named classes apart.
+        name = r['PACKAGE'].split('.')[-2] + '/' + r['CLASS'].split('.')[0]
         lines = (int(r['LINE_COVERED']), int(r['LINE_COVERED']) + int(r['LINE_MISSED']))
         branches = (int(r['BRANCH_COVERED']), int(r['BRANCH_COVERED']) + int(r['BRANCH_MISSED']))
         prev = per_class.get(name, ((0, 0), (0, 0)))
@@ -42,21 +44,24 @@ def backend(path):
                            (prev[1][0] + branches[0], prev[1][1] + branches[1]))
     total_l = [sum(v[0][i] for v in per_class.values()) for i in (0, 1)]
     total_b = [sum(v[1][i] for v in per_class.values()) for i in (0, 1)]
-    focus = {n: v for n, v in per_class.items() if n.split('$')[0] in FOCUS_BACKEND}
+    focus = {n: v for n, v in per_class.items() if n.split('/')[-1] in FOCUS_BACKEND}
+    missed = lambda v: (v[0][1] - v[0][0]) + (v[1][1] - v[1][0])
     return ('Backend (JaCoCo)', pct(*total_l), pct(*total_b),
             [(n, pct(*v[0]), pct(*v[1])) for n, v in sorted(focus.items())],
-            sorted(((n, pct(*v[0]), pct(*v[1])) for n, v in per_class.items() if v[0][1] >= 10),
-                   key=lambda t: t[1])[:10])
+            [(n, pct(*v[0]), pct(*v[1])) for n, v in
+             sorted((i for i in per_class.items() if missed(i[1])), key=lambda i: -missed(i[1]))[:10]])
 
 
 def frontend(path):
     data = json.load(open(path, encoding='utf-8'))
     total = data.pop('total')
-    files = [(f.replace('\\', '/').split('/src/')[-1], v['lines']['pct'], v['branches']['pct'])
-             for f, v in data.items()]
-    focus = [f for f in files if any(f[0].endswith(x) for x in FOCUS_FRONTEND)]
+    # A file of types only has nothing to run (0 of 0); it is neither covered nor missed.
+    files = [(f.replace('\\', '/').split('/src/')[-1], v['lines']['pct'], v['branches']['pct'],
+              (v['lines']['total'] - v['lines']['covered']) + (v['branches']['total'] - v['branches']['covered']))
+             for f, v in data.items() if v['lines']['total']]
+    focus = [f[:3] for f in files if any(f[0].endswith(x) for x in FOCUS_FRONTEND)]
     return ('Frontend (Vitest/V8)', total['lines']['pct'], total['branches']['pct'], sorted(focus),
-            sorted((f for f in files if f[1] < 100), key=lambda t: t[1])[:10])
+            [f[:3] for f in sorted((f for f in files if f[3]), key=lambda t: -t[3])[:10]])
 
 
 def main():
@@ -69,7 +74,7 @@ def main():
            f'**Lines {lines:.1f}% · Branches {branches:.1f}%**', '',
            '| Focus stories (EC-NEW2, EC08, EO04) | Lines | Branches |', '|---|---:|---:|']
     out += [f'| `{n}` | {l:.1f}% | {b:.1f}% |' for n, l, b in focus] or ['| (none found) | | |']
-    out += ['', '| Least covered | Lines | Branches |', '|---|---:|---:|']
+    out += ['', '| Most untested (lines + branches missed) | Lines | Branches |', '|---|---:|---:|']
     out += [f'| `{n}` | {l:.1f}% | {b:.1f}% |' for n, l, b in lowest]
     text = '\n'.join(out) + '\n'
     print(text)

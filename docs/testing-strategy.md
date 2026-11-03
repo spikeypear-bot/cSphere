@@ -97,6 +97,7 @@ EC page coverage remains diagnostic; the shared staff/map thresholds are unchang
 
 | Code | Why it is not covered |
 |---|---|
+| Frontend files of types only (`types/*.ts`, `navTypes.ts`, `*.types.ts`, `readinessTypes.ts`) | TypeScript removes them at build time, so they hold no code to run (0 of 0 lines). They do not lower the totals; `coverage-summary.py` leaves them out of its table instead of listing them at 0%. |
 | `EventReadinessPanel.tsx`: the non-`ApiClientError` branch of `act()` | `apiClient` turns every failure, network included, into an `ApiClientError`, so this only guards against a programming error and no test can reach it. It is marked `/* v8 ignore … */` with the reason in the code. |
 | Production constructors and the after-commit hook in `EventLifecycleService` / `JourneyStatusResolver` | Not reached by unit tests (which pass a fixed clock and have no transaction), but executed by the integration tests. They are covered in the combined report CI publishes. |
 | AT04 `AttendeeRegistrationQueryService` defensive missing-event guards | Valid database rows cannot take these paths because the registration event FK applies. Unknown registration status and missing start fallbacks now belong to the shared AT08 withdrawal policy and are covered by its boundary tests. |
