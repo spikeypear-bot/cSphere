@@ -893,9 +893,11 @@ class EquipmentLog <<Entity>>  {
 	{field} -loanedFrom : Instant
 	{field} -loanedUntil : Instant
 	{field} -quantity : int
+	{field} -requestId : UUID
 	{field} -serialNumber : String
 	{field} -spare : boolean
 	{field} -technicalRequirements : String
+	{method} +forRequest ( requestId : UUID ) : void
 	{method} +reduceBy ( units : int ) : void
 	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
@@ -931,6 +933,7 @@ class SerialisedEquipmentId {
 
 interface EquipmentLogRepository {
 	{method}  {abstract} +findByEventId ( eventId : UUID ) : List
+	{method}  {abstract} +findByRequestId ( requestId : UUID ) : List
 	{method}  {abstract} +findOverlappingForEquipment ( equipmentId : UUID , start : Instant , end : Instant ) : List
 	{method}  {abstract} +findOverlappingForEquipments ( equipmentIds : Collection , start : Instant , end : Instant ) : List
 	{method}  {abstract} +findOverlappingForUnit ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : List
@@ -976,7 +979,9 @@ class EquipmentAvailabilityService {
 	{method} +forEquipment ( kind : Equipment , start : Instant , end : Instant ) : Availability
 	{method}  {static} +heldThroughout ( reservations : Collection , equipmentId : UUID , start : Instant , end : Instant ) : int
 	{method} +unitConflict ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : Optional
+	{method} +unitConflict ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant , ignoring : Set ) : Optional
 	{method} +unitsNotFree ( equipmentId : UUID , start : Instant , end : Instant ) : Set
+	{method} +unitsNotFree ( equipmentId : UUID , start : Instant , end : Instant , ignoring : Set ) : Set
 }
 
 
@@ -1004,8 +1009,12 @@ class EquipmentCatalogueService {
 
 class EquipmentReservationService {
 	{method} +availabilityForEvent ( requestId : UUID , start : Instant , end : Instant ) : List
+	{method} +freeForEvent ( eventId : UUID , start : Instant , end : Instant ) : Map
+	{method} +keepOnly ( eventId : UUID , owner : UUID , needed : Map , start : Instant , end : Instant ) : void
 	{method} +needsAt ( eventId : UUID , start : Instant , end : Instant ) : List
+	{method} +needsAt ( eventId : UUID , needed : Map , start : Instant , end : Instant ) : List
 	{method} +releaseAllForEvent ( eventId : UUID ) : void
+	{method} +releaseForRequest ( requestId : UUID ) : void
 	{method} +reservationsForEquipment ( equipmentId : UUID , from : Instant , to : Instant ) : List
 	{method} +reservationsForEvent ( eventId : UUID ) : List
 	{method} +reserve ( req : ReserveEquipmentRequest ) : EquipmentReservationResponse
@@ -1278,6 +1287,7 @@ class EventEquipmentDamageService {
 
 
 class EquipmentRequestController {
+	{method} +availability ( jwt : Jwt , eventId : UUID ) : List
 	{method} +forEvent ( jwt : Jwt , eventId : UUID ) : List
 	{method} +lines ( requestId : UUID ) : List
 	{method} +list ( status : String ) : List
@@ -1294,6 +1304,7 @@ class EquipmentRequestDetailsResponse {
 	{field} -eventId : UUID
 	{field} -rejectReason : String
 	{field} -requestId : UUID
+	{field} -revision : boolean
 	{field} -status : String
 	{field} -technicalRequirement : String
 	{method}  {static} +from ( request : EquipmentRequest , lines : List ) : EquipmentRequestDetailsResponse
@@ -1317,6 +1328,7 @@ class EquipmentRequestResponse {
 	{field} -isShortfallRequest : boolean
 	{field} -organisationName : String
 	{field} -requestId : UUID
+	{field} -revision : boolean
 	{field} -shortfallReportId : UUID
 	{field} -status : String
 	{field} -technicalRequirement : String
@@ -1359,9 +1371,11 @@ class EquipmentRequest <<Entity>>  {
 	{field} -eventId : UUID
 	{field} -id : UUID {id}
 	{field} -rejectReason : String
+	{field} -revision : boolean
 	{field} -technicalRequirement : String
 	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
 	{method} +flagAttention ( reason : String ) : void
+	{method} +markRevision () : void
 	{method} +markStillSuitable () : void
 	{method} +supersede () : void
 }
@@ -1423,11 +1437,18 @@ class EquipmentRequestQueueService {
 class EquipmentRequestService {
 	{field} {static} -MAX_REQUIREMENT_LENGTH : int
 	{field} -changeLog : ApplicationEventPublisher
+	{method} +availabilityForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +listForEvent ( coordinatorId : UUID , eventId : UUID ) : List
 	{method} +listForSafetyOfficer ( eventId : UUID ) : List
 	{method} +markStillSuitable ( coordinatorId : UUID , eventId : UUID , requestId : UUID , rawNote : String ) : EquipmentRequestDetailsResponse
 	{method} +revise ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
 	{method} +submit ( coordinatorId : UUID , eventId : UUID , input : SubmitEquipmentRequest ) : EquipmentRequestDetailsResponse
+}
+
+
+class EquipmentRequestService.FreeAtEventTime {
+	{field} -equipmentId : UUID
+	{field} -free : int
 }
 
 
@@ -3819,6 +3840,7 @@ EquipmentRequest --> EquipmentRequestStatus : status
 EquipmentRequestLine --> Equipment : equipment
 EquipmentRequestLine *-- EquipmentRequestLineId : id
 EquipmentRequestDecisionService --> EquipmentLogRepository : reservations
+EquipmentRequestDecisionService --> EquipmentReservationService : releaser
 EquipmentRequestDecisionService --> EquipmentRequestLineRepository : lines
 EquipmentRequestDecisionService --> EquipmentRequestRepository : requests
 EquipmentRequestDecisionService --> EventRepository : events
