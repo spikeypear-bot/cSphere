@@ -16,13 +16,20 @@
   width: 100%;
 }
 
+.venue-search__filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--venue-map-content-gap);
+  width: 100%;
+}
+
 .venue-search__form [role='alert'] {
   margin: 0;
   color: var(--danger);
 }
 
 .venue-search .venue-search-field { gap: var(--venue-map-field-gap); }
-.venue-search .venue-search-field input { padding: var(--venue-map-input-padding); }
+.venue-search .venue-search-field :is(input, select) { padding: var(--venue-map-input-padding); }
 
 .venue-search__results h2 {
   margin: 0 0 0.75rem;

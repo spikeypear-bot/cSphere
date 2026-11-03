@@ -63,7 +63,7 @@ export function EventRequestWizardPage() {
   const [stepIndex, setStepIndex] = useState(0)
   const [missingFields, setMissingFields] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
-  const [submitError, setSubmitError] = useState<string>()
+  const [actionError, setActionError] = useState<string>()
   const [equipmentCatalogue, setEquipmentCatalogue] = useState<EquipmentCatalogueItem[] | null>(null)
   const [catalogueError, setCatalogueError] = useState<string | null>(null)
   const [selectedEquipment, setSelectedEquipment] = useState<Record<string, string>>({})
@@ -226,7 +226,11 @@ export function EventRequestWizardPage() {
     // "Exit" still saves first — leaving the wizard must never silently
     // discard what was typed (the previous "Save & exit" button looked like
     // it did this but only navigated away, without calling save()).
-    await save()
+    setActionError(undefined)
+    if (!await save()) {
+      setActionError('Your latest changes have not been saved. Please try again before exiting.')
+      return
+    }
     navigate('/organiser/requests')
   }
 
@@ -240,7 +244,7 @@ export function EventRequestWizardPage() {
       setStepIndex(3)
       return
     }
-    setSubmitError(undefined)
+    setActionError(undefined)
     setSubmitting(true)
     try {
       const result = await submit()
@@ -257,7 +261,7 @@ export function EventRequestWizardPage() {
         else if (hasProblems(result.fieldErrors)) setStepIndex(1)
       }
     } catch (error) {
-      setSubmitError(error instanceof Error ? error.message : 'Could not submit. Please try again.')
+      setActionError(error instanceof Error ? error.message : 'Could not submit. Please try again.')
     } finally {
       setSubmitting(false)
     }
@@ -495,22 +499,21 @@ export function EventRequestWizardPage() {
         )}
       </Card>
 
-      {submitError && <p role="alert">{submitError}</p>}
+      {actionError && <p role="alert">{actionError}</p>}
       <div className="wizard__nav wizard__nav--sticky">
-        {stepIndex === 0 ? (
-          <>
-            <Button variant="secondary" onClick={() => save()}>
-              Save as draft
-            </Button>
-            <Button variant="secondary" onClick={handleExit}>
-              Exit
-            </Button>
-          </>
-        ) : (
+        {stepIndex > 0 ? (
           <Button variant="secondary" onClick={() => goToStep(stepIndex - 1)}>
             Back
           </Button>
-        )}
+        ) : null}
+        <div className="wizard__nav-actions">
+          <Button variant="secondary" disabled={autosaveState === 'saving' || submitting} onClick={() => save()}>
+            Save as draft
+          </Button>
+          <Button variant="secondary" disabled={autosaveState === 'saving' || submitting} onClick={handleExit}>
+            Exit
+          </Button>
+        </div>
         {stepIndex < STEPS.length - 1 ? (
           <Button disabled={stepIndex === 1 && scheduleBlocked} onClick={() => goToStep(stepIndex + 1)}>Next</Button>
         ) : (
