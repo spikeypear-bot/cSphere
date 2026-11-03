@@ -172,12 +172,11 @@ interface CheckboxFieldProps {
   label: string
   checked: boolean
   onChange: (checked: boolean) => void
-  hint?: string
   /** Larger, boxed treatment for a choice that drives the rest of the form. */
   prominent?: boolean
 }
 
-export function CheckboxField({ id, label, checked, onChange, hint, prominent = false }: CheckboxFieldProps) {
+export function CheckboxField({ id, label, checked, onChange, prominent = false }: CheckboxFieldProps) {
   return (
     <div
       className={prominent ? 'field field--prominent-check' : 'field'}
@@ -193,7 +192,6 @@ export function CheckboxField({ id, label, checked, onChange, hint, prominent = 
       <label htmlFor={id} style={prominent ? undefined : { fontWeight: 500 }}>
         {label}
       </label>
-      {hint ? <span className="field-hint">{hint}</span> : null}
     </div>
   )
 }

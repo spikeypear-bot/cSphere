@@ -1,6 +1,6 @@
 // @stories TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { AppShell } from './AppShell'
@@ -182,5 +182,39 @@ describe('TS09 reusable side navigation', () => {
     const home = within(nav).getByRole('link', { name: 'Home' })
     expect(home.querySelector('.side-nav__letter')).toHaveAttribute('data-letter', 'H')
     expect(home).toHaveTextContent(/^Home$/)
+  })
+
+  it('TS09 (boundary): on a page outside the nav, opening the drawer focuses the first entry; other keys leave it open', async () => {
+    const user = userEvent.setup()
+    renderAt('/elsewhere')
+    await user.click(screen.getByRole('button', { name: 'Menu' }))
+    const nav = screen.getByRole('navigation', { name: 'Example console' })
+    expect(within(nav).getByRole('link', { name: 'Home' })).toHaveFocus()
+    await user.keyboard('a')
+    expect(nav).toHaveClass('side-nav--open')
+  })
+
+  it('TS09 (cross-cutting): widening the window past the drawer breakpoint closes an open drawer; narrowing does not', async () => {
+    let listener: (() => void) | undefined
+    const query = { matches: false, addEventListener: (_: string, fn: () => void) => { listener = fn },
+      removeEventListener: vi.fn() }
+    vi.stubGlobal('matchMedia', vi.fn(() => query))
+    try {
+      const user = userEvent.setup()
+      const view = renderAt('/console')
+      const toggle = screen.getByRole('button', { name: 'Menu' })
+      await user.click(toggle)
+
+      act(() => listener?.())
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+
+      query.matches = true
+      act(() => listener?.())
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+      view.unmount()
+      expect(query.removeEventListener).toHaveBeenCalledWith('change', listener)
+    } finally {
+      vi.unstubAllGlobals()
+    }
   })
 })

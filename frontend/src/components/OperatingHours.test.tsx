@@ -18,6 +18,7 @@ it('VS17 (boundary): distinguishes midnight and noon and retains meaningful seco
 })
 it.each([undefined, [], [{dayOfWeek: 0, openTime: '09:00', closeTime: '18:00'}],
  [{dayOfWeek: 1, openTime: '25:00', closeTime: '26:00'}],
+ [{dayOfWeek: 1, openTime: '9am', closeTime: '6pm'}],
  [{dayOfWeek: 1, openTime: '18:00', closeTime: '09:00'}]])('VS17 (negative): does not advertise missing or invalid schedules: %j', hours => {
  render(<OperatingHours hours={hours} />)
  expect(screen.getByText('Operating hours not configured')).toBeInTheDocument()
