@@ -102,4 +102,35 @@ describe('TS02 request fulfilment rows (D33)', () => {
       [{ equipmentId: 'proj', equipmentName: 'Projector', quantity: 2 }, { equipmentId: 'mic', equipmentName: 'Microphone', quantity: 4 }])
     expect(groups.map((g) => [g.equipmentId, g.reservations.length])).toEqual([['proj', 1], ['mic', 2]])
   })
+
+  it('TS02 (boundary): an item with no availability figure shows as unknown, by quantity, with nothing reservable', () => {
+    const [, mic] = rows({ availability: [] })
+    expect(mic.available).toBeNull()
+    expect(mic.serialised).toBe(false)
+    expect(mic.capacity).toBe(0)
+    expect(planBatch([mic], {})).toEqual([])
+  })
+
+  it('TS02 (boundary): a serialised item with no other bookings read, and a hold with no event name, still lists every unit', () => {
+    const [projector] = rows({
+      kindReservations: {},
+      eventReservations: [held('proj', 1, { eventId: 'other', serialNumber: 'P-3', eventName: undefined })],
+    })
+    expect(projector.units.find((u) => u.serialNumber === 'P-3')?.state).toEqual({ kind: 'elsewhere', eventName: null })
+    expect(projector.units.find((u) => u.serialNumber === 'P-2')?.state.kind).toBe('free')
+  })
+
+  it('TS02 (negative): a part or negative number of units is refused, and too many chosen units asks for the right count', () => {
+    const [projector, mic] = rows()
+    expect(rowProblem(mic, { ...NO_CHOICE, now: 1.5 })).toBe('Enter a whole number of units.')
+    expect(rowProblem(mic, { ...NO_CHOICE, now: -1 })).toBe('Enter a whole number of units.')
+    expect(rowProblem(projector, { now: 2, spare: 0, serials: [] })).toBe('Choose 2 more units.')
+    expect(rowProblem(projector, { now: 2, spare: 0, serials: ['P-10', 'P-3', 'P-4'] })).toBe('Choose 2 units.')
+  })
+
+  it('TS02 (boundary): reservations for an item the request does not list come after the requested ones', () => {
+    const groups = groupReservations([held('cable', 1), held('mic', 2), held('hdmi', 1)],
+      [{ equipmentId: 'mic', equipmentName: 'Microphone', quantity: 4 }])
+    expect(groups.map((g) => g.equipmentId)).toEqual(['mic', 'cable', 'hdmi'])
+  })
 })
