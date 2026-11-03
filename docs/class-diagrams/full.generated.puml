@@ -941,6 +941,7 @@ interface EquipmentRepository {
 	{method}  {abstract} +damagedQuantities ( equipmentIds : Collection , start : Instant , end : Instant ) : List
 	{method}  {abstract} +findForUpdate ( equipmentId : UUID ) : Optional
 	{method}  {abstract} +openlyDamagedSerials ( equipmentId : UUID , start : Instant , end : Instant ) : List
+	{method}  {abstract} +openlyDamagedUnits ( equipmentIds : Collection , start : Instant , end : Instant ) : List
 	{method}  {abstract} +unitOpenlyDamaged ( equipmentId : UUID , serialNumber : String , start : Instant , end : Instant ) : boolean
 }
 
@@ -2368,6 +2369,7 @@ enum NotificationType {
 	{field} +request_handed_over
 	{field} +request_submitted
 	{field} +safety_review_requested
+	{field} +safety_review_withdrawn
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved
@@ -2445,6 +2447,7 @@ class NotificationService {
 	{method} +createReturnedToPlanningNotification ( coordinatorId : UUID , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createSafetyApprovedNotification ( coordinatorId : UUID , eventId : UUID , eventName : String ) : void
 	{method} +createSafetyReviewRequestedNotifications ( recipients : List , eventId : UUID , eventName : String ) : void
+	{method} +createSafetyReviewWithdrawnNotifications ( recipients : List , eventId : UUID , eventName : String , reason : String ) : void
 	{method} +createStatusChangeNotification ( recipientUserId : UUID , eventRequestId : UUID , eventId : UUID , eventName : String , newStatus : String , reason : String ) : void
 	{method} +createVenueBookingApprovedNotification ( coordinator : UUID , bookingId : UUID , eventId : UUID , eventName : String , venue : String ) : void
 	{method} +createVenueBookingCancelledNotifications ( recipientUserIds : List , bookingId : UUID , eventId : UUID , eventName : String , reason : String ) : void

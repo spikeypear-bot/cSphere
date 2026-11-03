@@ -562,6 +562,7 @@ enum NotificationType {
 	{field} +request_handed_over
 	{field} +request_submitted
 	{field} +safety_review_requested
+	{field} +safety_review_withdrawn
 	{field} +status_change
 	{field} +venue_arrangements_changed
 	{field} +venue_booking_approved

@@ -611,6 +611,7 @@ enum notification_type {
 	equipment_request_submitted
 	equipment_change_review
 	safety_review_requested
+	safety_review_withdrawn
 }
 
 enum user_role {
