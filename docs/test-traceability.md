@@ -5,92 +5,94 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**283 test files, 2339 tests, 82 stories traced, 0 files untraced.**
+**304 test files, 2494 tests, 84 stories traced, 0 files untraced, 965 tests whose name names no story.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
-| AT01 | 5 | 6 | 9 | 5 | 172 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| AT02 | 2 | 4 | 6 | 4 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT01 | 6 | 7 | 9 | 5 | 199 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AT02 | 2 | 5 | 7 | 4 | 74 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT03 | 5 | 4 | 8 | 4 | 112 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT04 | 2 | 4 | 9 | 5 | 115 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT07 |  |  | 1 | 1 | 10 | — | happy, negative, boundary, conflict, failure |
 | AT08 | 2 | 2 | 3 | 4 | 57 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | AT09 | 1 | 2 | 3 | 1 | 33 | — | happy, negative, boundary, failure, cross-cutting |
-| AU04 | 6 | 8 | 6 | 3 | 140 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| AU06 |  |  |  | 1 | 3 | — | negative, cross-cutting |
+| AU02 |  |  |  | 1 | 3 | — | happy, negative |
+| AU04 | 6 | 8 | 6 | 4 | 143 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| AU06 |  | 1 |  | 1 | 3 | — | negative, cross-cutting |
 | DEV05 |  | 3 | 4 |  | 53 | — | happy |
-| DEV15 | 1 | 2 |  |  | 6 | — | happy, negative |
-| DEV16 | 4 | 6 | 20 | 3 | 329 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| DEV15 | 1 | 2 |  |  | 7 | — | happy, negative |
+| DEV16 | 4 | 6 | 20 | 3 | 330 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC01 | 2 | 2 | 2 | 1 | 76 | AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12 | happy, negative, conflict |
 | EC02 | 2 | 5 | 6 | 3 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC03 | 4 | 4 | 9 | 5 | 161 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 5 | 3 | 37 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
-| EC07 | 1 | 3 | 1 | 1 | 87 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC08 | 4 | 7 | 5 | 4 | 275 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC07 | 2 | 5 | 2 | 5 | 154 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC08 | 4 | 8 | 6 | 6 | 287 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC09 | 2 | 1 | 5 | 1 | 65 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC10 |  | 1 | 2 | 2 | 57 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC10 |  | 1 | 2 | 3 | 62 | AC1, AC2, AC3, AC5, AC9 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C1 | 2 | 1 | 4 | 1 | 46 | AC1, AC2, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-C2 | 2 | 4 | 3 | 2 | 125 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C3 | 2 | 1 | 2 | 1 | 50 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-C4 |  | 1 | 2 | 1 | 65 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9 | happy, negative, boundary, conflict, failure |
-| EC-NEW2 | 2 | 2 | 7 | 2 | 175 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-NEW3 | 8 | 5 | 5 | 1 | 225 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C3 | 2 | 1 | 2 | 1 | 51 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-C4 |  | 1 | 2 | 1 | 66 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9 | happy, negative, boundary, conflict, failure |
+| EC-NEW2 | 2 | 2 | 7 | 2 | 176 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW3 | 9 | 9 | 9 | 4 | 343 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC41, AC42, AC43, AC44 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC-NEW4 | 3 | 4 | 1 | 5 | 116 | AC1, AC2, AC3, AC4, AC9, AC11, AC15, AC16, AC17, AC18, AC19, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC32 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC-NEW5 | 2 | 2 | 3 | 3 | 102 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
-| ECL-C1 | 1 | 1 | 6 | 1 | 76 | AC2, AC4, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC-NEW5 | 2 | 2 | 3 | 3 | 105 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35 | happy, negative, boundary, conflict, failure, cross-cutting |
+| ECL-C1 | 1 | 1 | 6 | 2 | 83 | AC2, AC4, AC7 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C2 | 2 | 2 | 1 | 1 | 57 | — | happy |
-| ECL-C3 | 2 | 1 | 4 | 2 | 140 | — | happy, boundary, failure |
+| ECL-C3 | 2 | 1 | 4 | 2 | 140 | — | happy, negative, boundary, failure |
 | ECL-C4 |  | 1 | 1 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ECL-C5 |  |  |  | 1 | 2 | AC1, AC2, AC3, AC8, AC9, AC13 | happy, negative |
 | ECL-C6 |  |  |  | 1 | 2 | AC3, AC7, AC12 | happy, negative |
 | ECL-C7 | 2 | 4 | 3 | 2 | 185 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23 | happy, negative, boundary, conflict, failure, cross-cutting |
 | ELC-C5 | 2 | 3 | 3 | 1 | 137 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| ELC-C6 | 3 | 3 | 4 | 3 | 181 | — | happy, boundary, conflict, failure |
-| EO01 | 2 | 1 | 4 | 3 | 89 | — | happy, boundary |
-| EO02 | 3 | 2 | 5 | 5 | 126 | — | happy, negative, boundary, conflict, failure |
-| EO03 | 3 | 2 | 2 | 2 | 83 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO04 | 2 | 3 | 5 | 3 | 133 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO07 | 4 | 5 | 3 | 2 | 183 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO09 | 3 | 3 | 2 | 1 | 109 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO10 | 1 | 2 | 1 | 1 | 31 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9 | happy, negative, boundary, conflict, cross-cutting |
-| EO11 | 1 |  | 1 | 1 | 25 | AC1, AC2, AC5, AC7 | negative, boundary, conflict |
+| ELC-C6 | 3 | 3 | 4 | 3 | 183 | — | happy, negative, boundary, conflict, failure |
+| EO01 | 2 | 1 | 5 | 5 | 105 | — | happy, negative, boundary, cross-cutting |
+| EO02 | 3 | 2 | 5 | 5 | 127 | — | happy, negative, boundary, conflict, failure |
+| EO03 | 3 | 4 | 3 | 5 | 118 | AC1, AC2, AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28, AC29, AC30, AC31, AC32, AC33, AC34, AC35, AC36, AC37, AC38, AC39, AC40, AC41, AC42, AC43 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO04 | 2 | 3 | 5 | 3 | 134 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22, AC23, AC24, AC25, AC26, AC27, AC28 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO07 | 4 | 5 | 3 | 2 | 184 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO09 | 3 | 3 | 2 | 1 | 112 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO10 | 1 | 2 | 1 | 1 | 35 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9 | happy, negative, boundary, conflict, cross-cutting |
+| EO11 | 1 |  | 1 | 1 | 28 | AC1, AC2, AC5, AC7 | happy, negative, boundary, conflict |
 | EO12 | 3 | 1 | 2 | 1 | 25 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC11, AC12, AC13, AC14, AC15, AC16 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EO15 | 1 | 1 | 8 | 2 | 81 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EO19 | 3 | 2 | 2 | 1 | 87 | AC1, AC3, AC4, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict |
+| EO19 | 3 | 2 | 2 | 1 | 90 | AC1, AC3, AC4, AC7, AC8, AC9, AC10 | happy, negative, boundary, conflict |
 | EO26 | 3 | 3 | 5 | 1 | 116 | AC1, AC3, AC6, AC8 | happy, negative, boundary, conflict, failure |
 | EO-C1 | 1 | 1 | 1 | 1 | 36 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, failure |
-| EO-C2 | 2 | 1 | 5 | 1 | 113 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure |
-| SO-C1 | 1 |  | 3 | 2 | 27 | AC1, AC2, AC7, AC8 | happy, negative, boundary, conflict, failure |
-| SO-C2 |  | 4 |  | 1 | 64 | AC1, AC2, AC3, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C3 | 1 |  | 2 | 1 | 35 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| SO-C4 | 2 | 2 | 1 | 2 | 58 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EO-C2 | 2 | 1 | 5 | 1 | 114 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure |
+| SO-C1 | 1 | 2 | 5 | 3 | 49 | AC1, AC2, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C2 |  | 4 |  | 1 | 65 | AC1, AC2, AC3, AC5, AC6, AC7, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C3 | 1 |  | 4 | 2 | 51 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| SO-C4 | 2 | 2 | 1 | 2 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C5 | 2 | 2 | 3 | 1 | 112 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | SO-C6 | 2 | 2 | 3 | 1 | 111 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS01 | 3 | 3 | 6 | 1 | 100 | AC1, AC2, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS02 | 2 | 4 | 6 | 1 | 132 | AC5, AC10, AC11, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS03 | 4 | 4 | 6 | 1 | 121 | AC2, AC3 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS06 | 1 | 3 | 3 | 1 | 99 | AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
-| TS09 | 7 | 7 | 15 | 1 | 230 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS01 | 3 | 4 | 9 | 5 | 144 | AC1, AC2, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS02 | 3 | 5 | 6 | 2 | 150 | AC5, AC10, AC11, AC14 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS03 | 4 | 5 | 6 | 1 | 141 | AC2, AC3 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS06 | 2 | 3 | 3 | 2 | 111 | AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS09 | 8 | 8 | 18 | 2 | 298 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17, AC18, AC19, AC20, AC21, AC22 | happy, negative, boundary, conflict, failure, cross-cutting |
+| TS11 | 3 | 3 | 2 | 1 | 87 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC9, AC10, AC11, AC12, AC13, AC14, AC15, AC16, AC17 | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS01 | 1 | 3 | 2 | 1 | 79 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS02 |  | 2 | 10 | 4 | 164 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS03 | 1 | 2 | 3 | 3 | 113 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS04 | 1 | 4 | 2 | 1 | 119 | AC3, AC4, AC5, AC6, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS06A |  |  | 1 | 1 | 25 | — | happy, negative, boundary, failure, cross-cutting |
-| VS06B |  |  | 1 | 1 | 25 | — | happy, negative, boundary, failure, cross-cutting |
-| VS07 | 3 | 3 | 5 | 3 | 105 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS02 |  | 2 | 10 | 4 | 166 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS03 | 1 | 2 | 3 | 4 | 119 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS04 | 1 | 4 | 2 | 2 | 125 | AC3, AC4, AC5, AC6, AC7, AC10 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS06A |  |  | 1 | 1 | 26 | AC1, AC3, AC4, AC5, AC6, AC7 | happy, negative, boundary, failure, cross-cutting |
+| VS06B |  |  | 1 | 1 | 26 | — | happy, negative, boundary, failure, cross-cutting |
+| VS07 | 3 | 3 | 5 | 3 | 106 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS08 |  | 3 | 2 | 1 | 67 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS09 |  | 1 | 1 | 1 | 56 | AC3, AC4, AC5, AC6, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS13 | 2 | 2 | 2 | 1 | 51 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS15 |  |  | 5 | 2 | 42 | — | happy, boundary, conflict, failure, cross-cutting |
-| VS16 |  | 1 | 2 | 1 | 22 | — | happy, negative, boundary, cross-cutting |
-| VS17 | 13 | 20 | 23 | 8 | 721 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS18 |  | 1 | 4 | 1 | 46 | — | happy, negative, boundary, conflict, cross-cutting |
+| VS09 |  | 1 | 1 | 1 | 57 | AC3, AC4, AC5, AC6, AC8 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS13 | 2 | 2 | 2 |  | 50 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS15 |  |  | 5 | 2 | 43 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS16 |  | 1 | 3 | 2 | 72 | — | happy, negative, boundary, failure, cross-cutting |
+| VS17 | 13 | 20 | 23 | 8 | 724 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS18 |  | 1 | 4 | 1 | 47 | — | happy, negative, boundary, conflict, cross-cutting |
 | VS25 |  | 2 |  | 1 | 25 | AC1, AC5 | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS-C1 | 1 | 5 | 1 | 2 | 95 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C1 | 1 | 5 | 1 | 2 | 96 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | VS-C2 | 1 | 3 | 3 | 1 | 59 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS-C3 | 2 | 4 | 5 | 2 | 146 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| VS-C4 | 2 | 2 | 4 | 1 | 127 | AC2, AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C3 | 2 | 4 | 5 | 2 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| VS-C4 | 2 | 2 | 4 | 1 | 128 | AC2, AC3, AC4, AC6, AC7, AC8, AC9, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 
 ## High-priority stories with no automated test yet
 
@@ -102,13 +104,984 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 - none
 
+## Tests whose name names no story
+
+The file is traced, but this test's own name does not say which story it checks.
+
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aTechnicianReservesAQuantityAndTheReservationIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: theReservationCanBeViewedForTheEventAfterSaving
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: availabilityListsOnlyRequestedEquipmentWithItsTotalAndAvailableQuantity
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aSavedReservationReducesLaterAvailabilityForThatPeriodOnly
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: reservingOneMoreThanTheAvailableQuantityIsRefusedAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: quantityCommittedToAnOverlappingPeriodCannotBeReservedByAnotherEvent
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: theQuantityLeftOverInAnOverlappingPeriodCanStillBeReserved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aBackToBackPeriodIsNotAnOverlap
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aUnitMarkedFaultyOrUnavailableForThePeriodCannotBeReserved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aBlockThatEndsWhenThePeriodStartsDoesNotPreventReservingTheUnit
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: blockedUnitsAreExcludedFromTheAvailableQuantity
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aUnitAlreadyReservedForAnOverlappingPeriodCannotBeReservedAgain
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: reservingEquipmentDoesNotConfirmTheEvent
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: approvalIsRejectedUntilEveryRequestedQuantityIsReservedAndChangesNothing
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: approvalRequiresReservationsToCoverTheFullEventAndLeavesReservationsAndEventUnchanged
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: fullyReservedRequestCanBeApprovedAndTheCoordinatorSeesItImmediately
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: rejectionRequiresAndPersistsAReasonForTheCoordinator
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: onlyTechnicalSupportCanChangeEquipmentRequestStatus
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: onlyTechnicalSupportCanReserveAndNothingIsSavedForOtherRoles
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: anUnauthenticatedCallerCannotReserveAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: equipmentThatIsNotPartOfTheEventsRequestCannotBeReserved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: equipmentThatDoesNotExistReturnsNotFoundAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aQuantityOfZeroIsRefusedAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`: aPeriodThatEndsWhenItStartsIsRefusedAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aUnitWithNoBlockShowsAsAvailableForThePeriod
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: markingAUnitSavesTheChangeAndTheUnitShowsThatStatusForThePeriod
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aBlockDoesNotChangeTheStatusShownForAdjacentPeriods
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aBlockWithNoEndDateCoversEveryLaterPeriod
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: makingAUnitAvailableForTheWholeBlockRemovesTheBlock
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: removingABlockMakesTheUnitAvailableAgain
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: markingAUnitFaultyLowersTheAvailableQuantityAndMakingItAvailableRaisesItAgain
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aUnitReservedForAnEventCannotBeMarkedFaultyForThatPeriodAndKeepsItsStatus
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aReservedUnitCanBeMarkedFaultyForAPeriodThatStartsWhenItsReservationEnds
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aChangeWhoseEndIsNotAfterItsStartIsRefusedAndThePreviousStatusRemains
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aStatusThatIsNotOneOfTheThreeIsRefusedAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aUnitThatDoesNotExistReturnsNotFound
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: removingABlockThatDoesNotExistReturnsNotFound
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: otherRolesCannotChangeOrRemoveAStatusAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: aCoordinatorCanViewUnitStatus
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`: anUnauthenticatedCallerCannotChangeAStatusAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`: reservationAllowsQuantityExactlyEqualToAvailableAndPersistsIt
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`: reservationRejectsQuantityAboveAvailable
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`: availableStatusChangeSplitsTheExistingBlockedPeriod
+- `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`: cannotMarkAReservedUnitFaultyForItsCommittedPeriod
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: coordinatorSubmitsItemsWithQuantitiesAndNotesAndTheRequestIsSavedAsProcessing
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aSubmittedRequestAppearsInTheTechnicalSupportQueueWithItsItems
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: theCoordinatorCanViewTheRequestAndItsQuantitiesAfterSubmitting
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: anEventWithNoRequestShowsAnEmptyList
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: theSafetyOfficerCanViewTheRequestsOfAnActiveEvent
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: theSafetyOfficerCannotViewTheRequestsOfACancelledEvent
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aQuantityOfOneIsAccepted
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aQuantityOfZeroIsRefusedAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: anEquipmentTypeThatDoesNotExistIsRefusedWithAMessageAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aSecondRequestIsRefusedWhileOneIsProcessingAndTheFirstIsUnchanged
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: submittingDoesNotChangeTheEventsStatus
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: anEventThatIsNoLongerInPlanningCannotTakeARequest
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: otherRolesCannotSubmitOrViewAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aCoordinatorNotAssignedToTheEventCannotSubmitOrViewAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: anUnauthenticatedCallerCannotSubmitAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: anEventThatDoesNotExistReturnsNotFound
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aMalformedEventIdReturnsBadRequest
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: revisingAProcessingRequestSupersedesItAndCreatesANewOneWithTheNewItems
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: revisingAnEventWithNoEquipmentRequestIsRefused
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: revisingAfterARejectionIsRefused
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: aCoordinatorNotAssignedToTheEventCannotReviseAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`: otherRolesCannotReviseAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: cannotApproveUntilEveryRequestedUnitIsReservedForTheFullEvent
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: reservationOutsideTheWholeEventPeriodDoesNotCountTowardApproval
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: fullyReservedRequestCanBeApprovedWithoutChangingReservationsOrEvent
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: approvingARevisionReplacesTheApprovedRequest
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: rejectingARevisionReleasesNothing
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: approvingANonRevisionReplacesNothing
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: rejectionRequiresAndStoresAReason
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`: technicalSupportCannotSetACoordinatorSideStatus
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: submitCreatesAProcessingRequestAndItsItemLines
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: onlyTheAssignedCoordinatorCanViewOrSubmitARequest
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: activeRequestPreventsDuplicateSubmission
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: rejectsEmptyRequestsAndNonPositiveQuantities
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: reviseKeepsAnApprovedRequestAndItsReservationsUntilTechnicalSupportDecide
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: revisingAProcessingRequestSupersedesItAndReleasesNow
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: revisingAgainReplacesOnlyThePendingRevision
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: revisingARequestThatNeedsAttentionKeepsItUntilTechnicalSupportDecide
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: reviseWithNoActiveRequestIsRefused
+- `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`: onlyTheAssignedCoordinatorCanRevise
+- `backend/src/test/java/com/example/connect_sphere/event/EventReassignmentFlowTest.java`: coordinatorRequestIsLeadOnlyAndApprovalMovesTheEventAndOriginatingRequest
+- `backend/src/test/java/com/example/connect_sphere/event/EventReassignmentFlowTest.java`: pendingRequestCannotBeSubmittedTwice
+- `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`: anEventCoordinatorGetsTheirOwnEventsWithWhatTheListShows
+- `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`: aCoordinatorWithNoAssignedEventsGetsAnEmptyListNotAnError
+- `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`: aParameterNamingAnotherCoordinatorIsIgnored
+- `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`: everyOtherRoleIsDeniedAndNoEventDataIsRead
+- `backend/src/test/java/com/example/connect_sphere/event/controller/AssignedEventsAccessTest.java`: aCallWithNoTokenIsRejectedAndNoEventDataIsRead
+- `backend/src/test/java/com/example/connect_sphere/event/controller/EventReassignmentAccessTest.java`: onlyTheAssignedCoordinatorRoleCanSubmitARequest
+- `backend/src/test/java/com/example/connect_sphere/event/controller/EventReassignmentAccessTest.java`: thePendingQueueIsLeadOnly
+- `backend/src/test/java/com/example/connect_sphere/event/controller/EventReassignmentAccessTest.java`: unauthenticatedCallsAreRejected
+- `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`: aCoordinatorSeesTheirOwnEventsAcrossOrganisationsAndNeverAnotherCoordinators
+- `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`: pendingAndConfirmedEventsAreListedWhileCancelledAndCompletedAreNot
+- `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`: eventsAreOrderedByStartDateSoonestFirstWhateverOrderTheyWereCreatedIn
+- `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`: aNewlyApprovedEventAppearsAndAReassignedOneMovesToItsNewCoordinator
+- `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`: overHttpEachCoordinatorGetsOnlyTheirOwnEventsAndOtherRolesAreRefused
+- `backend/src/test/java/com/example/connect_sphere/event/service/AssignedEventsQueryTest.java`: readingTheListLeavesEveryEventAndNotificationAsItWas
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`: assignedCoordinatorCanSubmitReasonAndLeadReceivesNotification
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`: someoneOtherThanTheAssignedCoordinatorCannotCreateARequest
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`: leadApprovalUpdatesEventAndOriginatingRequestAndNotifiesAffectedUsers
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`: completedEventsCannotBeReassignedAndTheRequestRemainsPending
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`: aSecondPendingRequestIsRejectedWithoutCreatingAnotherRecord
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventReassignmentServiceTest.java`: leadDeclineLeavesBothEventAssignmentsUntouchedAndNotifiesRequester
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: initialPlanningAndReconfirmationPauseRegistration
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC1_otherOrganisationIsRefused
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC4_onlyConfirmedConsumePlacesAndFullIsReported
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC5_statesFollowOpeningAndClosing
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC6_notRequiredAndEmptyMessages
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC3_AC4_cancelledEventReleasesConfirmedRegistrations
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC5_openWhenWindowStartedAndEventNotStarted
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC4_placesRemainingNeverNegative
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO10_AC3_cancelledEventKeepsWithdrawnAsWithdrawn
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_validCapacityIsSavedAndReturned
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_updateTakesTheEventRowLock
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_invalidInputsAreRejectedAndCapacityUnchanged
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_cannotGoBelowConfirmedButEqualIsAllowed
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_otherOrganisationOrNoRegistrationRefused
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_tooLargeNumbersAreRejected
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_otherNonNumericInputIsRejected
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_cancelledEventRefusesCapacityChange
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`: EO11_missingEventIsNotFound
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: anOrganiserCanViewTheirOwnOrganisationsEvent
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: anOrganiserCannotViewAnotherOrganisationsEvent
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: confirmingDelegatesToTheLifecycleAndReturnsTheUpdatedEvent
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: aRefusedConfirmationPropagatesAndNotifiesNoOne
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: coordinatorContactDetailsAreResolvedOntoTheDto
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: assignedEventsAreReadForTheCallerOnlyAndOnlyWhileStillActive
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: assignedEventsKeepTheirSoonestFirstOrderAndCarryWhatTheListShows
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: aCoordinatorWithNoActiveEventsGetsAnEmptyList
+- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: listingAssignedEventsIsReadOnly
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`: anEventCoordinatorLeadGetsEveryCoordinatorWithTheirRequestsInTheServicesOrder
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`: everyOtherRoleIsDeniedAndNoRequestDataIsRead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`: aCallWithNoTokenIsRejectedAndNoRequestDataIsRead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`: anEventCoordinatorLeadReassignsAsThemselvesToTheCoordinatorTheyChose
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`: everyOtherRoleIsDeniedReassigningAndNothingIsChanged
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsAccessTest.java`: aReassignCallWithNoTokenIsRejectedAndNothingIsChanged
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: theLeadSeesAnAssignedRequestsDetailsUnderItsCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aNewlyAssignedRequestAppearsAndAnApprovedOrRejectedOneNoLongerDoes
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aRequestWaitingOnClarificationStaysListedAndTheLeadOpensItAsAssignedWithNoActions
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: withNothingAssignedEveryCoordinatorIsStillListedHoldingNone
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: everyOtherSignedInRoleIsRefusedAndSeesNoRequestData
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aReassignedRequestKeepsItsStatusAndMovesToTheNewCoordinatorInTheLeadsListAndBothQueues
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: theNewCoordinatorSeesTheFullHistoryAndApprovesAReassignedRequestAsBefore
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: thePreviousCoordinatorCanNoLongerOpenOrDecideAReassignedRequest
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: reassigningIsOnTheTimelineWithTheLeadAsItsActorAndBothCoordinatorsNames
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: reassigningChangesNoDetailOfTheRequestAndCreatesNoEvent
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aRequestReassignedWhileItWaitsForClarificationGoesToTheNewCoordinatorWhenResubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: reassigningWithoutACoordinatorIsRefusedWithAMessageAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: reassigningToSomeoneWhoCannotTakeItIsRefusedWithAMessageAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aRequestWithNoCoordinatorCannotBeReassigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aRequestItsCoordinatorHasAlreadyRejectedCannotBeReassigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: aDraftOrUnknownRequestCannotBeReassigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/AssignedRequestsFlowTest.java`: nobodyButTheLeadCanReassignEvenByCallingTheApiDirectly
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`: invalidScheduleReturns422WithAnActionableMessage
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`: savingADraftWithAnEmptyBodyReturns201
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`: scopesByTheTokenClaimAndIgnoresAnyOrganisationTheClientSends
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`: unassignedQueueReturnsTheServicesListInItsOrder
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`: unassignedQueueIsAnEmptyArrayWhenNothingIsWaiting
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: anIncompleteRequestCanBeSavedAsADraftForTheOrganisersOrganisation
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aSavedDraftCanBeReopenedWithEverythingThatWasSaved
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aDraftCanBeEditedAndSavedAgainWithoutBeingSubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aSaveThatFailsLeavesTheLastSavedVersionInPlace
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aDraftIsNotShownToTheLeadOrToCoordinatorsForReview
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: anOrganiserInTheSameOrganisationCanOpenAndEditTheDraft
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: anotherOrganisationCannotOpenEditOrSubmitTheDraftAndItIsUnchanged
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aCompleteDraftCanBeSubmittedAndItsStatusChangesFromDraftToPending
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: submittingRecordsWhenTheRequestWasSubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aSubmittedRequestWaitsInTheLeadsUnassignedListAndInNoCoordinatorsQueue
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: submittingAnEmptyDraftNamesEveryRequiredFieldAndLeavesItADraft
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: aSubmittedRequestCanNoLongerBeEditedOrSubmittedAsADraft
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: theListShowsOnlyTheCallersOrganisationWithEachRequestsStatusAndLastUpdate
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: otherRolesCannotCreateOrListEventRequestsAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: anOrganiserCannotUseCoordinatorVenueStaffOrTechnicalSupportFunctions
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`: anUnauthenticatedCallerCannotCreateOrListEventRequests
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aFullClarificationRoundTripIsRecordedInOrderFromSubmissionToApproval
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: eachFlaggedFieldsQuestionAndTheValuesAtThatMomentReachTheOrganiser
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aQuestionAboutAnUnflaggedFieldOrABlankQuestionIsRefused
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aSingleFieldQuestionOver2000CharactersIsRefused
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aRefusedResubmissionLeavesTheOrganisersEditsUnsaved
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aSuccessfulResubmissionSavesTheEditsAndRecordsTheNewValues
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: decidingTwiceIsRefusedWithAPlainMessage
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: theReviewScreenNamesTheOrganiserWhoCreatedTheRequest
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aRequestWaitingForClarificationCannotBeApprovedAndSaysWhy
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aBlankClarificationIsRejectedAndLeavesNoTrace
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: aCoordinatorNotAssignedToTheRequestCannotOpenOrActOnIt
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: theReviewQueueShowsOnlyMyRequestsNotUnassignedOnesOrAnotherCoordinators
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: anOrganiserCannotRequestClarificationOrOpenTheReviewScreen
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: anOrganiserOfAnotherOrganisationCannotSeeTheTimelineOrResubmit
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: timelineEntriesCannotBeEditedInTheDatabase
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestReviewFlowTest.java`: timelineEntriesCannotBeDeletedInTheDatabase
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestScopingTest.java`: anOrganiserCannotReadAnotherOrganisationsRequestByNamingItInAHeader
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestScopingTest.java`: listingOnlyReturnsTheCallersOwnOrganisation
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadCanOpenARequestsReview
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadsRejectionIsRecordedAgainstTheSignedInLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadsClarificationIsRecordedAgainstTheSignedInLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadCanListTheEventCoordinatorsToAssignTo
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadsAssignmentIsRecordedAgainstTheSignedInLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: everyOtherRoleIsDeniedAndNoRequestDataIsReadOrChanged
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aCallWithNoTokenIsRejectedAndNoRequestDataIsReadOrChanged
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadTokenDoesNotOpenTheCoordinatorsActions
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: theRemovedSelfAssignmentCallIsDeniedAndAssignsNothing
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: theRemovedSelfAssignmentCallDoesNotExistForAnOrganiserEither
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewAccessTest.java`: aLeadTokenDoesNotOpenTheCoordinatorsReviewScreen
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: theLeadSeesAnUnassignedRequestAsTheOrganiserSubmittedIt
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aDraftOrUnknownRequestIsNotFoundForTheLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aRejectedRequestLeavesTheQueueAndTheOrganiserSeesTheReasonFromTheLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aRequestSentBackStaysInTheQueueMarkedClarificationRequiredUntilItIsResubmittedStillUnassigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: anEmptyReasonOrMessageIsRefusedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: onceARequestIsAssignedTheLeadsActionsAreRefusedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aRequestTheLeadAlreadyRejectedCannotBeRejectedOrSentBackAgain
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: theLeadPicksFromEveryEventCoordinatorAndNobodyElse
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: anAssignedRequestKeepsItsStatusLeavesTheUnassignedListAndJoinsItsCoordinatorsQueue
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: theAssignedCoordinatorReviewsAndApprovesTheRequestAsBefore
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: assigningIsOnTheTimelineWithTheLeadAsItsActorAndTheCoordinatorsName
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: assigningChangesNoDetailOfTheRequestAndCreatesNoEvent
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aRequestAssignedWhileItWaitsForClarificationGoesToItsCoordinatorWhenResubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: assigningWithoutACoordinatorIsRefusedWithAMessageAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: assigningSomeoneWhoIsNotAnEventCoordinatorIsRefusedWithAMessageAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aRequestThatAlreadyHasACoordinatorCannotBeAssignedAgain
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aRequestTheLeadAlreadyRejectedCannotBeAssigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: aDraftOrUnknownRequestCannotBeAssigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: nobodyButTheLeadCanAssignEvenByCallingTheApiDirectly
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/LeadRequestReviewFlowTest.java`: anEventCoordinatorCanNoLongerSeeOrPickUpAnUnassignedRequest
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`: anEventCoordinatorLeadCanOpenTheUnassignedQueue
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`: everyOtherRoleIsDeniedAndNoRequestDataIsRead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`: aCallWithNoTokenIsRejectedAndNoRequestDataIsRead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/UnassignedRequestsAccessTest.java`: aLeadTokenDoesNotOpenCoordinatorOrOrganiserEndpoints
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: aRequestIsListedUnderItsCoordinatorWhileSubmittedOrWaitingOnClarificationAcrossOrganisations
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: unassignedDraftApprovedRejectedAndCancelledRequestsAreNotListed
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: withinACoordinatorRequestsAreOrderedByEventStartSoonestFirstWhateverOrderTheyWereAssignedIn
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: requestsThatStartAtTheSameMomentKeepOneFixedOrder
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: everyCoordinatorIsListedInNameOrderIncludingOneWhoHoldsNothingAndNoOtherRole
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: theNumberEachCoordinatorHoldsFollowsAssignmentAndDecisions
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: eachRequestCarriesTheDateItWasSubmittedNotWhenItWasAssignedOrCreated
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/AssignedRequestsQueryTest.java`: readingTheListLeavesEveryRequestTimelineAndNotificationAsItWas
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/ConcurrentDecisionTest.java`: twoSimultaneousApprovalsCreateExactlyOneEvent
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/ConcurrentDecisionTest.java`: twoSimultaneousBookingRequestsForOneEventCreateExactlyOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: everyCoordinatorIsListedInNameOrder
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: aCoordinatorWhoHoldsNoRequestsIsStillListedHoldingNone
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: whenNothingIsAssignedEveryCoordinatorIsListedHoldingNone
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: eachRequestSitsUnderItsOwnCoordinatorWhicheverOrganisationItCameFrom
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: withinACoordinatorRequestsKeepTheSoonestFirstOrderEvenWhenOtherCoordinatorsRequestsFallBetween
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: onlyAssignedRequestsThatAreSubmittedOrWaitingOnClarificationAreAskedFor
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: aRequestThatIsNotUnderReviewIsNeverAskedFor
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: eachRequestShowsItsEventDetailsAndCurrentStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: theDateSubmittedIsWhenTheOrganiserSubmittedNotWhenTheRequestWasAssigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: aRequestSubmittedBeforeTheTimelineExistedFallsBackToWhenItWasCreated
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestAssignmentsServiceTest.java`: viewingAssignmentsChangesNothingAndNotifiesNoOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: clarificationMovesASubmittedRequestToClarificationRequired
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: clarificationRecordsMessageFlagsCoordinatorAndStatusChangeOnTheTimeline
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: everyOrganiserOfTheOwningOrganisationIsNotifiedWithTheMessage
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: clarificationDoesNotChangeAnyDetailTheOrganiserSubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: blankOrWhitespaceMessageIsRejectedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aMessageOfExactly2000CharactersIsAccepted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aMessageOf2001CharactersIsRejectedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: flaggingAFieldThatDoesNotExistIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aCoordinatorNotAssignedToTheRequestCannotRequestClarification
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aSecondClarificationCannotBeSentWhileOneIsStillOpen
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: clarificationIsOnlyPossibleOnASubmittedRequest
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aRequestAwaitingClarificationCannotBeApproved
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aRequestAwaitingClarificationCanStillBeRejectedWithAReason
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: resubmittingReturnsTheRequestToSubmittedWithTheSameCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: resubmittingRecordsTheResponseAndNotifiesTheAssignedCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: resubmittingWithoutAResponseIsRejectedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: resubmittingAppliesTheSameCompletenessCheckAsTheFirstSubmission
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: resubmittingAppliesTheSameDateRuleAsTheFirstSubmission
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: onlyARequestWaitingForClarificationCanBeResubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: anOrganiserOfAnotherOrganisationCannotResubmit
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: theOrganiserCanEditARequestWaitingForClarificationWithoutChangingItsStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: aRequestThatIsNeitherDraftNorWaitingForClarificationCannotBeEdited
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: approvalRechecksMandatoryFieldsAndListsWhatIsMissing
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: approvalRecordsTheOutcomeAgainstTheNewEvent
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: theReviewScreenIsOnlyAvailableToTheAssignedCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestClarificationServiceTest.java`: theReviewScreenReportsWhatWouldBlockApproval
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: theReviewShowsTheRequestAsTheOrganiserSubmittedIt
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: theReviewIncludesTheRequestsHistory
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aDraftIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestThatDoesNotExistIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestThatHasSinceBeenAssignedStillOpensAndShowsItsCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestThatHasSinceBeenDecidedStillOpensAndShowsItsStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: openingTheReviewChangesNothingAndNotifiesNoOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: rejectingAnUnassignedRequestMakesItRejectedWithTheReasonAndAssignsNoOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: rejectingNotifiesTheOrganiserWithTheReason
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: rejectingIsRecordedOnTheTimelineWithTheLeadAsTheActor
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: rejectingWithoutAReasonIsBlockedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestAssignedSinceThePageLoadedCannotBeRejectedByTheLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestThatIsNoLongerSubmittedCannotBeRejectedByTheLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aDraftCannotBeRejectedAndIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: askingForClarificationMakesTheRequestClarificationRequiredAndAssignsNoOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: askingForClarificationNotifiesEveryOrganiserOfTheOrganisationWithTheMessage
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: askingForClarificationIsRecordedOnTheTimelineWithTheLeadAsTheActor
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: askingForClarificationDoesNotChangeAnyDetailTheOrganiserSubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: askingForClarificationWithoutAMessageIsBlockedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestAssignedSinceThePageLoadedCannotBeSentBackByTheLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestThatIsNoLongerSubmittedCannotBeSentBackByTheLead
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: whenTheOrganiserResubmitsTheRequestIsSubmittedAgainWithNoCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: assigningGivesTheRequestItsCoordinatorAndKeepsItsStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: assigningIsRecordedOnTheTimelineWithTheLeadAsTheActorAndTheCoordinatorsName
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: assigningDoesNotApproveTheRequestCreateAnEventOrChangeAnyOtherDetail
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: assigningTellsTheOrganiserWhoTheirCoordinatorIsAndNotifiesNobodyElse
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: assigningWithoutChoosingACoordinatorIsBlockedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aUserWhoIsNotAnEventCoordinatorCannotBeAssignedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aUserThatDoesNotExistCannotBeAssignedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestAssignedSinceThePageLoadedCannotBeAssignedAgain
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestDecidedSinceThePageLoadedCannotBeAssigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aDraftCannotBeAssignedAndIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: whenTheOrganiserResubmitsARequestAssignedWhileItWaitedItGoesToThatCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: reassigningMovesTheRequestToTheChosenCoordinatorAndKeepsItsStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: reassigningIsRecordedOnTheTimelineWithTheLeadAsTheActorAndBothCoordinatorsNames
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: reassigningDoesNotApproveTheRequestCreateAnEventOrChangeAnyOtherDetail
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: reassigningTellsTheOrganiserTheirCoordinatorChangedAndNotifiesNobodyElse
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: reassigningWithoutChoosingACoordinatorIsBlockedAndNothingChanges
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestCannotBeReassignedToAUserWhoIsNotAnEventCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestCannotBeReassignedToAUserThatDoesNotExist
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestCannotBeReassignedToTheCoordinatorItAlreadyHas
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestWithNoCoordinatorCannotBeReassigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aRequestDecidedSinceThePageLoadedCannotBeReassigned
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: aDraftCannotBeReassignedAndIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: afterReassignmentThePreviousCoordinatorCanNoLongerOpenOrDecideTheRequest
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: afterReassignmentTheNewCoordinatorCanOpenTheRequest
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`: whenTheOrganiserResubmitsARequestReassignedWhileItWaitedOnlyTheNewCoordinatorIsTold
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: pickerItemsAreRetainedOnDraftSave
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: equipmentSelectionIsNotLostByALegacyDraftEdit
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: savingANewDraftSucceedsWithEveryFieldMissing
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: savingANewDraftRecordsWhoCreatedIt
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: aNewDraftIsNeverVisibleAsSubmittedOrAnyOtherStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: reopeningAndEditingADraftKeepsTheSameId
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: savingChangesUpdatesTheSameDraftRatherThanCreatingANewOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: savingANewDraftSetsBothCreatedAndUpdatedAt
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: editingADraftAdvancesUpdatedAtButNotCreatedAt
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: cannotViewOrEditAnotherOrganisationsDraft
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: savingWithoutAnOrganisationIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: submissionIsBlockedWhileRequiredFieldsAreMissingAndListsWhichOnes
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: submissionIsBlockedWhenAccessibilityNeedsWasNeverAnswered
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: submittingACompleteDraftTransitionsItToPending
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: aRequestThatHasAlreadyLeftDraftCannotBeEditedOrResubmitted
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: listOnlyReturnsRequestsForTheGivenOrganisation
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningACoordinatorNotifiesTheOrganiserWithTheirNameAndContactAsAnInitialAssignment
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: aRequestThatAlreadyHasACoordinatorCannotBeAssignedToAnotherOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningTheCoordinatorARequestAlreadyHasIsRefusedAndSendsNoNotification
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningANonCoordinatorUserIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningANonexistentUserIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningWithNoCoordinatorSpecifiedIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningACoordinatorToARequestThatDoesNotExistIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: assigningACoordinatorNeverNotifiesWhenTheRequestHasNoRecordedCreator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: theLeadsCoordinatorListIsEveryEventCoordinatorByUsername
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: approvingAPendingRequestAssignedToTheCallerCreatesAnEventAndNotifies
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: approvingWithoutBeingTheAssignedCoordinatorIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: approvingARequestThatIsNotPendingIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: approvingTwiceTheSecondTimeFailsSoAtMostOneApprovalNotificationIsEverSent
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: rejectingRecordsTheReasonAndNotifies
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: rejectingWithoutAReasonIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: rejectingWithoutBeingTheAssignedCoordinatorIsRejected
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: reviewQueueHoldsOnlyTheCallersOwnRequestsSplitByWhoNeedsToAct
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: unassignedRequestsListsEveryOrganisationsWaitingRequestsLongestWaitingFirst
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: unassignedRequestsAsksOnlyForSubmittedOrClarifyingRequestsWithNoCoordinator
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: aRequestWaitingForClarificationIsListedWithThatStatus
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: unassignedRequestsIsAnEmptyListWhenNothingIsWaiting
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: viewingUnassignedRequestsChangesNothingAndNotifiesNoOne
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: reversedRangeCannotBeSubmittedAndDoesNotChangeTheDraft
+- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`: equalInstantsWithDifferentOffsetsAndPastDatesAreRefused
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: assigningACoordinatorNotifiesTheOrganiserWithTheCoordinatorsNameAndContact
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: assigningARequestThatAlreadyHasACoordinatorIsRefusedAndCreatesNoNotification
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: reassigningNotifiesTheOrganiserOfTheirNewCoordinatorAsAReassignment
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: reassigningNotifiesNeitherCoordinatorNorTheLead
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: aReassignmentToTheSameCoordinatorIsRefusedAndCreatesNoNotification
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: aReassignmentAfterTheCoordinatorDecidedIsRefusedAndCreatesNoNotification
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: approvingNotifiesTheOrganiserWithTheNewStatusAndALinkToTheEvent
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: rejectingNotifiesTheOrganiserWithTheNewStatusAndTheReason
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: openingTheReviewScreenCreatesNoNotification
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: safetyApprovalThenCoordinatorConfirmationNotifiesTheOrganiser
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: confirmingStraightFromPlanningIsRefusedAndNotifiesNobody
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: otherRolesCannotConfirmAnEventAndNoNotificationIsCreated
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: onlyTheOrganiserWhoCreatedTheRequestSeesItsNotifications
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: theUnreadCountRisesWithANewNotificationAndFallsWhenItIsMarkedRead
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: markingANotificationReadDoesNotChangeTheRequestOrItsCoordinator
+- `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`: anUnauthenticatedCallerCannotReadNotifications
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`: aClarificationRequestReachesEveryOrganiserAndOpensTheirRespondPage
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`: aResponseOpensTheCoordinatorsReviewScreen
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`: bookingRequestedAndCancelledBothOpenTheBookingForVenueStaff
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationLinkTest.java`: theOriginalStatusAndAssignmentLinksAreUnchanged
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: eo09NotificationCarriesEventReferenceStatusAndTimestamp
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: eo09RejectionNotificationCarriesTheReason
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: eo19NotificationDistinguishesInitialFromReassignment
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: aNotificationSaveFailureIsSwallowedNotThrown
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: listReturnsNewestFirstAndMapsReadState
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: linkPathPointsAtTheEventWhenOneExistsOtherwiseTheRequest
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: markingAsReadIsIdempotent
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: cannotMarkSomeoneElsesNotificationAsRead
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: markingANonexistentNotificationAsReadIsReportedAsNotFound
+- `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`: unreadCountDelegatesToTheRepositoryCount
+- `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`: onlySafetyOfficersCanReadConfirmedEvents
+- `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`: aCallWithoutATokenCannotReadConfirmedEvents
+- `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`: confirmedListIncludesEventTimeAndAssignedVenue
+- `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`: planningListCarriesTheSameStatusEveryOtherRoleSees
+- `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`: safetyOfficerCannotUseTheCoordinatorsConfirmAndCoordinatorCannotApprove
+- `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`: coordinatorCannotEditSafetyChecklistItems
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: checklistHasStandardItemsAndStartsIncomplete
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: updatingAnItemPersistsTheActorAndTimestamp
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: incompleteChecklistBlocksApprovalAndListsOutstandingItems
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: approvalRecordsTheSafetyApprovalOnlyAfterEveryStandardItemIsChecked
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: aDecisionIsRefusedUntilTheCoordinatorSendsTheEventForReview
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: requestingChangesOrRejectingNeedsANoteAndSendsTheEventBackToTheCoordinator
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: checklistCanBeWorkedOnWhileAwaitingReviewButNotOnceApproved
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: uncheckingAnItemKeepsTheLastCheckerAndCheckTime
+- `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`: coordinatorCanOnlyReadTheirOwnEventsReadiness
+- `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`: unrelatedRolesAreRefused
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: loginReturnsTokensAndEchoesTheVerifiedAccount
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: theTokenLoginReturnsOpensAProtectedEndpoint
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: everyFailedLoginAnswersIdentically
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: refreshRotatesAndTheOldTokenStopsWorking
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: reusingARotatedTokenAlsoKillsItsSuccessor
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: logoutEndsTheSessionAndIsIdempotent
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: anUnknownRefreshTokenIsRejected
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: theAuthEndpointsNeedNoTokenOfTheirOwn
+- `backend/src/test/java/com/example/connect_sphere/user/controller/AuthControllerTest.java`: aTamperedTokenIsRejected
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: storesOnlyAHashSoALeakedTableYieldsNothingUsable
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: rotationIssuesASuccessorAndSpendsTheTokenPresented
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: successorsStayInTheSameFamilySoOneLoginCanBeRevokedAsAUnit
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: separateLoginsGetSeparateFamilies
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: presentingARotatedTokenRevokesTheWholeFamilyIncludingItsSuccessor
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: logoutRevokesEveryLiveTokenInTheFamily
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: logoutIsSilentForAnUnknownTokenRatherThanAnOracle
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: anUnknownTokenIsRejected
+- `backend/src/test/java/com/example/connect_sphere/user/service/RefreshTokenServiceTest.java`: anExpiredTokenIsRejectedEvenThoughItWasNeverUsed
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: createsThenListsAndReadsSavedVenue
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: emptySelectionsRemainCompatibleWithBasicCreation
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: invalidSelectionsReturn422WithoutSaving
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: unknownVenueReturns404
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: malformedIdReturns400
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: malformedInputReturns400WithoutSaving
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: missingFieldsReturn422WithoutSaving
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: updatesOnlySubmittedFieldsAndPersists
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: rejectsInvalidUpdateWithoutChangingVenue
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: rejectsMalformedUpdate
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: updateMissingVenueReturns404
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: validationNamesFieldAndPreservesSavedValues
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: acceptsCapacityBoundsAndExplicitNoAccessibility
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: updatesAndClearsAdditionalInformation
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: characteristicUpdatesPreserveReservationsAndInvalidateAffectedApprovals
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: unauthenticatedRequestReturns401InApiErrorShape
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: catalogueAndDetailReadsPreserveVenueEventAndBookingRows
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: allVenueStaffCanReadTheSameCatalogueAndIndividualRecords
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: invalidBearerTokenCannotReadVenues
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: createByDisallowedRoleReturns403WithoutSaving
+- `backend/src/test/java/com/example/connect_sphere/venue/controller/VenueControllerTest.java`: legacyProseDoesNotAdvertiseHours
+- `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`: preservesPublicNameWhenDerivingHours
+- `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`: mapsEmptySelectionsToEmptyResponseLists
+- `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`: mapsEveryDatabaseEnumLabel
+- `backend/src/test/java/com/example/connect_sphere/venue/mapper/VenueMapperTest.java`: mapsStoredLayoutStringsToApiEnumsWithOneSharedCapacity
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenuePersistenceTest.java`: persistsEveryEnumLabelAndCanClearSelections
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenuePersistenceTest.java`: persistsLayoutsAndEmptyOptionalSelections
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`: invalidCapacityBeforeRead
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`: missingTimesBeforeRead
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`: invalidFacilitiesBeforeRead
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`: filtersByMinimumCapacityAndEveryRequiredFacility
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueSearchServiceTest.java`: rejectsInvalidDatesAndCapacityBeforeSearching
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: invalidVenueNames
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: copiesSelectionsAndNormalisesMissingLists
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: rejectsInvalidSelectionsBeforeSaving
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: createsVenueWithSharedCapacityAndTrimmedText
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: rejectsInvalidInputBeforeSaving
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: selectionsDoNotBypassBasicVenueValidation
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: accepts500CharacterAddressAfterTrimming
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: returnsFieldMessagesInExistingApiErrorShape
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: updatesOnlySubmittedFields
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: validatesBeforeMutatingExistingVenue
+- `backend/src/test/java/com/example/connect_sphere/venue/service/VenueServiceTest.java`: unknownUpdateDoesNotSave
+- `backend/src/test/java/com/example/connect_sphere/venueavailability/entity/EffectivePeriodTest.java`: calculatesAcrossMidnightAndYearBoundariesWithoutChangingAdvertisedTimes
+- `backend/src/test/java/com/example/connect_sphere/venueavailability/entity/EffectivePeriodTest.java`: rejectsInvalidDurations
+- `backend/src/test/java/com/example/connect_sphere/venueavailability/entity/EffectivePeriodTest.java`: rejectsMissingDurationsAndFractionalJsonValues
+- `backend/src/test/java/com/example/connect_sphere/venueavailability/service/UnavailabilityValidationTest.java`: pastDateUsesSingaporeCalendarRatherThanSuppliedOffset
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/TimingConflictServiceTest.java`: comparesEffectivePeriodsUsingStrictBounds
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/TimingConflictServiceTest.java`: vsc4Ac3Ac4BoundaryCrossesMidnightAndReportsEveryPairOnce
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/TimingConflictServiceTest.java`: vsc4Ac5Ac10NegativeRetrievalReflectsStoredChangesWithoutWrites
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/TimingConflictServiceTest.java`: vsc4Ac11FailurePropagatesInsteadOfReturningEmpty
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/TimingConflictServiceTest.java`: vsc4Ac6Ac11FailureApiReturns503RatherThanNoConflicts
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: migrationRenamesExistingCommittedRowsWithoutChangingTheirData
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: approvalPreservesRecordAndRelationshipsAndLeavesPendingQueue
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: refusesNonPending
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: missingAndInvalidIds
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: onlyVenueStaffMayApprove
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: anonymousCannotApprove
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: conflictsBlockButBackToBackAndOtherVenuesRemainAvailable
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: bufferOnlyConflictExplainsRestrictionAndKeepsBookingsUnchanged
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: approvalUsesBothBookingSnapshotsRatherThanCurrentDefaults
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: concurrentApprovalsCannotOverlapOnlyThroughBookingSnapshots
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: failedDatabaseWriteRollsBack
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: overlapResponseIdentifiesEveryConflictAndPreservesRecords
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: overlapBoundaries
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: nonApprovedBookingsDoNotBlock
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: finalEventBookingDoesNotBlockApproval
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: midnightOverlapUsesInstantsAcrossOffsets
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: concurrentDuplicateApprovalSucceedsOnlyOnce
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: concurrentOverlappingApprovalsCommitOnlyOneBooking
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: currentAccessibilityIsRevalidated
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: justifiedAccessibilityRemainsSupported
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: emptyAccessibilityOverrideIsPreserved
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: effectiveRequirementsAreConsistent
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingApprovalTest.java`: relatedBookingsAndIndependentDecision
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingDurationMigrationTest.java`: upgradesIncomingV26WithoutLosingBookingWindowsOrLifecycleNotifications
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingDurationMigrationTest.java`: backfillPreservesEveryStatusAndEnforcesSnapshotConstraints
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: readsCurrentLinkedEventWithoutChangingAnyRecord
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: refetchReadsLatestSavedEventValues
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: listsOnlyAssociatedBookingsAndReturnsEmptyForUnbookedVenue
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: pendingQueueFiltersStatusesReadsCurrentRelationshipsAndDoesNotWrite
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: pendingQueueReturnsEmptyWhenOnlyNonPendingBookingsExist
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: staffBookingReadsRejectOtherRoles
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: pendingQueueRequiresAuthentication
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`: missingRecordsAndMalformedIdsUseNormalErrors
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: rejectionPreservesDataAndOriginalReason
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: rejectionSavesBothOptionalSuggestionsWithoutCreatingAnotherBooking
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: rejectionCanSaveAnArrangementWithoutAnAlternativeVenue
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: invalidAlternativeVenueLeavesPendingBookingUntouched
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: overlongAlternativeArrangementLeavesPendingBookingUntouched
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: invalidReasonLeavesBookingUntouched
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: refusesNonPending
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: missingAndUnauthorized
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: failedWriteRollsBackRejectionAndSuggestionFields
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRejectionTest.java`: competingDecisionsOnlySucceedOnce
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: maximumLengthNotesArePersistedWithoutOverflowingTheActivityTimeline
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: attendanceEqualToCapacityCanBeBookedAndCreatesAPendingRequest
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: attendanceOneOverCapacityIsRefusedAndNothingIsCreated
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: anApprovedBookingOverlappingTheEventBlocksTheVenue
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: aBackToBackApprovedBookingIsNotAnOverlap
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: anotherEventsPendingRequestDoesNotBlockTheVenue
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: anEventCanHaveMultipleActiveRequestsForDifferentVenues
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: aVenueMissingARequestedAccessibilityFeatureNeedsAJustification
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: submittingWithoutAVenueIsRefused
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: onlyAnEventInPlanningCanTakeABookingRequest
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: onlyTheAssignedCoordinatorCanRequestOrSeeOptions
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: organisersAndVenueStaffCannotUseTheCoordinatorEndpoints
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: venueOptionsListBookableVenuesFirstAndExplainWhyOthersAreBlocked
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: venueSearchCombinesAvailabilityCapacityAndAllRequiredFacilities
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: venueSearchRejectsInvalidDateTimeAndCapacityAndIsCoordinatorOnly
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: theCoordinatorCanCancelAPendingRequestAndThenRequestAnotherVenue
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: anApprovedBookingCanBeCancelledByItsAssignedCoordinator
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: onlyTheAssignedCoordinatorCanCancelAndOnlyForTheirOwnEvent
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: textLimitsAre2000CharactersForNotesAndJustification
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: aCancellationReasonOver2000CharactersIsRefusedAndTheRequestStaysPending
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: anAlreadyCancelledRequestCannotBeCancelledAgain
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: onlyAnEventInPlanningCanTakeARequest
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: requestingAVenueThatDoesNotExistIsNotFound
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: theRequestIsOnTheCoordinatorsTimelineButNotTheOrganisers
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: theSafetyOfficerCanViewTheBookingsOfAnActiveEvent
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: theSafetyOfficerCannotViewTheBookingsOfACancelledEvent
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`: staffRejectionIsVisibleToAssignedCoordinator
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: multipleBookingWindowsDriveSubmissionApprovalCalendarAndStaffEdits
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: availabilityRechecksTheRequestedWindowAndBuffersInsteadOfTheEventWindow
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: batchRejectsBufferOnlyOverlapAndRollsBackEarlierRequests
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: bookingWindowControlsOpeningHoursAndUnavailability
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: operationalIssueDuringSetupBlocksApprovalAndTimingExpansion
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: incomingLifecycleNotificationsRemainValidAlongsideTimingNotifications
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: defaultsAreVisibleEditableAndDoNotRewriteExistingBookings
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: approvalConflictReturnsSavedDurationsAndBothTimeRanges
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: fractionalNegativeAndOutOfRangeDurationsCannotBeSaved
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: openingHoursCoverTheEntireOccupiedPeriodAcrossAllVenueActions
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: coordinatorOverridesRequireReasonAndPreserveChosenValues
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: overriddenOccupancyDrivesOptionsSubmissionAndSearch
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: safeEditNotifiesCoordinatorAndRejectsStaleOrUnauthorisedWrites
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: legacyOverlapsAreReportedOnceWithoutCancellingAndCanBeReduced
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: conflictingEditsAndNotificationFailuresRollBackCompletely
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`: timingEditAndApprovalCannotRaceIntoAnOverlap
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: cancellationReleasesBuffersAndPreservesOtherOccupancyAndHistory
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: differentVenueReplacementReleasesOnlyItsOriginalPeriod
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: failedReplacementApprovalRollsBackOriginalRelease
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: failedCancellationPreservesApprovedReservationAndEventStatus
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: concurrentCancellationAndApprovalKeepOneConsistentReservation
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: submissionAndReplacementSnapshotTheirOwnVenueDefaults
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: snapshotsSurviveDefaultChangesAcrossCalendarPreviewAndApproval
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: prospectiveRequestsUseDefaultsButExistingConflictsUseSnapshots
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: completedBookingCalendarRetainsSnapshotAfterAllowedDefaultEdit
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: approvalDoesNotPadSnapshotWithLargerCurrentVenueDefaults
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: calendarIncludesHistoryBuffersAndOverlapsWithoutChangingOperationalReads
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: calendarRejectsInvalidRangesAndReturnsEmptyPeriods
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: overlappingPeriodsAreRejectedByPreviewAndCreateWithoutSideEffects
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: separatedAndTouchingPeriodsAreAllowedAndVenuesAreIndependent
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: multiDayOverlapAndEquivalentOffsetsAreCheckedAgainAfterPreview
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: simultaneousOverlappingRecordsAllowOnlyOneSave
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: buffersBoundariesStatusesAndVenueScoping
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: confirmationPreservesBookingsAndNotifiesAssignedCoordinator
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: EC_C4_notifiesCoordinatorWithTheAffectedBookingForPlannedAndConfirmedBookings
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: stalePreviewRequiresAnotherConfirmation
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: failedInsertRollsBackAllEffects
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: unavailablePeriodBlocksShortlistSubmissionAndApproval
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: bufferAwareBookingConflicts
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: replacementApprovalChangesOnlyOriginalStatus
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: rejectedAndCancelledBookingsCanBeRebookedWithoutChangingOtherEventBookings
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: healthyApprovedBookingCanBeReplaced
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: rejectedAndWithdrawnReplacementsKeepOriginalAndAllowRetry
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: confirmedEventCanRequestReplacementButAnotherCoordinatorCannot
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: notificationFailureRollsBackPeriodAndAffectedLinks
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: createAndScheduleWorkThroughAuthenticatedApi
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: invalidCalendarAndPastDatesAreRejectedByBothEndpointsWithoutWrites
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: permissionValidationAndSettingsBoundaries
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: approvalReportsBookingsAndAllUnavailablePeriodsTogether
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: approvalUnavailabilityBoundaries
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: approvalIncludesBufferOnlyUnavailablePeriodButIgnoresOtherVenues
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: approvalUnavailabilityComparesFullTimestampsAcrossMidnight
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`: simultaneousRecordingAndApprovalCannotSilentlyMissEachOther
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: everyVenueStaffMemberIsNotifiedOfTheNewRequest
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: theRequestIsRecordedOnTheOriginatingRequestsTimeline
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: coordinatorBookingHistoryIncludesRejectedAlternativeSuggestions
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: attendanceEqualToCapacityFits
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: attendanceOneOverCapacityDoesNotFit
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: noAccessibilityNeededNeverRequiresAJustification
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: onlyTheAccessibilityFeaturesTheVenueLacksAreReported
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: onlyTheFacilitiesTheVenueLacksAreReported
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`: operationalIssueOverlappingEventBlocksSubmission
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: notesOfExactlyTheMaximumLengthAreAcceptedAndTheTimelineEntryStillFits
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: shortNotesAreCopiedToTheTimelineUnchanged
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: aRecordedUnavailablePeriodIsNamedWithItsTimesAndReason
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: aMissingAccessibilityFeatureIsNamedByItsLabel
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: aMissingFacilityIsNamedByItsLabel
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: anEventPastPlanningIsDescribedByItsStatusLabel
+- `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`: labelsMatchTheScreensAndUnknownCodesPassThrough
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: coordinatorSeesIssuesDuringSavedSetupAndTurnaround
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: venueStaffReportsAnIssueWithAPeriodAndItIsSavedAgainstTheVenue
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: aNewlyReportedIssueComesBackWithTheTimeItWasReported
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: anIssueCanBeReportedWithoutAnAffectedPeriod
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: anIssueWithoutADescriptionIsRefusedWithAMessageAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: anEndEarlierThanTheStartIsRefusedWithAMessageAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: reportingAnIssueDoesNotChangeCancelOrRemoveTheVenuesBookings
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: venueStaffCanViewAReportedIssueUnderItsVenueOnly
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: theCoordinatorSeesAnIssueAtAVenueTheyManageWithTheEventItOverlaps
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: anIssueThatStartsWhenTheEventEndsIsListedWithoutAnOverlappingEvent
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: anIssueWithoutAPeriodIsListedForTheCoordinatorWithoutOverlappingEvents
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: aCoordinatorDoesNotSeeIssuesAtVenuesTheyDoNotManage
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: otherRolesCannotReportOrListVenueIssuesAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: onlyCoordinatorsCanOpenTheCoordinatorIssueList
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: anUnauthenticatedCallerCannotReportAnIssueAndNothingIsSaved
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: aVenueThatDoesNotExistReturnsNotFound
+- `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`: aMalformedVenueIdReturnsBadRequest
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/CoordinatorVenueOperationalIssueServiceTest.java`: returnsOverlappingIssuesForApprovedManagedBookings
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/CoordinatorVenueOperationalIssueServiceTest.java`: hidesIssuesWhenCoordinatorHasNoApprovedManagedBookings
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: createsAnIssueForAnExistingVenue
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: trimsTheDescriptionBeforeSaving
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: rejectsBlankDescription
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: rejectsOnlyOnePeriodBoundary
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: rejectsAnEndThatIsNotAfterTheStart
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: rejectsAnUnknownVenue
+- `backend/src/test/java/com/example/connect_sphere/venueissue/service/VenueOperationalIssueServiceTest.java`: listsIssuesForAnExistingVenue
+- `frontend/src/App.test.tsx`: sends an unauthenticated visit to a role route to the login page
+- `frontend/src/App.test.tsx`: opens the console belonging to the signed-in account
+- `frontend/src/App.test.tsx`: puts "My events" one click away in the Event Coordinator navigation and opens the page there
+- `frontend/src/App.test.tsx`: redirects an Event Coordinator Lead away from "My events" and says why
+- `frontend/src/App.test.tsx`: sends a signed-in visitor at "/" straight to their own console — there is no role to pick
+- `frontend/src/App.test.tsx`: redirects a signed-in account away from another role's console and says why
+- `frontend/src/App.test.tsx`: does not show the access-denied alert during ordinary navigation
+- `frontend/src/App.test.tsx`: identifies the signed-in account in the shell
+- `frontend/src/App.test.tsx`: lands a signed-in Event Coordinator Lead on their own console, with the unassigned queue one click away
+- `frontend/src/App.test.tsx`: redirects an Event Coordinator away from the Lead's unassigned queue and says why
+- `frontend/src/App.test.tsx`: puts "Coordinator assignments" one click away on the Lead console and opens the page there
+- `frontend/src/App.test.tsx`: redirects a signed-in %s away from coordinator assignments, says why and reads no request data
+- `frontend/src/App.test.tsx`: redirects an Event Coordinator Lead away from the Event Coordinator's console — it is a separate role
+- `frontend/src/components/ui/ActivityTimeline.test.tsx`: renders each entry in the order given, with who acted and what they did
+- `frontend/src/components/ui/ActivityTimeline.test.tsx`: shows the message, the flagged fields by name, and the status change
+- `frontend/src/components/ui/ActivityTimeline.test.tsx`: shows the empty text when there is no history
+- `frontend/src/components/ui/ActivityTimeline.test.tsx`: lists each question under its field instead of one block of text
+- `frontend/src/components/ui/RequestByline.test.tsx`: names the organiser who submitted and the coordinator who last acted, from the coordinator side
+- `frontend/src/components/ui/RequestByline.test.tsx`: says "by you" for the organiser who submitted, and names the coordinator
+- `frontend/src/components/ui/RequestByline.test.tsx`: credits the organiser side when their saved edits are newer than the last timeline entry
+- `frontend/src/components/ui/RequestByline.test.tsx`: falls back to the creator for requests submitted before the timeline existed
+- `frontend/src/components/ui/RequestByline.test.tsx`: omits names it does not know, for requests older than the timeline
+- `frontend/src/components/ui/StatusTimeline.test.tsx`: shows Draft as the current step for a draft request
+- `frontend/src/components/ui/StatusTimeline.test.tsx`: shows Submitted as current and an "Under review" upcoming step for pending
+- `frontend/src/components/ui/StatusTimeline.test.tsx`: shows a green Approved terminal step
+- `frontend/src/components/ui/StatusTimeline.test.tsx`: shows Rejected as a distinct terminal state, not just "further along"
+- `frontend/src/components/ui/StatusTimeline.test.tsx`: shows Cancelled as a distinct terminal state
+- `frontend/src/features/auth/LoginPage.test.tsx`: posts the credentials to /api/auth/login with no Authorization header
+- `frontend/src/features/auth/LoginPage.test.tsx`: shows the backend's message on a rejected login and clears the password
+- `frontend/src/features/auth/LoginPage.test.tsx`: names the page the visitor was trying to reach
+- `frontend/src/features/auth/LoginPage.test.tsx`: will not submit until both fields are filled
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: shows each event's name, organisation, start and end, expected attendance and current status
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: keeps the order the server sends — soonest first — and says how many are assigned
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: links each event to that event's details page
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: shows a clear message when no events are assigned to the coordinator
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: shows the access-denied message, not an empty list, when the server refuses the caller
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: refreshing re-reads the list: a newly assigned event appears and a reassigned one drops off
+- `frontend/src/features/coordinator/AssignedEventsPage.test.tsx`: only ever reads, and never names a coordinator in the request
+- `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`: submits an event equipment request with item quantities and shows it awaiting review
+- `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`: shows an existing active request instead of allowing a duplicate
+- `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`: shows Technical Support rejection status and reason
+- `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`: submits a reason and displays the pending status
+- `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`: shows an existing pending request without allowing duplicate submission
+- `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`: shows a decline reason and lets the still-assigned requester submit a new request
+- `frontend/src/features/coordinator/EventReassignmentRequestPage.test.tsx`: does not offer the request form when the server denies the caller access
+- `frontend/src/features/coordinator/OperationalIssuesPage.test.tsx`: shows affected managed events without implying bookings were changed
+- `frontend/src/features/coordinator/OperationalIssuesPage.test.tsx`: shows a clear empty state when no managed venue has an issue
+- `frontend/src/features/coordinator/OperationalIssuesPage.test.tsx`: shows a retrieval error
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: shows every submitted detail and the request history
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: explains what blocks approval and disables Approve while details are missing
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: asking about missing details pre-flags them, each with its own question box
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: shows one question per flagged field and updates as fields are flagged and unflagged
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: cannot send until every flagged field has a question
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: sends a clarification with the flagged fields and confirms it was sent
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: will not send a blank clarification
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: will not send a clarification over 2000 characters
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: approving opens the new event
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: while waiting for the organiser, only rejection is offered and the question is shown
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: after a resubmission, shows the reply and what changed since the question, and marks changed rows
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: rejecting needs a reason, sends it trimmed, and confirms the organiser was notified
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: shows a server error from a failed clarification and keeps what was typed
+- `frontend/src/features/coordinator/RequestReviewPage.test.tsx`: labels each question with its field, in flag order, skipping blank ones
+- `frontend/src/features/coordinator/ReviewQueuePage.test.tsx`: shows an empty state when nothing is waiting
+- `frontend/src/features/coordinator/ReviewQueuePage.test.tsx`: groups my requests by who needs to act, and links each to its review screen
+- `frontend/src/features/coordinator/ReviewQueuePage.test.tsx`: filters the queue by the shared status
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: marks %s history labels for booking-only colour styling
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: submits one linked replacement for a rejected booking while preserving other active bookings
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: submits independent windows and buffers for multiple venues in Singapore time
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: blocks submission when a changed booking window has an occupied-time conflict
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: initialises saved venue defaults, rechecks overrides and requires a timing reason
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: allows a replacement for an affected confirmed event and sends the original booking id
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: blocks another replacement while one is already pending
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: lists bookable venues in the server ranking and hides unavailable ones until asked
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: explains missing facilities and prevents submitting the venue
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: shows coordinators the recorded unavailability reason and time window
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: search narrows the list by address or details, and says so when nothing matches
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: shows capacity against attendance for each venue
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: submits the selected suitable venue with notes and returns to the event
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: reviews and submits multiple venues for the same event
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: a venue missing a requested accessibility feature cannot be requested without a justification
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: allows adding another venue when the event already has an active request
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: shows rejection reason and alternative suggestions in coordinator booking history
+- `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`: shows the server reason when a submission is refused and stays on the page
+- `frontend/src/features/coordinator/VenueSearchPage.test.tsx`: searches with event time, capacity and all selected facilities
+- `frontend/src/features/coordinator/VenueSearchPage.test.tsx`: shows a no-matches message when the server returns no venues
+- `frontend/src/features/coordinator/VenueSearchPage.test.tsx`: rejects invalid event times without requesting or showing stale results
+- `frontend/src/features/coordinator/VenueSearchPage.test.tsx`: rejects an impossible calendar date without requesting venues
+- `frontend/src/features/coordinator/VenueSearchPage.test.tsx`: rejects a negative or non-integer capacity without requesting venues
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: shows each request's event, organisation, dates, attendance, status, date submitted and coordinator
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: groups requests under their Event Coordinator, keeping the order the server sends
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: shows how many requests each coordinator holds, including a coordinator who holds none
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: shows a clear message when no requests are assigned, with every coordinator holding none
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: shows the access-denied message and no request data when the server refuses the caller
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: refreshing re-reads the list: a newly assigned request appears and a decided one drops off
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: only ever reads: a card offers its view link and nothing that changes the request
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: selecting a %s request opens its review page, shown as assigned and offering only Reassign
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: after a reassignment, confirms it and shows the request under its new coordinator with both counts updated
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: shows no confirmation when the page is opened on its own
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: the review page opened from a card leads back to the coordinator assignments
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: does not name the coordinator on the card once the request is held by someone else
+- `frontend/src/features/coordinatorLead/CoordinatorAssignmentsPage.test.tsx`: filters assigned requests by the shared status and keeps every coordinator heading
+- `frontend/src/features/coordinatorLead/EventReassignmentRequestsPage.test.tsx`: approves a request by selecting another coordinator
+- `frontend/src/features/coordinatorLead/EventReassignmentRequestsPage.test.tsx`: requires a decline reason and submits it with the decision
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: shows the request as the organiser submitted it
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: says a detail was not provided rather than leaving it blank
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: shows the request's history, including a clarification and the organiser's response
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: links back to the unassigned requests list
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: shows "request not found" and no request data for a draft or unknown request
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: shows the access-denied message and no request data when the server refuses the caller
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: says so and offers no review actions when the %s request already has a coordinator
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: says so and offers no review actions when the request is already %s
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: offers only Assign while an unassigned request waits on the organiser
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: shows an assigned request that waits on the organiser as assigned, not as returning to the unassigned list
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: offers assign, clarification and reject on an unassigned request, and never approve
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: lists every Event Coordinator to choose from, with none chosen to begin with
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: assigning sends the chosen coordinator, then returns to the queue with a confirmation naming them
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: a request waiting on the organiser can be assigned the same way
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: assigning without choosing a coordinator is blocked with a message and sends nothing
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: says so when the Event Coordinators cannot be loaded, and assigning sends nothing
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: rejecting sends the reason, then returns to the queue with a confirmation and the request gone
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: asking for clarification sends the message, then returns to the queue with a confirmation
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: %s with nothing entered, or only spaces, is blocked with a message and sends nothing
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: when the request was assigned meanwhile, shows the refusal, stays on the page and withdraws the actions
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: when the request was %s meanwhile, assigning shows the refusal, stays on the page and withdraws the actions
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: offers Reassign and nothing else when the %s request already has a coordinator
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: does not offer Reassign once the assigned request is %s
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: lists every Event Coordinator to reassign to, showing the current one, who cannot be picked
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: reassigning a %s request sends the chosen coordinator, then returns to the assignments with a confirmation naming them
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: reassigning without choosing a coordinator is blocked with a message and sends nothing
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: when the coordinator approved the request meanwhile, reassigning shows the refusal, stays on the page and withdraws Reassign
+- `frontend/src/features/coordinatorLead/IncomingRequestReviewPage.test.tsx`: opening the page only reads the request
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: shows each waiting request's basic event information on its card
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: keeps the order the server sends — longest-waiting first — and says how many are waiting
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: shows a clear message when there are no unassigned requests
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: shows the access-denied message, not an empty queue, when the server refuses the caller
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: refreshing re-reads the queue: a new submission appears and an assigned request drops off
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: only ever reads: a card offers its review link and nothing that changes the request
+- `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`: filters unassigned requests by the shared status
+- `frontend/src/features/events/EventLifecycle.test.tsx`: refreshes lifecycle readiness after cancelling an approved venue booking
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: labels an approved, unconfirmed event as Planning and shows its history
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: offers the coordinator a venue request when none is active
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: shows the pending request instead of offering another
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: shows every active venue booking for the event
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: offers a linked rebooking action for a %s venue booking
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: shows replacement attempts without repeating their venue in the source history
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: offers a replacement action for an unavailable active booking
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: retains the approved booking and displays a cancellation failure
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: opens cancellation for only the selected booking
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: cancels a %s booking with an optional reason and then offers a new request
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: highlights a request that needs clarification, shows the question, and links to Respond
+- `frontend/src/features/events/EventPlanningPanels.test.tsx`: describes a clarification request and shows its message
+- `frontend/src/features/notifications/NotificationBell.test.tsx`: shows an unread-count badge from the unread-count endpoint
+- `frontend/src/features/notifications/NotificationBell.test.tsx`: lists notifications and distinguishes read from unread, including the rejection reason
+- `frontend/src/features/notifications/NotificationBell.test.tsx`: marks a notification as read and navigates to its link when clicked
+- `frontend/src/features/notifications/NotificationBell.test.tsx`: shows an empty state with nothing to fail on when there are no notifications
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: shows the coordinator's question and puts the flagged field first, highlighted
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: cannot resubmit without a reply to the coordinator
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: sends the edited details and the reply together in one call, and returns home
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: saving alone keeps the request with the organiser
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: tells the organiser when saving fails and does not claim it was saved
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: shows which required details are missing when resubmission is refused
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: shows the coordinator's question for each field right beside that field
+- `frontend/src/features/organiser/ClarificationResponsePage.test.tsx`: says so when the request is no longer waiting for clarification
+- `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`: says a rejected request was rejected, not submitted
+- `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`: still says a submitted request was submitted
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: does not submit previously saved data when saving the current fields fails
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: lets the organiser move through every step without filling any field in
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: shows exactly the missing fields the backend reports when submitting an incomplete request
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: shows an inline error on the accessibility field when the backend reports it missing
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: treats "no accessibility requirements needed" as exclusive with a real accommodation
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: lets organisers select catalogue equipment and saves item quantities in the request
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: shows a live completion percentage that rises as required fields are filled in
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: autosaves automatically after the person stops typing, without clicking Next
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: restores unsynced input from a local backup when the server is unreachable
+- `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`: never answers a load failure with a backup left behind by a different organisation on this device
+- `frontend/src/features/organiser/MyRequestsPage.test.tsx`: shows a success confirmation once, right after arriving from a successful submission
+- `frontend/src/features/organiser/MyRequestsPage.test.tsx`: shows no confirmation on an ordinary visit
+- `frontend/src/features/organiser/MyRequestsPage.test.tsx`: shows a relative last-edited time and completion ring for a draft
+- `frontend/src/features/organiser/MyRequestsPage.test.tsx`: shows the status timeline for a submitted request, not only the badge
+- `frontend/src/features/organiser/eventRequestCompletion.test.ts`: reports every required field missing on a blank draft
+- `frontend/src/features/organiser/eventRequestCompletion.test.ts`: reports nothing missing once every required field is filled in
+- `frontend/src/features/organiser/eventRequestCompletion.test.ts`: treats whitespace-only text fields as missing, same as the backend
+- `frontend/src/features/organiser/eventRequestCompletion.test.ts`: treats an empty accessibilityNeeds array as missing (must answer, even with "none")
+- `frontend/src/features/organiser/eventRequestCompletion.test.ts`: computes a proportional percentage for a partially filled draft
+- `frontend/src/features/organiser/eventRequestCompletion.test.ts`: does not count optional fields (description, equipment, registration) toward completion
+- `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`: shows confirmed events with their venue and the empty state when there are none
+- `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`: persists checklist changes, shows event logistics, and blocks approval while incomplete
+- `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`: asks for a note before requesting changes, and sends the decision
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: separates tentative holds from pending requests and filters the two queues with counts
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: automatically moves a remotely released hold back to pending without a page refresh
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: renders pending summaries with status and opens the selected existing booking details
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: keeps initial loading separate from an empty queue
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: shows retrieval errors separately from empty state and retries successfully
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: shows a refresh state and replaces the list with the latest pending results
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: uses a placeholder for missing requirements and shortens long requirements
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: keeps the queue behind the existing Venue Staff route gate
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: reads fresh details when a pending booking becomes %s and refreshes the queue on return
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: preserves queue context on direct navigation and reopening with current detail data
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: handles HTTP %s detail errors with queue navigation and retry
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: ignores a late detail response after returning to the queue
+- `frontend/src/features/venueStaff/BookingApprovalsPage.test.tsx`: approves from the queue and removes the booking when returning
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: keeps the page, open editor and unsaved input mounted during focus refresh (%s)
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows the ordered requirements using booking timings and updates them after saving
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: offers a hold beside approval/rejection and updates release/conversion actions immediately without refreshing
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: exposes the %s booking status for colour styling on details and venue lists
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: defaults an absent booking status (%s) to pending and follows an approval response
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: rejects with an alternative venue and arrangement and displays both suggestions
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: allows rejection without an alternative when the venue list cannot be loaded
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: navigates catalogue to venue to booking, displays requirements and refetches on reopening
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: displays empty associated bookings
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows a booking error and can retry without showing stale details
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: preserves explicit no accessibility requirements and displays existing equipment requirements
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows missing venue errors without exposing an associated booking list
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: retains venue details when associated bookings fail and supports retry
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: paginates within the venue and fetches current details for each selected booking
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: keeps both panels and navigation mounted while paging without refetching the list
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: retains the displayed booking and navigation after failure and throughout retry
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: reviews the booking, cancels without writing, then approves exactly once and displays the response
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: does not offer approval for %s
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: keeps the booking pending and shows an error for failure %s
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows conflict details through automatic refresh (refresh fails: %s)
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows a buffer-only restriction without falsely highlighting the event times
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: highlights the paired boundaries in the conflict card and current request (reverse: %s)
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows unavailable periods and highlights both sides (refresh fails: %s)
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: shows combined booking and unavailable-period conflicts without highlighting buffer-only periods
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: reconciles a stale approval conflict to the backend %s status
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: removes a booking deleted between review and approval
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: requires a successful refresh after a lost response and failed read, then shows the committed status
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: places the approval action in the venue information header
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: requires a reason, cancels without writing, and displays the saved rejection
+- `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`: refreshes after a lost rejection response and displays the committed reason
+- `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`: refreshes the editable durations when the server booking is refreshed
+- `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`: preserves unsaved duration edits when background refresh returns the same saved timings
+- `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`: shows only the timing editor and sends edited durations with a stale-write guard
+- `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`: retains proposed inputs and identifies occupied conflicts after a rejected save
+- `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`: blocks invalid input and hides editing for historical records
+- `frontend/src/features/venueStaff/BookingTimingEditor.test.tsx`: previews durations around the booking window when it differs from the event
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: validates expiry and preserves entered values after a backend conflict
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: creates a hold and refreshes booking details without treating it as approved
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: reuses approval conflict cards and highlights occupied times for a buffer-only conflict
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: shows expiry and performs %s for an active hold
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: hides hold actions when status retrieval fails and offers retry
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: uses server time to remove occupancy at the exact deadline even with a wrong client clock and failed refresh
+- `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`: calendar distinguishes a real hold from pending requests and applies its occupied interval once
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: defaults capacity to 50 and rejects missing fields without POST
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: rejects capacity %s
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: shows only the edited invalid field and clears its error when corrected
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: POSTs trimmed input then GETs the catalogue and displays success
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: retains input after backend rejection
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: saves selections and displays the freshly fetched catalogue labels
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: keeps no provisions exclusive and lets selections be cleared
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: distinguishes empty selections from explicitly no accessibility provisions
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: handles network failure and retries catalogue loading
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: saves explicit no provisions as none and displays the saved meaning
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: still validates %s when provisions are selected
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: displays all supported provision and facility labels
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: edits %s and reloads saved data
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: shows edit validation and server rejection without losing input
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: shows loading errors and retries before enabling editing
+- `frontend/src/features/venueStaff/VenuePages.test.tsx`: saves multiple changes together, clears additional information and reopens current values
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: opens venue panels without duplicate sibling keys
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: keeps rooms at the same location separate and layouts within their room
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: reads full characteristics and latest values on refresh and reopening without writes
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: validates an operational issue before posting
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: hides details and never requests bookings when venue read returns %s
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: removes previously displayed catalogue records after access is denied on refresh
+- `frontend/src/features/venueStaff/VenueRead.test.tsx`: shows an empty catalogue without venue links
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: refreshes on window focus and removes released occupancy while retaining other entries
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: shows overlapping bookings, holds and separate buffers, with read-only details
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: requests displayed dates, navigates periods and returns to today
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: clears previous entries on refresh failure and supports retry
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: ignores a late response for the previous venue
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: normalises distinct IDs, omits zero buffers and assigns multi-day entries with exclusive midnight ends
+- `frontend/src/features/venueStaff/VenueSchedulePage.test.tsx`: preserves the calendar height during navigation, venue changes and refresh without retaining stale entries
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: rejects missing and equal timestamps near the relevant fields
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: updates the end minimum, retains invalid dates, and clears live errors when corrected
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: requires conflict acknowledgement and allows returning without saving
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: sends Singapore timestamps and acknowledged bookings, then refreshes
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: saves a period without conflicts after checking
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: keeps the form and requires review again when saving fails
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: does not save when checking affected bookings fails
+- `frontend/src/features/venueStaff/VenueUnavailabilityPanel.test.tsx`: shows an overlapping-period error from %s and preserves input
+- `frontend/src/features/venueStaff/bookingConflictHighlights.test.ts`: highlights request %s–%s against booking %s–%s
+- `frontend/src/features/venueStaff/bookingConflictHighlights.test.ts`: compares instants across midnight and timezone offsets
+- `frontend/src/features/venueStaff/bookingStatusColours.test.ts`: uses green/red theme colours for approved, rejected and attention booking labels and pills
+- `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`: scenario %s: %s → %s is accepted=%s
+- `frontend/src/features/venueStaff/unavailabilityValidation.test.ts`: uses Singapore midnight and the Gregorian century leap-year rule
+- `frontend/src/lib/apiClient.test.ts`: sends the access token as a Bearer header
+- `frontend/src/lib/apiClient.test.ts`: sends no organisation of any kind — the backend reads its own claim
+- `frontend/src/lib/apiClient.test.ts`: parses a successful JSON response
+- `frontend/src/lib/apiClient.test.ts`: throws an ApiClientError with missingFields on a 422 response
+- `frontend/src/lib/apiClient.test.ts`: retains valid booking conflict details and ignores malformed entries
+- `frontend/src/lib/apiClient.test.ts`: handles absent or invalid conflict lists (%s)
+- `frontend/src/lib/apiClient.test.ts`: retains unavailable periods while ignoring malformed entries
+- `frontend/src/lib/apiClient.test.ts`: renews an expired access token and replays the original request
+- `frontend/src/lib/apiClient.test.ts`: ends the session when the token cannot be renewed
+- `frontend/src/lib/apiClient.test.ts`: does NOT end the session on a 403 — being forbidden is not being logged out
+- `frontend/src/lib/apiClient.test.ts`: does not treat a validation (422) or server (500) error as unauthorised
+- `frontend/src/lib/apiClient.test.ts`: throws a distinguishable ApiClientError when the network request itself fails
+- `frontend/src/lib/authTokens.test.ts`: maps the backend's `ecl` claim to the Event Coordinator Lead console
+- `frontend/src/lib/authTokens.test.ts`: keeps the Lead distinct from an Event Coordinator
+- `frontend/src/lib/authTokens.test.ts`: signs a Lead in from a login response carrying the `ecl` role
+- `frontend/src/lib/authTokens.test.ts`: still treats a role this build does not know as not signed in
+- `frontend/src/lib/authTokens.test.ts`: maps the Safety Officer role to its protected console
+- `frontend/src/lib/bookingTiming.test.ts`: validates minutes and calculates across midnight using timestamp instants
+- `frontend/src/lib/bookingTiming.test.ts`: identifies approved snapshot overlaps, allowing touching boundaries and ignoring pending holds
+- `frontend/src/lib/fieldChanges.test.ts`: reports only real changes, in form order, readably
+- `frontend/src/lib/fieldChanges.test.ts`: treats the same instant written with a different offset as unchanged
+- `frontend/src/lib/fieldChanges.test.ts`: treats empty text, null and an empty list as the same
+- `frontend/src/lib/fieldChanges.test.ts`: returns nothing when either moment is unknown (older timeline entries)
+- `frontend/src/lib/fieldChanges.test.ts`: formats blanks as a dash
+- `frontend/src/lib/relativeTime.test.ts`: says "just now" for anything under a minute old
+- `frontend/src/lib/relativeTime.test.ts`: reports whole minutes, singular vs plural
+- `frontend/src/lib/relativeTime.test.ts`: reports whole hours once past 60 minutes
+- `frontend/src/lib/relativeTime.test.ts`: reports whole days once past 24 hours
+- `frontend/src/lib/relativeTime.test.ts`: falls back to a plain date once past 30 days
+- `frontend/src/lib/session.test.tsx`: maps the backend's role abbreviation onto the console vocabulary
+- `frontend/src/lib/session.test.tsx`: logs the user out when apiClient reports a session that could not be renewed
+- `frontend/src/lib/session.test.tsx`: resumes a stored session on reload
+- `frontend/src/lib/session.test.tsx`: treats an unrecognised role as not logged in rather than guessing a console
+
 ## Files per story
 
 <details><summary>AT01</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeEventDetailsServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/RegistrationChangeFieldsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeEventDetailsServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeRegistrationServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/RegistrationChangeFieldsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestLeadReviewServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeBadgeDataFlowTest.java`
@@ -117,6 +1090,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationQueryFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/RegistrationConfirmationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeEventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeStatusBadges.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeWorkflowAudit.test.tsx`
@@ -135,17 +1109,19 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>AT02</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeEventDetailsServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/RegistrationConfirmationEventDetailsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeEventDetailsServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeBadgeDataFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationQueryFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeEventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeStatusBadges.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/AttendeeWorkflowAudit.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationConfirmation.test.tsx`
 - frontend component/unit: `frontend/src/features/attendee/RegistrationPages.test.tsx`
+- frontend component/unit: `frontend/src/features/changeRequests/ReleaseOneSynchronization.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/registrationRules.test.ts`
 - e2e (browser): `frontend/e2e/attendee-badges.spec.ts`
 - e2e (browser): `frontend/e2e/attendee-registration-status.spec.ts`
@@ -155,8 +1131,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>AT03</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/RegistrationConfirmationEventDetailsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeRegistrationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/CoordinatorNotificationsTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/NotificationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/RegistrationConfirmationNotificationTest.java`
@@ -180,8 +1156,8 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>AT04</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationQueryServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeRegistrationQueryServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeWithdrawalServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeBadgeDataFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationQueryFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalFlowTest.java`
@@ -210,7 +1186,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>AT08</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeWithdrawalServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/notification/service/WithdrawalNotificationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeWithdrawalMigrationTest.java`
@@ -232,6 +1208,11 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/attendee/RegistrationConfirmation.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/AttendeeEventNotifications.test.tsx`
 - e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
+
+</details>
+<details><summary>AU02</summary>
+
+- e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
 
 </details>
 <details><summary>AU04</summary>
@@ -257,12 +1238,14 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueMap/VenueMapExplorer.test.tsx`
 - frontend component/unit: `frontend/src/lib/session.test.tsx`
 - e2e (browser): `frontend/e2e/coordinator-venue-map.spec.ts`
+- e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/venue-map.spec.ts`
 - e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
 </details>
 <details><summary>AU06</summary>
 
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/AccessMessagesApiTest.java`
 - e2e (browser): `frontend/e2e/access-messages.spec.ts`
 
 </details>
@@ -399,24 +1382,33 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>EC07</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/entity/EquipmentRequestLineIdTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentreview/TechnicalSupportNotificationFlowTest.java`
+- frontend component/unit: `frontend/src/components/equipment/EquipmentPicker.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 - e2e (browser): `frontend/e2e/equipment.spec.ts`
+- e2e (browser): `frontend/e2e/final-ui.spec.ts`
+- e2e (browser): `frontend/e2e/release1-integration-repairs.spec.ts`
 
 </details>
 <details><summary>EC08</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/ReadinessServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/BookingAssessmentFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventCancellationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/notification/SafetyReviewNoticeDeliveryTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
@@ -424,9 +1416,12 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventLifecycle.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+- frontend component/unit: `frontend/src/features/safetyOfficer/SafetyReviewLiveUpdates.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingAssessment.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
+- e2e (browser): `frontend/e2e/release1-integration-repairs.spec.ts`
 - e2e (browser): `frontend/e2e/venue-suitability-live.spec.ts`
 - e2e (browser): `frontend/e2e/venue-unavailability-release.spec.ts`
 
@@ -449,6 +1444,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/MultipleVenueRequirementsTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorVenueMaps.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/VenueBookingRequestPage.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/coordinator-venue-map.spec.ts`
 - e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
@@ -517,25 +1513,37 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>EC-NEW3</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeFieldsTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeImpactServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestDecisionServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestQueueServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeFieldsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeImpactServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestQueueServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentreview/service/TechnicalSupportNotificationServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleCancellationTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestNotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/EquipmentRequestAttentionFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentreview/TechnicalSupportNotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/notification/EquipmentAttentionNoticeDeliveryTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
+- frontend component/unit: `frontend/src/features/changeRequests/ChangeApprovalNavigation.test.tsx`
 - frontend component/unit: `frontend/src/features/changeRequests/ChangeRequests.test.tsx`
+- frontend component/unit: `frontend/src/features/changeRequests/ReleaseOneSynchronization.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/CoordinatorDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinator/EquipmentRequestPage.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequestFilters.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/DecisionCard.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/change-requests.spec.ts`
+- e2e (browser): `frontend/e2e/final-ui.spec.ts`
+- e2e (browser): `frontend/e2e/release1-integration-repairs.spec.ts`
 
 </details>
 <details><summary>EC-NEW4</summary>
@@ -579,6 +1587,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/coordinatorLead/CoordinatorLeadNav.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/UnassignedRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/lib/authTokens.test.ts`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 - e2e (browser): `frontend/e2e/request-review.spec.ts`
 
 </details>
@@ -672,11 +1681,14 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestControllerTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/EventRequestServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/controller/EventRequestDraftSubmitFlowTest.java`
+- frontend component/unit: `frontend/src/components/equipment/EquipmentPicker.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.status.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/EventRequestWizardPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/MyRequestsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/organiser/eventRequestCompletion.test.ts`
 - e2e (browser): `frontend/e2e/access-scope.spec.ts`
+- e2e (browser): `frontend/e2e/critical-journeys.spec.ts`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
@@ -702,15 +1714,21 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>EO03</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeFieldsTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/RegistrationChangeFieldsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeFieldsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeRequestServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/RegistrationChangeFieldsTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeEventChangeNotificationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestNotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
 - frontend component/unit: `frontend/src/features/changeRequests/ChangeRequests.test.tsx`
+- frontend component/unit: `frontend/src/features/changeRequests/ReleaseOneSynchronization.test.tsx`
 - frontend component/unit: `frontend/src/features/notifications/NotificationBell.ecnew4.test.tsx`
 - e2e (browser): `frontend/e2e/attendee-event-changes.spec.ts`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/change-requests.spec.ts`
+- e2e (browser): `frontend/e2e/final-ui.spec.ts`
+- e2e (browser): `frontend/e2e/release1-integration-repairs.spec.ts`
 
 </details>
 <details><summary>EO04</summary>
@@ -779,7 +1797,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>EO12</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationPeriodBoundaryTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/attendee/service/AttendeeRegistrationPeriodBoundaryTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/controller/EventRegistrationPeriodAccessTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventRegistrationPeriodServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
@@ -856,11 +1874,16 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>SO-C1</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/notification/SafetyReviewNoticeDeliveryTest.java`
+- frontend component/unit: `frontend/src/features/changeRequests/ReleaseOneSynchronization.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerNav.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+- frontend component/unit: `frontend/src/features/safetyOfficer/SafetyReviewLiveUpdates.test.tsx`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 - e2e (browser): `frontend/e2e/oversight.spec.ts`
+- e2e (browser): `frontend/e2e/release1-integration-repairs.spec.ts`
 
 </details>
 <details><summary>SO-C2</summary>
@@ -874,16 +1897,19 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>SO-C3</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/ReadinessServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
+- frontend component/unit: `frontend/src/components/equipment/EquipmentPicker.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EventDetailsPage.test.tsx`
+- frontend component/unit: `frontend/src/features/safetyOfficer/ReadinessChecklistPanel.test.tsx`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 
 </details>
 <details><summary>SO-C4</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/ReadinessServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/safety/SafetyOfficerAccessTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/event/EventLifecycleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/notification/NotificationFlowTest.java`
 - frontend component/unit: `frontend/src/features/safetyOfficer/SafetyOfficerPages.test.tsx`
@@ -894,7 +1920,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>SO-C5</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/ReadinessServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionCommitTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
@@ -906,7 +1932,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>SO-C6</summary>
 
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/ReadinessServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/safety/service/ReadinessServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionCommitTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/safety/SafetyDecisionFlowTest.java`
 - frontend component/unit: `frontend/src/components/ui/ActivityTimeline.test.tsx`
@@ -917,25 +1943,35 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>TS01</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentConsoleReadsTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestQueueServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentAvailabilityServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestQueueServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
+- frontend component/unit: `frontend/src/components/equipment/EquipmentPicker.test.tsx`
+- frontend component/unit: `frontend/src/features/changeRequests/ReleaseOneSynchronization.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/dashboard/TechnicalSupportDashboard.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequestFilters.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 - e2e (browser): `frontend/e2e/equipment.spec.ts`
+- e2e (browser): `frontend/e2e/final-ui.spec.ts`
+- e2e (browser): `frontend/e2e/release1-integration-repairs.spec.ts`
 
 </details>
 <details><summary>TS02</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/entity/SerialisedEquipmentIdTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentAvailabilityServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/changerequest/ReleaseOneIntegrationRepairTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
@@ -946,15 +1982,17 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/singaporeTime.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>TS03</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentConsoleReadsTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentTechnicalSupportServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/ReportDamageRequestTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentStatusFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleRoleAccessTest.java`
@@ -970,53 +2008,74 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>TS06</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestDecisionServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/entity/EquipmentRequestLineIdTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestDecisionServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
 - frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/fulfilment.test.ts`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/equipment.spec.ts`
 
 </details>
 <details><summary>TS09</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/DevEquipmentSeederTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentConsoleReadsTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/DevEquipmentSeederTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipment/service/EquipmentAvailabilityServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/DamageImpactTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/ReportDamageRequestTest.java`
-- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/EquipmentRequestQueueServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentrequest/service/EquipmentRequestQueueServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentreview/service/TechnicalSupportNotificationServiceTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/attendee/AttendeeRegistrationMigrationTest.java`
-- backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/DevEquipmentSeederFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/EquipmentBatchReservationFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/TechnicalSupportConsoleRoleAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipment/service/DevEquipmentSeederFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentdamage/EquipmentDamageRoleAccessTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentreview/TechnicalSupportNotificationFlowTest.java`
 - frontend component/unit: `frontend/src/App.test.tsx`
 - frontend component/unit: `frontend/src/components/layout/SideNav.test.tsx`
 - frontend component/unit: `frontend/src/features/coordinatorLead/ActiveEventsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/equipment/equipmentCatalogueMedia.test.tsx`
 - frontend component/unit: `frontend/src/features/events/EquipmentDamagePanel.test.tsx`
+- frontend component/unit: `frontend/src/features/notifications/NotificationBell.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/LegacyRedirects.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/changeReviews/ChangeReviews.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/damage/EquipmentDamage.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/dashboard/TechnicalSupportDashboard.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/faulty/FaultyEquipment.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/inventory/Inventory.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequestFilters.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/requests/EquipmentRequests.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/reservations/singaporeTime.test.ts`
 - frontend component/unit: `frontend/src/features/technicalSupport/review/EquipmentReviewPage.test.tsx`
 - frontend component/unit: `frontend/src/features/technicalSupport/shared/format.test.ts`
 - e2e (browser): `frontend/e2e/equipment.spec.ts`
+- e2e (browser): `frontend/e2e/final-ui.spec.ts`
+
+</details>
+<details><summary>TS11</summary>
+
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentreview/service/EquipmentChangeImpactTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentreview/service/EquipmentChangeReviewServiceTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/equipmentreview/service/TechnicalSupportNotificationServiceTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/equipmentreview/TechnicalSupportNotificationFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/security/CoordinatorAssignmentScopeTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/uml/DomainClassDiagramTest.java`
+- frontend component/unit: `frontend/src/features/technicalSupport/TechnicalSupportPages.test.tsx`
+- frontend component/unit: `frontend/src/features/technicalSupport/changeReviews/ChangeReviews.test.tsx`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 
 </details>
 <details><summary>VS01</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/venueavailability/UnavailabilityValidationTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venueavailability/service/UnavailabilityValidationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffCoverageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueUnavailabilityTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
@@ -1053,6 +2112,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalCoverage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueHoldPanel.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/failure-paths.spec.ts`
 - e2e (browser): `frontend/e2e/golden-path.spec.ts`
 - e2e (browser): `frontend/e2e/tentative-holds.spec.ts`
@@ -1067,6 +2127,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingApprovalCoverage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
+- e2e (browser): `frontend/e2e/change-request-journeys.spec.ts`
 - e2e (browser): `frontend/e2e/venue-decisions.spec.ts`
 
 </details>
@@ -1125,7 +2186,6 @@ Some of these are not built yet; a story that is built and still listed here nee
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venueissue/VenueOperationalIssueFlowTest.java`
 - frontend component/unit: `frontend/src/features/coordinator/OperationalIssuesPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueOperationalIssuesPanel.test.tsx`
-- e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
 <details><summary>VS15</summary>
@@ -1142,16 +2202,18 @@ Some of these are not built yet; a story that is built and still listed here nee
 <details><summary>VS16</summary>
 
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingReadTest.java`
+- frontend component/unit: `frontend/src/features/venueStaff/BookingDetailsPage.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueRead.test.tsx`
 - frontend component/unit: `frontend/src/features/venueStaff/VenueStaffPresentation.test.tsx`
+- e2e (browser): `frontend/e2e/equipment-layout.spec.ts`
 - e2e (browser): `frontend/e2e/venue-staff-presentation.spec.ts`
 
 </details>
 <details><summary>VS17</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/ChangeRequestServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueRequirementChangeTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/VenueSuitabilitySummaryTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/changerequest/service/ChangeRequestServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventArrangementsServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleCancellationTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/event/service/EventLifecycleServiceTest.java`
@@ -1247,7 +2309,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 </details>
 <details><summary>VS-C2</summary>
 
-- backend unit: `backend/src/test/java/com/example/connect_sphere/venueavailability/EffectivePeriodTest.java`
+- backend unit: `backend/src/test/java/com/example/connect_sphere/venueavailability/entity/EffectivePeriodTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingDurationMigrationTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueStaffCoverageFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueTimingWorkflowTest.java`
