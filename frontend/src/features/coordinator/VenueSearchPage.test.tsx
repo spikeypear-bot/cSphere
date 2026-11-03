@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
 import { jsonResponse, seedSession, stubApi } from '../../test/apiStubs'
 import type { VenueDto } from '../../types/venue'
+import { VenueSearchSelect } from '../../components/venue/VenueSearchFilters'
 import { VenueSearchPage } from './VenueSearchPage'
 
 const start = '2027-03-10T09:00'
@@ -124,6 +125,16 @@ describe('EC04 VenueSearchPage', () => {
 
     await user.selectOptions(screen.getByLabelText('Accessibility provision'), 'accessible_parking')
     expect(screen.getByRole('button', { name: '2 Garden Road' })).toBeInTheDocument()
+  })
+
+  it('EC04 (happy): supports custom styling classes on venue dropdown filters', () => {
+    render(
+      <VenueSearchSelect label="Test filter" className="custom-filter" value="" onChange={() => {}}>
+        <option value="">Any</option>
+      </VenueSearchSelect>,
+    )
+
+    expect(screen.getByLabelText('Test filter').closest('label')).toHaveClass('venue-search-field', 'custom-filter')
   })
 
   it('rejects invalid event times without requesting or showing stale results', async () => {
