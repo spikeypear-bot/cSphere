@@ -5,7 +5,7 @@ Each story lists the test files that exercise it, by layer (IS212 Week 4/6/9 tes
 "ACs referenced" are acceptance criteria named in test names (e.g. `EC08 AC12`); the full
 AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-cases/`.
 
-**304 test files, 2494 tests, 82 stories traced, 0 files untraced, 2 tests whose name names no story.**
+**304 test files, 2494 tests, 82 stories traced, 0 files untraced, 0 tests whose name names no story.**
 
 | Story | Unit (BE) | Integration (BE) | Component (FE) | E2E | Tests | ACs referenced | Case types named |
 |---|---:|---:|---:|---:|---:|---|---|
@@ -24,7 +24,7 @@ AC-by-AC mapping for a story, with its Week 4 test cases, lives in `docs/test-ca
 | DEV16 | 4 | 6 | 20 | 3 | 330 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC01 | 2 | 2 | 2 | 1 | 76 | AC3, AC4, AC5, AC8, AC9, AC10, AC11, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC02 | 2 | 5 | 6 | 3 | 147 | — | happy, negative, boundary, conflict, failure, cross-cutting |
-| EC03 | 4 | 4 | 9 | 5 | 161 | — | happy, negative, boundary, conflict, failure, cross-cutting |
+| EC03 | 4 | 5 | 9 | 5 | 163 | — | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC04 | 1 |  | 5 | 3 | 37 | AC1, AC2, AC3, AC4, AC5, AC6, AC7, AC8, AC10, AC11 | happy, negative, boundary, conflict, failure, cross-cutting |
 | EC05 | 1 |  |  | 1 | 7 | AC1, AC2, AC3, AC4, AC5, AC7 | happy, negative, boundary, conflict |
 | EC07 | 2 | 5 | 2 | 5 | 154 | AC2, AC3, AC5, AC7, AC8, AC9, AC10, AC12 | happy, negative, boundary, conflict, failure, cross-cutting |
@@ -106,8 +106,7 @@ Some of these are not built yet; a story that is built and still listed here nee
 
 The file is traced, but this test's own name does not say which story it checks.
 
-- `backend/src/test/java/com/example/connect_sphere/event/service/EventServiceTest.java`: coordinatorContactDetailsAreResolvedOntoTheDto
-- `backend/src/test/java/com/example/connect_sphere/eventrequest/service/ConcurrentDecisionTest.java`: twoSimultaneousBookingRequestsForOneEventCreateExactlyOne
+- none
 
 ## Files per story
 
@@ -380,6 +379,7 @@ The file is traced, but this test's own name does not say which story it checks.
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingRequestServiceTest.java`
 - backend unit: `backend/src/test/java/com/example/connect_sphere/venuebooking/service/VenueBookingWordingTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/activity/ChangeLogFlowTest.java`
+- backend integration: `backend/src/test/java/com/example/connect_sphere/eventrequest/service/ConcurrentDecisionTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/security/NewEndpointRoleAccessTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueBookingRequestFlowTest.java`
 - backend integration: `backend/src/test/java/com/example/connect_sphere/venuebooking/VenueWorkflowRepairTest.java`

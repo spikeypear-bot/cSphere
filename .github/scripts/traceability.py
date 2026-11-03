@@ -15,7 +15,8 @@ are picked up from test names and display names.
 Writes docs/test-traceability.md. With --check, exits 1 if any test file
 traces to no story, so new tests cannot silently drop out of the matrix.
 It also lists each test whose own name (backend @DisplayName, frontend
-it/test title) names no story, so every test, not only its file, traces.
+it/test title) names no story, and --check fails on those too, so every
+test, not only its file, traces.
 With GITHUB_STEP_SUMMARY set (CI), also writes a short summary there.
 
 Usage: python .github/scripts/traceability.py [--check]
@@ -181,6 +182,10 @@ def main():
     print(summary.strip())
     if check and untraced:
         print('Untraced test files (add a story @Tag / "// @stories" header):', *untraced, sep='\n  ')
+    if check and unnamed:
+        print('Tests whose name names no story (start it with the story ID, e.g. "VS-C3 (boundary): ..."):',
+              *(f'{p}: {n}' for p, n in unnamed), sep='\n  ')
+    if check and (untraced or unnamed):
         sys.exit(1)
 
 

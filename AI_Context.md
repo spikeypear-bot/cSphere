@@ -193,7 +193,7 @@ Week 6 asked "is the evidence from one unit trustworthy?"; Week 9 asks "does it 
 - **Unit vs integration traceability.** A unit test usually proves one story's AC. Integration and E2E tests often cut across several stories, so tag all of them.
 - **Week 4 test cases go in the Sheet** (*Test Cases – Sprint N*: ID, scenario, pre-conditions, steps, data, expected, plus an execution record). **Remarks name the automated tests that execute each case**, so Sheet, ACs and code point at each other. Repository copies are in `docs/test-cases/` (e.g. `sprint3-jillian.md`, which maps all 95 ACs of EC-NEW2/EC08/EO04).
 
-**Writing or changing a test — every time (all agents, no prompt needed).** CI's `traceability` job fails the PR if any test file names no story. Follow these steps for every test you create or edit, without being asked:
+**Writing or changing a test — every time (all agents, no prompt needed).** CI's `traceability` job fails the PR if any test file names no story, or if any single test's own name (`@DisplayName`, `it`/`test` title) does not start with a story ID. Follow these steps for every test you create or edit, without being asked:
 
 1. **Find the story ID** from the branch name (`git branch --show-current`).
    - Examples: `feat/vs-c3-tentative-venue-holds` → `VS-C3`; `feature/ecnew5-change_log` → `EC-NEW5`; `feat/ec08-…` → `EC08`.

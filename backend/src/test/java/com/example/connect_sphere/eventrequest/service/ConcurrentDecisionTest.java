@@ -45,6 +45,7 @@ import com.example.connect_sphere.venuebooking.service.VenueBookingRequestServic
 @SpringBootTest
 @Tag("ECL-C6")
 @Tag("EC02")
+@Tag("EC03")
 class ConcurrentDecisionTest {
 
     private static final String HIDDEN_ORG = "Automated Concurrency Tests";
@@ -114,6 +115,7 @@ class ConcurrentDecisionTest {
     }
 
     @Test
+    @DisplayName("EC03 (conflict): two venue booking requests sent for one event at the same moment create exactly one")
     void twoSimultaneousBookingRequestsForOneEventCreateExactlyOne() throws Exception {
         UUID coordinator = id("ec5");
         UUID requestId = submittedAndAssigned(coordinator);

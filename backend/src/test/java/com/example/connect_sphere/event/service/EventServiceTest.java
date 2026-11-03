@@ -126,6 +126,7 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("ECL-C7 (happy): the event shows its coordinator's name and email")
     void coordinatorContactDetailsAreResolvedOntoTheDto() {
         Event event = pendingEvent(ORG);
         event.setCoordinatorId(COORDINATOR_ID);
