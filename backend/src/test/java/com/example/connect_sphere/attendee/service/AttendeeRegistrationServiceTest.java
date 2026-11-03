@@ -213,4 +213,84 @@ class AttendeeRegistrationServiceTest {
         event.setRegistrationOpensAt(NOW.minusDays(1));
         return event;
     }
+
+    private void refused(Event event, int status, String message) {
+        prepare(event);
+        assertThatThrownBy(() -> service.register(EVENT_ID, USER_ID))
+                .isInstanceOfSatisfying(AttendeeRegistrationException.class,
+                        e -> assertThat(e.getStatus()).isEqualTo(status))
+                .hasMessage(message);
+        verify(registrations, never()).saveAndFlush(any());
+        verify(notifications, never()).createAttendeeRegistrationConfirmation(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("AT01 (negative): a cancelled event refuses a new registration and saves nothing")
+    void refusesCancelledEvent() {
+        Event event = event();
+        event.setStatus(EventStatus.cancelled);
+        refused(event, 409, "This event has been cancelled.");
+    }
+
+    @Test
+    @DisplayName("AT01 (boundary): a confirmed event that has already ended reports registration closed")
+    void refusesEndedEvent() {
+        Event event = event();
+        event.setStartDatetime(NOW.minusHours(3));
+        event.setEndDatetime(NOW.minusMinutes(1));
+        refused(event, 409, "Registration is closed.");
+    }
+
+    @Test
+    @DisplayName("AT01 (negative): an event never confirmed refuses registration as not confirmed yet")
+    void refusesNeverConfirmedEvent() {
+        Event event = event();
+        event.setStatus(EventStatus.pending);
+        event.setFirstConfirmedAt(null);
+        refused(event, 409, "This event is not confirmed yet.");
+    }
+
+    @Test
+    @DisplayName("AT01 (negative): an event that needs no registration, or has not said, refuses one")
+    void refusesEventWithoutRegistration() {
+        Event event = event();
+        event.setRegistrationNeeds(false);
+        refused(event, 409, "This event does not require registration.");
+        event.setRegistrationNeeds(null);
+        refused(event, 409, "This event does not require registration.");
+    }
+
+    @Test
+    @DisplayName("AT01 (negative): missing capacity, missing opening time, or a close after the event starts is invalid and saves nothing")
+    void refusesIncompleteSettings() {
+        String invalid = "Registration settings are incomplete or invalid. Please contact the event organiser.";
+        Event noCapacity = event();
+        noCapacity.setRegistrationCapacity(null);
+        refused(noCapacity, 422, invalid);
+        Event noOpening = event();
+        noOpening.setRegistrationOpensAt(null);
+        refused(noOpening, 422, invalid);
+        Event closesLate = event();
+        closesLate.setRegistrationClosesAt(closesLate.getStartDatetime().plusMinutes(1));
+        refused(closesLate, 422, invalid);
+    }
+
+    @Test
+    @DisplayName("AT01 (negative): an attendee without a name or a valid email is asked to fix their profile, and nothing is saved")
+    void refusesIncompleteProfile() {
+        String profile = "Your attendee profile needs a valid name and email address before registering.";
+        for (String[] nameAndEmail : new String[][] {{null, "a@example.com"}, {"  ", "a@example.com"},
+                {"attendee1", null}, {"attendee1", "not-an-email"}}) {
+            User attendee = user();
+            attendee.setUsername(nameAndEmail[0]);
+            attendee.setEmail(nameAndEmail[1]);
+            prepare(event());
+            when(users.findById(USER_ID)).thenReturn(Optional.of(attendee));
+            assertThatThrownBy(() -> service.register(EVENT_ID, USER_ID))
+                    .isInstanceOfSatisfying(AttendeeRegistrationException.class,
+                            e -> assertThat(e.getStatus()).isEqualTo(422))
+                    .hasMessage(profile);
+        }
+        verify(registrations, never()).saveAndFlush(any());
+    }
 }
