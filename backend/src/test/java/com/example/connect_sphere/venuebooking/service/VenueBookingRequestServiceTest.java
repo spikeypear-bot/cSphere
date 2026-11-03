@@ -262,7 +262,7 @@ class VenueBookingRequestServiceTest {
     void recordedUnavailablePeriodBlocksSubmission() {
         Event event = event(150, List.of("none"));
         Venue venue = venue(150, List.of());
-        var period = new com.example.connect_sphere.venueavailability.AvailabilityModels.Period(
+        var period = new com.example.connect_sphere.venueavailability.dto.AvailabilityModels.Period(
                 UUID.randomUUID(), venue.getVenueId(), event.getStartDatetime(), event.getEndDatetime(),
                 "Emergency maintenance", OffsetDateTime.now());
         when(availability.unavailablePeriods(eq(venue.getVenueId()), any(), any(), any()))

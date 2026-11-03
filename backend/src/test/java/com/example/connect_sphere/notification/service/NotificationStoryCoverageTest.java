@@ -6,6 +6,7 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Clock;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -18,8 +19,8 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
 
-import com.example.connect_sphere.attendee.AttendeeRegistration;
-import com.example.connect_sphere.attendee.AttendeeRegistrationRepository;
+import com.example.connect_sphere.attendee.entity.AttendeeRegistration;
+import com.example.connect_sphere.attendee.repository.AttendeeRegistrationRepository;
 import com.example.connect_sphere.notification.entity.NotificationChange;
 import com.example.connect_sphere.notification.entity.Notification;
 import com.example.connect_sphere.notification.entity.NotificationType;
@@ -39,7 +40,7 @@ class NotificationStoryCoverageTest {
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
-        service = new NotificationService(repository);
+        service = new NotificationService(repository, Clock.systemUTC());
         when(repository.save(any())).thenAnswer(invocation -> invocation.getArgument(0));
     }
 
