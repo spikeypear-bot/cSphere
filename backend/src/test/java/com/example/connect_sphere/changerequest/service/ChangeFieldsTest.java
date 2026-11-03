@@ -90,4 +90,37 @@ class ChangeFieldsTest {
         assertThat(ChangeFields.changes(before, after)).singleElement()
                 .satisfies(change -> assertThat(change.field()).isEqualTo("equipmentItems"));
     }
+
+    @Test
+    @DisplayName("EO03 (boundary): empty details give empty values, and empty values give empty details")
+    void emptyDetailsStayEmpty() {
+        SaveEventRequestRequest empty = new SaveEventRequestRequest(" ", null, null, null, null, null, null, null,
+                null, null, true, null, null, null, null, null);
+
+        Map<String, Object> values = ChangeFields.valuesOf(empty);
+
+        assertThat(values).containsEntry("eventName", null).containsEntry("startDatetime", null)
+                .containsEntry("endDatetime", null).containsEntry("registrationClosesAt", null)
+                .containsEntry("accessibilityNeeds", List.of()).containsEntry("equipmentItems", List.of());
+        values.remove("equipmentItems");
+        SaveEventRequestRequest back = ChangeFields.detailsOf(values);
+        assertThat(back.expectedAttendance()).isNull();
+        assertThat(back.startDatetime()).isNull();
+        assertThat(back.equipmentItems()).isEmpty();
+        // A needed registration with no closing time closes when the event starts.
+        SaveEventRequestRequest registered = new SaveEventRequestRequest("Town Hall", null, null, ORIGINAL.startDatetime(),
+                null, null, null, null, null, null, true, 100, null, null, null);
+        assertThat(ChangeFields.valuesOf(registered)).containsEntry("registrationClosesAt", ORIGINAL.startDatetime().toString());
+    }
+
+    @Test
+    @DisplayName("EO03 (happy): registration settings read as a person reads them: Yes or No, times in Singapore, blank as a dash")
+    void registrationSettingsShownForPeople() {
+        assertThat(ChangeFields.show("registrationNeeds", true)).isEqualTo("Yes");
+        assertThat(ChangeFields.show("registrationNeeds", false)).isEqualTo("No");
+        assertThat(ChangeFields.show("registrationOpensAt", "2027-03-01T01:00:00Z")).isEqualTo("1 Mar 2027, 9:00 AM");
+        assertThat(ChangeFields.show("registrationClosesAt", "2027-03-10T01:00:00Z")).isEqualTo("10 Mar 2027, 9:00 AM");
+        assertThat(ChangeFields.show("attendeeInstructions", "  ")).isEqualTo("—");
+        assertThat(ChangeFields.show("registrationCapacity", 120)).isEqualTo("120");
+    }
 }

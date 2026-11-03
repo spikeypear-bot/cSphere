@@ -318,4 +318,63 @@ class ChangeRequestServiceTest {
                 .isInstanceOf(com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException.class);
         assertThat(c.getStatus()).isEqualTo(ChangeRequestStatus.pending);
     }
+
+    @Test
+    @DisplayName("EO03 (happy): withdrawing a change while no coordinator is assigned yet tells no one")
+    void withdrawingWithoutACoordinatorTellsNoOne() {
+        EventRequest r = submitted(null);
+        ChangeRequest c = pendingChange(r, 200);
+
+        service.withdraw(organiser, c.getChangeRequestId());
+
+        assertThat(c.getStatus()).isEqualTo(ChangeRequestStatus.withdrawn);
+        verifyNoInteractions(notifications);
+    }
+
+    @Test
+    @DisplayName("EO03 (negative): an organiser whose token names no organisation finds no request, and nothing is saved")
+    void anOrganiserWithoutAnOrganisationFindsNothing() {
+        EventRequest r = submitted(COORDINATOR);
+
+        assertThatThrownBy(() -> service.create(new Caller(UserRole.eo, ORGANISER, null), r.getRequestId(), "x",
+                withAttendance(r, 160))).isInstanceOf(ChangeRequestException.NotFound.class);
+        verify(changeRequests, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (negative): only a coordinator decides; the Lead, even when named as the coordinator, cannot approve, and nothing changes")
+    void onlyACoordinatorDecides() {
+        EventRequest r = submitted(LEAD);
+        ChangeRequest c = pendingChange(r, 200);
+
+        assertThatThrownBy(() -> service.approve(new Caller(UserRole.ecl, LEAD, "ConnectSphere"), c.getChangeRequestId(), List.of()))
+                .isInstanceOf(com.example.connect_sphere.eventrequest.service.NotAssignedCoordinatorException.class);
+        assertThat(c.getStatus()).isEqualTo(ChangeRequestStatus.pending);
+        verify(rules, never()).applyApprovedDetails(any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("EO03 (cross-cutting): roles other than organiser, coordinator and Lead see no change request")
+    void otherRolesSeeNothing() {
+        EventRequest r = submitted(COORDINATOR);
+        ChangeRequest c = pendingChange(r, 200);
+        when(changeRequests.findByStatusOrderByRequestedAtAsc(ChangeRequestStatus.pending)).thenReturn(List.of(c));
+        Caller venueStaff = new Caller(UserRole.vs, UUID.randomUUID(), "ConnectSphere");
+
+        assertThatThrownBy(() -> service.get(venueStaff, c.getChangeRequestId()))
+                .isInstanceOf(ChangeRequestException.NotFound.class);
+        assertThat(service.pending(venueStaff)).isEmpty();
+        assertThat(service.pending(organiser)).hasSize(1);
+    }
+
+    @Test
+    @DisplayName("EC-NEW3 (boundary): a timeline message cut to fit never splits a two-character symbol")
+    void cuttingKeepsSymbolsWhole() {
+        String message = "a".repeat(1998) + "😀" + "b".repeat(10);
+
+        String cut = ChangeRequestService.fitActivityMessage(message);
+
+        assertThat(cut).isEqualTo("a".repeat(1998) + "…");
+        assertThat(ChangeRequestService.fitActivityMessage("a".repeat(2000))).hasSize(2000);
+    }
 }

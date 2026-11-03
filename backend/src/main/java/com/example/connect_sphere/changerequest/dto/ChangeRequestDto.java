@@ -14,9 +14,6 @@ public final class ChangeRequestDto {
 
     /** EO03: the organiser's proposal, as the full set of changeable details. */
     public record Create(UUID requestId, String reason, SaveEventRequestRequest details, Boolean capacityConfirmed) {
-        public Create(UUID requestId, String reason, SaveEventRequestRequest details) {
-            this(requestId, reason, details, false);
-        }
     }
 
     /** EC-NEW3: approve, naming every impact the coordinator has considered. */

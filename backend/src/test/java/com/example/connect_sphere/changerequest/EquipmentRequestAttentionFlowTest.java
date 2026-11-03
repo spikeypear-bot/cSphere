@@ -180,6 +180,18 @@ class EquipmentRequestAttentionFlowTest {
     }
 
     @Test
+    @DisplayName("EC-NEW3 (D37) (boundary): a new end one minute past the reservation, with the same start, flags the approved request")
+    void aLaterEndAloneFlagsTheApprovedRequest() throws Exception {
+        UUID eventId = event();
+        UUID requestId = equipmentRequest(eventId, true);
+
+        changeApproved(eventId, details("09:00", "12:01", null));
+
+        assertThat(statusOf(requestId)).isEqualTo("attention");
+        assertThat(reasonOf(requestId)).isEqualTo(COVERAGE);
+    }
+
+    @Test
     @DisplayName("EC-NEW3 (D37) (boundary): a new time still exactly inside the reservation leaves the request approved")
     void aNewTimeExactlyInsideTheReservationLeavesItApproved() throws Exception {
         UUID eventId = event();
