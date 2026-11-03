@@ -377,7 +377,7 @@ public class EventRequestService {
         event.setEquipmentRequirements(entity.getEquipmentRequirements());
         event.setEquipmentItems(entity.getEquipmentItems());
         event.setAccessibilityNeeds(entity.getAccessibilityNeeds().stream().map(Enum::name).toList());
-        event.setRequiredFacilities(entity.getRequiredFacilities() == null ? List.of() : entity.getRequiredFacilities());
+        event.setRequiredFacilities(entity.getRequiredFacilities());
         event.setRegistrationNeeds(entity.getRegistrationNeeds());
         event.setRegistrationCapacity(entity.getRegistrationCapacity());
         event.setRegistrationOpensAt(entity.getRegistrationOpensAt());
@@ -600,8 +600,7 @@ public class EventRequestService {
         if (status == EventStatus.cancelled || status == EventStatus.completed) {
             return false;
         }
-        return !(status == EventStatus.confirmed && event.getEndDatetime() != null
-                && event.getEndDatetime().isBefore(OffsetDateTime.now(clock)));
+        return !(status == EventStatus.confirmed && event.getEndDatetime().isBefore(OffsetDateTime.now(clock)));
     }
 
     /** ECL-C3: the Lead filters out a request before anyone is assigned. */
@@ -691,7 +690,7 @@ public class EventRequestService {
     }
 
     private static void requireAssigned(UUID coordinatorId, EventRequest entity) {
-        if (coordinatorId == null || !coordinatorId.equals(entity.getCoordinatorId())) {
+        if (!coordinatorId.equals(entity.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(entity.getRequestId());
         }
     }
@@ -810,13 +809,12 @@ public class EventRequestService {
         values.put("eventName", e.getEventName());
         values.put("purpose", e.getPurpose());
         values.put("description", e.getDescription());
-        values.put("startDatetime", e.getStartDatetime() == null ? null : e.getStartDatetime().toString());
-        values.put("endDatetime", e.getEndDatetime() == null ? null : e.getEndDatetime().toString());
+        values.put("startDatetime", e.getStartDatetime().toString());
+        values.put("endDatetime", e.getEndDatetime().toString());
         values.put("expectedAttendance", e.getExpectedAttendance());
         values.put("venueRequirements", e.getVenueRequirements());
         values.put("equipmentRequirements", e.getEquipmentRequirements());
-        values.put("accessibilityNeeds", e.getAccessibilityNeeds() == null ? List.of()
-                : e.getAccessibilityNeeds().stream().map(Enum::name).toList());
+        values.put("accessibilityNeeds", e.getAccessibilityNeeds().stream().map(Enum::name).toList());
         values.put("registrationNeeds", e.getRegistrationNeeds());
         values.put("registrationCapacity", e.getRegistrationCapacity());
         values.put("registrationOpensAt", e.getRegistrationOpensAt() == null ? null : e.getRegistrationOpensAt().toString());
@@ -854,9 +852,8 @@ public class EventRequestService {
     public static SaveEventRequestRequest detailsOf(EventRequest e) {
         return new SaveEventRequestRequest(e.getEventName(), e.getPurpose(), e.getDescription(),
                 e.getStartDatetime(), e.getEndDatetime(), e.getExpectedAttendance(), e.getVenueRequirements(),
-                e.getEquipmentRequirements(), e.getAccessibilityNeeds() == null ? List.of() : List.copyOf(e.getAccessibilityNeeds()),
-                e.getRequiredFacilities() == null ? List.of()
-                        : e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
+                e.getEquipmentRequirements(), List.copyOf(e.getAccessibilityNeeds()),
+                e.getRequiredFacilities().stream().map(com.example.connect_sphere.common.enums.Facility::valueOf).toList(),
                 e.getRegistrationNeeds(), e.getRegistrationCapacity(), e.getRegistrationOpensAt(),
                 e.getRegistrationClosesAt(), e.getAttendeeInstructions(), e.getEquipmentItems());
     }
@@ -886,7 +883,7 @@ public class EventRequestService {
             event.setEquipmentRequirements(request.getEquipmentRequirements());
             event.setEquipmentItems(request.getEquipmentItems());
             event.setAccessibilityNeeds(request.getAccessibilityNeeds().stream().map(Enum::name).toList());
-            event.setRequiredFacilities(request.getRequiredFacilities() == null ? List.of() : request.getRequiredFacilities());
+            event.setRequiredFacilities(request.getRequiredFacilities());
             event.setRegistrationNeeds(request.getRegistrationNeeds());
             event.setRegistrationCapacity(request.getRegistrationCapacity());
             event.setRegistrationOpensAt(request.getRegistrationOpensAt());
@@ -970,7 +967,7 @@ public class EventRequestService {
         if (isBlank(entity.getVenueRequirements())) {
             missing.add("venueRequirements");
         }
-        if (entity.getAccessibilityNeeds() == null || entity.getAccessibilityNeeds().isEmpty()) {
+        if (entity.getAccessibilityNeeds().isEmpty()) {
             missing.add("accessibilityNeeds");
         }
         if (Boolean.TRUE.equals(entity.getRegistrationNeeds())) {

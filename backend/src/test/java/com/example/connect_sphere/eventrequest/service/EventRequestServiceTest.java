@@ -560,6 +560,24 @@ class EventRequestServiceTest {
     }
 
     @Test
+    @DisplayName("EO09 (boundary): rejecting a request with no recorded creator still rejects it but notifies no organiser")
+    void rejectingARequestWithNoCreatorNotifiesNobody() {
+        UUID id = UUID.randomUUID();
+        EventRequest existing = completeDraftEntity(id, ORG);
+        existing.setStatus(EventRequestStatus.pending);
+        existing.setCoordinatorId(COORDINATOR_ID);
+        existing.setCreatedBy(null);
+        when(repository.findById(id)).thenReturn(Optional.of(existing));
+
+        EventRequestDto result = service.reject(COORDINATOR_ID, id, "Venue unavailable for these dates");
+
+        assertThat(result.status()).isEqualTo(EventRequestStatus.rejected);
+        verify(activityService).record(any());
+        verify(notificationService, never()).createStatusChangeNotification(
+                any(), any(), any(), any(), any(), any());
+    }
+
+    @Test
     @DisplayName("EO09 (negative): rejecting without a reason is refused and no one is notified")
     void rejectingWithoutAReasonIsRejected() {
         UUID id = UUID.randomUUID();
