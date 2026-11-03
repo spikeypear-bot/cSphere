@@ -126,7 +126,7 @@ public class EventEquipmentDamageService {
     }
 
     private static void requireAssigned(UUID coordinatorId, Event event) {
-        if (coordinatorId == null || !coordinatorId.equals(event.getCoordinatorId())) {
+        if (!coordinatorId.equals(event.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(event.getEventId());
         }
     }

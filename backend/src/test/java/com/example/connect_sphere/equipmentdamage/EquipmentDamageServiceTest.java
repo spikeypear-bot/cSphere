@@ -26,6 +26,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.example.connect_sphere.common.status.JourneyStatus;
@@ -186,6 +188,24 @@ class EquipmentDamageServiceTest {
         verify(notifications, never()).createEquipmentDamageOutcomeNotification(any(), any(), any(), any());
         verify(changeLog, never()).publishEvent(any(Object.class));
         verify(lifecycle, never()).returnToPlanning(any(), any(), anyString());
+    }
+
+    @Test
+    @DisplayName("TS09 AC16, AC22 (happy): inside a transaction the coordinator is told only once the decision commits")
+    void theNotificationWaitsForTheCommit() {
+        TransactionSynchronizationManager.initSynchronization();
+        try {
+            decide("REPLACE", "PJ-2");
+            verify(notifications, never()).createEquipmentDamageOutcomeNotification(any(), any(), any(), any());
+
+            TransactionSynchronizationManager.getSynchronizations().forEach(TransactionSynchronization::afterCommit);
+
+            verify(notifications, times(1)).createEquipmentDamageOutcomeNotification(eq(coordinator),
+                    eq(event.getEventId()), eq("Gala"),
+                    eq("Projector PJ-1 was reported damaged. It has been replaced with PJ-2."));
+        } finally {
+            TransactionSynchronizationManager.clearSynchronization();
+        }
     }
 
     @Test

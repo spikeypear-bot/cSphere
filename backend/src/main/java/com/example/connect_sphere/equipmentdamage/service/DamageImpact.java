@@ -71,7 +71,7 @@ public class DamageImpact {
     /** Not cancelled, not completed, and not over. */
     public boolean isActive(Event event) {
         return ACTIVE.contains(event.getStatus())
-                && (event.getEndDatetime() == null || !event.getEndDatetime().toInstant().isBefore(Instant.now(clock)));
+                && !event.getEndDatetime().toInstant().isBefore(Instant.now(clock));
     }
 
     /** The reservations the damage touches for one event: the damaged unit's,
