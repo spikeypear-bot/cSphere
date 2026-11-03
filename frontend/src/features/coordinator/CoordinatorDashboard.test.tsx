@@ -116,3 +116,43 @@ describe('EC09 coordinator dashboard', () => {
     expect(within(panel('Venue issues')).getByText(/Lift out of service/)).toBeInTheDocument()
   })
 })
+
+describe('EC09 coordinator dashboard: sparse data and failures', () => {
+  beforeEach(() => seedSession('coordinator'))
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  it('EC09 (boundary): an unnamed, undated request and an event with no journey status still list', async () => {
+    routes({
+      [QUEUE]: () => jsonResponse(200, { needsReview: [{ ...request(2), eventName: null, startDatetime: null, endDatetime: null }], awaitingOrganiser: [] }),
+      [EVENTS]: () => jsonResponse(200, [{ ...event(1), journeyStatus: null }]),
+    })
+    renderDashboard()
+
+    const row = await within(await findPanel('Requests to review')).findByRole('link', { name: 'Untitled request' })
+    expect(row).toHaveTextContent('Acme Pte Ltd')
+    expect(row.querySelector('.dash-queue__when')).toBeNull()
+    const expo = await within(panel('Upcoming events')).findByRole('link', { name: 'Expo' })
+    expect(expo.querySelector('.journey-badge')).toBeNull()
+  })
+
+  it('EC09 (failure): when neither the queue nor the changes load, the summary says so', async () => {
+    routes({ [QUEUE]: () => jsonResponse(500, {}), [CHANGES]: () => jsonResponse(500, {}) })
+    renderDashboard()
+
+    expect(await screen.findByText('Some of what needs your attention could not be loaded.')).toBeInTheDocument()
+  })
+
+  it('EC09 (boundary): a stored session without a username is greeted without a name', async () => {
+    const stored = JSON.parse(window.localStorage.getItem('connectsphere.auth')!)
+    delete stored.username
+    window.localStorage.setItem('connectsphere.auth', JSON.stringify(stored))
+    routes()
+    renderDashboard()
+
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(/^Good \w+$/)
+  })
+})
