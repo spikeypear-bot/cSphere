@@ -202,6 +202,62 @@ class EventReassignmentServiceTest {
                 "Request declined: Please continue with the current coordinator.");
     }
 
+    @Test
+    @DisplayName("EC-C1 (conflict): when the original request no longer names the requester, approval is refused and nothing is saved")
+    void approvalIsRefusedWhenTheOriginalRequestHasAnotherCoordinator() {
+        origin.setCoordinatorId(NEXT_COORDINATOR_ID);
+        when(requests.findForUpdate(REQUEST_ID)).thenReturn(Optional.of(pendingRequest()));
+        when(events.findForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
+        when(users.findById(NEXT_COORDINATOR_ID)).thenReturn(Optional.of(nextCoordinator));
+
+        assertThatThrownBy(() -> service.approve(LEAD_ID, REQUEST_ID, NEXT_COORDINATOR_ID))
+                .isInstanceOf(EventReassignmentStateException.class)
+                .hasMessage("The event request's assignment changed; refresh before approving this request.");
+
+        assertThat(event.getCoordinatorId()).isEqualTo(COORDINATOR_ID);
+        verify(events, never()).save(any());
+        verify(eventRequests, never()).save(any());
+        verify(requests, never()).save(any());
+        verifyNoInteractions(activity, notifications);
+    }
+
+    @Test
+    @DisplayName("EC-C1 (boundary): a request with no recorded organiser is still reassigned, and only the two coordinators are told")
+    void approvalWithoutAnOrganiserTellsOnlyTheCoordinators() {
+        origin.setCreatedBy(null);
+        when(requests.findForUpdate(REQUEST_ID)).thenReturn(Optional.of(pendingRequest()));
+        when(events.findForUpdate(EVENT_ID)).thenReturn(Optional.of(event));
+        when(users.findById(COORDINATOR_ID)).thenReturn(Optional.of(coordinator));
+        when(users.findById(NEXT_COORDINATOR_ID)).thenReturn(Optional.of(nextCoordinator));
+
+        var result = service.approve(LEAD_ID, REQUEST_ID, NEXT_COORDINATOR_ID);
+
+        assertThat(result.status()).isEqualTo(EventReassignmentStatus.approved);
+        assertThat(event.getCoordinatorId()).isEqualTo(NEXT_COORDINATOR_ID);
+        verify(notifications, org.mockito.Mockito.times(2)).createEventReassignmentDecisionNotifications(
+                any(), any(), any(), any(), any());
+        verify(notifications, never()).createCoordinatorAssignmentNotification(
+                any(), any(), any(), any(), any(), any(), org.mockito.ArgumentMatchers.anyBoolean());
+    }
+
+    @Test
+    @DisplayName("EC-C1 (boundary): the Lead's queue shows a pending request on an event with no coordinator, with no coordinator named")
+    void pendingRequestOnAnEventWithNoCoordinatorNamesNone() {
+        event.setCoordinatorId(null);
+        when(requests.findByStatusOrderByRequestedAtAsc(EventReassignmentStatus.pending))
+                .thenReturn(List.of(pendingRequest()));
+        when(events.findById(EVENT_ID)).thenReturn(Optional.of(event));
+        when(users.findById(COORDINATOR_ID)).thenReturn(Optional.of(coordinator));
+
+        var result = service.pendingRequests();
+
+        assertThat(result).singleElement().satisfies(row -> {
+            assertThat(row.requesterName()).isEqualTo("ec1");
+            assertThat(row.coordinatorUserId()).isNull();
+            assertThat(row.coordinatorName()).isNull();
+        });
+    }
+
     private EventReassignmentRequest pendingRequest() {
         EventReassignmentRequest request = new EventReassignmentRequest();
         request.setReassignmentRequestId(REQUEST_ID);

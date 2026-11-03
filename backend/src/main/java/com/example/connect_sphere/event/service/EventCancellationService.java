@@ -143,7 +143,7 @@ public class EventCancellationService {
         EventRequest origin = eventRequests.findById(requestId)
                 .filter(r -> organisation.equals(r.getOrganisation()))
                 .orElseThrow(() -> new EventRequestNotFoundException(requestId));
-        if (origin.getStatus() != EventRequestStatus.approved || origin.getEventId() == null) {
+        if (origin.getStatus() != EventRequestStatus.approved) {
             boolean underReview = origin.getStatus() == EventRequestStatus.pending
                     || origin.getStatus() == EventRequestStatus.clarification_required;
             throw new EventCancellationStateException(underReview
@@ -308,7 +308,7 @@ public class EventCancellationService {
     }
 
     private static void requireAssigned(UUID coordinatorId, Event event) {
-        if (coordinatorId == null || !coordinatorId.equals(event.getCoordinatorId())) {
+        if (!coordinatorId.equals(event.getCoordinatorId())) {
             throw new NotAssignedCoordinatorException(event.getEventId());
         }
     }

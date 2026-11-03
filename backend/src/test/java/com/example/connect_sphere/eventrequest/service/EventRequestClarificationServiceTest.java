@@ -431,6 +431,48 @@ class EventRequestClarificationServiceTest {
     // ---- helpers ------------------------------------------------------
 
     /** A complete request of ORG, assigned to COORDINATOR, in {@code status}. */
+    @Test
+    @DisplayName("EC01 (boundary): an empty set of per-field questions is the same as none")
+    void anEmptySetOfQuestionsIsNone() {
+        EventRequest request = stored(EventRequestStatus.pending);
+
+        service.requestClarification(COORDINATOR, request.getRequestId(), "Please confirm the end time.",
+                List.of("endDatetime"), java.util.Map.of());
+
+        ArgumentCaptor<ActivityService.Entry> entry = ArgumentCaptor.forClass(ActivityService.Entry.class);
+        verify(activityService).record(entry.capture());
+        assertThat(entry.getValue().fieldQuestions()).isNull();
+        assertThat(entry.getValue().flaggedFields()).containsExactly("endDatetime");
+    }
+
+    @Test
+    @DisplayName("EC01 (boundary): when the owning organisation has no organiser accounts, clarification is still requested and nobody is notified")
+    void clarificationWithNoOrganiserAccountsNotifiesNobody() {
+        EventRequest request = stored(EventRequestStatus.pending);
+        when(userRepository.findByRoleAndOrganisation(UserRole.eo, ORG)).thenReturn(List.of());
+
+        EventRequestDto result = service.requestClarification(
+                COORDINATOR, request.getRequestId(), "Please confirm the end time.", null);
+
+        assertThat(result.status()).isEqualTo(EventRequestStatus.clarification_required);
+        verify(activityService).record(any());
+        verify(notificationService, never()).createClarificationRequestedNotifications(anyList(), any(), any(), any());
+    }
+
+    @Test
+    @DisplayName("EO26 (negative): an organiser with no organisation cannot read an event's timeline")
+    void anOrganiserWithNoOrganisationCannotReadAnEventsTimeline() {
+        EventRequest request = stored(EventRequestStatus.approved);
+        UUID eventId = UUID.randomUUID();
+        request.setEventId(eventId);
+        when(repository.findByEventId(eventId)).thenReturn(Optional.of(request));
+
+        assertThatThrownBy(() -> service.timelineForEvent(UserRole.eo, null, ORGANISER, eventId))
+                .isInstanceOf(EventRequestNotFoundException.class);
+
+        verifyNoInteractions(activityService);
+    }
+
     private EventRequest stored(EventRequestStatus status) {
         EventRequest entity = new EventRequest();
         entity.setRequestId(UUID.randomUUID());

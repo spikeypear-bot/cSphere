@@ -227,6 +227,28 @@ class SafetyDecisionFlowTest {
     }
 
     @Test
+    @DisplayName("VS17 (boundary): a ticked venue item stops counting once the venue's details change, so the Safety Officer must check it again")
+    void aVenueItemIsUntickedWhenTheVenueChanges() throws Exception {
+        UUID eventId = eventAwaitingReview();
+        UUID bookingId = jdbc.queryForObject("SELECT booking_id FROM venue_bookings WHERE event_id = ?", UUID.class,
+                eventId);
+        String key = "venue_safety_" + bookingId;
+        String item = "$.items[?(@.itemKey == '" + key + "')].checked";
+        mvc.perform(patch("/api/safety/events/" + eventId + "/readiness/items/" + key).with(flow.as("so1"))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"checked\":true,\"note\":\"Exits checked\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(item).value(org.hamcrest.Matchers.contains(true)));
+
+        sync();
+        jdbc.update("UPDATE venues SET venue_capacity = venue_capacity + 10 WHERE venue_id = "
+                + "(SELECT venue_id FROM venue_bookings WHERE booking_id = ?)", bookingId);
+
+        mvc.perform(get("/api/safety/events/" + eventId + "/readiness").with(flow.as("so1")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath(item).value(org.hamcrest.Matchers.contains(false)));
+    }
+
+    @Test
     @DisplayName("SO-C5 AC1, AC2, SO-C6 AC1, AC2 (negative): only a Safety Officer decides, and only while the event awaits review; otherwise nothing changes")
     void onlyASafetyOfficerDecidesAndOnlyWhileTheEventAwaitsReview() throws Exception {
         UUID planned = plannedEvent();

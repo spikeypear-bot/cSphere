@@ -145,7 +145,7 @@ public class ActivityService {
         }
         return events.findById(eventId)
                 .filter(e -> (e.getStatus() == EventStatus.confirmed || e.getStatus() == EventStatus.completed)
-                        && e.getEndDatetime() != null && e.getEndDatetime().isBefore(OffsetDateTime.now(clock)))
+                        && e.getEndDatetime().isBefore(OffsetDateTime.now(clock)))
                 .map(e -> new ActivityDto(null, ActivityType.event_completed.name(), "ConnectSphere", null,
                         "The event took place and is now Completed.", List.of(), "CONFIRMED", "COMPLETED",
                         e.getEndDatetime(), null, null, "normal"));

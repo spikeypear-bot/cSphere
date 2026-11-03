@@ -445,6 +445,33 @@ class AssignedRequestsFlowTest {
                 """, String.class, approved)).isEqualTo(flow.idOf("ec2").toString());
     }
 
+    @ParameterizedTest
+    @org.junit.jupiter.params.provider.ValueSource(strings = {"cancelled", "completed", "confirmed"})
+    @DisplayName("ECL-C7 (conflict): an approved request whose event was cancelled, is completed or has ended cannot be reassigned, and it stays with its coordinator")
+    void anApprovedRequestWhoseEventIsOverCannotBeReassigned(String eventStatus) throws Exception {
+        UUID approved = assignedTo("ec1", "eo1");
+        act("ec1", approved + "/approve", "{}", 200);
+        entityManager.flush();
+        // A confirmed event whose end has passed is Completed (EC-NEW2).
+        jdbc.update("UPDATE events SET status = ?::event_status, start_datetime = now() - interval '3 hours', "
+                + "end_datetime = now() - interval '1 hour' "
+                + "WHERE event_id = (SELECT event_id FROM event_requests WHERE request_id = ?)", eventStatus, approved);
+        entityManager.clear();
+
+        mvc.perform(post(ASSIGNED + "/" + approved + "/reassign").with(flow.as("ecl1"))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"coordinatorUserId\":\"" + flow.idOf("ec2") + "\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.message")
+                        .value("This request can no longer be reassigned (current status: Approved)."));
+
+        assertThat(coordinatorOf(approved)).isEqualTo(flow.idOf("ec1").toString());
+        assertThat(jdbc.queryForObject("""
+                SELECT e.coordinator_id::text FROM events e
+                JOIN event_requests r ON r.event_id = e.event_id WHERE r.request_id = ?
+                """, String.class, approved)).isEqualTo(flow.idOf("ec1").toString());
+    }
+
     @Test
     @DisplayName("ECL-C5 (negative): a draft or unknown request is not found for reassigning and nothing changes")
     void aDraftOrUnknownRequestCannotBeReassigned() throws Exception {
