@@ -285,3 +285,161 @@ describe('EO03 NotificationBell — the organiser is told a change request was d
     expect(screen.getAllByText(outcome)).toHaveLength(1)
   })
 })
+
+describe('EC-NEW4 NotificationBell — every kind of notice reads as words', () => {
+  beforeEach(() => {
+    window.localStorage.setItem('connectsphere.auth', JSON.stringify({
+      accessToken: 'a', refreshToken: 'r', userId: 'ec-1', username: 'ec1', role: 'ec', organisation: null,
+    }))
+  })
+
+  afterEach(() => {
+    cleanup()
+    vi.unstubAllGlobals()
+    window.localStorage.clear()
+  })
+
+  async function openWith(list: unknown[], count: number) {
+    const fetchMock = stubApi(list, count, (url) => (url.endsWith('/read') ? jsonResponse(200, {}) : undefined))
+    const user = userEvent.setup()
+    render(
+      <MemoryRouter initialEntries={['/coordinator']}>
+        <SessionProvider>
+          <Routes>
+            <Route path="/coordinator" element={<><NotificationBell /><p>Outside the bell</p></>} />
+          </Routes>
+        </SessionProvider>
+      </MemoryRouter>,
+    )
+    await user.click(await screen.findByRole('button', { name: /^Notifications/ }))
+    return { user, fetchMock }
+  }
+
+  const notice = (type: string, extra: Record<string, unknown> = {}) => ({
+    ...BASE, notificationId: `${type}-${JSON.stringify(extra)}`, type, occurredAt: '2026-10-28T02:00:00Z', read: true, ...extra,
+  })
+
+  it.each([
+    ['request_submitted', {}, 'New request "Town Hall" is waiting to be assigned'],
+    ['equipment_request_decided', { reason: null }, 'Equipment request for "Town Hall" was approved'],
+    ['venue_hold_expired', {}, 'Tentative venue hold expired for "Town Hall"'],
+    ['event_reassignment_requested', {}, 'Reassignment requested for "Town Hall"'],
+    ['change_request_submitted', {}, 'Change requested for "Town Hall"'],
+    ['change_request_withdrawn', {}, 'Change request withdrawn for "Town Hall"'],
+    ['equipment_request_attention', {}, 'The equipment request for "Town Hall" needs attention'],
+    ['venue_timing_changed', {}, 'Venue timings updated for "Town Hall"'],
+    ['venue_timing_conflict', {}, 'Venue timing conflict for "Town Hall"'],
+    ['event_confirmed', {}, '"Town Hall" is confirmed'],
+    ['event_returned_to_planning', {}, '"Town Hall" is back in Planning'],
+    ['event_safety_approved', {}, '"Town Hall" passed its safety check and is ready to confirm'],
+    ['clarification_requested', {}, 'Clarification needed on "Town Hall"'],
+    ['clarification_responded', {}, '"Town Hall" was updated and resubmitted'],
+    ['venue_booking_rejected', {}, 'Venue booking for "Town Hall" was rejected'],
+    ['venue_booking_approved', {}, 'Venue booking for "Town Hall" was approved'],
+    ['venue_booking_requested', {}, 'New venue booking request for "Town Hall"'],
+    ['venue_booking_cancelled', {}, 'Venue booking request for "Town Hall" was cancelled'],
+    ['coordinator_assignment', { coordinatorName: 'ec2' }, '"Town Hall" assigned to ec2'],
+    ['coordinator_assignment', { isReassignment: true, coordinatorName: null }, '"Town Hall" reassigned to a coordinator'],
+    ['status_change', { newStatus: 'cancelled' }, '"Town Hall" is now Cancelled'],
+    ['status_change', { newStatus: 'on_hold' }, '"Town Hall" is now on_hold'],
+    ['status_change', { newStatus: null }, '"Town Hall" is now updated'],
+  ])('EC-NEW4 (happy): a %s notice %j is titled in words', async (type, extra, title) => {
+    await openWith([notice(type, extra)], 0)
+    expect(await screen.findByText(title)).toBeInTheDocument()
+  })
+
+  it('EC-NEW4 (boundary): minutes and hours ago are shown as such, and an unknown role is named as given', async () => {
+    const minutesAgo = new Date(Date.now() - 5 * 60_000).toISOString()
+    const hoursAgo = new Date(Date.now() - 3 * 3_600_000).toISOString()
+    await openWith([
+      notice('event_confirmed', { occurredAt: minutesAgo, actorName: 'sys1', actorRole: 'auditor' }),
+      notice('venue_timing_changed', { occurredAt: hoursAgo, actorName: 'vs1', actorRole: null }),
+    ], 0)
+    expect(await screen.findByText('5m ago')).toBeInTheDocument()
+    expect(screen.getByText('3h ago')).toBeInTheDocument()
+    expect(screen.getByText('By sys1 (auditor)')).toBeInTheDocument()
+    expect(screen.getByText('By vs1')).toBeInTheDocument()
+  })
+
+  it('EC-NEW4 (happy): opening a read notice with no link closes the list without marking it again or leaving the page', async () => {
+    const { user, fetchMock } = await openWith([notice('event_confirmed', { linkPath: null })], 0)
+    await user.click(await screen.findByText('"Town Hall" is confirmed'))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+    expect(screen.getByText('Outside the bell')).toBeInTheDocument()
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/read'))).toBe(false)
+  })
+
+  it('EC-NEW4 (happy): clicking inside the open list keeps it open, clicking outside closes it', async () => {
+    const { user } = await openWith([notice('event_confirmed')], 0)
+    await user.click(await screen.findByRole('heading', { name: 'Notifications' }))
+    expect(screen.getByRole('menu')).toBeInTheDocument()
+    await user.click(screen.getByText('Outside the bell'))
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument()
+  })
+
+  it('EC-NEW4 (boundary): while the list is still loading the open bell says so', async () => {
+    vi.stubGlobal('fetch', vi.fn(() => new Promise<Response>(() => {})))
+    const user = userEvent.setup()
+    renderBell()
+    await user.click(screen.getByRole('button', { name: 'Notifications' }))
+    expect(screen.getByRole('status')).toHaveTextContent('Loading notifications…')
+  })
+
+  it('EC-NEW4 (boundary): with an unread count but an empty list, Mark all as read sends nothing', async () => {
+    const { user, fetchMock } = await openWith([], 2)
+    await user.click(await screen.findByRole('button', { name: 'Mark all as read' }))
+    expect(fetchMock.mock.calls.some(([url]) => String(url).endsWith('/read-all'))).toBe(false)
+    expect(screen.getByRole('button', { name: 'Notifications, 2 unread' })).toBeInTheDocument()
+  })
+
+  it('EC-NEW4 (happy): Mark all as read marks up to the newest notice wherever it is listed', async () => {
+    const older = notice('event_confirmed', { notificationId: 'old', occurredAt: '2026-10-27T02:00:00Z', read: false })
+    const newer = notice('venue_timing_changed', { notificationId: 'new', occurredAt: '2026-10-28T02:00:00Z', read: false })
+    const oldest = notice('venue_timing_conflict', { notificationId: 'oldest', occurredAt: '2026-10-26T02:00:00Z', read: false })
+    const { user, fetchMock } = await openWith([older, newer, oldest], 3)
+    await user.click(await screen.findByRole('button', { name: 'Mark all as read' }))
+    await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/notifications/read-all',
+      expect.objectContaining({ method: 'POST', body: JSON.stringify({ upTo: '2026-10-28T02:00:00Z' }) })))
+  })
+
+  it('EC-NEW4 (boundary): a tab being hidden does not fetch; only coming back does', async () => {
+    const fetchMock = stubApi([ASSIGNED], 1)
+    renderBell()
+    await screen.findByLabelText('Notifications, 1 unread')
+    const before = listCalls(fetchMock)
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+    act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+    Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    expect(listCalls(fetchMock)).toBe(before)
+  })
+
+  it('EC-NEW4 (failure): a reply that is not readable at all (a gateway error page) still shows the load failure', async () => {
+    stubApi([], 0, (url) => (url === '/api/notifications'
+      ? ({ ok: false, status: 502, text: async () => '<html>Bad gateway</html>' } as Response) : undefined))
+    const user = userEvent.setup()
+    renderBell()
+    await user.click(screen.getByRole('button', { name: 'Notifications' }))
+    expect(await screen.findByRole('alert')).toHaveTextContent('Notifications could not be loaded.')
+  })
+
+  it('EC-NEW4 (boundary): a load that fails after the bell has gone away changes nothing', async () => {
+    let fail!: (response: Response) => void
+    stubApi([], 0, (url) => (url === '/api/notifications'
+      ? (new Promise<Response>((resolve) => { fail = resolve }) as unknown as Response) : undefined))
+    const view = renderBell()
+    await waitFor(() => expect(fail).toBeTypeOf('function'))
+    view.unmount()
+    const errors = vi.spyOn(console, 'error')
+    await act(async () => { fail(jsonResponse(500, { message: 'Down' })) })
+    expect(errors).not.toHaveBeenCalled()
+    errors.mockRestore()
+  })
+
+  it('EC-NEW4 (negative): with nobody signed in the bell fetches nothing', async () => {
+    window.localStorage.clear()
+    const fetchMock = stubApi([], 0)
+    renderBell()
+    expect(screen.getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+})
