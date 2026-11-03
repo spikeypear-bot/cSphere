@@ -537,14 +537,12 @@ public class NotificationService {
     }
 
     /** TS11 AC4/AC8: tell Technical Support an approved change affects an
-     * event's equipment and needs reviewing. Each user is told once per review (AC15). */
+     * event's equipment and needs reviewing. Each user is told once per review (AC15):
+     * the only caller passes a review it has just opened, and opens one per change. */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public void createEquipmentChangeReviewNotifications(List<UUID> recipientUserIds, UUID reviewId,
             UUID eventId, String eventName, String message) {
         for (UUID recipient : recipientUserIds) {
-            if (repository.existsByRecipientUserIdAndEquipmentReviewId(recipient, reviewId)) {
-                continue;
-            }
             Notification notification = base(recipient, NotificationType.equipment_change_review, eventName);
             notification.setEventId(eventId);
             notification.setEquipmentReviewId(reviewId);
@@ -589,7 +587,6 @@ public class NotificationService {
 
     /** EC-NEW4: the signed-in user is who did it; a scheduled job has none. */
     private void stampActor(Notification n) {
-        if (n.getActorName() != null) return;
         var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
         if (!(auth instanceof org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken jwt)) {
             return;

@@ -192,4 +192,84 @@ class CoordinatorNotificationsTest {
                 .isEqualTo("Booking at Harbour Hall was rejected: Closed for repairs. Suggested instead: Marina Hall");
         assertThat(all.getAllValues().get(1).getMessage()).isEqualTo("Booking at Marina Hall was approved.");
     }
+
+    @Test
+    @DisplayName("EC-NEW4 AC9 (boundary): a rejection with no suggested alternative, missing or blank, ends at the reason")
+    void aRejectionWithoutAnAlternativeEndsAtTheReason() {
+        service.createVenueBookingRejectedNotification(COORDINATOR, UUID.randomUUID(), EVENT, "Town Hall", "Harbour Hall",
+                "Closed for repairs", null);
+        service.createVenueBookingRejectedNotification(COORDINATOR, UUID.randomUUID(), EVENT, "Town Hall", "Harbour Hall",
+                "Closed for repairs", "  ");
+        ArgumentCaptor<Notification> all = ArgumentCaptor.forClass(Notification.class);
+        verify(repository, org.mockito.Mockito.times(2)).save(all.capture());
+
+        assertThat(all.getAllValues()).extracting(Notification::getMessage)
+                .containsOnly("Booking at Harbour Hall was rejected: Closed for repairs");
+    }
+
+    @Test
+    @DisplayName("EC-NEW4 AC25 (boundary): mark all as read with no bound marks everything up to now")
+    void markAllReadWithNoBoundMeansNow() {
+        OffsetDateTime before = OffsetDateTime.now();
+
+        service.markAllRead(COORDINATOR, null);
+
+        ArgumentCaptor<OffsetDateTime> upTo = ArgumentCaptor.forClass(OffsetDateTime.class);
+        verify(repository).markAllRead(eq(COORDINATOR), upTo.capture(), any());
+        assertThat(upTo.getValue()).isBetween(before, OffsetDateTime.now());
+    }
+
+    @Test
+    @DisplayName("EC-NEW4 AC17 (boundary): a signed-in token that names no user records no actor, and the notice still arrives")
+    void aTokenWithoutAUserIdRecordsNoActor() {
+        Jwt jwt = Jwt.withTokenValue("t").header("alg", "none").subject("scheduler").claim("role", "ecl").build();
+        SecurityContextHolder.getContext().setAuthentication(new JwtAuthenticationToken(jwt));
+
+        service.createRequestAssignedNotification(COORDINATOR, REQUEST, null, "Town Hall", false, "Assigned to you");
+
+        Notification n = saved();
+        assertThat(n.getRecipientUserId()).isEqualTo(COORDINATOR);
+        assertThat(n.getActorUserId()).isNull();
+        assertThat(n.getActorName()).isNull();
+    }
+
+    @Test
+    @DisplayName("EC-NEW4 (boundary): an event with no coordinator yet sends no coordinator notice")
+    void noCoordinatorNoNotice() {
+        var review = new com.example.connect_sphere.changerequest.entity.VenueRequirementReview();
+        service.createEquipmentRequestDecidedNotification(null, EVENT, "Town Hall", "No mics", "Rejected: No mics");
+        service.createVenueBookingRejectedNotification(null, UUID.randomUUID(), EVENT, "Town Hall", "Harbour Hall", "Closed", null);
+        service.createVenueBookingApprovedNotification(null, UUID.randomUUID(), EVENT, "Town Hall", "Harbour Hall");
+        service.createHoldExpiredNotification(null, EVENT, UUID.randomUUID(), "Town Hall", OffsetDateTime.now());
+        service.createVenueRequirementReviewedNotification(null, review, "Reviewed");
+
+        verify(repository, never()).save(any());
+        verify(repository, never()).saveAndFlush(any());
+    }
+
+    @Test
+    @DisplayName("EC-NEW4 AC19 (happy): every Lead is told of a reassignment request, which opens the Lead's queue; the decision opens the coordinator's reassignment page")
+    void reassignmentNoticesOpenWhereEachReaderActs() {
+        UUID otherLead = UUID.randomUUID();
+        service.createEventReassignmentRequestedNotifications(List.of(LEAD, otherLead), EVENT, "Town Hall",
+                "I am no longer available.");
+        service.createEventReassignmentDecisionNotifications(List.of(COORDINATOR), EVENT, "Town Hall",
+                NotificationType.event_reassignment_approved, "Reassigned to ec2.");
+        service.createEventReassignmentDecisionNotifications(List.of(COORDINATOR), EVENT, "Town Hall",
+                NotificationType.event_reassignment_declined, "Please keep the event.");
+        ArgumentCaptor<Notification> all = ArgumentCaptor.forClass(Notification.class);
+        verify(repository, org.mockito.Mockito.times(4)).save(all.capture());
+
+        assertThat(all.getAllValues()).extracting(Notification::getRecipientUserId)
+                .containsExactly(LEAD, otherLead, COORDINATOR, COORDINATOR);
+        assertThat(all.getAllValues()).extracting(Notification::getType).containsExactly(
+                NotificationType.event_reassignment_requested, NotificationType.event_reassignment_requested,
+                NotificationType.event_reassignment_approved, NotificationType.event_reassignment_declined);
+        assertThat(all.getAllValues()).extracting(Notification::getMessage).containsExactly(
+                "I am no longer available.", "I am no longer available.", "Reassigned to ec2.", "Please keep the event.");
+        assertThat(all.getAllValues().stream().map(this::asRead).map(NotificationDto::linkPath)).containsExactly(
+                "/coordinator-lead/reassignment-requests", "/coordinator-lead/reassignment-requests",
+                "/coordinator/events/" + EVENT + "/reassignment-request",
+                "/coordinator/events/" + EVENT + "/reassignment-request");
+    }
 }
