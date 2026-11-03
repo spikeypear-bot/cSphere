@@ -220,4 +220,72 @@ describe('TS09 inventory by date and equipment detail', () => {
     expect(links[0]).toHaveAccessibleName('Projector')
     expect(links[0]).toHaveAccessibleDescription(/Available\s*3/)
   })
+
+  it('TS09 TS03 (boundary): a kind with no units, unnamed holds and quantity reports; new dates reload its reservations', async () => {
+    const later = query(day(20), day(22))
+    stubApi({
+      'GET /api/equipment/eq-widget': () => jsonResponse(200, {
+        equipmentId: 'eq-widget', equipmentName: 'Widget', serialised: true, totalQuantity: 0, units: [],
+      }),
+      [`GET /api/equipment/eq-widget/reservations?${DEFAULT}`]: () => jsonResponse(200, [{
+        logId: 'log-1', eventId: 'ev-1', equipmentId: 'eq-widget', equipmentName: 'Widget', quantity: 2, serialNumber: null,
+        loanedFrom: '2027-03-12T01:00:00Z', loanedUntil: '2027-03-12T04:00:00Z',
+      }]),
+      [`GET /api/equipment/eq-widget/reservations?${later}`]: () => jsonResponse(200, []),
+      'GET /api/equipment-damage-reports?equipmentId=eq-widget': () => jsonResponse(200, [1, 3].map((quantity) => ({
+        reportId: `rep-${quantity}`, equipmentId: 'eq-widget', equipmentName: 'Widget', serialised: false, serialNumber: null, quantity,
+        description: 'Bent', periodStart: '2027-03-01T00:00:00Z', periodEnd: null, blockStatus: null, blockApplied: false,
+        status: 'OPEN', reportedBy: 't-1', reportedByName: 'ts1', reportedAt: '2027-03-01T00:00:00Z', closedAt: null, canClose: false, affectedEvents: [],
+      }))),
+    })
+    renderAt('/technical-support/inventory/eq-widget')
+
+    expect(await screen.findByRole('heading', { level: 1, name: 'Widget' })).toBeInTheDocument()
+    expect(screen.getByText('Category').nextSibling).toHaveTextContent('Other')
+    expect(screen.getByText('No units are recorded for this kind.')).toBeInTheDocument()
+    const reservation = within(await screen.findByRole('list', { name: 'Reservations' })).getByRole('listitem')
+    expect(reservation).toHaveTextContent('Event')
+    expect(reservation).toHaveTextContent('2 × Widget')
+    expect(reservation).not.toHaveTextContent('unit')
+    const history = within(await screen.findByRole('list', { name: 'Damage history' })).getAllByRole('listitem')
+    expect(within(history[0]).getByRole('link', { name: '1 unit: Bent' })).toBeInTheDocument()
+    expect(within(history[1]).getByRole('link', { name: '3 units: Bent' })).toBeInTheDocument()
+    expect(history[0]).toHaveTextContent('Open')
+
+    fireEvent.change(screen.getByLabelText('From'), { target: { value: '2027-03-20' } })
+    fireEvent.change(screen.getByLabelText('To (inclusive)'), { target: { value: '2027-03-21' } })
+    expect(await screen.findByText('Nothing is reserved in these dates.')).toBeInTheDocument()
+  })
+
+  it('TS09 (negative): a last day before the first in the link reads no reservations', async () => {
+    const calls = stubApi({
+      'GET /api/equipment/eq-lap': () => jsonResponse(200, {
+        equipmentId: 'eq-lap', equipmentName: 'Laptop', serialised: false, totalQuantity: 10, units: [],
+      }),
+      'GET /api/equipment-damage-reports?equipmentId=eq-lap': () => jsonResponse(200, []),
+    })
+    renderAt('/technical-support/inventory/eq-lap?from=2027-03-14&to=2027-03-12')
+
+    expect(await screen.findByText('No damage has been reported for this equipment.')).toBeInTheDocument()
+    expect(screen.queryByText('Nothing is reserved in these dates.')).not.toBeInTheDocument()
+    expect(calls.some((call) => call.url.includes('/reservations'))).toBe(false)
+  })
+
+  it('TS03 (failure): a block that cannot be removed says nothing was changed and keeps it', async () => {
+    stubApi({
+      'GET /api/equipment/eq-proj': () => jsonResponse(200, {
+        equipmentId: 'eq-proj', equipmentName: 'Projector', serialised: true, totalQuantity: 6,
+        units: [{ serialNumber: 'PJ-1', status: 'Faulty', statusPeriods: [{ id: 'blk-1', status: 'Faulty', start: '2027-03-09T00:00:00Z', end: null }] }],
+      }),
+      [`GET /api/equipment/eq-proj/reservations?${DEFAULT}`]: () => jsonResponse(200, []),
+      'GET /api/equipment-damage-reports?equipmentId=eq-proj': () => jsonResponse(200, []),
+      'DELETE /api/equipment/periods/blk-1': () => ({ ok: false, status: 502, text: async () => '<html>Bad gateway</html>' }) as Response,
+    })
+    const user = userEvent.setup()
+    renderAt('/technical-support/inventory/eq-proj')
+
+    await user.click(await screen.findByRole('button', { name: 'Remove (mark available)' }))
+    expect(await screen.findByText('Could not remove that period. Nothing was changed.')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Remove (mark available)' })).toBeEnabled()
+  })
 })
