@@ -156,14 +156,12 @@ export function OrganiserRegistrations({
     (data.registrationState !== 'not_yet_open' ||
       (now !== null && Date.parse(data.opensAt) <= now))
 
+  // Narrowed by the `if (!data) return null` above; the period form only renders after it.
+  const currentData = data
+
  async function savePeriod(event: FormEvent<HTMLFormElement>) {
   event.preventDefault()
 
-  if (!data) {
-    setSaveError('Registration information is unavailable. Please try again.')
-    return
-  }
-const currentData = data
 setSaveError('')
 setSaveSuccess('')
 
