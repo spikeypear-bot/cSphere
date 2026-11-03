@@ -145,9 +145,8 @@ export function VenueBookingRequestPage() {
     }).catch((err: unknown) => {
       if (cancelled) return
       if (isNotAssigned(err)) setNotAssigned(true)
-      setLoadError(err instanceof ApiClientError
-        ? err.isForbidden ? 'Only the coordinator assigned to this event can request a venue for it.' : err.message
-        : 'Could not load this event.')
+      // A 403 already shows NotAssignedNotice above, so only the message is needed here.
+      setLoadError(err instanceof ApiClientError ? err.message : 'Could not load this event.')
     })
     return () => {
       cancelled = true
@@ -161,9 +160,10 @@ export function VenueBookingRequestPage() {
   const replacementSource = requestedSourceId
     ? (bookings ?? []).find(booking => booking.bookingId === requestedSourceId) ?? null
     : implicitUnavailableSource
-  const replacementPending = !!replacementSource && (bookings ?? []).some(booking =>
+  // A replacement source is always one of the loaded bookings.
+  const replacementPending = !!replacementSource && bookings!.some(booking =>
     booking.replacesBookingId === replacementSource.bookingId && booking.status === 'pending')
-  const replacementApproved = !!replacementSource && (bookings ?? []).some(booking =>
+  const replacementApproved = !!replacementSource && bookings!.some(booking =>
     booking.replacesBookingId === replacementSource.bookingId && (booking.status === 'approved' || booking.status === 'attention'))
   const sourceCanBeReplaced = !!replacementSource && (
     replacementSource.status === 'approved' || replacementSource.status === 'attention' || (replacementSource.status === 'pending' && replacementSource.requiresAlternative)
@@ -173,11 +173,12 @@ export function VenueBookingRequestPage() {
 
   const requestableOptions = useMemo(() => {
     if (!replacing) return options ?? []
-    const unavailableVenueIds = new Set((bookings ?? [])
+    // replacing comes from bookings, which load together with options, so both are set here.
+    const unavailableVenueIds = new Set(bookings!
       .filter(booking => (booking.status === 'pending' || booking.status === 'approved' || booking.status === 'attention')
         && booking.bookingId !== replacing.bookingId)
       .map(booking => booking.venueId))
-    return (options ?? []).filter(option => !unavailableVenueIds.has(option.venue.venueId))
+    return options!.filter(option => !unavailableVenueIds.has(option.venue.venueId))
   }, [options, bookings, replacing])
 
   // One active booking per venue per event (the server's rule). Outside a
@@ -487,7 +488,7 @@ export function VenueBookingRequestPage() {
                       setSubmitting(true);setSubmitError(null)
                       try {
                         const updated=await apiClient.post<EventVenueBookingDto>(`/events/${eventId}/venue-bookings/${b.bookingId}/withdraw-requirement`,{reason:withdrawReasons[b.bookingId]})
-                        setBookings(current => current?.map(item => item.bookingId===updated.bookingId?updated:item) ?? null)
+                        setBookings(current => current!.map(item => item.bookingId===updated.bookingId?updated:item))
                       } catch(error) { setSubmitError(error instanceof Error?error.message:'Could not withdraw this requirement.') }
                       finally { setSubmitting(false) }
                     }}>Withdraw venue requirement</Button>
@@ -688,6 +689,9 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
   const period = validInput(input) ? occupiedPeriod(instant(input.start), instant(input.end), Number(input.setup), Number(input.turnaround)) : null
   const { venue } = option
   const needs = (input.requirements?.accessibilityNeeds ?? event.accessibilityNeeds).filter((n) => n !== 'none')
+  const unavailable = option.unavailablePeriods ?? []
+  const facilities = input.requirements?.requiredFacilities ?? event.requiredFacilities ?? []
+  const missingFacilities = option.missingFacilities ?? []
   return (
     <table className="venue-request__compare">
       <thead>
@@ -699,22 +703,22 @@ function Comparison({ event, option, input }: { event: EventDto; option: VenueOp
           <td>{(input.requirements?.expectedAttendance ?? event.expectedAttendance).toLocaleString()} people</td>
           <td>{(venue.venueCapacity ?? 0).toLocaleString()} {option.capacityOk ? '✓' : '✗'}</td>
         </tr>
-        <tr data-ok={(option.unavailablePeriods ?? []).length === 0 && option.conflicts.length === 0}>
+        <tr data-ok={unavailable.length === 0 && option.conflicts.length === 0}>
           <th scope="row">Availability</th>
           <td>{period ? timeRange(period.effectiveStart, period.effectiveEnd) : 'Enter valid booking times'}</td>
-          <td>{(option.unavailablePeriods ?? []).length
-            ? `Unavailable: ${(option.unavailablePeriods ?? []).map(unavailablePeriodLabel).join(', ')} ✗`
+          <td>{unavailable.length
+            ? `Unavailable: ${unavailable.map(unavailablePeriodLabel).join(', ')} ✗`
             : option.conflicts.length
               ? 'Overlaps an approved booking ✗'
               : 'Available ✓'}</td>
         </tr>
-        <tr data-ok={(option.missingFacilities ?? []).length === 0}>
+        <tr data-ok={missingFacilities.length === 0}>
           <th scope="row">Required facilities</th>
-          <td>{(input.requirements?.requiredFacilities ?? event.requiredFacilities ?? []).length
-            ? (input.requirements?.requiredFacilities ?? event.requiredFacilities ?? []).map((f) => venueFacilityLabels[f as Facility]).join(', ')
+          <td>{facilities.length
+            ? facilities.map((f) => venueFacilityLabels[f as Facility]).join(', ')
             : 'None specified'}</td>
-          <td>{(option.missingFacilities ?? []).length
-            ? `Missing: ${(option.missingFacilities ?? []).map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ')} ✗`
+          <td>{missingFacilities.length
+            ? `Missing: ${missingFacilities.map((f) => venueFacilityLabels[f as Facility] ?? f).join(', ')} ✗`
             : 'All provided ✓'}</td>
         </tr>
         {needs.length === 0 ? (

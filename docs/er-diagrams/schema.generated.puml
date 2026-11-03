@@ -71,6 +71,7 @@ entity equipment_logs {
 	* loaned_from : timestamp with time zone
 	* loaned_until : timestamp with time zone
 	* spare : boolean
+	request_id : uuid <<FK>>
 }
 
 entity equipment_request_equipments {
@@ -88,6 +89,7 @@ entity equipment_requests {
 	* technical_requirement : text
 	reject_reason : text
 	attention_reason : text
+	* revision : boolean
 }
 
 entity equipment_status_periods {
@@ -648,6 +650,7 @@ equipment_damage_reports }o--|| users : reported_by
 equipment_logs }o--|| equipments : equipment_id
 equipment_logs }o--o| serialised_equipments : equipment_id, serial_number
 equipment_logs }o--|| events : event_id
+equipment_logs }o--o| equipment_requests : request_id
 equipment_request_equipments }o--|| equipments : equipment_id
 equipment_request_equipments }o--|| equipment_requests : request_id
 equipment_requests }o--|| events : event_id

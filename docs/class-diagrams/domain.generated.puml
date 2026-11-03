@@ -214,9 +214,11 @@ class EquipmentLog <<Entity>>  {
 	{field} -loanedFrom : Instant
 	{field} -loanedUntil : Instant
 	{field} -quantity : int
+	{field} -requestId : UUID
 	{field} -serialNumber : String
 	{field} -spare : boolean
 	{field} -technicalRequirements : String
+	{method} +forRequest ( requestId : UUID ) : void
 	{method} +reduceBy ( units : int ) : void
 	{method} +replaceUnit ( replacementSerialNumber : String ) : void
 }
@@ -311,9 +313,11 @@ class EquipmentRequest <<Entity>>  {
 	{field} -eventId : UUID
 	{field} -id : UUID {id}
 	{field} -rejectReason : String
+	{field} -revision : boolean
 	{field} -technicalRequirement : String
 	{method} +decide ( status : EquipmentRequestStatus , rejectReason : String ) : void
 	{method} +flagAttention ( reason : String ) : void
+	{method} +markRevision () : void
 	{method} +markStillSuitable () : void
 	{method} +supersede () : void
 }
@@ -839,6 +843,7 @@ EquipmentDamageReport "0..*" --> "1" User : reportedBy
 EquipmentLog "0..*" --> "1" Equipment : equipmentId
 EquipmentLog "0..*" --> "0..1" SerialisedEquipment : equipmentId, serialNumber
 EquipmentLog "0..*" --> "1" Event : eventId
+EquipmentLog "0..*" --> "0..1" EquipmentRequest : requestId
 EquipmentRequestLine "0..*" --> "1" EquipmentRequest : id.requestId
 EquipmentRequest "0..*" --> "1" Event : eventId
 EquipmentStatusPeriod "0..*" --> "1" SerialisedEquipment : equipmentId, serialNumber
