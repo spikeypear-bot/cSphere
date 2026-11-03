@@ -41,7 +41,7 @@ import com.example.connect_sphere.event.repository.EventRepository;
 import com.example.connect_sphere.venue.entity.Venue;
 import com.example.connect_sphere.venue.repository.VenueRepository;
 
-@Tag("unit")
+@Tag("integration")
 @WebMvcTest(SafetyOfficerController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 @Tag("SO-C1")

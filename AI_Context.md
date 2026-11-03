@@ -200,7 +200,7 @@ Week 6 asked "is the evidence from one unit trustworthy?"; Week 9 asks "does it 
    - Use the canonical form: uppercase, a hyphen before `C` or `NEW`, and two digits for plain numbers (`EO04`, `EC08`, `VS-C3`, `EC-NEW5`, `ECL-C7`, `TS01`, `SO-C4`, `AU04`, `DEV15`).
    - If the branch names no clear story, **stop and ask the user**. Never guess or invent an ID.
 2. **Tag every test file you create or edit.**
-   - **Backend** (`backend/src/test/**/*Test.java`): on the class, add `@Tag("<StoryID>")` next to exactly one layer tag. Use `@Tag("integration")` for tests that use a real database or Spring context (`@SpringBootTest`), and `@Tag("unit")` otherwise.
+   - **Backend** (`backend/src/test/**/*Test.java`): on the class, add `@Tag("<StoryID>")` next to exactly one layer tag. Use `@Tag("integration")` for tests that use a real database or any Spring context (`@SpringBootTest`, and slices such as `@WebMvcTest`), and `@Tag("unit")` otherwise (plain JUnit with Mockito mocks).
    - **Frontend** (`frontend/src/**/*.test.ts(x)`): make line 1 `// @stories <StoryID>`, and start the top-level `describe` title with the story ID.
    - **E2E** (`frontend/e2e/*.spec.ts`): make line 1 `// @stories <IDs>`, and start each test title with a story ID.
    - **Tests that cover several stories** (usually integration or E2E): tag **all** of them.

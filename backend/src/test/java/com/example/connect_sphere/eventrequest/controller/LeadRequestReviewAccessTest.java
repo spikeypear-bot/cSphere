@@ -45,7 +45,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
  * the coordinator's actions. Controller slice with the real SecurityConfig
  * imported; no database needed.
  */
-@Tag("unit")
+@Tag("integration")
 @WebMvcTest(EventRequestController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })
 @Tag("ECL-C3")

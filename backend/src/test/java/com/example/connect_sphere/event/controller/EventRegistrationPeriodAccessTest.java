@@ -35,7 +35,7 @@ import com.example.connect_sphere.event.service.EventRegistrationService;
 import com.example.connect_sphere.event.service.EventService;
 import com.example.connect_sphere.eventrequest.service.EventRequestService;
 
-@Tag("unit")
+@Tag("integration")
 @Tag("EO12")
 @WebMvcTest(EventController.class)
 @Import({ SecurityConfig.class, JwtConfig.class, RestAuthenticationEntryPoint.class, RestAccessDeniedHandler.class })

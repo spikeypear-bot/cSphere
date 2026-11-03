@@ -39,7 +39,7 @@ import com.example.connect_sphere.eventrequest.service.EventRequestService;
  * correctly, independent of real business logic (which EventRequestServiceTest
  * already covers). The service is mocked.
  */
-@Tag("unit")
+@Tag("integration")
 @WebMvcTest(EventRequestController.class)
 @AutoConfigureMockMvc(addFilters = false)
 @Tag("EO01")
