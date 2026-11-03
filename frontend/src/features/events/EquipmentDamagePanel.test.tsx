@@ -1,6 +1,6 @@
 // @stories TS09  (IS212 traceability: the user stories this file tests; see docs/test-traceability.md)
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { act, cleanup, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes } from 'react-router-dom'
 import { SessionProvider } from '../../lib/session'
@@ -140,6 +140,69 @@ describe('TS09 the coordinator sees damaged equipment and deals with a shortfall
     expect(await screen.findByText('Damaged equipment for this event could not be loaded.')).toBeInTheDocument()
     await user.click(screen.getByRole('button', { name: 'Try again' }))
     expect(await screen.findByText('Short by 1')).toBeInTheDocument()
+  })
+
+  it('TS09 AC17 (boundary): an unserialised item names its damaged quantity, its period end and how it was dealt with', async () => {
+    stubApi({ 'GET /api/events/event-1/equipment-damage': () => jsonResponse(200, [
+      { ...SHORT, outcomeId: 'bulk', equipmentName: 'Cables', serialNumber: null, damagedQuantity: 3,
+        periodEnd: '2027-03-02T00:00:00Z', resolution: 'ADDITIONAL_REQUEST', canRequestAdditional: false, canResolve: false },
+      { ...SHORT, outcomeId: 'sent', additionalRequestId: 'req-2', additionalRequestStatus: 'pending',
+        canRequestAdditional: false, canResolve: true },
+      { ...SHORT, outcomeId: 'new', additionalRequestId: 'req-3', additionalRequestStatus: null,
+        canRequestAdditional: false, canResolve: false },
+    ]) })
+    renderPanel()
+
+    const [bulk, sent, fresh] = within(await screen.findByRole('list', { name: 'Damaged equipment' })).getAllByRole('listitem')
+    expect(bulk).toHaveTextContent('Cables · 3 damaged')
+    expect(bulk).toHaveTextContent(/until 2 Mar 2027/)
+    expect(bulk).toHaveTextContent('Resolved: the additional equipment request was approved.')
+    expect(sent).toHaveTextContent('Additional request submitted (pending).')
+    expect(sent).toHaveTextContent('until further notice')
+    expect(within(sent).queryByRole('link', { name: /Request/ })).not.toBeInTheDocument()
+    expect(within(sent).getByRole('button', { name: 'Resolve with a note' })).toBeInTheDocument()
+    expect(fresh).toHaveTextContent('Additional request submitted (processing).')
+  })
+
+  it('TS09 AC20 (happy): Cancel closes the note without sending, and resolving one item leaves the others as they were', async () => {
+    const resolved = { ...SHORT, resolution: 'NOTE' as const, resolutionNote: 'One is enough', canRequestAdditional: false, canResolve: false }
+    const calls = stubApi({
+      'GET /api/events/event-1/equipment-damage': () => jsonResponse(200, [SHORT, { ...SHORT, outcomeId: 'out-3', equipmentName: 'Speaker' }]),
+      'POST /api/events/event-1/equipment-damage/out-1/resolve': () => jsonResponse(200, resolved),
+    })
+    const user = userEvent.setup()
+    renderPanel()
+
+    const [first, second] = within(await screen.findByRole('list', { name: 'Damaged equipment' })).getAllByRole('listitem')
+    await user.click(within(first).getByRole('button', { name: 'Resolve with a note' }))
+    await user.type(within(first).getByLabelText(/Why the event can go ahead/), 'Draft')
+    await user.click(within(first).getByRole('button', { name: 'Cancel' }))
+    expect(within(first).queryByLabelText(/Why the event can go ahead/)).not.toBeInTheDocument()
+    expect(calls.filter((c) => c.method === 'POST')).toHaveLength(0)
+
+    await user.click(within(first).getByRole('button', { name: 'Resolve with a note' }))
+    expect(within(first).getByLabelText(/Why the event can go ahead/)).toHaveValue('')
+    await user.type(within(first).getByLabelText(/Why the event can go ahead/), 'One is enough')
+    await user.click(within(first).getByRole('button', { name: 'Resolve shortfall' }))
+    expect(await within(first).findByText('Resolved with a note: One is enough')).toBeInTheDocument()
+    expect(second).toHaveTextContent('Speaker')
+    expect(within(second).getByRole('button', { name: 'Resolve with a note' })).toBeInTheDocument()
+  })
+
+  it.each(['answers', 'fails'])('TS09 AC17 (conflict): when the previous event\'s list %s late, the event now shown keeps its own', async (outcome) => {
+    let settleFirst!: () => void
+    vi.stubGlobal('fetch', vi.fn((input: RequestInfo | URL) => String(input) === '/api/events/event-1/equipment-damage'
+      ? new Promise<Response>((resolve) => {
+        settleFirst = () => resolve(outcome === 'answers' ? jsonResponse(200, [SHORT]) : jsonResponse(500, { message: 'late' }))
+      })
+      : Promise.resolve(jsonResponse(200, [{ ...SHORT, equipmentName: 'Speaker' }]))))
+    const panel = (eventId: string) => <MemoryRouter><EquipmentDamagePanel eventId={eventId} readOnly={false} /></MemoryRouter>
+    const { rerender } = render(panel('event-1'))
+    rerender(panel('event-2'))
+    expect(await screen.findByRole('heading', { name: /^Speaker/ })).toBeInTheDocument()
+    await act(async () => settleFirst())
+    expect(screen.queryByRole('heading', { name: /^Projector/ })).not.toBeInTheDocument()
+    expect(screen.queryByText('Damaged equipment for this event could not be loaded.')).not.toBeInTheDocument()
   })
 
   it('TS09 AC19 (happy): requests the shortfall beside the approved request, sending which shortfall it answers', async () => {
