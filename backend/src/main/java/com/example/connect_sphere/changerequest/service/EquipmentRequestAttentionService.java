@@ -60,9 +60,8 @@ public class EquipmentRequestAttentionService {
         requests.saveAll(active);
         changeLog.publishEvent(new EventChange(event.getEventId(), ActivityType.equipment_request_attention,
                 change.getDecidedBy(), reason));
-        if (event.getCoordinatorId() != null) {
-            notifications.createEquipmentRequestAttentionNotification(event.getCoordinatorId(), event.getEventId(),
-                    event.getEventName(), reason);
-        }
+        // The approver is the event's coordinator (ChangeRequestService.requireDecider, under the event lock).
+        notifications.createEquipmentRequestAttentionNotification(event.getCoordinatorId(), event.getEventId(),
+                event.getEventName(), reason);
     }
 }
