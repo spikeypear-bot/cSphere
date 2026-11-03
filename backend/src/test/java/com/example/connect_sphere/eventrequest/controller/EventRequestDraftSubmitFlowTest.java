@@ -413,4 +413,23 @@ class EventRequestDraftSubmitFlowTest {
 
         assertThat(savedRequests()).isZero();
     }
+
+    @Test
+    @DisplayName("EO01 (negative): a draft with a registration capacity of 0 is refused with a field message, not a server error, and nothing is saved or overwritten")
+    void aDraftCannotHoldAZeroRegistrationCapacity() throws Exception {
+        Map<String, String> zero = complete();
+        zero.put("registrationCapacity", "0");
+        int before = savedRequests();
+
+        save("eo1", json(zero)).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors.registrationCapacity").value("Registration capacity must be at least 1."));
+        assertThat(savedRequests()).isEqualTo(before);
+
+        UUID requestId = draft("eo1", json(complete()));
+        update(requestId, "eo1", json(zero)).andExpect(status().isUnprocessableEntity())
+                .andExpect(jsonPath("$.fieldErrors.registrationCapacity").value("Registration capacity must be at least 1."));
+        sync();
+        assertThat(jdbc.queryForObject("SELECT registration_capacity FROM event_requests WHERE request_id = ?",
+                Integer.class, requestId)).isNull();
+    }
 }

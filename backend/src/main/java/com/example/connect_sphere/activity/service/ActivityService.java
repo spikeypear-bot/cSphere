@@ -77,6 +77,17 @@ public class ActivityService {
         }
     }
 
+    /** The timeline's limit (V13 chk_activity_message_length). */
+    static final int MAX_MESSAGE_LENGTH = 2000;
+
+    /** A label plus the user's own text (a requirement, a note, a reason) can pass the limit even
+     * when the text alone is within it. The full text stays on its own record, so the timeline
+     * entry is shortened rather than the whole action failing. */
+    static String fitted(String message) {
+        return message == null || message.length() <= MAX_MESSAGE_LENGTH ? message
+                : message.substring(0, MAX_MESSAGE_LENGTH - 1) + "…";
+    }
+
     @Transactional(propagation = Propagation.MANDATORY)
     public void record(Entry entry) {
         User actor = userRepository.findById(entry.actorUserId())
@@ -94,7 +105,7 @@ public class ActivityService {
             row.setActorRole("system");
             row.setActorName("ConnectSphere");
         }
-        row.setMessage(entry.message());
+        row.setMessage(fitted(entry.message()));
         row.setFlaggedFields(entry.flaggedFields() == null ? List.of() : List.copyOf(entry.flaggedFields()));
         row.setFromStatus(entry.fromStatus());
         row.setToStatus(entry.toStatus());

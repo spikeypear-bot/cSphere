@@ -213,6 +213,23 @@ describe('EO01 EO02 — every wizard step, what it saves and how it is reviewed'
     delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView
   })
 
+  it('EO02 (boundary): registration values are pre-filled only once; a value the organiser clears stays empty, and typing replaces it', async () => {
+    stubDraft(draft({ registrationNeeds: true }))
+    const user = userEvent.setup()
+    renderWizard()
+    await next(user, 3)
+
+    const capacity = await screen.findByLabelText('Registration capacity')
+    expect(capacity).toHaveValue(150)
+    await user.clear(capacity)
+    await user.clear(screen.getByLabelText('Registration opens'))
+    expect(capacity).toHaveValue(null)
+    expect(screen.getByLabelText('Registration opens')).toHaveValue('')
+
+    await user.type(capacity, '120')
+    expect(capacity).toHaveValue(120)
+  })
+
   it('EO02 (happy): registration is pre-filled from the schedule, the closing time can be chosen and reset, and it can be turned off', async () => {
     const calls = stubDraft(draft({ registrationNeeds: true }))
     const user = userEvent.setup()

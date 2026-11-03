@@ -101,8 +101,19 @@ public class EventRequestService {
         OffsetDateTime now = OffsetDateTime.now(clock);
         entity.setCreatedAt(now);
         entity.setUpdatedAt(now);
+        requireStorableCapacity(request);
         applyFields(entity, request);
         return mapper.toDto(repository.save(entity));
+    }
+
+    /** EO01: drafts may be incomplete, but V41 stores only a positive registration capacity, so
+     * a capacity below 1 is refused with the field message the submit rule uses, not a 500. */
+    private static void requireStorableCapacity(SaveEventRequestRequest request) {
+        Integer capacity = request.registrationCapacity();
+        if (capacity != null && capacity < 1) {
+            throw new InvalidEventRequestScheduleException(
+                    Map.of("registrationCapacity", "Registration capacity must be at least 1."));
+        }
     }
 
     /** EO01 draft edits, and (EO26) edits to a request that is waiting for
@@ -112,6 +123,7 @@ public class EventRequestService {
     public EventRequestDto updateDraft(String organisation, UUID requestId, SaveEventRequestRequest request) {
         requireOrganisation(organisation);
         EventRequest entity = findOwnedEditable(organisation, requestId);
+        requireStorableCapacity(request);
         applyFields(entity, request);
         entity.setUpdatedAt(OffsetDateTime.now(clock));
         // If this save fails (e.g. the transaction rolls back for any reason),

@@ -856,6 +856,28 @@ class EquipmentRequestFlowTest {
         assertThat(requestsFor(eventId)).isZero();
     }
 
+    private java.util.List<String> timeline(UUID eventId) {
+        sync();
+        return jdbc.queryForList("SELECT a.message FROM event_request_activity a JOIN event_requests r ON r.request_id = a.request_id "
+                + "WHERE r.event_id = ? AND a.activity_type IN ('equipment_requested', 'equipment_revised') ORDER BY a.occurred_at",
+                String.class, eventId);
+    }
+
+    @Test
+    @DisplayName("EC07 EC-NEW3 (boundary): requirements of exactly 2,000 characters are saved in full, on a first request and a revision, and their timeline entries are shortened to fit")
+    void maximumLengthRequirementsAreSavedAndTheTimelineFits() throws Exception {
+        UUID eventId = event();
+        UUID projector = equipment("EC07 Projector");
+        String longest = "x".repeat(2000);
+
+        UUID requestId = submitted(eventId, body(longest, item(projector, 1)));
+        revise(eventId, "ec1", body("y".repeat(2000), item(projector, 2))).andExpect(status().isOk());
+
+        assertThat(jdbc.queryForObject("SELECT technical_requirement FROM equipment_requests WHERE request_id = ?",
+                String.class, requestId)).isEqualTo(longest);
+        assertThat(timeline(eventId)).hasSize(2).allSatisfy(message -> assertThat(message).hasSize(2000).endsWith("…"));
+    }
+
     @Test
     @DisplayName("EC07 (boundary): items with no technical requirements, or requirements with no items, are each enough on their own")
     void itemsOrRequirementsAloneAreEnough() throws Exception {

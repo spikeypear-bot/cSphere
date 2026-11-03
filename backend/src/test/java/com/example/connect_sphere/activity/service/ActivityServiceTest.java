@@ -291,4 +291,12 @@ class ActivityServiceTest {
             assertThat(type.audience()).as(type.name()).doesNotContain(UserRole.eo);
         }
     }
+
+    @org.junit.jupiter.api.Test
+    @org.junit.jupiter.api.DisplayName("EC-NEW5 (boundary): a timeline message of up to 2,000 characters is kept whole; a longer one is cut to 2,000 ending in an ellipsis")
+    void longMessagesAreShortenedToTheLimit() {
+        assertThat(ActivityService.fitted(null)).isNull();
+        assertThat(ActivityService.fitted("x".repeat(2000))).isEqualTo("x".repeat(2000));
+        assertThat(ActivityService.fitted("x".repeat(2001))).hasSize(2000).isEqualTo("x".repeat(1999) + "…");
+    }
 }
